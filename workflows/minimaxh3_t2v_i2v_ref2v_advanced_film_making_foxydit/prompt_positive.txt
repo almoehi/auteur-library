@@ -1,0 +1,12 @@
+summary:
+A young American woman descends a narrow hotel staircase into a dim Italian lobby on a rainy morning, then steps into the hushed ground-floor office where the tall, dignified hotel-keeper rises slowly from his desk to bow.
+
+detailed_description:
+[Shot 1]: The woman emerges from the second-floor hallway and begins to descend a worn marble staircase. Her hand trails the iron railing. Grey rain-light filters through a tall landing window, catching her short hair and simple cardigan. The stairwell is old-world — dark wood wainscoting, a single brass sconce overhead. She moves with quiet purpose, expression a blend of wistfulness and resolve.
+[Shot 2] at 00:04: She steps across the threshold into a long dim office with a high ceiling. The hotel-keeper rises from behind a desk at the far end of the room and bows with formal gravity. He is tall; the vertical lines of the room's dark panelling emphasise his height. A single window behind him lets in flat grey light. The wife pauses, momentarily arrested by the ceremony of his greeting.
+
+overall_soundscape:
+Quiet interior ambience: muffled rain against glass, the soft creak of old marble stairs, the scrape of a chair as the hotel-keeper stands. No music.
+
+non_diegetic_music:
+N/A

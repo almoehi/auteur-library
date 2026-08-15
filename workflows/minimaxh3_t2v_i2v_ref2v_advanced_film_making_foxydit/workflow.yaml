@@ -1,0 +1,148 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Original workflow by foxydits
+# https://civitai.com/models/2834514/minimax-h3-t2v-i2v-ref2v-advanced-filmmaking-workflow-or-all-speedups-qol-features
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# SolAttnPatch                           https://github.com/kijai/ComfyUI-SolAttn_triton @ 842c4eaa7d91dbaef3fee3ccdbf36a39521e82fc
+# MiniMaxH3ImageToVideo, ResolutionSelector, VAEDecodeAudio — built-in ComfyUI (comfy_extras/nodes_minimax_h3, nodes_resolution, nodes_audio)
+# MiniMaxH3MemoryEfficientSageAttentionPatch, PathchSageAttentionKJ — ComfyUI-KJNodes (already in nodes.lock)
+# VHS_VideoCombine                       https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite (already in nodes.lock)
+# Power Lora Loader / Any Switch (rgthree) https://github.com/rgthree/rgthree-comfy (already in nodes.lock)
+# ComfyMathExpression                    https://github.com/evanspearman/ComfyMath (already in nodes.lock)
+# RIFEInterpolation                      https://github.com/Fannovel16/ComfyUI-Frame-Interpolation (already in nodes.lock)
+# easy cleanGpuUsed / easy seed          https://github.com/yolain/ComfyUI-Easy-Use (already in nodes.lock)
+# SpectrumApplyMiniMaxH3                 NOT included — workflow exported in EasyCache mode (use one or the other)
+#
+# ─── Append to serverless-comfy/nodes.lock ────────────────────────────────────
+# https://github.com/kijai/ComfyUI-SolAttn_triton.git 842c4eaa7d91dbaef3fee3ccdbf36a39521e82fc
+#
+
+name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
+version: "1.6"
+description: >
+  Generates video with synchronized audio from a structured text prompt using the MiniMax H3
+  FL2VA model and Qwen3VL 32B text encoder, in T2V mode (no image anchor inputs required).
+  Best for cinematic AI filmmaking structured around MiniMax H3's REF2V prompt format (use prompt-writer-minimaxh3 skill), which
+  organizes subject definitions, shot descriptions, and soundscape into discrete sections for
+  rich narrative control. Not suitable for I2V, first/last-frame anchoring, or external
+  reference image workflows — a separate FL2VA export is needed for those modes.
+url: workflow.json
+workflow_type: t2va
+model_family: minimaxh3
+gpu_types: [a100, h100, blackwell]  # l40s incompatible on cu13: nodes 636/663 call sageattn() directly → XID-43
+ports:
+  params:
+    - name: steps
+      kind: int
+      description: "Denoising steps. LightX2V 4-step turbo LoRA requires steps=4 for fastest inference; steps=6–10 also work at 0.6–1.0 LoRA strength."
+      binding: steps@124
+      constraints: { min: 1, max: 50 }
+      required: true
+    - name: seed
+      kind: int
+      description: "Random seed for reproducibility. Use -1 or omit for a fresh random seed each run."
+      binding: seed@142
+      seed: true
+      required: false
+      default: -1
+    - name: prompt_positive
+      kind: string
+      description: "MiniMax H3 structured cinematic prompt. Supports REF2V format with subject_definitions, summary, detailed_description, soundscape sections and <Subject N> / <Picture N> / <Audio N> placeholders."
+      binding: value@138
+      required: true
+    - name: video_length
+      kind: float
+      description: "Target video duration in seconds. Frame count is derived from this value multiplied by the output frame rate."
+      binding: value@132
+      constraints: { min: 1.0, max: 30.0 }
+      required: false
+      default: 5.0
+    - name: width
+      kind: int
+      description: "Output video width in pixels. Must be divisible by 32. Paired with height to set the full resolution."
+      binding: value@wh_width
+      constraints: { min: 256, max: 1920 }
+      required: true
+      default: 480
+    - name: height
+      kind: int
+      description: "Output video height in pixels. Must be divisible by 32. Paired with width to set the full resolution."
+      binding: value@wh_height
+      constraints: { min: 256, max: 1920 }
+      required: true
+      default: 864
+    - name: fps
+      kind: int
+      description: "Output video frame rate in FPS. Controls the VHS container frame rate; default 48 = model native 24fps × RIFE 2× interpolation, preserving clip duration. Raise to 60 for high-framerate output or lower to 24 for standard cinema rate."
+      binding: value@146
+      constraints: { min: 1, max: 120 }
+      required: false
+      default: 48
+  outputs:
+    - name: output_video
+      kind: video
+      description: "RIFE 2× interpolated final output video with audio, encoded at the fps param rate (default 48 FPS)."
+      node_id: "145"
+      role: primary
+context: >
+  GPU / VRAM: minimum 40 GB VRAM recommended. The Qwen3VL 32B text encoder in NVfp4 AWQ
+  uses ~16 GB alone; the FL2VA int8 convrot diffusion model uses ~10–14 GB. An L40S
+  (48 GB) or A100 (80 GB) is the recommended GPU tier for comfortable headroom.
+
+  Model download size: approximately 35–40 GB total on first run (FL2VA diffusion model
+  ~20 GB, Qwen3VL text encoder ~16 GB, two VAEs ~1 GB combined, LightX2V LoRA ~200 MB,
+  RIFE model ~50 MB).
+
+  Render time at steps=4 (LightX2V turbo, default) on an L40S: approximately 2–4 min
+  for a 5-second clip. At steps=8 with LoRA disabled (strength 0): approximately 10–18 min.
+
+  Prompt format: MiniMax H3 uses a filmmaking-oriented structured prompt. For best results
+  follow the four-section format: subject_definitions → summary → detailed_description
+  (with timestamped shots) → soundscape. Consult the prompting guide at
+  https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/docs/VIDEO_PROMPT_WRITING_GUIDE_ref_en.md.
+  T2V mode does not require <Picture N> or <Audio N> placeholders; include only if
+  switching to I2V/REF2VA mode with a different workflow export.
+
+  Resolution: set via width and height (pixels, must be divisible by 32). Default is
+  480×864 (9:16 portrait). For landscape use e.g. width=864, height=480.
+
+  LightX2V turbo LoRA: set steps=4, LoRA strength 0.7 (default). Reduce to 0.5 for more
+  natural motion. Do NOT combine with EasyCache or Spectrum in the same session.
+
+  SolAttnPatch (SolAttn): requires triton; may silently degrade to standard attention
+  on GPUs without triton support. The node patches the model in-place for faster inference.
+
+  CUDA 13.0 (PyTorch 2.13) strongly recommended for full INT8 convrot throughput;
+  cu126 gives ~2× slower inference with this model variant.
+models:
+  - name: minimax_h3_fl2va_pruned_int8_convrot
+    type: unet
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+
+  - name: qwen3vl_32b_minimax_h3_nvfp4_awq
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+
+  - name: minimax_h3_audio_vae_fp32
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+
+  - name: minimax_h3_video_vae_fp16
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+
+  - name: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy
+    type: lora
+    dest: loras/MINIMAX/
+    files:
+      - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+
+  - name: rife49
+    type: rife
+    files:
+      - url: https://huggingface.co/marduk191/rife/resolve/main/rife49.pth
+        filename: rife49.pth

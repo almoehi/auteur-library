@@ -1,0 +1,298 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Original workflow by IAMCCS
+# https://www.patreon.com/iamccs/posts/vid-first-last-2-151609624
+# https://www.patreon.com/iamccs/posts/upd-new-25-02-151613044?collection=1836124
+#
+# ─── Custom Nodes ────────────────────────────────────────────────────────────
+# [DISPLAY] ShowText|pysssss                              https://github.com/pythongosssss/ComfyUI-Custom-Scripts @ 609f3afaa74b2f88ef9ce8d939626065e3247469
+# RIFE VFI                                      https://github.com/Fannovel16/ComfyUI-Frame-Interpolation @ 26545cc2dd95bc3d27f056016300673bdeee78f5  # rife49.pth must be listed in models stanza (type: rife → /model-storage/ComfyUI/models/rife/)
+# VHS_GetImageCount                             https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite @ 4ee72c065db22c9d96c2427954dc69e7b908444b
+# MathExpression|pysssss                        https://github.com/pythongosssss/ComfyUI-Custom-Scripts @ 609f3afaa74b2f88ef9ce8d939626065e3247469
+# easy float                                    https://github.com/yolain/ComfyUI-Easy-Use @ 595e0738a9e3f8d0d9c4d875461b2d2c9e7559c7
+# easy int                                      https://github.com/yolain/ComfyUI-Easy-Use @ 595e0738a9e3f8d0d9c4d875461b2d2c9e7559c7
+# KSampler Config (rgthree)                     https://github.com/rgthree/rgthree-comfy @ 6b76ee6f2c5a007710b5a16f97c94330d6ecc871
+# VHS_VideoCombine                              https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite @ 4ee72c065db22c9d96c2427954dc69e7b908444b
+# LayerUtility: PurgeVRAM                       https://github.com/chflame163/ComfyUI_LayerStyle @ 64f976fec8492ea4930c0e30c32369573189b23d
+# ImageResize+                                  https://github.com/cubiq/ComfyUI_essentials @ 9d9f4bedfc9f0321c19faf71855e228c93bd0dc9
+# GetImageSize+                                 https://github.com/cubiq/ComfyUI_essentials @ 9d9f4bedfc9f0321c19faf71855e228c93bd0dc9
+# GGUFLoaderKJ                                  https://github.com/kijai/ComfyUI-KJNodes @ 4d46ac107c33ed8a3d181b8776ede66498583380  # NOT city96/ComfyUI-GGUF; resolves via unet/ folder
+# WanImageMotionPro                             https://github.com/IAMCCS/IAMCCS-nodes @ 355ced604934d0cdcf71396808d07b5624b00004
+# AdjustContrast                                https://github.com/cubiq/ComfyUI_essentials @ 9d9f4bedfc9f0321c19faf71855e228c93bd0dc9
+# ImageBatchExtendWithOverlap                   https://github.com/pythongosssss/ComfyUI-Custom-Scripts @ 609f3afaa74b2f88ef9ce8d939626065e3247469
+# [DISPLAY] IAMCCS_AutoLinkArguments                      https://github.com/IAMCCS/IAMCCS-nodes @ 355ced604934d0cdcf71396808d07b5624b00004
+# Seed (rgthree)                                https://github.com/rgthree/rgthree-comfy @ 6b76ee6f2c5a007710b5a16f97c94330d6ecc871
+# IAMCCS_WanLoRAStackModelIO                    https://github.com/IAMCCS/IAMCCS-nodes @ 355ced604934d0cdcf71396808d07b5624b00004  # lora1-4 inputs may have Windows path prefixes — strip before committing
+# WanMotionProTrimmer                           https://github.com/IAMCCS/IAMCCS-nodes @ 355ced604934d0cdcf71396808d07b5624b00004
+#
+# ─── Append to serverless-comfy/nodes.lock ────────────────────────────────────
+# https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git 26545cc2dd95bc3d27f056016300673bdeee78f5
+# https://github.com/IAMCCS/IAMCCS-nodes.git 355ced604934d0cdcf71396808d07b5624b00004
+# https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git 4ee72c065db22c9d96c2427954dc69e7b908444b
+# https://github.com/chflame163/ComfyUI_LayerStyle.git 64f976fec8492ea4930c0e30c32369573189b23d
+# https://github.com/cubiq/ComfyUI_essentials.git 9d9f4bedfc9f0321c19faf71855e228c93bd0dc9
+# https://github.com/kijai/ComfyUI-KJNodes.git 4d46ac107c33ed8a3d181b8776ede66498583380
+# https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git 609f3afaa74b2f88ef9ce8d939626065e3247469
+# https://github.com/rgthree/rgthree-comfy.git 6b76ee6f2c5a007710b5a16f97c94330d6ecc871
+# https://github.com/yolain/ComfyUI-Easy-Use.git 595e0738a9e3f8d0d9c4d875461b2d2c9e7559c7
+#
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: iamcs_wan22_svi
+description: >
+  Animates three consecutive keyframes (first_frame → mid_frame → last_frame)
+  into a seamless 2-segment video using Wan 2.2 I2V 14B with SVI PRO motion
+  conditioning. Best for long continuous shots needing temporal coherence
+  across a scene transition — not suitable for single-segment clips or text-to-video tasks.
+url: workflow.json
+model_family: wan22
+workflow_type: flf2v
+gpu_types: [l40s, a100, h100, blackwell]
+ports:
+  inputs:
+    - name: first_frame
+      kind: image
+      description: "Opening keyframe — video begins from this frame; segment 1 animates forward from here toward mid_frame."
+      binding: image@745
+      required: true
+    - name: mid_frame
+      kind: image
+      description: "Bridge keyframe — segment 1 ends here and segment 2 begins here; appears in the middle of the combined output."
+      binding: image@371
+      required: true
+    - name: last_frame
+      kind: image
+      description: "Closing keyframe — video ends at this frame; segment 2 animates toward here from mid_frame."
+      binding: image@746
+      required: true
+  params:
+    - name: prompt_seg1
+      kind: string
+      description: "Motion prompt for segment 1 (first_frame → mid_frame, plays first). Describe camera motion and subject action from the opening to the bridge frame."
+      binding: value@1792
+      required: true
+      default: "The American wife descends the narrow marble hotel staircase, hand trailing the iron railing, grey rain-light through the tall landing window. Camera descends with her from high angle to eye-level as she reaches the lobby and crosses into the long ground-floor office. The tall padrone rises from his desk at the far end and bows with formal gravity."
+    - name: prompt_seg2
+      kind: string
+      description: "Motion prompt for segment 2 (mid_frame → last_frame, plays second). Describe camera motion and subject action from the bridge frame to the closing frame."
+      binding: value@1795
+      required: true
+      default: "The wife pauses near the office threshold and says 'Il piove'. The padrone replies with quiet formality, large hands resting on his desk. Camera slowly pushes in over her shoulder, 50mm medium, the dim room narrowing around their exchange, silvery rain-light washing across the padrone's weathered face at the far end of the room."
+    - name: prompt_negative
+      kind: string
+      description: "Elements to suppress across both segments. Defaults to baked-in Chinese negative prompt if omitted."
+      binding: text@1813
+      required: false
+      default: "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+    - name: length
+      kind: int
+      description: >-
+        Frames per segment — both segments share this value. Rendered at 16 FPS;
+        the two segments are joined with a 5-frame seam overlap, so total clip
+        duration = (length × 2 − 5) / 16 s. Must satisfy the 4n+1 rule
+        (length − 1 divisible by 4). Common targets: 21 ≈ 2 s, 45 ≈ 5 s,
+        81 ≈ 10 s (default), 121 ≈ 15 s, 161 ≈ 20 s.
+      binding: value@1575
+      required: false
+      default: 81
+      constraints:
+        min: 5
+        step: 4
+    - name: steps
+      kind: int
+      description: "High-noise sampler steps per segment (LightX2V 4-step distillation — default 1; pairs with baked low-noise steps=1 for 2 total per segment)."
+      binding: value@315:300
+      required: true
+      default: 1
+      constraints:
+        min: 1
+    - name: cfg
+      kind: float
+      description: "Classifier-free guidance scale. Keep at 1.0 (no guidance) for best results with the distilled model; values above 2 cause colour artifacts."
+      binding: cfg@858
+      required: false
+      default: 1
+    - name: seed
+      kind: int
+      description: "Random seed for reproducible output; omit or pass -1 for a random seed each run."
+      binding: seed@1806
+      seed: true
+      required: false
+      default: 845444788612421
+    - name: fps
+      kind: int
+      description: "Native model frame rate in FPS. The secondary output (video_combined) encodes at this rate; the primary HFPS output (output_video) encodes at fps×2 via RIFE 2× interpolation. Default 16 is Wan 2.2's native generation rate."
+      binding: value@657:648
+      constraints: { min: 8, max: 60 }
+      required: false
+      default: 16
+  outputs:
+    - name: output_video
+      kind: video
+      description: "Final 2-segment video with RIFE 2× interpolated frames, encoded at fps×2 (default 32 FPS)."
+      node_id: "212"
+      role: primary
+    - name: video_combined
+      kind: video
+      description: "Combined 2-segment video at standard frame rate (same content as output_video, without HFPS)."
+      node_id: "204"
+    - name: preview_seg2
+      kind: video
+      description: "Per-segment preview for segment 2 (contrast-adjusted, 16 FPS)."
+      node_id: "1829"
+    - name: preview_seg1
+      kind: video
+      description: "Per-segment preview for segment 1 (contrast-adjusted, 16 FPS)."
+      node_id: "1830"
+context: >
+  GPU: minimum 48 GB VRAM (L40S or equivalent). Model download: ~20 GB on
+  first run. Render time: 15–25 minutes per 2-segment clip on L40S.
+
+  How the pipeline works: SVI Pro v2 is a temporal stability LoRA (rank 128,
+  fp16) that reconditions Wan 2.2 to hold subject identity and motion
+  structure across chained generation passes — it does not change the visual
+  style. The FLF (First-Last Frame) system encodes first_frame and last_frame
+  as latents and hard-locks them into the generation as temporal endpoints.
+  These are not soft targets: the video will begin exactly at first_frame and
+  end exactly at last_frame. Segment 1 generates forward from first_frame
+  toward mid_frame; segment 2 continues from mid_frame toward the last_frame
+  lock. The segment boundary seam is smoothed automatically by the workflow.
+
+  Steps and CFG: each segment runs two sampler passes — a High Pass for
+  structure and large-scale composition, and a Low Pass for fine detail and
+  texture. The `steps` port controls the High Pass step count; keep it at 1
+  (default) for the LightX2V 4-step distilled model — increasing beyond 1
+  slows render without quality gain on distilled models. Set cfg=1.0 (no
+  guidance) for best results; values above 2 cause colour artifacts.
+
+  Input images: all three frames must share the same resolution and aspect
+  ratio — the workflow derives output dimensions from first_frame. Mismatched
+  resolutions cause silent crop artifacts. Ideal inputs are 480×832 or
+  720×1280 (portrait) or 832×480 / 1280×720 (landscape).
+
+  The three frames are keyframes of a single continuous motion arc, not cuts
+  from different shots. They must share the same scene, lighting, and colour
+  grade. The visual delta between adjacent frames should represent natural
+  motion progression — enough change for the model to have motion to
+  interpolate, but within a range that reads as a single unbroken take.
+  mid_frame should sit naturally between first_frame and last_frame in the
+  action: the subject and camera should be at an intermediate position that
+  makes both transitions (first→mid and mid→last) coherent. If first_frame
+  and last_frame are too visually close, the output will feel static; if they
+  are too distant (different poses, lighting shifts, background changes), the
+  model cannot bridge them smoothly and the result will stutter.
+
+  Prompts: write one prompt per segment. Prompt 1 (prompt_seg1) should
+  describe the subject's state and scene conditions at the opening
+  (first_frame → mid_frame transition). Prompt 2 (prompt_seg2) should
+  describe the subject's destination state (mid_frame → last_frame
+  transition). The pipeline handles the motion path between them — no "then"
+  or transition language is needed in prompts. Focus on: subject action,
+  camera motion, lighting, and visual mood; avoid describing static
+  appearance. The negative prompt overrides the baked-in Chinese negative
+  when provided; pass a short English list of artefact types or quality
+  degradation terms.
+
+  Failure modes: if segment 2 flickers or mismatches colours, verify that
+  mid_frame is visually consistent with first_frame and last_frame (same
+  lighting, same subject position, same colour grade). Temporal seam
+  artifacts at the segment boundary indicate inconsistent input frames — use
+  genuinely consecutive frames from the same scene. If the output feels
+  static despite correct prompts, the anchor frames may be too similar;
+  increase temporal distance between frames.
+
+  WanImageMotionPro node cheat sheet: this workflow uses the Pro variant
+  (WanImageMotionPro), which adds End Lock mechanics to force the video to
+  converge on last_frame via a smoothstep blend curve controlled by
+  end_transition frames.
+
+  Length and duration: the `length` parameter controls how many frames each
+  segment generates. Both segments always share the same length. The rendered
+  frame rate is 16 FPS; the two segments are joined with a 5-frame seam
+  overlap, so actual clip duration = (length × 2 − 5) / 16 s. Representative
+  values:
+    length=21  → 37 total frames  ≈  2 s
+    length=45  → 85 total frames  ≈  5 s
+    length=81  → 157 total frames ≈ 10 s  (default)
+    length=121 → 237 total frames ≈ 15 s
+    length=161 → 317 total frames ≈ 20 s
+  The HFPS primary output applies RIFE 2× frame interpolation, doubling the
+  frame count and output FPS to 32 — duration is unchanged.
+
+  Critical rule — 4n+1: video length must follow the 4n+1 rule (length − 1
+  must be divisible by 4): valid values are 5, 9, 13, 17, 21, 25, … 81, …
+  121, … 161, etc. Lengths outside this sequence cause instability and
+  compatibility failures. The `length` param enforces step=4 starting from 5.
+
+  T=2 constraint: the Wan VAE encodes one image into ~2 latent slots. Locking
+  1 end-lock slot (default) constrains the final ~4 frames; locking 2 slots
+  constrains ~8 frames. End-lock slots are set per-segment in the Pro node.
+
+  End transition frames: controls how many frames blend into the end-lock.
+  Use 4 slots for short clips (33–65 frames); use 6–8 slots for long clips
+  (81–121+ frames). Too few transition frames causes an abrupt cut to
+  last_frame; too many softens the convergence.
+
+  Include padding: when True, motion boost applies to the whole clip. When
+  False on chunk 2+, only the single overlap frame receives the boost
+  (creates a "motion dip" at the join — usually unwanted).
+
+  Safety presets: 'base' = no limiting (diagnostic baseline); 'safe' = tanh
+  soft limiter prevents clipping; 'safer' = higher ramp + limiting, required
+  when motion > 1.5 or chain length > 4 chunks.
+
+  Pro preset quick-reference (motion | safety | use_end_frame |
+  end_transition | end_lock_slots):
+    NOTE: end_transition_frames is deprecated in the current node — keep at 0.
+    Values > 0 produce static/frozen output (latent interpolation is non-linear).
+    All named presets in the node source use end_transition_frames=0.
+    parity 1:1  — 1.0  | base   | true  | 0 | 16 (diagnostic baseline; locks all slots)
+    flf overshoot — 1.15 | safe   | true  | 0 | 1  (general purpose)
+    smooth chain — 1.3  | safer  | true  | 0 | 1  (fluid transitions)
+    high motion — 1.6  | safer  | true  | 0 | 2  (max movement — manual, no named preset)
+    low vram flf — 1.15 | safe   | true  | 0 | 1  (memory-constrained — manual, no named preset)
+models:
+  - name: wan_2.1_vae
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors
+
+  - name: umt5_xxl_fp8_e4m3fn_scaled
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors
+
+  - name: wan2.2_i2v_high_noise_14B_Q5_K_M
+    type: unet
+    files:
+      - url: https://huggingface.co/bullerwins/Wan2.2-I2V-A14B-GGUF/resolve/main/wan2.2_i2v_high_noise_14B_Q5_K_M.gguf
+
+  - name: wan2.2_i2v_low_noise_14B_Q5_K_M
+    type: unet
+    files:
+      - url: https://huggingface.co/bullerwins/Wan2.2-I2V-A14B-GGUF/resolve/main/wan2.2_i2v_low_noise_14B_Q5_K_M.gguf
+
+  - name: wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022
+    type: lora
+    files:
+      - url: https://huggingface.co/lightx2v/Wan2.2-Distill-Loras/resolve/main/wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors
+
+  - name: SVI_v2_PRO_Wan2.2-I2V-A14B_HIGH_lora_rank_128_fp16
+    type: lora
+    files:
+      - url: https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/LoRAs/Stable-Video-Infinity/v2.0/SVI_v2_PRO_Wan2.2-I2V-A14B_HIGH_lora_rank_128_fp16.safetensors
+
+  - name: wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022
+    type: lora
+    files:
+      - url: https://huggingface.co/lightx2v/Wan2.2-Distill-Loras/resolve/main/wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022.safetensors
+
+  - name: SVI_v2_PRO_Wan2.2-I2V-A14B_LOW_lora_rank_128_fp16
+    type: lora
+    files:
+      - url: https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/LoRAs/Stable-Video-Infinity/v2.0/SVI_v2_PRO_Wan2.2-I2V-A14B_LOW_lora_rank_128_fp16.safetensors
+
+  - name: rife49
+    type: rife
+    files:
+      - url: https://huggingface.co/marduk191/rife/resolve/main/rife49.pth
+        filename: rife49.pth
