@@ -200,5 +200,6 @@ After `create_artifact` succeeds:
 2. **Bail on missing prerequisites** — if the shotlist or visual-shots artifact is absent or unapproved, tell the user and stop. Do not create a partial task.
 3. **Idempotency** — if a Shoot task for this scene already exists and is live, do not create another.
 4. **Canonical filenames are set in Step 3** — derive them once, embed them in the task description and artifact files list. The worker locks onto these; renaming causes slot mismatch and completion rejection.
-5. **create_artifact immediately follows create_task** — do not read the next scene or do anything else between the two calls.
-6. **Single-cut clips need T2I** — declare their `.mp4` slot normally; the `shoot-single-scene` worker skill handles keyframe generation automatically.
+5. **Filenames must match exactly** — Before calling `create_task`, confirm that every filename in the task description's "Clips to render" list appears verbatim in the `files` list passed to `create_artifact`, and vice versa. Any mismatch causes `buildArtifacts` to reject the task — fix it before creating the task, not after.
+6. **create_artifact immediately follows create_task** — do not read the next scene or do anything else between the two calls.
+7. **Single-cut clips need T2I** — declare their `.mp4` slot normally; the `shoot-single-scene` worker skill handles keyframe generation automatically.

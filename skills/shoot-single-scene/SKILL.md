@@ -53,5 +53,6 @@ After each render, write all prompt outputs to their declared paths.
 - Every declared clip was rendered by the video workflow (not a T2I tool)
 - Every render returned a success response with the correct output path
 - Every declared prompt file has been written
+- **Path audit**: each `.mp4` path returned by the wf_* tool must match exactly the canonical filename declared in your task description. If the wf_* tool saved to a different path than declared, the artifact build will fail — do not call `task_complete` until every path matches. Call the wf_* tool again targeting the correct declared path if needed.
 
 Then call `task_complete`.
