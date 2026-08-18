@@ -1,0 +1,6 @@
+allowBuilds:
+  esbuild: set this to true or false
+# esbuild fetches its platform binary in a postinstall script; pnpm blocks those
+# by default. Vite needs it, so it is allowed here explicitly.
+onlyBuiltDependencies:
+  - esbuild

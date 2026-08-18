@@ -1,0 +1,2035 @@
+<script lang="ts">
+	/** Studio — chat-first surface for the local auteur harness (~/auteur).
+	 *
+	 *  The whole production happens in one growing transcript, like a chat with a
+	 *  studio. The user types an idea; the plan comes back as a chat message; each
+	 *  planning document (screenplay, cast, scenes, art direction, visual bible)
+	 *  lands in the chat for approval or revision; only after the user approves
+	 *  does GPU rendering start. A right-hand rail mirrors the full pipeline —
+	 *  including steps that have not started yet — the way the harness's own TUI
+	 *  does.
+	 *
+	 *  Workspaces are immutable and unpausable, so the approval gate cannot live
+	 *  in the harness. The production is therefore split in two:
+	 *
+	 *    planning workspace  `${slug}@1.0`        — LLM-only, ~4 minutes, no GPU
+	 *    render workspace    `${slug}-shoot@1.0`  — opened only after approval,
+	 *                                               carries the approved documents
+	 *                                               inline and renders on Modal
+	 *
+	 *  Per-document revision goes through reset-task on the planning workspace.
+	 *  Downstream planning documents do NOT re-run on their own, so this page
+	 *  orchestrates a chain reset: wait for the upstream artifact to come back,
+	 *  then reset the next planning task in dependency order, and so on.
+	 *
+	 *  Same-origin routes back it:
+	 *    /studio/api/plan    — idea (or prior plan + feedback) -> Brief
+	 *    /studio/api/launch  — {stage:'planning'|'render'} -> workspace
+	 *    /api/harness        — POST proxy (poll-state, chat, reset-task…)
+	 *    /api/file           — raw artifact bytes, same-origin (the harness
+	 *                          itself sends no CORS headers)
+	 */
+	import { onMount } from 'svelte';
+	import { renderDocument, type Block } from './render-doc';
+	import {
+		SCENE_COUNT_MAX,
+		SCENE_COUNT_MIN,
+		type Artifact,
+		type ArtifactFile,
+		type Brief,
+		type ChatItem,
+		type LaunchResult,
+		type PollState,
+		type ProxyResult,
+		type Task
+	} from './types';
+
+	/** Polling cadence, unchanged from the previous surface: the harness author
+	 *  asked not to hammer the status endpoints. 15s while things move, 30s once
+	 *  three consecutive polls came back identical, no polling once terminal. */
+	const POLL_FAST_MS = 15_000;
+	const POLL_SLOW_MS = 30_000;
+	const QUIET_CYCLES = 3;
+
+	// Status vocabularies differ per entity: tasks end on `success`, artifacts on
+	// `approved`, and the harness also says `completed` in places. Failure is
+	// `permanently-failed` for tasks, `rejected` for artifacts.
+	const DONE = ['success', 'completed', 'approved'];
+	const DEAD = ['permanently-failed', 'failed', 'rejected'];
+
+	/** The five planning steps in dependency order. Each pairs the task that
+	 *  writes it with the artifact it registers, the ApprovedDocs field the
+	 *  render launch carries it under, and the name a person reads.
+	 *  The chain reset walks this list top to bottom. */
+	const PLANNING_STEPS = [
+		{ task: 'write_screenplay', artifact: 'screenplay', doc: 'screenplay', label: 'Screenplay' },
+		{ task: 'character_table', artifact: 'character_table', doc: 'characterTable', label: 'Cast' },
+		{ task: 'create_scenes', artifact: 'scene_list', doc: 'sceneList', label: 'Scenes' },
+		{ task: 'write_art_direction', artifact: 'art_direction', doc: 'artDirection', label: 'Art direction' },
+		{ task: 'write_visual_bible', artifact: 'visual_bible', doc: 'visualBible', label: 'Visual bible' }
+	] as const;
+
+	type PlanningStep = (typeof PLANNING_STEPS)[number];
+
+	/** The instruction a downstream planning task gets when an upstream document
+	 *  changed. Agent-facing, so English. */
+	const CONSISTENCY_INSTRUCTION =
+		'An upstream planning document changed — regenerate this document so it stays consistent with the updated upstream content.';
+
+	/** The assembly instruction that worked live — verbatim, do not "improve" it. */
+	const ASSEMBLY_MSG =
+		'Combine all rendered scene clips into a single final video file, in scene order. ' +
+		'Use the scene-assembler skill. Resolve each clip from the artifact index rather ' +
+		'than guessing by filename. Register the result as a new artifact.';
+
+	const OFFLINE_TEXT =
+		'The harness is not responding. Start the container: cd ~/auteur && ./run.sh';
+
+	const WELCOME_TEXT =
+		'Describe the film in one sentence. We start with a plan — screenplay, cast, ' +
+		'art direction — and you approve every document here. ' +
+		'No GPU time is used until you approve.';
+
+	/** Seed pitches for the audience this plugs into: adult creators making promo
+	 *  and teaser content for their own profiles. They set the register in one
+	 *  glance — confident, sensual, character-led — which a blank input never
+	 *  does, and they steer the model away from the children's-story default it
+	 *  otherwise falls into. */
+	const EXAMPLES = [
+		'a late-night confession from someone who knows exactly what they want',
+		'a slow burn between two rivals who keep pretending they are not interested',
+		'a teasing introduction to a character who is used to being adored'
+	];
+
+	/** Survives an accidental reload mid-run. Chat items are rebuilt from poll
+	 *  state on resume; only the run identity is persisted. */
+	const RESUME_KEY = 'auteur-studio-chat-v2';
+
+	const SCENE_CHOICES = Array.from(
+		{ length: SCENE_COUNT_MAX - SCENE_COUNT_MIN + 1 },
+		(_, i) => SCENE_COUNT_MIN + i
+	);
+
+	/** Tasks whose key/title says they combine clips belong to the Final cut
+	 *  rail entry, not the shoot list. */
+	const ASSEMBLE_RE = /assemb|combin|final|stitch|concat/i;
+
+	// --- transcript ----------------------------------------------------------
+
+	let chat = $state<ChatItem[]>([]);
+	/** Items replaced by a newer version collapse to one line. */
+	let superseded = $state<Record<string, boolean>>({});
+	let idSeq = 0;
+	function mkId(): string {
+		idSeq += 1;
+		return `i${Date.now().toString(36)}-${idSeq}`;
+	}
+	function pushItem(partial: Omit<ChatItem, 'id' | 'at'>): ChatItem {
+		const item: ChatItem = { ...partial, id: mkId(), at: Date.now() };
+		chat.push(item);
+		return item;
+	}
+	function pushStudio(text: string): ChatItem {
+		return pushItem({ who: 'studio', kind: 'text', text });
+	}
+	function pushError(text: string): ChatItem {
+		return pushItem({ who: 'studio', kind: 'error', text });
+	}
+
+	// --- the production ------------------------------------------------------
+
+	/** The current plan. Refinement replaces it wholesale; edits patch it. */
+	let brief = $state<Brief | null>(null);
+	/** The user's first idea, kept as context for plan revisions. */
+	let originalPitch = $state('');
+	/** The Brief the planning workspace was actually opened with — its slug may
+	 *  carry a retry suffix, and the render workspace derives from it. */
+	let launchedBrief = $state<Brief | null>(null);
+	let latestPlanId = $state('');
+	let sceneCount = $state(4);
+
+	let planningWs = $state('');
+	let renderWs = $state('');
+	const activeWs = $derived(renderWs || planningWs);
+
+	let startedAt = $state(0);
+	let now = $state(Date.now());
+
+	/** Last good poll per workspace — kept separately so the rail can keep
+	 *  drawing the planning steps after the poll target moves to rendering. */
+	let planningPoll = $state<PollState | null>(null);
+	let renderPoll = $state<PollState | null>(null);
+
+	let offline = $state(false);
+	let lastError = $state('');
+	let lastTick = $state<Date | null>(null);
+	let pollingActive = $state(false);
+
+	// --- planning documents ----------------------------------------------------
+
+	/** Per planning artifact key: undefined/waiting -> posted -> (regen -> posted).
+	 *  `regen` means a reset was issued and the current artifact content is stale. */
+	let docPhase = $state<Record<string, 'posted' | 'regen'>>({});
+	/** [ok] is a UI state only — the harness already moved on. */
+	let docAccepted = $state<Record<string, boolean>>({});
+	/** artifact key -> latest chat item showing it, so re-posts collapse the old. */
+	let latestDocItem = $state<Record<string, string>>({});
+	/** artifact key -> loaded document text (what the render launch carries). */
+	let docBody = $state<Record<string, string>>({});
+	/** artifact key -> the filename it came from. The renderer needs it to tell a
+	 *  JSON visual bible from a markdown document. */
+	let docFile = $state<Record<string, string>>({});
+	let approvalId = $state('');
+
+	/** The chain reset in flight, or null. `armed` flips once the reset task was
+	 *  seen non-terminal — only then does "success" mean "re-ran", not "still the
+	 *  old result". `polls` is the safety valve for a re-run faster than one poll
+	 *  interval: after enough polls with the task terminal and never armed, the
+	 *  re-run is assumed missed rather than stalling the chain forever. */
+	let chain = $state<{
+		taskKey: string;
+		downstream: string[];
+		armed: boolean;
+		polls: number;
+	} | null>(null);
+
+	// --- rendering -------------------------------------------------------------
+
+	let shootsAnnounced = $state(false);
+	let assemblySent = $state(false);
+	let finalPosted = $state(false);
+	let renderLaunching = $state(false);
+
+	// --- composer ----------------------------------------------------------------
+
+	let input = $state('');
+	let sending = $state(false);
+	let composer = $state<HTMLTextAreaElement | null>(null);
+
+	// --- plan editing (only the latest plan, only before launch) -----------------
+
+	let editingPlan = $state(false);
+	let editTitle = $state('');
+	let editStory = $state('');
+	let editStyle = $state('');
+
+	// --- per-item UI state ---------------------------------------------------------
+
+	let expanded = $state<Record<string, boolean>>({});
+	let changeOpen = $state<Record<string, boolean>>({});
+	let changeText = $state<Record<string, string>>({});
+	let changeBusy = $state<Record<string, boolean>>({});
+
+	// --- rail ---------------------------------------------------------------------
+
+	let railOpen = $state(false); // mobile toggle
+	let showDetails = $state(false);
+
+	// --- one-shot bookkeeping, deliberately non-reactive ---------------------------
+	// Written from the poll loop (imperative code), read nowhere in the template.
+	/* eslint-disable svelte/prefer-svelte-reactivity */
+	const clipPosted = new Set<string>(); // artifact ids already shown as clips
+	const failedNoted = new Set<string>(); // task ids already reported as failed
+	const preAssemblyIds = new Set<string>(); // artifacts that existed before assembly
+	/* eslint-enable svelte/prefer-svelte-reactivity */
+	/** After a resume, preAssemblyIds is empty — "new artifact since assembly"
+	 *  can no longer be told apart from a scene clip, so the final film is
+	 *  recognised by name alone until this run observes an assembly itself. */
+	let finalByNameOnly = false;
+	let errorNoted = false; // one error chat item per error episode
+	let offlineNoted = false;
+	let planningLaunchAttempts = 0;
+	let renderLaunchAttempts = 0;
+
+	// Poll loop bookkeeping — plain locals, nothing here belongs on screen.
+	let timer: ReturnType<typeof setTimeout> | null = null;
+	/** Epoch, bumped by every stop. A tick already awaiting its fetch when the
+	 *  loop is stopped or retargeted checks this and exits instead of scheduling
+	 *  a second loop against a harness whose author asked us not to hammer it. */
+	let runId = 0;
+	let quiet = 0;
+	let lastSig = '';
+	let sawAllDone = false;
+
+	// --- proxy ------------------------------------------------------------------
+
+	async function call(op: string, body: unknown = {}, ws: string = activeWs) {
+		const res = await fetch('/api/harness', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ workspace: ws, op, body })
+		});
+		if (!res.ok) throw new Error(`proxy ${res.status}`);
+		return (await res.json()) as ProxyResult;
+	}
+
+	// --- files -------------------------------------------------------------------
+
+	function fileKeyOf(f: ArtifactFile): string {
+		if (typeof f === 'string') return f;
+		for (const k of ['key', 'name', 'filename', 'file']) {
+			const v = f[k];
+			if (typeof v === 'string' && v) return v;
+		}
+		return '';
+	}
+
+	function kindOf(name: string): 'image' | 'video' | 'text' | 'other' {
+		const n = name.toLowerCase();
+		if (/\.(png|jpe?g|webp|gif|avif)$/.test(n)) return 'image';
+		if (/\.(mp4|webm|mov|m4v)$/.test(n)) return 'video';
+		if (/\.(md|markdown|txt|json|ya?ml)$/.test(n)) return 'text';
+		return 'other';
+	}
+
+	/** Clip filenames are NOT uniform (`scene1_clip.mp4` next to `scene3.mp4`) —
+	 *  ordering reads the first number found anywhere in the artifact's identity.
+	 *  No number means "sort last", never "scene zero". */
+	function sceneNo(...parts: string[]): number {
+		const m = parts.join(' ').match(/\d+/);
+		return m ? Number(m[0]) : 999;
+	}
+
+	function firstFileOfKind(a: Artifact, kind: 'text' | 'video'): string {
+		for (const f of a.files ?? []) {
+			const name = fileKeyOf(f);
+			if (name && kindOf(name) === kind) return name;
+		}
+		return '';
+	}
+
+	/** Same-origin file route — the browser cannot read the harness directly
+	 *  (no CORS on it), so everything renderable goes through this proxy. */
+	function fileUrl(ws: string, artifactId: string, fileKey: string, bust = false): string {
+		const q = new URLSearchParams({ workspace: ws, artifact: artifactId, file: fileKey });
+		if (bust) q.set('t', String(Date.now()));
+		return `/api/file?${q.toString()}`;
+	}
+
+	/** Reads a planning document as text. Cache-busted: after a chain reset the
+	 *  same artifact id carries new bytes. Returns null on failure — the chat
+	 *  item then degrades to a link, never an empty box. */
+	async function fetchDocBody(artifactId: string, fileKey: string): Promise<string | null> {
+		try {
+			const res = await fetch(fileUrl(planningWs, artifactId, fileKey, true));
+			if (!res.ok) return null;
+			const text = (await res.text()).trim();
+			return text || null;
+		} catch {
+			return null;
+		}
+	}
+
+	// --- composer: one input, three meanings --------------------------------------
+
+	/** What the input does right now. Deliberately does NOT switch to a "sending"
+	 *  state: the transcript already shows a live line for that, and a label that
+	 *  flickers between two strings on every submit is noise on a surface whose
+	 *  whole job is to stay calm for twenty minutes. */
+	const composerHint = $derived.by(() => {
+		if (!brief) return 'New film — describe the idea in one sentence';
+		if (!planningWs) return 'Refining the plan — describe what to change';
+		if (!renderWs) return 'Message to the planning crew lead';
+		return 'Message to the shooting crew lead';
+	});
+
+	/** Examples are a cure for the blank page, so they belong only on a blank
+	 *  page. They go the moment the user commits to anything — not when the plan
+	 *  comes back, which is several seconds later and leaves them sitting under
+	 *  the user's own message looking like unread options. */
+	/** Seconds the current request has been in flight — drives the live counter
+	 *  next to the busy line. Reset on every send so it always counts this call,
+	 *  not the session. */
+	let sendingSince = $state(0);
+	let sendingFor = $state(0);
+	$effect(() => {
+		if (!sending) {
+			sendingFor = 0;
+			return;
+		}
+		sendingSince = Date.now();
+		const id = setInterval(() => {
+			sendingFor = Math.round((Date.now() - sendingSince) / 1000);
+		}, 1000);
+		return () => clearInterval(id);
+	});
+
+	/** Which document cards the GPU gate opens. Not persisted: the gate is a
+	 *  single decision made once, and a reopened production is past it. */
+	let gateOpen = $state<Record<string, boolean>>({});
+
+	/** The gate's review list. Visual bible first and visually lifted: it is the
+	 *  document every render prompt inherits verbatim, so a mistake there is the
+	 *  one that shows up in all four clips. */
+	const GATE_NOTES: Record<string, string> = {
+		visual_bible: 'how every character and place will look — inherited by every shot',
+		art_direction: 'the visual language of the whole film',
+		scene_list: 'what happens in each scene',
+		character_table: 'who appears and how they are described',
+		screenplay: 'the script the scenes came from'
+	};
+	const GATE_ORDER = [
+		'visual_bible',
+		'art_direction',
+		'scene_list',
+		'character_table',
+		'screenplay'
+	];
+
+	const summaryDocs = $derived.by(() =>
+		GATE_ORDER.map((key) => {
+			const step = PLANNING_STEPS.find((s) => s.artifact === key);
+			return {
+				key,
+				artifact: key,
+				label: step?.label ?? key,
+				note: GATE_NOTES[key] ?? '',
+				file: docFile[key] ?? '',
+				body: docBody[key] ?? ''
+			};
+		}).filter((d) => d.body)
+	);
+
+	const showExamples = $derived(!brief && !sending && !chat.some((c) => c.who === 'user'));
+
+	const composerPlaceholder = $derived.by(() => {
+		if (!brief) return 'a late-night confession from someone who knows exactly what they want';
+		if (!planningWs) return 'make it more suggestive, keep the same character';
+		return 'a question or request for the crew';
+	});
+
+	async function submit() {
+		const text = input.trim();
+		if (!text || sending) return;
+		input = '';
+		grow(composer);
+		pushItem({ who: 'user', kind: 'text', text });
+		sending = true;
+		try {
+			if (!brief) await planFromIdea(text);
+			else if (!planningWs) await refinePlan(text);
+			else await managerChat(text);
+		} finally {
+			sending = false;
+		}
+	}
+
+	// --- planning the plan ----------------------------------------------------------
+
+	async function callPlan(body: unknown): Promise<Brief | null> {
+		const res = await fetch('/studio/api/plan', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify(body)
+		});
+		if (!res.ok) {
+			// A 4xx here is a SvelteKit error(), whose body is { message }.
+			const m = (await res.json().catch(() => null)) as { message?: string } | null;
+			pushError(m?.message || `Planning could not start (${res.status}).`);
+			return null;
+		}
+		const r = (await res.json()) as { ok: boolean; brief?: Brief; error?: string };
+		if (!r.ok || !r.brief) {
+			pushError(r.error || 'The plan could not be created.');
+			return null;
+		}
+		return r.brief;
+	}
+
+	async function planFromIdea(idea: string) {
+		const b = await callPlan({ prompt: idea, sceneCount });
+		if (!b) return;
+		originalPitch = idea;
+		brief = b;
+		sceneCount = b.sceneCount;
+		const item = pushItem({ who: 'studio', kind: 'plan', plan: b });
+		latestPlanId = item.id;
+	}
+
+	/** A message typed while a plan awaits approval refines that plan: the prior
+	 *  Brief and the feedback both travel to /plan, and the revision lands as a
+	 *  new chat item while the old one collapses. */
+	async function refinePlan(feedback: string) {
+		if (!brief) return;
+		const b = await callPlan({ prompt: originalPitch, sceneCount, prior: brief, feedback });
+		if (!b) return;
+		if (latestPlanId) superseded[latestPlanId] = true;
+		editingPlan = false;
+		brief = b;
+		sceneCount = b.sceneCount;
+		const item = pushItem({ who: 'studio', kind: 'plan', plan: b });
+		latestPlanId = item.id;
+	}
+
+	function openEdit() {
+		if (!brief) return;
+		editTitle = brief.title;
+		editStory = brief.story;
+		editStyle = brief.style;
+		editingPlan = true;
+	}
+
+	function saveEdit() {
+		if (!brief) return;
+		brief = {
+			...brief,
+			title: editTitle.trim() || brief.title,
+			story: editStory.trim() || brief.story,
+			style: editStyle.trim() || brief.style
+		};
+		const item = chat.find((c) => c.id === latestPlanId);
+		if (item) item.plan = brief;
+		editingPlan = false;
+	}
+
+	// --- talking to a workspace manager --------------------------------------------
+
+	async function managerChat(msg: string) {
+		try {
+			const r = await call('chat', { msg }, activeWs);
+			const d = r.data;
+			if (r.offline) {
+				pushError(OFFLINE_TEXT);
+			} else if (!r.ok) {
+				const e = d as { code?: string; error?: string } | string | undefined;
+				const detail =
+					typeof e === 'string' ? e : `${e?.code ?? r.status} — ${(e?.error ?? '').slice(0, 300)}`;
+				pushError(`Error from the harness: ${detail}`);
+			} else {
+				pushStudio(typeof d === 'string' ? d : JSON.stringify(d));
+				// A manager message can schedule new work — make sure the poller is
+				// awake and fast again, whatever state the backoff was in.
+				startPolling();
+			}
+		} catch (e) {
+			pushError(String(e));
+		}
+	}
+
+	// --- launching --------------------------------------------------------------------
+
+	let launchingPlanning = $state(false);
+
+	async function callLaunch(body: unknown): Promise<LaunchResult> {
+		const res = await fetch('/studio/api/launch', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify(body)
+		});
+		if (!res.ok) {
+			const m = (await res.json().catch(() => null)) as { message?: string } | null;
+			return { ok: false, error: m?.message || `launch ${res.status}` };
+		}
+		return (await res.json()) as LaunchResult;
+	}
+
+	/** [start] on the plan card. Opens the LLM-only planning workspace — cheap,
+	 *  no GPU. A workspace id can only be opened once (reopening is a silent
+	 *  no-op), so a retry after a failure carries a suffixed slug. */
+	async function launchPlanning() {
+		if (!brief || launchingPlanning || planningWs) return;
+		launchingPlanning = true;
+		planningLaunchAttempts += 1;
+		const b: Brief = {
+			...brief,
+			slug: planningLaunchAttempts === 1 ? brief.slug : `${brief.slug}-r${planningLaunchAttempts}`,
+			sceneCount
+		};
+		try {
+			const r = await callLaunch({ stage: 'planning', brief: b });
+			if (!r.ok) {
+				pushError(r.offline ? OFFLINE_TEXT : r.error || 'The workspace did not open.');
+				return;
+			}
+			launchedBrief = b;
+			planningWs = r.workspaceId;
+			startedAt = Date.now();
+			now = Date.now();
+			editingPlan = false;
+			pushStudio(
+				'Planning has started. About four minutes, still no GPU — documents appear here as they are written.'
+			);
+			persist();
+			startPolling();
+		} catch (e) {
+			pushError(String(e));
+		} finally {
+			launchingPlanning = false;
+		}
+	}
+
+	/** [start shooting] on the approval card. Collects the five approved
+	 *  document texts and opens the render workspace, whose planner prompt
+	 *  carries them inline. */
+	async function launchRender() {
+		if (!launchedBrief || renderLaunching || renderWs) return;
+		renderLaunching = true;
+		try {
+			// Re-fetch anything that failed to load earlier — the render launch is
+			// the one moment every document text must actually be in hand. Keys are
+			// the ApprovedDocs field names compose.ts asserts on, not artifact keys.
+			const approved: Record<string, string> = {};
+			for (const step of PLANNING_STEPS) {
+				let body = docBody[step.artifact];
+				if (!body) {
+					const a = (planningPoll?.artifacts ?? []).find((x) => x.key === step.artifact);
+					const name = a ? firstFileOfKind(a, 'text') : '';
+					if (a && name) body = (await fetchDocBody(a.id, name)) ?? '';
+				}
+				if (!body) {
+					pushError(`The ${step.label} document could not be read — shooting cannot start.`);
+					return;
+				}
+				approved[step.doc] = body;
+			}
+			renderLaunchAttempts += 1;
+			const b: Brief = {
+				...launchedBrief,
+				slug:
+					renderLaunchAttempts === 1
+						? launchedBrief.slug
+						: `${launchedBrief.slug}-s${renderLaunchAttempts}`
+			};
+			const r = await callLaunch({ stage: 'render', brief: b, approved });
+			if (!r.ok) {
+				pushError(r.offline ? OFFLINE_TEXT : r.error || 'The shooting workspace did not open.');
+				return;
+			}
+			renderWs = r.workspaceId;
+			startedAt = Date.now();
+			now = Date.now();
+			pushStudio(
+				'Shooting has started. Clips are rendered scene by scene — usually 15–20 minutes — and appear here as they land.'
+			);
+			persist();
+			startPolling();
+		} catch (e) {
+			pushError(String(e));
+		} finally {
+			renderLaunching = false;
+		}
+	}
+
+	// --- polling ----------------------------------------------------------------------
+
+	/** Everything that would make the screen change. Identical signatures back to
+	 *  back mean nothing moved, which is what the backoff keys off. */
+	function signature(p: PollState): string {
+		const t = (p.tasks ?? []).map((x) => `${x.id}:${x.status}`).join(',');
+		const a = (p.artifacts ?? [])
+			.map((x) => `${x.id}:${x.status}:${(x.files ?? []).length}`)
+			.join(',');
+		return `${t}|${a}`;
+	}
+
+	function stopPolling() {
+		if (timer) clearTimeout(timer);
+		timer = null;
+		runId += 1;
+		pollingActive = false;
+	}
+
+	function startPolling() {
+		stopPolling();
+		quiet = 0;
+		lastSig = '';
+		sawAllDone = false;
+		pollingActive = true;
+		tick(runId);
+	}
+
+	async function tick(id: number) {
+		// The target is captured up front: a launch mid-tick retargets the loop
+		// through startPolling (which bumps runId), so a stale tick simply exits.
+		const target = activeWs;
+		if (!target || id !== runId) return;
+		// Only a poll that actually answered may be used to decide anything.
+		// A failed poll is never progress.
+		let answered = false;
+		let fresh: PollState | null = null;
+		try {
+			const r = await call('poll-state', {}, target);
+			if (r.offline) {
+				offline = true;
+				quiet += 1;
+				if (!offlineNoted) {
+					offlineNoted = true;
+					pushError(OFFLINE_TEXT);
+				}
+			} else if (!r.ok) {
+				// A crashed workspace agent answers 500 INTERNAL_AGENT_EXECUTION_FAILED
+				// on every endpoint, forever. The last good state stays on screen and
+				// the harness's own words go above it — never an empty page.
+				offline = false;
+				const d = r.data as { code?: string; error?: string } | string | undefined;
+				lastError =
+					typeof d === 'string' ? d : `${d?.code ?? r.status} — ${(d?.error ?? '').slice(0, 300)}`;
+				quiet += 1;
+				if (!errorNoted) {
+					errorNoted = true;
+					pushError(`Error from the harness: ${lastError}`);
+				}
+			} else {
+				offline = false;
+				offlineNoted = false;
+				errorNoted = false;
+				lastError = '';
+				answered = true;
+				fresh = r.data as PollState;
+				lastTick = new Date();
+				const sig = signature(fresh);
+				if (sig === lastSig) quiet += 1;
+				else {
+					quiet = 0;
+					lastSig = sig;
+				}
+			}
+		} catch (e) {
+			lastError = String(e);
+			quiet += 1;
+		}
+
+		if (answered && fresh) {
+			if (target === renderWs && renderWs) {
+				renderPoll = fresh;
+				await processRender(fresh);
+			} else if (target === planningWs) {
+				planningPoll = fresh;
+				await processPlanning(fresh);
+			}
+		}
+
+		// End of the loop, decided only on confirmed data and only after two
+		// consecutive polls agree — there are windows (planner just finished,
+		// assembly just requested) where "all terminal" is true for one poll while
+		// new tasks are still being ingested.
+		if (answered && fresh && target === activeWs) {
+			const ts = fresh.tasks ?? [];
+			const terminal =
+				ts.length > 0 && ts.every((t) => DONE.includes(t.status) || DEAD.includes(t.status));
+			let finished = false;
+			if (renderWs) {
+				const anyDead = ts.some((t) => DEAD.includes(t.status));
+				// Rendering ends when the final film was posted, or when a shoot
+				// failed permanently and no assembly will be requested.
+				finished = terminal && (finalPosted || (anyDead && !assemblySent));
+			} else {
+				const allPosted = PLANNING_STEPS.every((s) => docPhase[s.artifact] === 'posted');
+				const anyDead = ts.some((t) => DEAD.includes(t.status));
+				// Planning ends (poll-wise) when every document is on screen and no
+				// chain reset is in flight — the workspace just sits there while the
+				// user reads. Anything that schedules new work restarts the loop.
+				finished = terminal && !chain && (allPosted || anyDead);
+			}
+			if (finished) {
+				if (sawAllDone) {
+					stopPolling();
+					return;
+				}
+				sawAllDone = true;
+			} else {
+				sawAllDone = false;
+			}
+		}
+
+		if (id !== runId) return;
+		timer = setTimeout(() => tick(id), quiet >= QUIET_CYCLES ? POLL_SLOW_MS : POLL_FAST_MS);
+	}
+
+	// --- planning workspace: post documents, drive the chain reset ----------------------
+
+	async function processPlanning(p: PollState) {
+		const tasks = p.tasks ?? [];
+		const arts = p.artifacts ?? [];
+
+		// Advance the chain reset, if one is in flight. The next downstream task is
+		// reset only AFTER the upstream re-ran to completion AND its artifact is
+		// approved again — the artifact content is what the downstream regeneration
+		// reads, so a merely-terminal task is not enough.
+		if (chain) {
+			const t = tasks.find((x) => x.key === chain!.taskKey);
+			if (t) {
+				chain.polls += 1;
+				if (t.status === 'pending' || t.status === 'running') chain.armed = true;
+				const step = PLANNING_STEPS.find((s) => s.task === chain!.taskKey);
+				const a = step ? arts.find((x) => x.key === step.artifact) : undefined;
+				const done = DONE.includes(t.status) && (!step || a?.status === 'approved');
+				// A re-run that never comes back approved (rejected artifact, wedged
+				// task) must not hold the chain — and the poll loop — open forever.
+				// ~40 polls is 10-20 minutes; a planning task re-run is ~1 minute.
+				if (!done && chain.polls >= 40) {
+					pushError(
+						'The regeneration did not finish in time — the documents stay on their previous version.'
+					);
+					for (const key of [chain.taskKey, ...chain.downstream]) {
+						const s = PLANNING_STEPS.find((x) => x.task === key);
+						if (s && docPhase[s.artifact] === 'regen') docPhase[s.artifact] = 'posted';
+					}
+					chain = null;
+				}
+				// Armed-and-done is the normal path; the polls>=8 fallback covers a
+				// re-run faster than one poll interval, so the chain cannot stall on
+				// a missed observation.
+				else if (done && (chain.armed || chain.polls >= 8)) {
+					if (step) delete docPhase[step.artifact]; // back to waiting -> re-posts below
+					const next = chain.downstream[0];
+					if (next) {
+						const ok = await resetTaskByKey(next, CONSISTENCY_INSTRUCTION);
+						if (ok) {
+							chain = { taskKey: next, downstream: chain.downstream.slice(1), armed: false, polls: 0 };
+						} else {
+							pushError('Could not start regenerating the next document.');
+							// The unreset tasks still hold their old (valid) content —
+							// hand the cards back so the user is not stuck on a card
+							// that says "regenerating" forever.
+							for (const key of [chain.taskKey, ...chain.downstream]) {
+								const s = PLANNING_STEPS.find((x) => x.task === key);
+								if (s && docPhase[s.artifact] === 'regen') docPhase[s.artifact] = 'posted';
+							}
+							chain = null;
+						}
+					} else {
+						chain = null;
+					}
+				}
+			}
+		}
+
+		// Report a permanently failed planning step, once.
+		for (const t of tasks) {
+			if (DEAD.includes(t.status) && !failedNoted.has(t.id)) {
+				failedNoted.add(t.id);
+				const step = PLANNING_STEPS.find((s) => s.task === t.key);
+				pushError(
+					`A planning step stalled: ${step?.label ?? t.key}. Ask for a change to run it again.`
+				);
+			}
+		}
+
+		// Post each approved document as a chat item, exactly once per version.
+		// A key in `regen` is skipped: its artifact still carries the pre-reset
+		// content until the chain confirms the re-run.
+		for (const step of PLANNING_STEPS) {
+			const phase = docPhase[step.artifact];
+			if (phase === 'posted' || phase === 'regen') continue;
+			const a = arts.find((x) => x.key === step.artifact);
+			const t = tasks.find((x) => x.key === step.task);
+			if (!a || a.status !== 'approved' || !t || !DONE.includes(t.status)) continue;
+			const name = firstFileOfKind(a, 'text');
+			if (!name) continue;
+			const body = await fetchDocBody(a.id, name);
+			docPhase[step.artifact] = 'posted';
+			docAccepted[step.artifact] = false;
+			if (body) {
+				docBody[step.artifact] = body;
+				docFile[step.artifact] = name;
+			}
+			const old = latestDocItem[step.artifact];
+			if (old) superseded[old] = true;
+			const item = pushItem({
+				who: 'studio',
+				kind: 'artifact',
+				artifact: {
+					key: step.artifact,
+					title: step.label,
+					taskId: t.id,
+					files: [{ name, url: fileUrl(planningWs, a.id, name) }],
+					body: body ?? undefined
+				}
+			});
+			latestDocItem[step.artifact] = item.id;
+		}
+
+		// The approval gate: all five documents on screen, no revision in flight.
+		const allPosted = PLANNING_STEPS.every((s) => docPhase[s.artifact] === 'posted');
+		if (allPosted && !chain && !renderWs && !approvalId) {
+			const item = pushItem({
+				who: 'studio',
+				kind: 'approval',
+				text: 'The plans are ready. Start shooting? GPU time begins here.'
+			});
+			approvalId = item.id;
+		}
+	}
+
+	async function resetTaskByKey(taskKey: string, instructions: string): Promise<boolean> {
+		const t = (planningPoll?.tasks ?? []).find((x) => x.key === taskKey);
+		if (!t) return false;
+		try {
+			const r = await call('reset-task', { req: { taskId: t.id, instructions } }, planningWs);
+			return r.ok;
+		} catch {
+			return false;
+		}
+	}
+
+	/** [request a change] submitted on a document card. Resets that one planning
+	 *  task with the user's instructions, then marks it and everything downstream
+	 *  for regeneration — the chain reset regenerates them in dependency order. */
+	async function requestChange(itemId: string, artifactKey: string) {
+		const text = (changeText[itemId] ?? '').trim();
+		if (!text || changeBusy[itemId]) return;
+		const idx = PLANNING_STEPS.findIndex((s) => s.artifact === artifactKey);
+		if (idx === -1) return;
+		const step = PLANNING_STEPS[idx];
+		changeBusy[itemId] = true;
+		try {
+			const ok = await resetTaskByKey(step.task, text);
+			if (!ok) {
+				pushError('Could not send the change request.');
+				return;
+			}
+			for (const s of PLANNING_STEPS.slice(idx)) {
+				docPhase[s.artifact] = 'regen';
+				docAccepted[s.artifact] = false;
+			}
+			chain = {
+				taskKey: step.task,
+				downstream: PLANNING_STEPS.slice(idx + 1).map((s) => s.task),
+				armed: false,
+				polls: 0
+			};
+			// A pending approval card no longer describes the truth — collapse it;
+			// a fresh one posts when the regenerated set is complete.
+			if (approvalId) {
+				superseded[approvalId] = true;
+				approvalId = '';
+			}
+			changeOpen[itemId] = false;
+			changeText[itemId] = '';
+			pushStudio(
+				`Rewriting the ${step.label.toLowerCase()}. Everything built on it is refreshed too, in order.`
+			);
+			startPolling();
+		} finally {
+			changeBusy[itemId] = false;
+		}
+	}
+
+	// --- render workspace: clips, then the assembly ---------------------------------------
+
+	function isShootTask(t: Task): boolean {
+		return t.key !== 'schedule_video_renders' && !ASSEMBLE_RE.test(`${t.key} ${t.title}`);
+	}
+
+	async function processRender(p: PollState) {
+		const tasks = p.tasks ?? [];
+		const arts = p.artifacts ?? [];
+		const shoots = tasks.filter(isShootTask);
+
+		if (!shootsAnnounced && shoots.length > 0) {
+			shootsAnnounced = true;
+			pushStudio(`Shoot scheduled — ${shoots.length} scenes to render.`);
+		}
+
+		for (const t of tasks) {
+			if (DEAD.includes(t.status) && !failedNoted.has(t.id)) {
+				failedNoted.add(t.id);
+				pushError(`A shooting step stalled: ${t.title || t.key}.`);
+			}
+		}
+
+		// Every approved artifact with a video file becomes a clip in the chat.
+		// After the assembly request, a new artifact (or one named like a final
+		// cut) is the film itself and closes the transcript.
+		const clipArts = arts
+			.filter((a) => a.status === 'approved' && firstFileOfKind(a, 'video'))
+			.sort((x, y) => sceneNo(x.key, x.name) - sceneNo(y.key, y.name));
+		for (const a of clipArts) {
+			if (clipPosted.has(a.id)) continue;
+			clipPosted.add(a.id);
+			const name = firstFileOfKind(a, 'video');
+			const isFinal =
+				assemblySent &&
+				(ASSEMBLE_RE.test(`${a.key} ${a.name} ${name}`) ||
+					(!finalByNameOnly && !preAssemblyIds.has(a.id)));
+			pushItem({
+				who: 'studio',
+				kind: 'clips',
+				text: isFinal ? 'The film is ready.' : a.name || name,
+				artifact: {
+					key: a.key,
+					title: isFinal ? 'A film' : a.name || name,
+					taskId: '',
+					files: [{ name, url: fileUrl(renderWs, a.id, name) }]
+				}
+			});
+			if (isFinal) {
+				finalPosted = true;
+				persist();
+			}
+		}
+
+		// The assembly cannot be a declared task (requires.tasks cannot reference
+		// dynamically created shoots), so this page triggers it: when every shoot
+		// is a success, the proven instruction goes to the manager.
+		if (
+			!assemblySent &&
+			shoots.length > 0 &&
+			shoots.every((t) => DONE.includes(t.status)) &&
+			tasks.every((t) => !DEAD.includes(t.status))
+		) {
+			assemblySent = true;
+			persist();
+			for (const a of arts) preAssemblyIds.add(a.id);
+			pushStudio('All scenes are done. Assembling the final cut.');
+			try {
+				const r = await call('chat', { msg: ASSEMBLY_MSG }, renderWs);
+				if (r.ok && typeof r.data === 'string' && r.data.trim()) pushStudio(r.data);
+				else if (!r.ok) pushError('The assembly request did not go through — you can send it again from the chat.');
+			} catch (e) {
+				pushError(`The assembly request did not go through: ${e}`);
+			}
+			// New work was just scheduled — wake the backoff and forget any
+			// "everything is terminal" observation.
+			startPolling();
+		}
+	}
+
+	// --- rail --------------------------------------------------------------------------
+
+	type RailStatus = 'pending' | 'running' | 'done' | 'failed' | 'regen';
+	type RailEntry = { id: string; label: string; status: RailStatus };
+
+	function mapStatus(s: string): RailStatus {
+		if (DONE.includes(s)) return 'done';
+		if (DEAD.includes(s)) return 'failed';
+		if (s === 'running') return 'running';
+		return 'pending';
+	}
+
+	const STATUS_LABEL: Record<RailStatus, string> = {
+		pending: 'waiting',
+		running: 'running',
+		done: 'done',
+		failed: 'stalled',
+		regen: 'rerunning'
+	};
+
+	/** The full pipeline, future steps included — ghosts (pending) until a poll
+	 *  brings the real task, shoot entries from the render poll once the planner
+	 *  created them, N static ghosts from the brief before that. */
+	const rail = $derived.by<RailEntry[]>(() => {
+		const b = brief;
+		if (!b) return [];
+		// The rail speaks the workspace's own vocabulary: these are the exact task
+		// keys the harness, its event log and its terminal UI use. One name per
+		// step, so a screenshot of this rail and a line in an error message are
+		// talking about the same thing without translation.
+		const out: RailEntry[] = [{ id: 'plan', label: 'plan', status: 'done' }];
+
+		const ptasks = planningPoll?.tasks ?? [];
+		for (const s of PLANNING_STEPS) {
+			const t = ptasks.find((x) => x.key === s.task);
+			let status: RailStatus = t ? mapStatus(t.status) : 'pending';
+			if (docPhase[s.artifact] === 'regen' || chain?.taskKey === s.task) status = 'regen';
+			out.push({ id: s.task, label: s.task, status });
+		}
+
+		const rtasks = renderPoll?.tasks ?? [];
+		const sched = rtasks.find((t) => t.key === 'schedule_video_renders');
+		out.push({
+			id: 'schedule',
+			label: 'schedule_video_renders',
+			status: sched ? mapStatus(sched.status) : 'pending'
+		});
+
+		const shoots = rtasks.filter(isShootTask).sort((x, y) => sceneNo(x.key) - sceneNo(y.key));
+		if (shoots.length > 0) {
+			shoots.forEach((t, i) =>
+				out.push({ id: t.id, label: t.key, status: mapStatus(t.status) })
+			);
+		} else {
+			for (let i = 0; i < b.sceneCount; i++) {
+				out.push({ id: `shoot-ghost-${i}`, label: `shoot_scene_${i + 1}`, status: 'pending' });
+			}
+		}
+
+		const asm = rtasks.find((t) => ASSEMBLE_RE.test(`${t.key} ${t.title}`));
+		out.push({
+			id: 'assemble',
+			// The only step whose key we cannot know in advance: the manager agent
+			// names this task itself when it creates it at runtime (we have seen
+			// both assemble_final_film and combine_clips_final_video). Show the
+			// real key once it exists, a placeholder while it is still a ghost.
+			label: asm?.key ?? 'assemble_final_film',
+			status: finalPosted
+				? 'done'
+				: asm
+					? mapStatus(asm.status)
+					: assemblySent
+						? 'running'
+						: 'pending'
+		});
+		return out;
+	});
+
+	const railDone = $derived(rail.filter((e) => e.status === 'done').length);
+	const railRunning = $derived(rail.find((e) => e.status === 'running' || e.status === 'regen'));
+	const railSummary = $derived.by(() => {
+		const head = `${railDone}/${rail.length} steps done`;
+		return railRunning ? `${head} · ${railRunning.label.toLowerCase()}` : head;
+	});
+
+	/** Precise rather than rounded: during a twenty-minute run the difference
+	 *  between "4 minutes" and "4m 31s" is the difference between a page that
+	 *  looks frozen and one that is visibly counting. */
+	function elapsedLabel(ms: number): string {
+		const s = Math.max(0, Math.floor(ms / 1000));
+		const m = Math.floor(s / 60);
+		return m === 0 ? `${s}s` : `${m}m ${String(s % 60).padStart(2, '0')}s`;
+	}
+
+	// --- resume / reset -----------------------------------------------------------------
+
+	function persist() {
+		try {
+			sessionStorage.setItem(
+				RESUME_KEY,
+				JSON.stringify({
+					brief,
+					launchedBrief,
+					planningWs,
+					renderWs,
+					assemblySent,
+					startedAt
+				})
+			);
+		} catch {
+			/* private mode throws on write — resume is a nicety, not a feature */
+		}
+	}
+
+	function forget() {
+		try {
+			sessionStorage.removeItem(RESUME_KEY);
+		} catch {
+			/* ignore */
+		}
+	}
+
+	function reset() {
+		stopPolling();
+		forget();
+		chat = [];
+		superseded = {};
+		brief = null;
+		originalPitch = '';
+		launchedBrief = null;
+		latestPlanId = '';
+		planningWs = '';
+		renderWs = '';
+		planningPoll = null;
+		renderPoll = null;
+		offline = false;
+		lastError = '';
+		docPhase = {};
+		docAccepted = {};
+		latestDocItem = {};
+		docBody = {};
+		docFile = {};
+		gateOpen = {};
+		approvalId = '';
+		chain = null;
+		shootsAnnounced = false;
+		assemblySent = false;
+		finalPosted = false;
+		editingPlan = false;
+		expanded = {};
+		changeOpen = {};
+		changeText = {};
+		changeBusy = {};
+		railOpen = false;
+		showDetails = false;
+		clipPosted.clear();
+		failedNoted.clear();
+		preAssemblyIds.clear();
+		finalByNameOnly = false;
+		errorNoted = false;
+		offlineNoted = false;
+		planningLaunchAttempts = 0;
+		renderLaunchAttempts = 0;
+		pushStudio(WELCOME_TEXT);
+	}
+
+	// --- small UI helpers ------------------------------------------------------------------
+
+	function grow(el: HTMLTextAreaElement | null) {
+		if (!el) return;
+		el.style.height = 'auto';
+		el.style.height = `${el.scrollHeight}px`;
+	}
+
+	function useExample(text: string) {
+		input = text;
+		composer?.focus();
+		grow(composer);
+	}
+
+	/** Collapse threshold for document prose — roughly twelve lines of text. */
+	function isLong(text: string): boolean {
+		return text.length > 700 || text.split('\n').length > 12;
+	}
+
+	// Follow the conversation, but only when the reader is already near the
+	// bottom — nobody's scroll position gets yanked while they re-read a scene.
+	let bottomEl = $state<HTMLElement | null>(null);
+	/** The transcript element — the page's only scroll container. */
+	let scrollEl = $state<HTMLElement | null>(null);
+	/** Whether the reader is parked at the latest message. Drives both the
+	 *  follow-the-tail behaviour and the "latest ↓" button. */
+	let atBottom = $state(true);
+
+	/** Within this many pixels of the end still counts as "at the bottom" —
+	 *  a reader who has scrolled up by a line or two has not left the tail. */
+	const TAIL_SLACK = 120;
+
+	function onTranscriptScroll() {
+		const el = scrollEl;
+		if (!el) return;
+		atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= TAIL_SLACK;
+	}
+
+	function scrollToBottom(behavior: ScrollBehavior = 'auto') {
+		const el = scrollEl;
+		if (!el) return;
+		el.scrollTo({ top: el.scrollHeight, behavior });
+		atBottom = true;
+	}
+
+	let seenLen = 0;
+	$effect(() => {
+		const len = chat.length;
+		if (len <= seenLen) {
+			seenLen = len;
+			return;
+		}
+		seenLen = len;
+		// Follow the tail only for a reader who is already there. Yanking someone
+		// out of a document they are mid-way through reading is the one thing a
+		// long-running transcript must never do — this run posts messages for
+		// twenty minutes.
+		if (!atBottom) return;
+		// Two frames: the first lets Svelte flush the new node, the second lets
+		// layout settle so scrollHeight is the post-insert value.
+		requestAnimationFrame(() => requestAnimationFrame(() => scrollToBottom('smooth')));
+	});
+
+	onMount(() => {
+		// A run left behind by a reload picks up where it was: the run identity is
+		// restored and the poller re-attaches. Document and clip items rebuild
+		// themselves from poll state; the conversation itself is not replayed.
+		let resumed = false;
+		try {
+			const raw = sessionStorage.getItem(RESUME_KEY);
+			if (raw) {
+				const s = JSON.parse(raw) as {
+					brief?: Brief;
+					launchedBrief?: Brief;
+					planningWs?: string;
+					renderWs?: string;
+					assemblySent?: boolean;
+					startedAt?: number;
+				};
+				if (s.brief && (s.planningWs || s.renderWs)) {
+					resumed = true;
+					brief = s.brief;
+					launchedBrief = s.launchedBrief ?? s.brief;
+					sceneCount = s.brief.sceneCount;
+					planningWs = s.planningWs ?? '';
+					renderWs = s.renderWs ?? '';
+					assemblySent = s.assemblySent ?? false;
+					startedAt = s.startedAt || Date.now();
+					if (assemblySent) {
+						shootsAnnounced = true;
+						finalByNameOnly = true;
+					}
+					pushStudio('Production restored — it picks up where it left off.');
+					const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
+					latestPlanId = item.id;
+					startPolling();
+				}
+			}
+		} catch {
+			/* nothing to resume */
+		}
+		if (!resumed) pushStudio(WELCOME_TEXT);
+
+		// Elapsed time is shown in whole minutes, so a 15s clock is plenty.
+		const clock = setInterval(() => (now = Date.now()), 15_000);
+		return () => {
+			clearInterval(clock);
+			stopPolling();
+		};
+	});
+</script>
+
+<svelte:head>
+	<title>studio · auteur</title>
+</svelte:head>
+
+{#snippet statusPill(status: RailStatus)}
+	<span
+		class="shrink-0 rounded-md px-2 py-0.5 text-[10px] tracking-wide
+			{status === 'running' ? 'bg-[var(--st-accent)] font-semibold text-white' : ''}
+			{status === 'done' ? 'bg-[var(--st-surface-2)] text-[var(--st-muted)]' : ''}
+			{status === 'failed' ? 'bg-[#5c2f24] text-[#f2d7cd]' : ''}
+			{status === 'regen' ? 'bg-[var(--st-surface-2)] text-[var(--st-text)]' : ''}
+			{status === 'pending' ? 'text-[var(--st-faint)]' : ''}"
+	>
+		{STATUS_LABEL[status]}
+	</span>
+{/snippet}
+
+{#snippet railList()}
+	{#if offline || lastError}
+		<div class="mb-3 rounded-xl bg-[var(--st-surface-2)] px-3 py-2">
+			<p class="text-xs leading-relaxed text-[var(--st-muted)]">
+				{offline ? 'The harness is not responding — showing the last known state.' : 'Error from the harness — showing the last known state.'}
+			</p>
+		</div>
+	{/if}
+	<ol class="space-y-1.5">
+		{#each rail as e (e.id)}
+			<li class="flex items-center justify-between gap-3">
+				<span
+					class="min-w-0 truncate text-[13px] {e.status === 'pending'
+						? 'text-[var(--st-faint)]'
+						: 'text-[var(--st-text)]'}"
+				>
+					{e.label}
+				</span>
+				{@render statusPill(e.status)}
+			</li>
+		{/each}
+	</ol>
+	<div class="mt-4">
+		<button
+			type="button"
+			class="cursor-pointer text-xs text-[var(--st-faint)] underline-offset-4 hover:text-[var(--st-muted)] hover:underline"
+			onclick={() => (showDetails = !showDetails)}
+		>
+			{showDetails ? 'hide details' : 'details'}
+		</button>
+		{#if showDetails}
+			<div class="mt-2 space-y-1 font-mono text-[10px] leading-relaxed text-[var(--st-faint)]">
+				{#if planningWs}<p class="break-all">plan: {planningWs}</p>{/if}
+				{#if renderWs}<p class="break-all">shoot: {renderWs}</p>{/if}
+				{#if lastTick}<p>last update: {lastTick.toLocaleTimeString('en-GB')}</p>{/if}
+			</div>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet document(blocks: Block[])}
+	<div class="space-y-3.5 text-[0.95rem] leading-[1.7] text-[var(--st-text)]">
+		{#each blocks as b, i (i)}
+			{#if b.kind === 'heading'}
+				<h4
+					class="font-display font-semibold {b.level === 1
+						? 'text-base'
+						: 'text-sm'} {i > 0 ? 'pt-2' : ''}"
+				>
+					{b.text}
+				</h4>
+			{:else if b.kind === 'para'}
+				<p>{#each b.spans as s, j (j)}{#if s.bold}<strong class="font-semibold"
+								>{s.text}</strong
+							>{:else if s.italic}<em>{s.text}</em>{:else}{s.text}{/if}{/each}</p>
+			{:else if b.kind === 'list'}
+				<ul class="space-y-1.5 pl-4">
+					{#each b.items as item, j (j)}
+						<li class="list-disc">
+							{#each item as s, k (k)}{#if s.bold}<strong class="font-semibold">{s.text}</strong
+								>{:else if s.italic}<em>{s.text}</em>{:else}{s.text}{/if}{/each}
+						</li>
+					{/each}
+				</ul>
+			{:else if b.kind === 'table'}
+				<!-- Wide tables scroll inside their own card rather than pushing the
+					 whole column sideways. -->
+				<div class="scroller -mx-1 overflow-x-auto px-1">
+					<table class="w-full min-w-[34rem] border-collapse text-sm">
+						<thead>
+							<tr>
+								{#each b.head as h (h)}
+									<th
+										class="border-b border-[var(--st-line)] px-2.5 py-2 text-left text-xs font-semibold tracking-wide text-[var(--st-muted)] uppercase"
+									>
+										{h}
+									</th>
+								{/each}
+							</tr>
+						</thead>
+						<tbody>
+							{#each b.rows as row, r (r)}
+								<tr class="align-top">
+									{#each row as cell, c (c)}
+										<td
+											class="border-b border-[var(--st-line)] px-2.5 py-2.5 {c === 0
+												? 'font-semibold whitespace-nowrap'
+												: ''}"
+										>
+											{cell}
+										</td>
+									{/each}
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{:else if b.kind === 'rule'}
+				<hr class="border-[var(--st-line)]" />
+			{:else if b.kind === 'slug'}
+				<p class="pt-3 font-mono text-xs font-semibold tracking-widest text-[var(--st-muted)] uppercase">
+					{b.text}
+				</p>
+			{:else if b.kind === 'transition'}
+				<p class="text-right font-mono text-xs tracking-widest text-[var(--st-faint)] uppercase">
+					{b.text}
+				</p>
+			{:else if b.kind === 'cue'}
+				<!-- Dialogue indented the way a script page does it: the eye finds who
+					 is speaking without reading the line. -->
+				<div class="pl-6 sm:pl-12">
+					<p class="font-mono text-xs font-semibold tracking-wider">
+						{b.who}{#if b.parenthetical}<span class="font-normal text-[var(--st-muted)]">
+								({b.parenthetical})</span
+							>{/if}
+					</p>
+					{#each b.lines as l, j (j)}
+						<p class="text-[0.95rem]">{l}</p>
+					{/each}
+				</div>
+			{:else if b.kind === 'anchor'}
+				<!-- An anchor is pasted verbatim into every render prompt, so it is
+					 shown as the quotable unit it is, not as prose. -->
+				<div class="rounded-xl bg-[var(--st-surface-2)] px-3.5 py-3">
+					<p class="text-[10px] font-semibold tracking-[0.18em] text-[var(--st-faint)] uppercase">
+						{b.label}
+					</p>
+					<p class="mt-1.5 text-[0.9rem] leading-relaxed">{b.text}</p>
+				</div>
+			{/if}
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet videoCard(name: string, url: string, caption: string)}
+	<figure class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
+		<!-- The app-wide CSS in layout.css hides every native media control on
+		     <video> unless the element opts in with .video-with-controls. -->
+		<!-- svelte-ignore a11y_media_has_caption -->
+		<video
+			src={url}
+			controls
+			playsinline
+			preload="metadata"
+			class="video-with-controls block aspect-video w-full bg-black"
+		></video>
+		<figcaption class="px-4 py-3 text-sm text-[var(--st-muted)]">{caption || name}</figcaption>
+	</figure>
+{/snippet}
+
+<!-- Chat-app shell: the page itself never scrolls. The window is split into a
+	 fixed header, a scrolling transcript and a pinned composer, so the input and
+	 the task rail stay put while only the conversation moves — the layout every
+	 chat client converges on. 100dvh (not vh) keeps it correct on mobile Safari,
+	 where the URL bar changes the viewport height mid-scroll. -->
+<main class="studio flex h-[100dvh] flex-col overflow-hidden pt-20">
+	<div class="mx-auto flex min-h-0 w-full max-w-[66rem] flex-1 flex-col px-5">
+		<header class="mb-4 flex shrink-0 items-baseline justify-between gap-4">
+			<p class="text-[10px] font-bold tracking-[0.3em] text-[var(--st-faint)] uppercase">
+				auteur studio
+			</p>
+			{#if brief}
+				<button
+					type="button"
+					class="cursor-pointer text-xs text-[var(--st-faint)] underline-offset-4 hover:text-[var(--st-muted)] hover:underline"
+					onclick={reset}
+				>
+					new production
+				</button>
+			{/if}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a
+						href="/studio/admin"
+						class="cursor-pointer text-xs text-[var(--st-faint)] underline-offset-4 hover:text-[var(--st-muted)] hover:underline"
+					>
+						tuning
+					</a>
+		</header>
+
+		<div
+			class="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-10"
+		>
+			<!-- ── chat column ─────────────────────────────────────────────── -->
+			<!-- min-h-0 is load-bearing: without it a flex child refuses to shrink
+				 below its content and the inner overflow-y-auto never engages. -->
+			<div class="flex min-h-0 min-w-0 flex-1 flex-col">
+				<!-- Mobile: the rail collapses into a slim strip above the chat. -->
+				{#if brief}
+					<div class="mb-5 lg:hidden">
+						<button
+							type="button"
+							class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl bg-[var(--st-surface)] px-4 py-3 text-left"
+							onclick={() => (railOpen = !railOpen)}
+						>
+							<span class="min-w-0 truncate text-xs text-[var(--st-muted)]">{railSummary}</span>
+							<span class="shrink-0 text-xs text-[var(--st-faint)]">
+								{railOpen ? 'hide' : 'progress'}
+							</span>
+						</button>
+						{#if railOpen}
+							<div class="enter mt-2 rounded-2xl bg-[var(--st-surface)] p-4">
+								{@render railList()}
+							</div>
+						{/if}
+					</div>
+				{/if}
+
+				<!-- ── the transcript — the only scrolling region on the page ── -->
+				<!-- Empty state centres its own content: a welcome line pinned to the
+					 top of a tall blank column reads as a page that failed to load.
+					 Once the transcript has real messages it goes back to flowing from
+					 the top, which is what a conversation wants. -->
+				<div
+					bind:this={scrollEl}
+					onscroll={onTranscriptScroll}
+					class="scroller min-h-0 flex-1 space-y-5 overflow-y-auto pr-1 pb-2 {showExamples
+						? 'flex flex-col justify-center'
+						: ''}"
+				>
+					{#each chat as item (item.id)}
+						{#if superseded[item.id]}
+							<p class="text-xs text-[var(--st-faint)]">
+								earlier version
+								{#if item.kind === 'plan' && item.plan}
+									· {item.plan.title}
+								{:else if item.kind === 'artifact' && item.artifact}
+									· {item.artifact.title}
+								{/if}
+							</p>
+						{:else if item.who === 'user'}
+							<div class="flex justify-end">
+								<p
+									class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
+								>
+									{item.text}
+								</p>
+							</div>
+						{:else if item.kind === 'text'}
+							<p class="enter doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+								{item.text}
+							</p>
+						{:else if item.kind === 'error'}
+							<div class="enter rounded-2xl bg-[var(--st-surface)] p-4">
+								<p class="text-xs font-semibold text-[#f2d7cd]">
+									<span class="mr-2 rounded-md bg-[#5c2f24] px-2 py-0.5">error</span>
+								</p>
+								<p class="doc mt-2 text-sm leading-relaxed text-[var(--st-muted)]">{item.text}</p>
+							</div>
+						{:else if item.kind === 'plan' && item.plan}
+							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+								{#if editingPlan && item.id === latestPlanId}
+									<label class="sr-only" for="edit-title">Title</label>
+									<input
+										id="edit-title"
+										bind:value={editTitle}
+										class="w-full rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 font-display text-lg font-semibold outline-none focus:border-[var(--st-muted)]"
+									/>
+									<label class="sr-only" for="edit-story">Story</label>
+									<textarea
+										id="edit-story"
+										bind:value={editStory}
+										rows="12"
+										class="mt-3 block w-full resize-y rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] p-4 text-[0.95rem] leading-[1.75] outline-none focus:border-[var(--st-muted)]"
+									></textarea>
+									<label class="sr-only" for="edit-style">Look</label>
+									<textarea
+										id="edit-style"
+										bind:value={editStyle}
+										rows="2"
+										class="mt-3 block w-full resize-y rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] p-4 text-sm leading-relaxed outline-none focus:border-[var(--st-muted)]"
+									></textarea>
+									<div class="mt-4 flex items-center gap-3">
+										<button
+											type="button"
+											onclick={saveEdit}
+											class="cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2.5 font-display text-xs font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)]"
+										>
+											save
+										</button>
+										<button
+											type="button"
+											onclick={() => (editingPlan = false)}
+											class="cursor-pointer px-2 py-2.5 text-xs text-[var(--st-muted)] hover:text-[var(--st-text)]"
+										>
+											cancel
+										</button>
+									</div>
+								{:else}
+									<h3 class="font-display text-lg leading-snug font-semibold tracking-tight">
+										{item.plan.title}
+									</h3>
+									<p class="doc mt-3 text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+										{item.plan.story}
+									</p>
+									<p class="mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
+										{item.plan.style}
+									</p>
+									<p class="mt-3 text-xs text-[var(--st-faint)]">
+										{item.plan.sceneCount} scenes
+										{#if item.id === latestPlanId && !planningWs}
+											· refine it by typing in the chat
+										{/if}
+									</p>
+									{#if item.id === latestPlanId && !planningWs}
+										<div class="mt-5 flex flex-wrap items-center gap-3">
+											<button
+												type="button"
+												disabled={launchingPlanning}
+												onclick={launchPlanning}
+												class="cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 font-display text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-50"
+											>
+												{launchingPlanning ? 'starting…' : 'start'}
+											</button>
+											<button
+												type="button"
+												disabled={launchingPlanning}
+												onclick={openEdit}
+												class="cursor-pointer px-2 py-2.5 text-sm text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-50"
+											>
+												edit
+											</button>
+										</div>
+									{:else if item.id === latestPlanId}
+										<p class="mt-4 text-xs text-[var(--st-faint)]">started</p>
+									{/if}
+								{/if}
+							</article>
+						{:else if item.kind === 'artifact' && item.artifact}
+							{@const art = item.artifact}
+							{@const isCurrent = latestDocItem[art.key] === item.id}
+							{@const phase = docPhase[art.key]}
+							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+								<h3 class="font-display text-base font-semibold">{art.title}</h3>
+								{#if art.body}
+									<div class="relative mt-3" class:clamp={isLong(art.body) && !expanded[item.id]}>
+										{@render document(renderDocument(art.files[0]?.name ?? '', art.body))}
+									</div>
+									{#if isLong(art.body)}
+										<button
+											type="button"
+											class="mt-3 cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 hover:text-[var(--st-text)] hover:underline"
+											onclick={() => (expanded[item.id] = !expanded[item.id])}
+										>
+											{expanded[item.id] ? 'collapse' : 'more'}
+										</button>
+									{/if}
+								{:else}
+									<!-- The text could not be read — the file itself is offered
+									     instead of an empty card. Same-origin route, but not a
+									     SvelteKit page, hence the lint exception. -->
+									{#each art.files as f (f.name)}
+										<p class="mt-2 text-sm text-[var(--st-muted)]">
+											<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+											<a
+												href={f.url}
+												target="_blank"
+												rel="noreferrer"
+												class="underline underline-offset-4"
+											>
+												{f.name}
+											</a>
+										</p>
+									{/each}
+								{/if}
+
+								{#if isCurrent && !renderWs}
+									<div class="mt-4 border-t border-[var(--st-line)] pt-4">
+										{#if phase === 'regen'}
+											<p class="text-xs text-[var(--st-muted)]">regenerating</p>
+										{:else if docAccepted[art.key]}
+											<p class="text-xs text-[var(--st-faint)]">elfogadva</p>
+										{:else}
+											<div class="flex flex-wrap items-center gap-3">
+												<button
+													type="button"
+													onclick={() => (docAccepted[art.key] = true)}
+													class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-2 text-xs font-semibold text-[var(--st-text)] transition-colors hover:bg-[var(--st-line)]"
+												>
+													ok
+												</button>
+												<button
+													type="button"
+													onclick={() => (changeOpen[item.id] = !changeOpen[item.id])}
+													class="cursor-pointer px-1 py-2 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+												>
+													request a change
+												</button>
+											</div>
+											{#if changeOpen[item.id]}
+												<form
+													class="mt-3 flex gap-2"
+													onsubmit={(e) => {
+														e.preventDefault();
+														requestChange(item.id, art.key);
+													}}
+												>
+													<label class="sr-only" for="change-{item.id}">What should change</label>
+													<input
+														id="change-{item.id}"
+														bind:value={changeText[item.id]}
+														placeholder="what should change in this document"
+														class="min-w-0 flex-1 rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--st-faint)] focus:border-[var(--st-muted)]"
+													/>
+													<button
+														type="submit"
+														disabled={changeBusy[item.id] || !(changeText[item.id] ?? '').trim()}
+														class="cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2.5 font-display text-xs font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+													>
+														send
+													</button>
+												</form>
+												<p class="mt-2 text-xs text-[var(--st-faint)]">
+													This step is rewritten, and everything built on it is refreshed after it.
+												</p>
+											{/if}
+										{/if}
+									</div>
+								{/if}
+							</article>
+						{:else if item.kind === 'approval'}
+							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+								<p class="doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">{item.text}</p>
+
+								<!-- The last free moment. Everything above this card can still be
+									 rewritten; nothing below it can. So the gate lists what is about
+									 to be filmed rather than asking for a blind yes — and it puts the
+									 visual bible first, because that is the document that decides
+									 whether the four clips look like one film. -->
+								<div class="mt-4 space-y-2">
+									{#each summaryDocs as d (d.artifact)}
+										<button
+											type="button"
+											class="flex w-full cursor-pointer items-baseline gap-3 rounded-xl px-3 py-2.5 text-left transition-colors {d.key ===
+											'visual_bible'
+												? 'bg-[var(--st-surface-2)]'
+												: 'hover:bg-[var(--st-surface-2)]'}"
+											onclick={() => (gateOpen[d.key] = !gateOpen[d.key])}
+										>
+											<span class="min-w-0 flex-1">
+												<span class="font-display text-sm font-semibold">{d.label}</span>
+												<span class="ml-2 text-xs text-[var(--st-faint)]">{d.note}</span>
+											</span>
+											<span class="shrink-0 text-xs text-[var(--st-faint)]">
+												{gateOpen[d.key] ? 'close' : 'review'}
+											</span>
+										</button>
+										{#if gateOpen[d.key]}
+											<div class="enter rounded-xl bg-[var(--st-bg)] px-4 py-3.5">
+												{@render document(renderDocument(d.file, d.body))}
+											</div>
+										{/if}
+									{/each}
+								</div>
+
+								{#if renderWs}
+									<p class="mt-3 text-xs text-[var(--st-faint)]">shooting has started</p>
+								{:else}
+									<p class="mt-4 text-xs text-[var(--st-faint)]">
+										Ask for a change in the chat while you still can — after this the
+										documents are fixed.
+									</p>
+									<button
+										type="button"
+										disabled={renderLaunching}
+										onclick={launchRender}
+										class="mt-4 cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 font-display text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-50"
+									>
+										{renderLaunching ? 'starting…' : 'start shooting'}
+									</button>
+								{/if}
+							</article>
+						{:else if item.kind === 'clips' && item.artifact}
+							<div class="enter">
+								{#each item.artifact.files as f (f.name)}
+									{@render videoCard(f.name, f.url, item.text ?? item.artifact.title)}
+								{/each}
+							</div>
+						{/if}
+					{/each}
+
+					{#if sending}
+						<!-- A word alone reads as frozen once it has been on screen for
+							 ten seconds. The counter is the proof that something is still
+							 happening, and it makes a stall visible as a stall. -->
+						<p class="flex items-center gap-2.5 text-xs text-[var(--st-faint)]">
+							<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
+							<span>{brief && planningWs ? 'the crew is replying' : 'planning'}</span>
+							{#if sendingFor > 1}
+								<span class="tabular-nums">{sendingFor}s</span>
+							{/if}
+						</p>
+					{/if}
+
+					{#if showExamples}
+						<div class="flex flex-wrap gap-2 pt-1">
+							{#each EXAMPLES as ex (ex)}
+								<button
+									type="button"
+									class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-2 text-left text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+									onclick={() => useExample(ex)}
+								>
+									{ex}
+								</button>
+							{/each}
+						</div>
+					{/if}
+
+					<div bind:this={bottomEl}></div>
+				</div>
+
+				<!-- ── the composer — pinned, outside the scrolling region ── -->
+				<div class="relative shrink-0 pt-3 pb-4">
+					{#if !atBottom}
+						<!-- Scrolled up and reading? New messages must not yank the view.
+							 This is the way back down, the way every chat client offers it. -->
+						<button
+							type="button"
+							class="enter absolute -top-9 left-1/2 z-10 -translate-x-1/2 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 py-1.5 text-xs text-[var(--st-text)]"
+							onclick={() => scrollToBottom('smooth')}
+						>
+							latest ↓
+						</button>
+					{/if}
+					{#if pollingActive && startedAt}
+						<!-- Live status: the dot says something is happening, the clock says
+							 how long, and the label says what — the three things a reader
+							 waiting twenty minutes actually wants. Opacity-only pulse: the
+							 house rules forbid glows. -->
+						<p class="mb-2 flex items-center gap-2.5 px-2 text-xs text-[var(--st-muted)]">
+							<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
+							<span class="tabular-nums">{elapsedLabel(now - startedAt)}</span>
+							{#if railRunning}
+								<span class="text-[var(--st-faint)]">·</span>
+								<span class="min-w-0 truncate">{railRunning.label}</span>
+							{/if}
+						</p>
+					{/if}
+					<p class="mb-1.5 px-2 text-xs text-[var(--st-faint)]">{composerHint}</p>
+					<div
+						class="rounded-3xl bg-[var(--st-surface)] p-3"
+					>
+						<label class="sr-only" for="composer">Message</label>
+						<textarea
+							id="composer"
+							bind:this={composer}
+							bind:value={input}
+							rows="1"
+							spellcheck="false"
+							placeholder={composerPlaceholder}
+							oninput={(e) => grow(e.currentTarget)}
+							onkeydown={(e) => {
+								// Enter sends, Shift+Enter breaks the line.
+								if (e.key === 'Enter' && !e.shiftKey) {
+									e.preventDefault();
+									submit();
+								}
+							}}
+							class="block max-h-56 w-full resize-none border-0 bg-transparent px-3 py-2 text-[1.05rem] leading-relaxed outline-none focus:ring-0 placeholder:text-[var(--st-faint)]"
+						></textarea>
+
+						<div class="flex items-center justify-between gap-3 px-2 pt-1 pb-1">
+							{#if !planningWs}
+								<div class="flex items-center gap-1.5">
+									<span class="mr-1 text-xs text-[var(--st-faint)]">scenes</span>
+									{#each SCENE_CHOICES as n (n)}
+										<button
+											type="button"
+											aria-pressed={sceneCount === n}
+											class="h-7 w-7 cursor-pointer rounded-full text-xs transition-colors {sceneCount ===
+											n
+												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+												: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}"
+											onclick={() => {
+												sceneCount = n;
+												if (brief) brief.sceneCount = n;
+											}}
+										>
+											{n}
+										</button>
+									{/each}
+								</div>
+							{:else}
+								<span></span>
+							{/if}
+
+							<button
+								type="button"
+								aria-label="send"
+								disabled={sending || !input.trim()}
+								onclick={submit}
+								class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+							>
+								{#if sending}
+									<span class="text-xs">…</span>
+								{:else}
+									<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true">
+										<path
+											d="M10 16V4M10 4l-5 5M10 4l5 5"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										/>
+									</svg>
+								{/if}
+							</button>
+						</div>
+					</div>
+
+				</div>
+			</div>
+
+			<!-- ── desktop task rail ────────────────────────────────────────── -->
+			{#if brief}
+				<aside class="hidden min-h-0 lg:block">
+					<div
+						class="scroller max-h-full overflow-y-auto rounded-2xl bg-[var(--st-surface)] p-5"
+					>
+						<p class="text-[10px] font-bold tracking-[0.25em] text-[var(--st-faint)] uppercase">
+							the production
+						</p>
+						{#if pollingActive && startedAt}
+							<p class="mt-1 text-xs text-[var(--st-faint)]">{elapsedLabel(now - startedAt)}</p>
+						{/if}
+						<div class="mt-4">
+							{@render railList()}
+						</div>
+					</div>
+				</aside>
+			{/if}
+		</div>
+	</div>
+</main>
+
+<style>
+	/* The studio wears the ratemyd brand: the app's own near-black surfaces, coral
+	 * accent and type pairing. The --st-* names stay as the component's internal
+	 * vocabulary so the markup never hardcodes a colour — only this block maps
+	 * them onto the app tokens, which is also what makes a future re-theme a
+	 * six-line edit. --st-surface-2 and --st-faint have no app-level counterpart:
+	 * they are the one step of lift above a card and the one step below muted,
+	 * derived from the same ramp. No glows anywhere: depth is fills and spacing,
+	 * per the house rules. */
+	.studio {
+		--st-bg: var(--color-bg);
+		--st-surface: var(--color-surface);
+		--st-surface-2: #1e1e1e;
+		--st-line: var(--color-border);
+		--st-text: var(--color-text);
+		--st-muted: var(--color-muted);
+		--st-faint: #565656;
+		--st-accent: var(--color-coral);
+		--st-accent-strong: var(--color-coral-dark);
+		background: var(--st-bg);
+		color: var(--st-text);
+		font-family: var(--font-body);
+	}
+
+	/* Headings and the wordmark carry the display face, the way they do across
+	 * the product. Body copy — including the generated prose, which is the thing
+	 * people actually read here — stays on the body face. */
+	.studio :global(h1),
+	.studio :global(h2),
+	.studio :global(h3) {
+		font-family: var(--font-display);
+	}
+
+	/* The two scroll regions: a thin, unobtrusive bar that matches the surface
+	 * rather than the OS default light one. Firefox gets the standard property,
+	 * WebKit/Blink the pseudo-elements. */
+	/* Opacity only — a colour glow would be a neon halo, which the house rules
+	   forbid. Slow enough to read as breathing, not as an alarm. */
+	.beacon {
+		animation: beacon 1.8s ease-in-out infinite;
+	}
+	@keyframes beacon {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.35;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.beacon {
+			animation: none;
+		}
+	}
+
+	.scroller {
+		scrollbar-width: thin;
+		scrollbar-color: var(--st-line) transparent;
+	}
+	.scroller::-webkit-scrollbar {
+		width: 10px;
+	}
+	.scroller::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.scroller::-webkit-scrollbar-thumb {
+		background: var(--st-line);
+		border: 3px solid transparent;
+		background-clip: content-box;
+		border-radius: 999px;
+	}
+
+	/* Generated text is markdown-ish prose: keep the author's line breaks, keep
+	 * the measure readable. */
+	.doc {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+
+	/* Collapsed document: roughly twelve lines, then a fade into the card's own
+	 * fill. The gradient is the surface color, not a colored halo. */
+	.clamp {
+		max-height: 21rem;
+		overflow: hidden;
+	}
+	.clamp::after {
+		content: '';
+		position: absolute;
+		inset-inline: 0;
+		bottom: 0;
+		height: 4.5rem;
+		background: linear-gradient(to bottom, transparent, var(--st-surface));
+		pointer-events: none;
+	}
+
+	/* Things arrive during a long wait; they should settle in rather than pop.
+	 * One animation for the whole page, and none of it for anyone who asked the
+	 * OS to stop moving things. */
+	.enter {
+		animation: enter 0.45s cubic-bezier(0.25, 1, 0.5, 1) both;
+	}
+	@keyframes enter {
+		from {
+			opacity: 0;
+			transform: translateY(8px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.enter {
+			animation: none;
+		}
+	}
+</style>

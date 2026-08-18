@@ -1,0 +1,26 @@
+{
+	"name": "auteur-webui",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Chat-first web UI for the auteur harness",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^5.3.3",
+		"@sveltejs/kit": "^2.50.2",
+		"@sveltejs/vite-plugin-svelte": "^6.2.4",
+		"@tailwindcss/forms": "^0.5.11",
+		"@tailwindcss/vite": "^4.1.18",
+		"@types/node": "^24.10.1",
+		"svelte": "^5.54.0",
+		"svelte-check": "^4.4.2",
+		"tailwindcss": "^4.1.18",
+		"typescript": "^5.9.3",
+		"vite": "^7.3.1"
+	}
+}

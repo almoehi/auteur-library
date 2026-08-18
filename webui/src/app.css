@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+/* The design tokens are lifted verbatim from the host product this UI is
+ * destined for, names included. That is deliberate: the studio is developed
+ * here as a standalone app and merged back later, and a token renamed in
+ * transit would mean rewriting every surface twice. Only the tokens the studio
+ * actually uses are carried over — the source palette is far larger. */
+
+@font-face {
+	font-family: 'Space Grotesk';
+	font-style: normal;
+	font-weight: 500 700;
+	font-display: optional;
+	src: url('/fonts/space-grotesk-latin.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+		U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'DM Sans';
+	font-style: normal;
+	font-weight: 400 600;
+	font-display: optional;
+	src: url('/fonts/dm-sans-latin.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+		U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@theme {
+	--font-display: 'Space Grotesk', system-ui, sans-serif;
+	--font-body: 'DM Sans', system-ui, sans-serif;
+
+	--color-bg: #0c0c0c;
+	--color-surface: #141414;
+	--color-surface-2: #1a1a1a;
+	--color-border: #262626;
+
+	--color-coral: #ff4d6d;
+	--color-coral-dark: #d93254;
+
+	--color-green: #22c55e;
+	--color-blue: #3b82f6;
+
+	--color-text: #f0f0f0;
+	--color-muted: #737373;
+}
+
+html {
+	background: var(--color-bg);
+	color-scheme: dark;
+}
+
+body {
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-family: var(--font-body);
+	-webkit-font-smoothing: antialiased;
+}
+
+/* Carried over with the same opt-in class the host product uses: there, a global
+ * rule strips the UA media controls and surfaces opt back in with
+ * .video-with-controls. Nothing strips them here, so the class is inert — it
+ * stays so the markup does not have to change when this merges back. */
+video:not(.video-with-controls)::-webkit-media-controls-enclosure {
+	display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
