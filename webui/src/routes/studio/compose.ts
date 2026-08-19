@@ -96,8 +96,9 @@ const STYLE_MAX = 500;
 const SLUG_MAX = 64;
 
 /** Cap per approved document. All five land inside one planner prompt, which
- *  the glm-5-2 planner (500k context) and the deepseek gate policies (32k) both
- *  have to read — the smaller window is the budget that matters. */
+ *  the planner and the gate policies both have to read. Every model in the
+ *  registry now declares the same 131k window, so this is a straight budget
+ *  against that rather than against the smallest of several. */
 const DOC_MAX = 100_000;
 
 /** C0 controls minus the newline we actually want, plus DEL. A YAML scalar
@@ -281,77 +282,70 @@ function profilesBlock(seed: number): string {
       compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
 }
 
-const MODELS_BLOCK = `  # Model registry — requires OLLAMA_API_KEY env var.
+const MODELS_BLOCK = `  # Model registry — requires OPENAI_API_KEY env var (an xAI key; the harness's
+  # "openai" provider is any OpenAI-compatible API, and api.x.ai is one).
+  #
+  # Latency was measured on a 120-word planning call before these were chosen,
+  # because a slow model here is not a slow call — the prompt writer runs three
+  # times per scene, so a 70s model costs three and a half minutes of wall clock
+  # per clip. grok-4.6 measured 70s and is deliberately absent.
   models:
-    - id: gemma4
-      name: "Gemma 4 (Ollama Cloud)"
-      provider: ollama
-      model: "gemma4:cloud"
-      endpoint: "https://ollama.com"
+    - id: grok-fast
+      name: "Grok 4.20 non-reasoning (xAI) — 2.8s"
+      provider: openai
+      model: "grok-4.20-0309-non-reasoning"
+      endpoint: "https://api.x.ai/v1"
       streaming: false
       reasoningEffort: default
       temperature: 0.4
       capabilities:
         - chat
       settings:
-        contextWindow: 200000
+        contextWindow: 131072
 
-    - id: deepseek-v4-flash
-      name: "DeepSeek V4 Flash (Ollama Cloud)"
-      provider: ollama
-      model: "deepseek-v4-flash:cloud"
-      endpoint: "https://ollama.com"
-      streaming: false
-      reasoningEffort: default
-      temperature: 0.4
-      capabilities:
-        - chat
-      settings:
-        contextWindow: 32768
-
-    - id: qwen3-5
-      name: "Qwen 3.5 (Ollama Cloud)"
-      provider: ollama
-      model: "qwen3.5:cloud"
-      endpoint: "https://ollama.com"
+    - id: grok-4-5
+      name: "Grok 4.5 (xAI) — 7.2s"
+      provider: openai
+      model: "grok-4.5"
+      endpoint: "https://api.x.ai/v1"
       streaming: false
       reasoningEffort: default
       temperature: 0.7
       capabilities:
         - chat
       settings:
-        contextWindow: 32768
+        contextWindow: 131072
 
-    - id: glm-5-2
-      name: "GLM 5.2 (Ollama Cloud)"
-      provider: ollama
-      model: "glm-5.2:cloud"
-      endpoint: "https://ollama.com"
+    - id: grok-4-3
+      name: "Grok 4.3 (xAI) — 15.5s"
+      provider: openai
+      model: "grok-4.3"
+      endpoint: "https://api.x.ai/v1"
+      streaming: false
+      reasoningEffort: default
+      temperature: 0.4
+      capabilities:
+        - chat
+      settings:
+        contextWindow: 131072
+
+    - id: grok-reasoning
+      name: "Grok 4.20 reasoning (xAI) — 26.3s"
+      provider: openai
+      model: "grok-4.20-0309-reasoning"
+      endpoint: "https://api.x.ai/v1"
       streaming: false
       reasoningEffort: medium
       temperature: 0.2
       capabilities:
         - chat
       settings:
-        contextWindow: 500000
-
-    - id: nemotron-3.5-lightning
-      name: "nemotron-3.5-lightning (Ollama Local)"
-      provider: ollama
-      model: "nemotron-3.5-lightning"
-      endpoint: "http://localhost:11434"
-      streaming: false
-      reasoningEffort: default
-      temperature: 0.2
-      capabilities:
-        - chat
-      settings:
-        contextWindow: 500000`;
+        contextWindow: 131072`;
 
 const POLICY_SCREENPLAY_QUALITY = `    screenplay-quality:
         id: screenplay-quality
         description: "Screenplay faithfully adapts the source story with proper formatting"
-        model: gemma4
+        model: grok-fast
         modality: text
         grading: Binary
         evalPrompt: >
@@ -370,7 +364,7 @@ const POLICY_SCREENPLAY_QUALITY = `    screenplay-quality:
 const POLICY_CAST_QUALITY = `    cast-quality:
         id: cast-quality
         description: "Cast list accurately reflects characters and captures their essence"
-        model: deepseek-v4-flash
+        model: grok-fast
         modality: text
         grading: Binary
         evalPrompt: >
@@ -402,7 +396,7 @@ const POLICY_CAST_QUALITY = `    cast-quality:
 const POLICY_SCENES_QUALITY = `    scenes-quality:
         id: scenes-quality
         description: "Scene breakdown covers all narrative beats with clear location and action"
-        model: deepseek-v4-flash
+        model: grok-fast
         modality: text
         grading: Binary
         evalPrompt: >
@@ -421,7 +415,7 @@ const POLICY_SCENES_QUALITY = `    scenes-quality:
 const POLICY_ENSURE_TASKS_CREATED = `    ensure-tasks-created:
         id: ensure-tasks-created
         description: "Make sure all tasks identified by a planner have been created and scheduled for processing"
-        model: deepseek-v4-flash
+        model: grok-fast
         modality: text
         grading: Binary
         evalPrompt: >
@@ -451,7 +445,7 @@ const POLICY_ENSURE_TASKS_CREATED = `    ensure-tasks-created:
 const POLICY_RENDER_COVERAGE_FROM_ARTIFACTS = `    ensure-render-covers-all-scenes:
         id: ensure-render-covers-all-scenes
         description: "Verifies render tasks were scheduled for every scene in the approved scene list without skipping any."
-        model: deepseek-v4-flash
+        model: grok-fast
         modality: text
         grading: Binary
         evalPrompt: >
@@ -488,7 +482,7 @@ const POLICY_RENDER_COVERAGE_FROM_ARTIFACTS = `    ensure-render-covers-all-scen
 const POLICY_RENDER_COVERAGE_FROM_PROMPT = `    ensure-render-covers-all-scenes:
         id: ensure-render-covers-all-scenes
         description: "Verifies render tasks were scheduled for every scene in the scene list embedded in the planner prompt without skipping any."
-        model: deepseek-v4-flash
+        model: grok-fast
         modality: text
         grading: Binary
         evalPrompt: >
@@ -524,7 +518,7 @@ const POLICY_RENDER_COVERAGE_FROM_PROMPT = `    ensure-render-covers-all-scenes:
 const POLICY_RENDER_TASKS_HAVE_ARTIFACTS = `    ensure-render-tasks-have-artifacts:
         id: ensure-render-tasks-have-artifacts
         description: "Every render task created by the scheduler must have at least one artifact registered"
-        model: deepseek-v4-flash
+        model: grok-fast
         modality: text
         grading: Binary
         evalPrompt: >

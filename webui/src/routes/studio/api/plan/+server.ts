@@ -21,7 +21,7 @@
  *  Like every route here it is unauthenticated — this app is a local operator
  *  tool. See the README: bind it to localhost, never expose it.
  *
- *  REQUIRES `OLLAMA_API_KEY` in this app's own environment. The harness reads it
+ *  REQUIRES `XAI_API_KEY` in this app's own environment. The harness reads it
  *  from ~/auteur/.env, but that file is the container's, not ours, and we never
  *  read it from disk at runtime. Copy the value into webui/.env (or export it
  *  before `pnpm dev`); without it this route answers with a plain error telling
@@ -32,15 +32,16 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SCENE_COUNT_MAX, SCENE_COUNT_MIN, type Brief } from '../../types';
 
-/** Ollama Cloud — the same provider the workspace's own model registry points
- *  at (see spec.models in the composed workspace), so if a production can run
- *  at all, this key works. */
-const OLLAMA = 'https://ollama.com/api/chat';
+/** xAI, through its OpenAI-compatible endpoint — the same provider the
+ *  workspace's own model registry points at (see spec.models in the composed
+ *  workspace), so if a production can run at all, this key works. */
+const XAI = 'https://api.x.ai/v1/chat/completions';
 
-/** Cheapest of the four cloud models the harness registers, and verified
- *  working on this account. Planning is a two-paragraph job; it does not need
- *  the reasoning models the screenwriter uses. */
-const MODEL = 'gemma4:cloud';
+/** Fastest of the four models the harness registers, and the only one that
+ *  reliably fits the timeout below: measured 2.8s here against 7.2s for
+ *  grok-4.5 and 70s for grok-4.6. Planning is a two-paragraph job; it does not
+ *  need the reasoning model the planner uses. */
+const MODEL = 'grok-4.20-0309-non-reasoning';
 
 /** A chat message is the point of this surface. Anything past this is someone
  *  pasting a document into the wrong box — cut it off rather than paying to
@@ -161,7 +162,7 @@ function extractJson(raw: string): Draft | null {
 }
 
 async function ask(key: string, system: string, user: string): Promise<string> {
-	const res = await fetch(OLLAMA, {
+	const res = await fetch(XAI, {
 		method: 'POST',
 		headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
 		body: JSON.stringify({
@@ -170,6 +171,10 @@ async function ask(key: string, system: string, user: string): Promise<string> {
 				{ role: 'system', content: system },
 				{ role: 'user', content: user }
 			],
+			// The provider guarantees parseable JSON, which the system prompts
+			// ask for anyway. extractJson and the terse retry below stay as the
+			// belt to this braces — they cost nothing when the first call works.
+			response_format: { type: 'json_object' },
 			stream: false
 		}),
 		signal: AbortSignal.timeout(TIMEOUT_MS)
@@ -180,10 +185,10 @@ async function ask(key: string, system: string, user: string): Promise<string> {
 	// in the body, but a helpful error that dumps "what we sent" is exactly how
 	// keys end up in a terminal scrollback. Status and the provider's own words
 	// are enough to tell a 401 from a rate limit.
-	if (!res.ok) throw new Error(`ollama ${res.status}: ${text.slice(0, 200)}`);
+	if (!res.ok) throw new Error(`xai ${res.status}: ${text.slice(0, 200)}`);
 
-	const body = JSON.parse(text) as { message?: { content?: string } };
-	return body.message?.content ?? '';
+	const body = JSON.parse(text) as { choices?: { message?: { content?: string } }[] };
+	return body.choices?.[0]?.message?.content ?? '';
 }
 
 /** kebab-case, ASCII only: the slug becomes `<slug>@1.0` in a URL path, and the
@@ -273,14 +278,14 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!revising && !pitch) throw error(400, 'Missing prompt');
 	if (prior !== null && !feedback) throw error(400, 'Missing feedback for revision');
 
-	const key = env.OLLAMA_API_KEY;
+	const key = env.XAI_API_KEY;
 	if (!key) {
 		// Not an exception: it is the state of a machine where nobody has set
 		// the variable yet, and the fix is one line. Say the line.
 		return json({
 			ok: false,
 			error:
-				'OLLAMA_API_KEY is not set — copy it from ~/auteur/.env into webui/.env and restart the dev server.'
+				'XAI_API_KEY is not set — copy it from ~/auteur/.env into webui/.env and restart the dev server.'
 		});
 	}
 

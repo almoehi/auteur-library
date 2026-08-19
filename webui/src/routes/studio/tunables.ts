@@ -33,11 +33,16 @@ export interface Tunable {
 }
 
 /** Models the registry offers. Ids match spec.models in the workspace YAML. */
+/** Timings are measured, not advertised: a 120-word planning call against each
+ *  model on this account. They matter more than they look — the prompt writer
+ *  runs three times per scene, so the gap between the first and last entry here
+ *  is minutes of wall clock per clip. grok-4.6 is deliberately absent: it
+ *  measured 70s, which is a different product. */
 export const MODEL_CHOICES = [
-	{ id: 'gemma4', note: 'balanced, fast' },
-	{ id: 'deepseek-v4-flash', note: 'cheapest, short context' },
-	{ id: 'qwen3-5', note: 'structured output' },
-	{ id: 'glm-5-2', note: 'largest context, slowest' }
+	{ id: 'grok-fast', note: 'fastest — 2.8s' },
+	{ id: 'grok-4-5', note: 'best writing — 7.2s' },
+	{ id: 'grok-4-3', note: 'alternative — 15.5s' },
+	{ id: 'grok-reasoning', note: 'thinks before answering — 26.3s' }
 ] as const;
 
 export const TUNABLES: Tunable[] = [
@@ -47,7 +52,7 @@ export const TUNABLES: Tunable[] = [
 		affects:
 			'Writes the final text the video model receives. Camera, lighting, motion, framing — every visual decision in every clip comes from here.',
 		agent: 'prompt_writer',
-		model: 'qwen3-5',
+		model: 'grok-4-5',
 		fallback: `          # Prompt Enhancement Engine — System Prompt
 
             ## Role
@@ -186,7 +191,7 @@ export const TUNABLES: Tunable[] = [
 		label: 'Visual bible task',
 		affects:
 			'Produces one fixed sentence per character and per location. Every scene pastes these in verbatim, so this is what makes the clips look like one film instead of four.',
-		model: 'deepseek-v4-flash',
+		model: 'grok-fast',
 		runBy: 'generic',
 		fallback: `        Use the visual-bible-writer skill to produce visual_bible.json.
 
@@ -204,7 +209,7 @@ export const TUNABLES: Tunable[] = [
 		label: 'Art direction task',
 		affects:
 			'Sets the film\'s visual rules: era, colour palette, lighting, and the list of looks that must never appear. The visual bible is built from it.',
-		model: 'gemma4',
+		model: 'grok-fast',
 		runBy: 'director',
 		fallback: `        Use the art-direction-writer skill to write art_direction.md for this production.
 
@@ -227,7 +232,7 @@ export const TUNABLES: Tunable[] = [
 		affects:
 			'Turns your story into the screenplay. Tone, dialogue density and pacing start here, and the cast, scenes and art direction are all built on it.',
 		agent: 'screenwriter',
-		model: 'gemma4',
+		model: 'grok-4-5',
 		fallback: `        You are {name}, a {role}. Your objective: {objective}.
 
         You are an expert Hollywood screenwriter and structural story consultant.
@@ -281,7 +286,7 @@ export const TUNABLES: Tunable[] = [
 		affects:
 			'Writes one file per character: appearance, wardrobe, mannerisms. The visual bible turns these into the anchors the renders use.',
 		agent: 'casting_director',
-		model: 'gemma4',
+		model: 'grok-fast',
 		fallback: `        You are an expert script supervisor and film production assistant. Your task is to generate a concise, production-ready Character Breakdown Sheet based on the provided character details.
 
         Use the exact Markdown structure below. Keep all bullet points extremely short and punchy. If any information is missing from the user's input, use placeholders in square brackets \\\`[...]\\\`.
@@ -323,7 +328,7 @@ export const TUNABLES: Tunable[] = [
 		affects:
 			'Breaks the screenplay into the numbered scene list — how many scenes, where each happens, who is in it. One clip is rendered per row.',
 		agent: 'director',
-		model: 'gemma4',
+		model: 'grok-fast',
 		fallback: `        You are {name}, a {role}. Your objective: {objective}.
         You have a strong visual sensibility and a precise understanding of character
         motivation and subtext. Analyze material critically and deliver concise,
@@ -335,7 +340,7 @@ export const TUNABLES: Tunable[] = [
 		affects:
 			'Drives the render itself: calls the video workflow, requests the prompt, saves the clip. Mechanics, not style — editing this changes how, not what.',
 		agent: 'generic',
-		model: 'deepseek-v4-flash',
+		model: 'grok-fast',
 		risky: true,
 		fallback: `        You are {name}, a {role}. Your objective: {objective}.
         Be thorough, well-organized, and precise. Follow instructions closely and
@@ -363,7 +368,7 @@ export const TUNABLES: Tunable[] = [
 		affects:
 			'Creates one shoot task per scene and hands each the anchors it needs. If this breaks, no clips are rendered at all.',
 		agent: 'planner',
-		model: 'glm-5-2',
+		model: 'grok-reasoning',
 		risky: true,
 		fallback: `        You are {name}, a {role}. Your objective: {objective}.
 
@@ -393,12 +398,12 @@ export const TUNABLES: Tunable[] = [
 
 /** Agent -> default model, the reset target for the model dropdowns. */
 export const DEFAULT_MODELS: Record<string, string> = {
-	prompt_writer: 'qwen3-5',
-	screenwriter: 'gemma4',
-	casting_director: 'gemma4',
-	director: 'gemma4',
-	generic: 'deepseek-v4-flash',
-	planner: 'glm-5-2',
+	prompt_writer: 'grok-4-5',
+	screenwriter: 'grok-4-5',
+	casting_director: 'grok-fast',
+	director: 'grok-fast',
+	generic: 'grok-fast',
+	planner: 'grok-reasoning'
 };
 
 export interface Overrides {
@@ -418,5 +423,5 @@ export function textFor(id: TunableId, o?: Overrides): string {
 }
 
 export function modelFor(agent: string, o?: Overrides): string {
-	return o?.models?.[agent]?.trim() || DEFAULT_MODELS[agent] || 'gemma4';
+	return o?.models?.[agent]?.trim() || DEFAULT_MODELS[agent] || 'grok-fast';
 }

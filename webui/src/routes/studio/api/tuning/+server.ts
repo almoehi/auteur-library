@@ -18,18 +18,25 @@ export const GET: RequestHandler = async () => {
 		updatedAt: stored.updatedAt ?? null,
 		models: MODEL_CHOICES,
 		defaultModels: DEFAULT_MODELS,
-		items: TUNABLES.map((t) => ({
+		items: TUNABLES.map((t) => {
+			// A tunable either owns an agent or is executed by someone else's.
+			// Either way the model shown must be the one that will actually run
+			// it, so a prompt whose host agent was re-pointed in this panel does
+			// not keep advertising the model it used to run on.
+			const host = t.agent ?? t.runBy;
+			return {
 			id: t.id,
 			label: t.label,
 			affects: t.affects,
 			agent: t.agent ?? null,
 			runBy: t.runBy ?? null,
-			model: t.agent ? (stored.models?.[t.agent] ?? DEFAULT_MODELS[t.agent]) : t.model,
-			defaultModel: t.agent ? DEFAULT_MODELS[t.agent] : t.model,
+			model: host ? (stored.models?.[host] ?? DEFAULT_MODELS[host]) : t.model,
+			defaultModel: host ? DEFAULT_MODELS[host] : t.model,
 			risky: t.risky ?? false,
 			fallback: t.fallback,
 			override: stored.prompts?.[t.id] ?? null
-		}))
+			};
+		})
 	});
 };
 
