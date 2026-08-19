@@ -781,7 +781,7 @@ function renderPlannerTaskBlock(docs: ApprovedDocs): string {
           drifts into a different medium.
         - do NOT let each task choose its own resolution, fps or step count — the
           render profile governs those. Say so explicitly in the task description.
-        - assign every shooting task to the agent whose id is exactly `generic`.
+        - assign every shooting task to the agent whose id is exactly: generic
           That is the id, not a description — the registry holds three agents
           (planner, generic, prompt_writer) and any other name is rejected.
 
