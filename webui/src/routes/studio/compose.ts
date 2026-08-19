@@ -271,7 +271,7 @@ const WORKFLOWS_BLOCK = `  workflows:
     - name: krea2_base_realism
       url: krea2_base_realism@mvp-lkg
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
-      url: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit@mvp-lkg`;
+      url: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit@dszabo`;
 
 function profilesBlock(seed: number): string {
 	return `  profiles:

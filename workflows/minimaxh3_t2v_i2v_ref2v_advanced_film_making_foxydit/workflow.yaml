@@ -29,7 +29,10 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
-gpu_types: [a100, h100, blackwell]  # l40s incompatible on cu13: nodes 636/663 call sageattn() directly → XID-43
+gpu_types: [h100]  # l40s incompatible on cu13: nodes 636/663 call sageattn() directly → XID-43.
+                   # Narrowed from [a100, h100, blackwell] to h100 alone: with several types
+                   # listed there is no way from here to say which one gets picked, and the
+                   # point of the change was to be on the fastest. No fallback is the cost.
 ports:
   params:
     - name: steps
