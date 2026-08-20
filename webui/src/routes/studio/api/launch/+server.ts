@@ -24,6 +24,9 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SLUG_RE, type Brief } from '../../types';
 import { readOverrides } from '../../overrides.server';
+import { loadLibraryInto, type LoadReport } from '../../harness.server';
+import { importStagedRefs, type RefImportResult } from '../../refs-import.server';
+import { listRefs } from '../../refs.server';
 import {
 	briefToWorkspaceId,
 	renderWorkspaceId,
@@ -86,7 +89,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				throw error(400, 'Missing approved docs for render stage');
 			}
 			workspaceId = renderWorkspaceId(brief);
-			yaml = composeRenderWorkspace(brief, approved as ApprovedDocs, overrides);
+			// Staged now, imported once the workspace is open — but the planner's
+			// prompt is written here, so it has to be told in advance.
+			yaml = composeRenderWorkspace(
+				brief,
+				approved as ApprovedDocs,
+				overrides,
+				listRefs().length > 0
+			);
 		}
 	} catch (e) {
 		// Let our own 400s through; anything else is a compose bug — a bug in
@@ -103,6 +113,55 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	// what was actually sent. The console is the only copy.
 	console.log(`\n=== auteur: opening ${workspaceId} ===\n${yaml}\n=== end ${workspaceId} ===\n`);
 
+	// Opening is two calls since the 2026-08-19 release. Prefetch resolves the
+	// skills and workflows the YAML names — fetching them from their branches —
+	// and answers with everything it could not resolve. That list is the only
+	// chance to see a bad reference before the slug is spent: an id can be
+	// opened once, so a workspace that opens against a missing workflow is not
+	// retryable, it is another run thrown away.
+	let pre: Response;
+	try {
+		pre = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/prefetch-workspace`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ req: { yaml } })
+		});
+	} catch (e) {
+		// Nobody started the container: a normal state, not an exception. The
+		// caller renders this as a banner.
+		return json({ ok: false, offline: true, error: String(e) }, { status: 200 });
+	}
+
+	const preText = await pre.text();
+	if (!pre.ok) {
+		return json(
+			{ ok: false, error: `prefetch failed (${pre.status}): ${preText.slice(0, 300)}` },
+			{ status: 200 }
+		);
+	}
+
+	// Same double-wrapping as everywhere else on this API.
+	let preData: unknown = preText;
+	try {
+		const once: unknown = JSON.parse(preText);
+		preData = typeof once === 'string' ? JSON.parse(once) : once;
+	} catch {
+		/* leave as text */
+	}
+	const pd = preData as { error?: string; errors?: string[] } | undefined;
+	const preErrors = [
+		...(pd?.error ? [pd.error] : []),
+		...(Array.isArray(pd?.errors) ? pd.errors : [])
+	].filter((x) => typeof x === 'string' && x.trim());
+
+	if (preErrors.length) {
+		console.error(`=== auteur: prefetch rejected ${workspaceId} ===\n${preErrors.join('\n')}`);
+		return json(
+			{ ok: false, error: `the workspace references something that could not be loaded:\n${preErrors.join('\n')}` },
+			{ status: 200 }
+		);
+	}
+
 	let res: Response;
 	try {
 		res = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/open-workspace`, {
@@ -111,8 +170,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			body: JSON.stringify({ req: { yaml, owner: 'studio' } })
 		});
 	} catch (e) {
-		// Nobody started the container: a normal state, not an exception. The
-		// caller renders this as a banner.
 		return json({ ok: false, offline: true, error: String(e) }, { status: 200 });
 	}
 
@@ -152,5 +209,20 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	}
 	if (harnessError) return json({ ok: false, error: harnessError }, { status: 200 });
 
-	return json({ ok: true, workspaceId }, { status: 200 });
+	// The workspace is live from here on. Everything below adds to it and can
+	// only fail partially: the production is already running, so a workflow that
+	// would not load is a missing capability to report, not a reason to pretend
+	// the launch failed.
+	//
+	// Render stage only. The planning workspace writes documents — it never
+	// touches a GPU and never reads a reference file, so loading either into it
+	// would be work nothing consumes.
+	let library: LoadReport | undefined;
+	let refs: RefImportResult | undefined;
+	if (stage === 'render') {
+		library = await loadLibraryInto(workspaceId);
+		refs = await importStagedRefs(workspaceId);
+	}
+
+	return json({ ok: true, workspaceId, library, refs }, { status: 200 });
 };

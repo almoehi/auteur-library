@@ -743,7 +743,21 @@ ${indentBlock(tuned.write_visual_bible, 8)}
  *
  *  The visual-consistency rules are kept verbatim; the coverage gate reads the
  *  scene list out of this same prompt (see POLICY_RENDER_COVERAGE_FROM_PROMPT). */
-function renderPlannerTaskBlock(docs: ApprovedDocs): string {
+function renderPlannerTaskBlock(docs: ApprovedDocs, hasReferenceMaterial: boolean): string {
+	// Said only when it is true. A standing instruction to look for reference
+	// material would send every planner hunting for an artifact that usually is
+	// not there, and a planner that cannot find what it was told to expect
+	// tends to invent a reason rather than move on.
+	const refClause = hasReferenceMaterial
+		? `
+
+        One artifact IS present: \`user_reference_material\`, holding files the
+        user supplied for this production. Read its file descriptions. Where a
+        file matches a character or location in a scene, say so in that scene's
+        shooting task and instruct the worker to pass it to the render workflow
+        as reference input — minimax accepts reference-to-video. Nobody can look
+        at these files, including you: the descriptions are all there is.`
+		: '';
 	const doc = (raw: string) => indentBlock(raw, 8);
 	return `  tasks:
     - id: schedule_video_renders
@@ -758,9 +772,8 @@ function renderPlannerTaskBlock(docs: ApprovedDocs): string {
         The five approved planning documents for this production are embedded below,
         verbatim, under the headings APPROVED SCREENPLAY, APPROVED CHARACTER TABLE,
         APPROVED SCENE LIST, APPROVED ART DIRECTION and APPROVED VISUAL BIBLE.
-        This workspace has no planning artifacts — the embedded documents are the
-        ground truth. Do not attempt to read artifacts; read the documents in this
-        prompt.
+        There are no planning artifacts to read — the embedded documents are the
+        ground truth for the story.${refClause}
 
         Schedule ONE film shooting task per scene in the APPROVED SCENE LIST below.
         Each scene becomes a ~5-15 second video clip rendered by the minimax workflow.
@@ -897,7 +910,13 @@ ${planningTasksBlock(brief.sceneCount, style, tuned)}
 export function composeRenderWorkspace(
 	brief: Brief,
 	approved: ApprovedDocs,
-	overrides?: Overrides
+	overrides?: Overrides,
+	/** Whether reference files will be imported into this workspace once it is
+	 *  open. Known at compose time because they are staged before launch, and it
+	 *  has to be known here: the planner is otherwise told there are no
+	 *  artifacts to read, which stops being true the moment one is imported —
+	 *  and the cost of that lie is the user's attached files going unused. */
+	hasReferenceMaterial = false
 ): string {
 	const tuned = resolveTuning(overrides);
 	if (!brief || typeof brief !== 'object') throw new Error('brief is missing');
@@ -944,7 +963,7 @@ ${AGENT_GENERIC(tuned.generic)}
 
 ${AGENT_PROMPT_WRITER(tuned.prompt_writer)}
 
-${renderPlannerTaskBlock(approved)}
+${renderPlannerTaskBlock(approved, hasReferenceMaterial)}
 `;
 }
 
