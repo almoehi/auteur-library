@@ -716,9 +716,14 @@ function planningTasksBlock(
       title: "Write Art Direction"
       description: "Define the single visual language for the whole film — era, palette, lensing, lighting, and what is forbidden."
       agent: director
+      # Waits for the screenplay and nothing else. It used to wait for
+      # create_scenes too, which cost about two and a half minutes of wall clock
+      # for nothing: this prompt names the style and reads the screenplay, and
+      # never asks for a scene list. It now runs alongside the cast list rather
+      # than behind it.
       requires:
         tasks:
-          - create_scenes
+          - write_screenplay
         artifacts:
           - screenplay
       prompt: >
@@ -734,10 +739,15 @@ ${indentBlock(tuned.write_art_direction, 8)}
       title: "Write Visual Bible"
       description: "Turn cast, scenes and art direction into fixed prompt anchors — one per character, one per location."
       agent: generic
+      # create_scenes is here because the prompt tells this task to read the
+      # scene list, and it was not among its dependencies. Harmless while
+      # everything ran in one line — scenes always finished first — but the
+      # moment art direction stopped waiting for them it became a race.
       requires:
         tasks:
           - write_art_direction
           - character_table
+          - create_scenes
         artifacts:
           - art_direction
       prompt: >
