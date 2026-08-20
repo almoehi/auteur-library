@@ -217,6 +217,18 @@
 	 */
 	let seenActivity = $state(new Set<string>());
 
+	/** How many times each task has been sent back, and which ones we have
+	 *  already warned about.
+	 *
+	 *  The harness retries a failed task indefinitely, including failures that
+	 *  cannot succeed on a second attempt — a CUDA kernel mismatch, a model that
+	 *  refuses the content. Each retry of a render is a GPU call you pay for.
+	 *  One afternoon of that cost real money before anyone noticed, because from
+	 *  outside a retry loop looks exactly like slow work. */
+	const RETRY_ALARM = 3;
+	let retryCounts = new Map<string, number>();
+	let retryWarned = new Set<string>();
+
 	async function pollActivity(target: string) {
 		const r = await call('get-event-log', {}, target);
 		if (!r.ok) return;
@@ -224,6 +236,24 @@
 			if (seenActivity.has(row.id)) continue;
 			seenActivity.add(row.id);
 			pushItem({ who: 'studio', kind: 'activity', activity: row });
+
+			// A retry is identified by the task it belongs to, which is the part
+			// of the row id before the first bar. Counting rows rather than
+			// parsing the event again keeps this on one source of truth.
+			if (row.tone !== 'warn' && row.tone !== 'bad') continue;
+			const key = row.id.split('|')[2] || row.id;
+			if (!key) continue;
+			const n = (retryCounts.get(key) ?? 0) + 1;
+			retryCounts.set(key, n);
+			if (n >= RETRY_ALARM && !retryWarned.has(key)) {
+				retryWarned.add(key);
+				pushError(
+					`This has failed ${n} times in a row and the harness will keep trying. ` +
+						`If the cause is the same every time — a refused prompt, a broken workflow — ` +
+						`retrying cannot fix it, and every render attempt costs GPU time. ` +
+						`Open the details above to see what it actually said, and stop the run if it reads final.`
+				);
+			}
 		}
 	}
 
