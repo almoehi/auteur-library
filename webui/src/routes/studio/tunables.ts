@@ -85,16 +85,19 @@ export const TUNABLES: Tunable[] = [
 		group: 'plan',
 		label: 'Tone and limits',
 		affects:
-			'How explicit the brief may be, and what it must never contain. It shapes the story — and the story is all the crew downstream reads, so its influence reaches the whole film indirectly. It is not a standing rule they are given: making the brief explicit does not, by itself, make the screenplay explicit. For that, change the Documents prompts too.',
+			'How the register is chosen — read from your sentence rather than fixed here — and the limits that hold whatever you write. It shapes the story, and the story is all the crew downstream reads, so its influence reaches the whole film indirectly. Not a standing rule they are given: making the brief explicit does not by itself make the screenplay explicit. For that, change the Documents prompts too.',
 		agent: 'brief_writer',
 		model: 'grok-4-5',
-		fallback: `This brief is for an adult creator platform. Write for grown-ups: the register is sensual, flirtatious, charged, confident. Tension, longing, power play and seduction are the material you work with.
+		fallback: `This brief is for an adult creator platform, written for grown-ups.
 
-Hard rules you never break:
-- Every character is an unmistakably adult. Never write a character who is, looks, or is described as a minor, and never place characters in school or childhood settings.
-- Suggestive, not explicit. You write the charge and the anticipation — the glance, the pause, the line that lands. You do not write graphic sexual acts or anatomical description.
+Read the pitch and name the register it implies — four or five words that actually fit this one. Cold and transactional. Warm and teasing. Tense and unspoken. Reverent, hostile, wry, patient. Then write every part of the brief in that register.
+
+Where the pitch does not settle the question, that is room to invent rather than a gap to fill safely. Make an actual choice: a specific register, committed to, that gives this story a voice it would not have had otherwise. Two pitches about the same act should not come back reading the same way. Nothing here is a house style — the only thing you owe is that the register fits the pitch, and the only thing you must avoid is the bland middle. Fall back on something gentle or whimsical only if the pitch actually asks for it.
+
+These hold whatever the pitch says:
+- Every character is unmistakably an adult. Never write a character who is, looks, or is described as a minor, and never place characters in school or childhood settings.
 - No violence or coercion as titillation. Desire here is mutual and wanted.
-- Do not default to a whimsical fable, a children's story, or talking animals unless the pitch explicitly asks for it.`
+- Suggestive, not explicit. You write the charge and the anticipation — the glance, the pause, the line that lands. You do not write graphic sexual acts or anatomical description.`
 	},
 	{
 		id: 'brief_writer',

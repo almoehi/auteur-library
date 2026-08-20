@@ -98,6 +98,8 @@ function jsonContract(sceneCount: number): string {
 
 "title": 2-5 words. The name of the film.
 
+"register": 3-5 words naming the register you chose for this film, the ones you actually wrote in. Not a description of the plot and not praise — the voice. "cold, transactional, unspoken". "warm, teasing, unhurried". "hostile, precise, breathless". Whoever reads this should recognise the story from it.
+
 "summary": 2-3 sentences, plain and concrete. What happens, to whom, where. This is the only part most people will read before deciding whether the plan is right, so it says what the film IS — not what it is about, not what it explores. No adjectives you would not use out loud.
 
 "story": 200-500 words of PROSE. An actual short story, not a synopsis and not bullet points: a beginning, a turn, an ending, in full sentences and paragraphs.
@@ -135,14 +137,14 @@ ONE RULE ABOVE ALL OF THESE: the pitch wins. Everything above describes a good d
  *  pitch. One retry only: past that it is a provider problem, and a third call
  *  just makes the user wait longer for the same error. */
 const SYSTEM_TERSE = `Output one JSON object. No other text. No code fences.
-{"title": "2-5 words", "summary": "2-3 plain sentences: what happens, to whom, where", "story": "a 300-word short story in prose paragraphs, with named characters whose appearance is described and 3-6 described locations", "style": "one sentence naming a visual medium as a noun and how it is handled, e.g. 2D digital comic book illustration with bold ink outlines; never the words cinematic or high quality"}`;
+{"title": "2-5 words", "register": "3-5 words naming the voice", "summary": "2-3 plain sentences: what happens, to whom, where", "story": "a 300-word short story in prose paragraphs, with named characters whose appearance is described and 3-6 described locations", "style": "one sentence naming a visual medium as a noun and how it is handled, e.g. 2D digital comic book illustration with bold ink outlines; never the words cinematic or high quality"}`;
 
 /** Terse retry for the revise path — same format hammer, plus the one rule the
  *  revision cannot lose: only change what the feedback asks. */
 const SYSTEM_TERSE_REVISE = `Output one JSON object. No other text. No code fences. Revise the given brief according to the feedback; change ONLY what the feedback asks and keep everything else as it is.
-{"title": "2-5 words", "summary": "2-3 plain sentences: what happens, to whom, where", "story": "a 300-word short story in prose paragraphs, with named characters whose appearance is described and 3-6 described locations", "style": "one sentence naming a visual medium as a noun and how it is handled; never the words cinematic or high quality"}`;
+{"title": "2-5 words", "register": "3-5 words naming the voice", "summary": "2-3 plain sentences: what happens, to whom, where", "story": "a 300-word short story in prose paragraphs, with named characters whose appearance is described and 3-6 described locations", "style": "one sentence naming a visual medium as a noun and how it is handled; never the words cinematic or high quality"}`;
 
-type Draft = { title: string; summary: string; story: string; style: string };
+type Draft = { title: string; register: string; summary: string; story: string; style: string };
 
 /** Models like to wrap. Strip fences, then take everything between the first
  *  `{` and the last `}` — that survives both a preamble and a trailing
@@ -163,6 +165,7 @@ function extractJson(raw: string): Draft | null {
 	const d = parsed as Partial<Draft> | null;
 	if (!d || typeof d !== 'object') return null;
 	const title = typeof d.title === 'string' ? d.title.trim() : '';
+	const register = typeof d.register === 'string' ? d.register.trim() : '';
 	const summary = typeof d.summary === 'string' ? d.summary.trim() : '';
 	const story = typeof d.story === 'string' ? d.story.trim() : '';
 	const style = typeof d.style === 'string' ? d.style.trim() : '';
@@ -171,7 +174,7 @@ function extractJson(raw: string): Draft | null {
 
 	// A missing summary is not worth rejecting a good brief over — the card
 	// falls back to the story's own opening, which is the same sentences anyway.
-	return { title, summary, story, style };
+	return { title, register, summary, story, style };
 }
 
 async function ask(key: string, model: string, system: string, user: string): Promise<string> {
@@ -353,6 +356,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const brief: Brief = {
 		slug,
 		title: draft.title,
+		register: draft.register || undefined,
 		summary: draft.summary || undefined,
 		story: draft.story,
 		style: draft.style,

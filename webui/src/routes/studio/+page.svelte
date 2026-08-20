@@ -2221,6 +2221,15 @@
 									<h3 class="font-display text-lg leading-snug font-semibold tracking-tight">
 										{item.plan.title}
 									</h3>
+									<!-- The voice the model picked. Your sentence rarely specifies one,
+									     so this is a decision taken on your behalf — and seeing it named
+									     is what lets you disagree with it in one line, rather than
+									     reverse-engineering it from four hundred words of prose. -->
+									{#if item.plan.register}
+										<p class="mt-1.5 font-mono text-[11px] tracking-wide text-[var(--st-faint)]">
+											{item.plan.register}
+										</p>
+									{/if}
 									<!-- The summary, not the story. Four hundred words of prose is
 									     what the crew needs and not what a person reads before deciding
 									     whether this is the film they asked for — and asking them to

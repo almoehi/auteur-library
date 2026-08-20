@@ -20,6 +20,11 @@ export interface Brief {
 	slug: string;
 	/** short human title shown in the UI (becomes spec.description) */
 	title: string;
+	/** Three to five words naming the voice the model chose for this film. Shown
+	 *  on the card because it is a decision made on the user's behalf, from a
+	 *  sentence that usually did not specify one — and a decision you can see is
+	 *  a decision you can argue with. */
+	register?: string;
 	/** Two or three sentences saying what the film is. Shown instead of the
 	 *  story, which runs to four hundred words nobody reads before deciding
 	 *  whether the plan is right. The story is one click away and unchanged. */
