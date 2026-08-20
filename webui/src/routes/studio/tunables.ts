@@ -82,7 +82,7 @@ export const TUNABLES: Tunable[] = [
 		group: 'plan',
 		label: 'Tone and limits',
 		affects:
-			'How explicit the writing is allowed to be, and what it must never contain. Everything downstream inherits this — the screenplay, the scenes, the prompts the video model receives. The single biggest lever on what kind of film comes out.',
+			'How explicit the brief may be, and what it must never contain. It shapes the story — and the story is all the crew downstream reads, so its influence reaches the whole film indirectly. It is not a standing rule they are given: making the brief explicit does not, by itself, make the screenplay explicit. For that, change the Documents prompts too.',
 		agent: 'brief_writer',
 		model: 'grok-4-5',
 		fallback: `This brief is for an adult creator platform. Write for grown-ups: the register is sensual, flirtatious, charged, confident. Tension, longing, power play and seduction are the material you work with.
