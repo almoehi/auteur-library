@@ -28,9 +28,39 @@ export interface Tunable {
 	/** For task prompts: the agent that executes them, so the panel can say whose
 	 *  model dropdown governs this one instead of leaving it unexplained. */
 	runBy?: string;
+	/** Which stage of the run this belongs to. The panel groups by it, because
+	 *  eleven prompts in one list is a list, not an explanation — what a person
+	 *  needs first is which stage they are unhappy with. */
+	group: GroupId;
 	/** The shipped text. Never mutated. */
 	fallback: string;
 }
+
+export type GroupId = 'plan' | 'documents' | 'shoot';
+
+/** The three stages, in the order they happen. The description says what the
+ *  stage decides, not what it is called — someone opening this panel has a
+ *  complaint about the film, not about the architecture. */
+export const GROUPS: { id: GroupId; title: string; affects: string }[] = [
+	{
+		id: 'plan',
+		title: 'Plan',
+		affects:
+			'Your one sentence becomes a title, a story and a visual style. Change these if the briefs come back with the wrong tone, the wrong level of explicitness, or a story you did not ask for.'
+	},
+	{
+		id: 'documents',
+		title: 'Documents',
+		affects:
+			'The screenplay, cast, scenes, art direction and visual bible — everything you read and approve before any GPU time is spent. Change these if the plan is right but the documents are thin, inconsistent, or miss what matters.'
+	},
+	{
+		id: 'shoot',
+		title: 'Shoot',
+		affects:
+			'What happens after you approve: how scenes become render tasks, and the exact words the video model receives. Change these if the documents read well but the clips do not look like them.'
+	}
+];
 
 /** The provider's own name for each registry id. The panel and the workspace
  *  YAML speak in ids; anything calling xAI directly — the brief writer does —
@@ -49,6 +79,7 @@ export const MODEL_CHOICES = [
 export const TUNABLES: Tunable[] = [
 	{
 		id: 'brief_register',
+		group: 'plan',
 		label: 'Tone and limits',
 		affects:
 			'How explicit the writing is allowed to be, and what it must never contain. Everything downstream inherits this — the screenplay, the scenes, the prompts the video model receives. The single biggest lever on what kind of film comes out.',
@@ -64,6 +95,7 @@ Hard rules you never break:
 	},
 	{
 		id: 'brief_writer',
+		group: 'plan',
 		label: 'Brief writer',
 		affects:
 			'Turns your one sentence into the title, story and visual style that the whole production is built from. This is the first thing that touches what you typed.',
@@ -73,6 +105,7 @@ Hard rules you never break:
 	},
 	{
 		id: 'brief_reviser',
+		group: 'plan',
 		label: 'Brief reviser',
 		affects:
 			'Runs when you ask for a change to the brief in the chat. Its job is restraint: apply the feedback and leave everything else alone.',
@@ -84,6 +117,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 	},
 	{
 		id: 'prompt_writer',
+		group: 'shoot',
 		label: 'Prompt writer',
 		affects:
 			'Writes the final text the video model receives. Camera, lighting, motion, framing — every visual decision in every clip comes from here.',
@@ -224,6 +258,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 	},
 	{
 		id: 'write_visual_bible',
+		group: 'documents',
 		label: 'Visual bible task',
 		affects:
 			'Produces one fixed sentence per character and per location. Every scene pastes these in verbatim, so this is what makes the clips look like one film instead of four.',
@@ -242,6 +277,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 	},
 	{
 		id: 'write_art_direction',
+		group: 'documents',
 		label: 'Art direction task',
 		affects:
 			'Sets the film\'s visual rules: era, colour palette, lighting, and the list of looks that must never appear. The visual bible is built from it.',
@@ -264,6 +300,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 	},
 	{
 		id: 'screenwriter',
+		group: 'documents',
 		label: 'Screenwriter',
 		affects:
 			'Turns your story into the screenplay. Tone, dialogue density and pacing start here, and the cast, scenes and art direction are all built on it.',
@@ -318,6 +355,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 	},
 	{
 		id: 'casting_director',
+		group: 'documents',
 		label: 'Casting director',
 		affects:
 			'Writes one file per character: appearance, wardrobe, mannerisms. The visual bible turns these into the anchors the renders use.',
@@ -360,6 +398,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 	},
 	{
 		id: 'director',
+		group: 'documents',
 		label: 'Director',
 		affects:
 			'Breaks the screenplay into the numbered scene list — how many scenes, where each happens, who is in it. One clip is rendered per row.',
@@ -372,6 +411,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 	},
 	{
 		id: 'generic',
+		group: 'shoot',
 		label: 'Production assistant',
 		affects:
 			'Drives the render itself: calls the video workflow, requests the prompt, saves the clip. Mechanics, not style — editing this changes how, not what.',
@@ -400,6 +440,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 	},
 	{
 		id: 'planner',
+		group: 'shoot',
 		label: 'Shot scheduler',
 		affects:
 			'Creates one shoot task per scene and hands each the anchors it needs. If this breaks, no clips are rendered at all.',

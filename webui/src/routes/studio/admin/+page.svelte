@@ -12,8 +12,10 @@
 	 */
 	import { onMount } from 'svelte';
 
+	type Group = { id: string; title: string; affects: string };
 	type Item = {
 		id: string;
+		group: string;
 		label: string;
 		affects: string;
 		agent: string | null;
@@ -28,6 +30,7 @@
 		path: string;
 		updatedAt: string | null;
 		models: { id: string; note: string }[];
+		groups: Group[];
 		defaultModels: Record<string, string>;
 		items: Item[];
 	};
@@ -36,6 +39,22 @@
 	let text = $state<Record<string, string>>({});
 	let models = $state<Record<string, string>>({});
 	let open = $state<Record<string, boolean>>({});
+
+	/** Groups start closed. Eleven prompts open at once is the flat list this
+	 *  replaced; the first question is which stage you are unhappy with, and the
+	 *  three headings answer it without scrolling. */
+	let groupOpen = $state<Record<string, boolean>>({});
+
+	function itemsIn(g: string): Item[] {
+		return (data?.items ?? []).filter((i) => i.group === g);
+	}
+
+	/** Entries in a group that differ from what shipped — shown on the closed
+	 *  heading, so something changed last week is findable without opening all
+	 *  three to look for it. */
+	function changedIn(g: string): number {
+		return itemsIn(g).filter((i) => !isStock(i)).length;
+	}
 	let saving = $state(false);
 	let saved = $state('');
 	let err = $state('');
@@ -141,8 +160,37 @@
 			<p class="text-sm text-[var(--st-faint)]">loading…</p>
 		{:else}
 			<div class="space-y-3">
-				{#each data.items as it (it.id)}
-					<section class="rounded-2xl bg-[var(--st-surface)] p-5">
+				{#each data.groups as g (g.id)}
+					{@const items = itemsIn(g.id)}
+					{@const changed = changedIn(g.id)}
+					<section class="overflow-hidden rounded-2xl bg-[var(--st-surface)]">
+						<button
+							type="button"
+							class="flex w-full cursor-pointer items-start justify-between gap-4 p-5 text-left"
+							onclick={() => (groupOpen[g.id] = !groupOpen[g.id])}
+						>
+							<span class="min-w-0">
+								<span class="font-display flex flex-wrap items-center gap-2 text-base font-semibold">
+									{g.title}
+									{#if changed}
+										<span class="rounded-md bg-[var(--st-accent)] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+											{changed} changed
+										</span>
+									{/if}
+								</span>
+								<span class="mt-1.5 block text-xs leading-relaxed text-[var(--st-muted)]">
+									{g.affects}
+								</span>
+							</span>
+							<span class="shrink-0 font-mono text-[11px] text-[var(--st-faint)]">
+								{groupOpen[g.id] ? 'close' : `${items.length} settings`}
+							</span>
+						</button>
+
+						{#if groupOpen[g.id]}
+							<div class="space-y-2.5 px-3 pb-3">
+								{#each items as it (it.id)}
+					<section class="rounded-xl bg-[var(--st-bg)] p-4">
 						<button
 							type="button"
 							class="flex w-full cursor-pointer items-start justify-between gap-4 text-left"
@@ -217,6 +265,10 @@
 										{(text[it.id] ?? '').length} chars
 									</span>
 								</div>
+							</div>
+						{/if}
+					</section>
+								{/each}
 							</div>
 						{/if}
 					</section>

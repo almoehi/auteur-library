@@ -8,7 +8,7 @@
  */
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { DEFAULT_MODELS, MODEL_CHOICES, TUNABLES, type Overrides } from '../../tunables';
+import { DEFAULT_MODELS, GROUPS, MODEL_CHOICES, TUNABLES, type Overrides } from '../../tunables';
 import { OVERRIDES_PATH, readOverrides, writeOverrides } from '../../overrides.server';
 
 export const GET: RequestHandler = async () => {
@@ -17,6 +17,7 @@ export const GET: RequestHandler = async () => {
 		path: OVERRIDES_PATH,
 		updatedAt: stored.updatedAt ?? null,
 		models: MODEL_CHOICES,
+		groups: GROUPS,
 		defaultModels: DEFAULT_MODELS,
 		items: TUNABLES.map((t) => {
 			// A tunable either owns an agent or is executed by someone else's.
@@ -26,6 +27,7 @@ export const GET: RequestHandler = async () => {
 			const host = t.agent ?? t.runBy;
 			return {
 			id: t.id,
+			group: t.group,
 			label: t.label,
 			affects: t.affects,
 			agent: t.agent ?? null,
