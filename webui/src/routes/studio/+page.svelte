@@ -364,6 +364,50 @@
 	let finalPosted = $state(false);
 	let renderLaunching = $state(false);
 
+	/* Stopping a run.
+	 *
+	 *  Two-step, because it is not undoable: a workspace id can be opened once,
+	 *  so a stopped production cannot be resumed — it can only be started again
+	 *  from the plan, under a fresh slug. A single misplaced click should not
+	 *  cost that.
+	 */
+	let stopArmed = $state(false);
+	let stopping = $state(false);
+
+	async function stopRun() {
+		const b = launchedBrief ?? brief;
+		if (!b?.slug || stopping) return;
+		stopping = true;
+		try {
+			const ids = [planningWs, renderWs].filter((w): w is string => !!w);
+			const res = await fetch('/studio/api/stop', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify(ids.length ? { workspaces: ids } : { slug: b.slug })
+			});
+			const d = (await res.json()) as { ok: boolean; removed?: number; torndown?: boolean };
+
+			// Stop polling before saying anything: a tick that lands after the
+			// message would re-report the run as alive.
+			runId += 1;
+			pollingActive = false;
+
+			pushStudio(
+				d.ok
+					? `Stopped. ${d.torndown ? 'The compute is released' : 'Compute was already idle'}` +
+							`${d.removed ? ` and ${d.removed} queued ${d.removed === 1 ? 'task was' : 'tasks were'} removed` : ''}. ` +
+							`This production cannot be resumed — start a new one when you are ready.`
+					: 'Nothing was left running to stop.'
+			);
+			persist();
+		} catch (e) {
+			pushError(`Could not stop the run: ${e}`);
+		} finally {
+			stopping = false;
+			stopArmed = false;
+		}
+	}
+
 	// --- composer ----------------------------------------------------------------
 
 	let input = $state('');
@@ -2598,6 +2642,44 @@
 						<div class="mt-4">
 							{@render railList()}
 						</div>
+
+						<!-- Beneath the list, not above it: reaching for this means having
+						     read the list and decided the run is not worth continuing. -->
+						{#if pollingActive}
+							<div class="mt-5 border-t border-[var(--st-line)] pt-4">
+								{#if !stopArmed}
+									<button
+										type="button"
+										class="cursor-pointer text-xs text-[var(--st-faint)] underline-offset-4 transition-colors hover:text-[var(--st-text)] hover:underline"
+										onclick={() => (stopArmed = true)}
+									>
+										stop this production
+									</button>
+								{:else}
+									<p class="text-xs leading-relaxed text-[var(--st-muted)]">
+										This releases the GPU and clears the queue. It cannot be resumed —
+										a new run starts from the plan again.
+									</p>
+									<div class="mt-2.5 flex items-center gap-3">
+										<button
+											type="button"
+											disabled={stopping}
+											onclick={stopRun}
+											class="font-display cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-2 text-xs font-semibold text-[var(--st-text)] transition-colors hover:bg-[var(--st-accent)] hover:text-white disabled:cursor-default disabled:opacity-50"
+										>
+											{stopping ? 'stopping…' : 'stop it'}
+										</button>
+										<button
+											type="button"
+											class="cursor-pointer text-xs text-[var(--st-faint)] hover:text-[var(--st-text)]"
+											onclick={() => (stopArmed = false)}
+										>
+											keep going
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</aside>
 			{/if}
