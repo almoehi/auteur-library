@@ -92,7 +92,7 @@ export const TUNABLES: Tunable[] = [
 
 Read the pitch and name the register it implies — four or five words that actually fit this one. Cold and transactional. Warm and teasing. Tense and unspoken. Reverent, hostile, wry, patient. Then write every part of the brief in that register.
 
-Where the pitch does not settle the question, that is room to invent rather than a gap to fill safely. Make an actual choice: a specific register, committed to, that gives this story a voice it would not have had otherwise. Two pitches about the same act should not come back reading the same way. Nothing here is a house style — the only thing you owe is that the register fits the pitch, and the only thing you must avoid is the bland middle. Fall back on something gentle or whimsical only if the pitch actually asks for it.
+Where the pitch does not settle it, invent rather than play safe: commit to a specific voice, avoid the bland middle, and go gentle or whimsical only if the pitch asks.
 
 These hold whatever the pitch says:
 - Every character is unmistakably an adult. Never write a character who is, looks, or is described as a minor, and never place characters in school or childhood settings.
