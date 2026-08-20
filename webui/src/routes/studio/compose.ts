@@ -282,24 +282,43 @@ function profilesBlock(seed: number): string {
       compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
 }
 
-const MODELS_BLOCK = `  # Model registry — requires GROK_API_KEY env var.
+/** The model registry.
+ *
+ *  The key is written onto each model rather than left to the harness, because
+ *  on the worker path there is nothing to leave it to. GrokBackend takes its
+ *  Authorization header from `model.apiKeys.token` and nowhere else, and the
+ *  only code that fills that from config is WorkspaceAgent.resolveApiKey — the
+ *  manager's path. WorkerAgent's injection is hard-gated on
+ *  `provider === "ollama"`, so a grok model declared here reaches the backend
+ *  with no token and the call comes back "401 no credentials presented".
+ *
+ *  Not fixable from golem.yaml: the deployer answers an added grokApiKey with
+ *  "Ignoring unused config keys for agent WorkerAgent", because the compiled
+ *  agent-type metadata declares that key on WorkspaceAgent only. The component's
+ *  own JSDoc documents this shape — "Required: model.apiKeys.token" — so this is
+ *  the intended channel rather than a trick.
+ */
+function modelsBlock(grokKey: string): string {
+	return `  # Model registry. The key travels on each model — see modelsBlock() for why.
   #
   # Everything runs on Grok because everything has to read the content: the
   # writers produce it, and the gate policies judge it. Every Ollama Cloud model
-  # refuses explicit material outright — tested, all four — and a refusal is
-  # invisible from outside: the worker writes nothing, calls task_complete, the
-  # gate says "no files produced", and the harness retries forever. A day went
-  # into chasing that as a GPU problem.
+  # refuses explicit material outright, and refuses it invisibly — the worker
+  # writes nothing, calls task_complete, the gate says "no files produced", and
+  # the harness retries forever.
   #
   # grok-4.5 rather than 4.6, which was the obvious pick and the wrong one: 4.6
-  # refuses the same prompts the Ollama models refused, and is three times
-  # slower on ordinary work (29.6s vs 8.3s measured). 4.3 also works and is
-  # kept as the alternative.
+  # refuses the same prompts the Ollama models refused, and is three times slower
+  # on ordinary work (29.6s vs 8.3s measured). 4.3 also works and is the
+  # alternative.
   models:
     - id: grok-4-5
       name: "Grok 4.5 (xAI)"
       provider: grok
       model: "grok-4.5"
+      endpoint: "https://api.x.ai/v1"
+      apiKeys:
+        token: ${yamlDoubleQuoted(grokKey)}
       streaming: false
       reasoningEffort: default
       temperature: 0.7
@@ -312,6 +331,9 @@ const MODELS_BLOCK = `  # Model registry — requires GROK_API_KEY env var.
       name: "Grok 4.3 (xAI)"
       provider: grok
       model: "grok-4.3"
+      endpoint: "https://api.x.ai/v1"
+      apiKeys:
+        token: ${yamlDoubleQuoted(grokKey)}
       streaming: false
       reasoningEffort: default
       temperature: 0.4
@@ -319,6 +341,7 @@ const MODELS_BLOCK = `  # Model registry — requires GROK_API_KEY env var.
         - chat
       settings:
         contextWindow: 131072`;
+}
 
 const POLICY_SCREENPLAY_QUALITY = `    screenplay-quality:
         id: screenplay-quality
@@ -800,7 +823,14 @@ ${doc(docs.visualBible)}`;
  *  Throws on an unusable Brief rather than emitting a document that would be
  *  rejected — or worse, accepted with a truncated story. Opening a workspace
  *  burns its id for good, so the cheap validation happens here first. */
-export function composePlanningWorkspace(brief: Brief, overrides?: Overrides): string {
+export function composePlanningWorkspace(
+	brief: Brief,
+	overrides?: Overrides,
+	/** Written into every model's apiKeys.token. Required on the worker path —
+	 *  see modelsBlock(). Empty produces a workspace that opens and then fails
+	 *  every task with 401, so the caller checks before composing. */
+	grokKey = ''
+): string {
 	const tuned = resolveTuning(overrides);
 	if (!brief || typeof brief !== 'object') throw new Error('brief is missing');
 
@@ -839,7 +869,7 @@ ${WORKFLOWS_BLOCK}
 
 ${profilesBlock(brief.seed)}
 
-${MODELS_BLOCK}
+${modelsBlock(grokKey)}
 
   policies:
 ${POLICY_SCREENPLAY_QUALITY}
@@ -883,6 +913,7 @@ export function composeRenderWorkspace(
 	brief: Brief,
 	approved: ApprovedDocs,
 	overrides?: Overrides,
+	grokKey = '',
 	/** Whether reference files will be imported into this workspace once it is
 	 *  open. Known at compose time because they are staged before launch, and it
 	 *  has to be known here: the planner is otherwise told there are no
@@ -918,7 +949,7 @@ ${WORKFLOWS_BLOCK}
 
 ${profilesBlock(brief.seed)}
 
-${MODELS_BLOCK}
+${modelsBlock(grokKey)}
 
   policies:
 ${POLICY_ENSURE_TASKS_CREATED}

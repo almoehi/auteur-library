@@ -20,6 +20,7 @@
  *  itself: it sends no CORS headers, and its URL has no business in a client
  *  bundle.
  */
+import { env } from '$env/dynamic/private';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SLUG_RE, type Brief } from '../../types';
@@ -59,6 +60,18 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	// without restarting the dev server.
 	const overrides = readOverrides();
 
+	// The worker agents only ever see a key that travels on the model itself, so
+	// a missing one is not a degraded run — it is a workspace that opens and then
+	// fails every task with 401. Cheaper to refuse here than to spend the slug.
+	const grokKey = (env.GROK_API_KEY ?? '').trim();
+	if (!grokKey) {
+		return json({
+			ok: false,
+			error:
+				'GROK_API_KEY is not set — copy it from ~/auteur/.env into webui/.env and restart the dev server.'
+		});
+	}
+
 	let payload: { brief?: Brief; stage?: unknown; approved?: unknown };
 	try {
 		payload = await request.json();
@@ -80,7 +93,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	try {
 		if (stage === 'planning') {
 			workspaceId = briefToWorkspaceId(brief);
-			yaml = composePlanningWorkspace(brief, overrides);
+			yaml = composePlanningWorkspace(brief, overrides, grokKey);
 		} else {
 			// The render workspace's planner prompt carries the approved planning
 			// documents inline — the two workspaces share nothing on the harness
@@ -96,6 +109,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				brief,
 				approved as ApprovedDocs,
 				overrides,
+				grokKey,
 				listRefs().length > 0
 			);
 		}
@@ -112,7 +126,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	// nothing about which line produced it, and the slug is burned either way —
 	// reopening it is a no-op, so there is no retry that would let us inspect
 	// what was actually sent. The console is the only copy.
-	console.log(`\n=== auteur: opening ${workspaceId} ===\n${yaml}\n=== end ${workspaceId} ===\n`);
+	// The composed YAML now carries the API key on every model, and this log is
+	// the one place it would otherwise be printed in full.
+	const printable = yaml.replaceAll(grokKey, '«GROK_API_KEY»');
+	console.log(`\n=== auteur: opening ${workspaceId} ===\n${printable}\n=== end ${workspaceId} ===\n`);
 
 	// Opening is two calls since the 2026-08-19 release. Prefetch resolves the
 	// skills and workflows the YAML names — fetching them from their branches —
