@@ -398,7 +398,16 @@
 		for (const row of parseEventLog(r.data)) {
 			if (seenActivity.has(row.id)) continue;
 			seenActivity.add(row.id);
-			pushItem({ who: 'studio', kind: 'activity', activity: row });
+
+			// The board says all of this, in one place, without three lines per
+			// document. What survives is trouble — a rejection or a failure has
+			// nowhere else to appear, and is the whole reason this feed exists.
+			const evKey = row.id.split('|')[2] ?? '';
+			const routine = row.tone === 'step' || row.tone === 'good';
+			const planning = PLANNING_STEPS.some((st) => st.task === evKey || st.artifact === evKey);
+			if (!(routine && planning)) {
+				pushItem({ who: 'studio', kind: 'activity', activity: row });
+			}
 
 			// A retry is identified by the task it belongs to, which is the part
 			// of the row id before the first bar. Counting rows rather than
@@ -1987,14 +1996,26 @@
 														</a>
 													{/if}
 
-													<div class="mt-4">
+													<div class="mt-4 flex flex-wrap items-center gap-2">
 														<button
 															type="button"
 															onclick={() => (changeOpen[row.key] = !changeOpen[row.key])}
-															class="cursor-pointer text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+															class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 py-2 text-xs font-semibold text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
 														>
 															request a change
 														</button>
+														<!-- The way out, next to the way in. A document runs to several
+														     screens, and without this the only way to close one was to
+														     scroll back up to the row that opened it. -->
+														<button
+															type="button"
+															onclick={() => (expanded[row.key] = false)}
+															class="cursor-pointer rounded-full px-3.5 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+														>
+															close
+														</button>
+													</div>
+													<div>
 														{#if changeOpen[row.key]}
 															<form
 																class="mt-3 flex gap-2"
@@ -2028,6 +2049,34 @@
 										</div>
 									{/each}
 								</div>
+
+								<!-- The button belongs to the thing it acts on. It is present from
+								     the start, disabled, so the shape of the run is visible before
+								     any of it has happened — and so nobody hunts for it once the
+								     last document lands. -->
+								{#if renderWs}
+									<p class="mt-5 text-xs text-[var(--st-faint)]">shooting has started</p>
+								{:else}
+									<div class="mt-5 flex flex-wrap items-center gap-3">
+										<button
+											type="button"
+											disabled={boardDone < board.length || renderLaunching || !!chain}
+											onclick={launchRender}
+											class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+										>
+											{renderLaunching ? 'starting…' : 'start shooting'}
+										</button>
+										<span class="text-xs text-[var(--st-faint)]">
+											{#if chain}
+												a document is being rewritten
+											{:else if boardDone < board.length}
+												ready when all five are written
+											{:else}
+												uses GPU time and costs money
+											{/if}
+										</span>
+									</div>
+								{/if}
 							</article>
 						{:else if item.kind === 'shootboard'}
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
@@ -2301,57 +2350,14 @@
 								{/if}
 							</article>
 						{:else if item.kind === 'approval'}
-							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
-								<p class="doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">{item.text}</p>
-
-								<!-- The last free moment. Everything above this card can still be
-									 rewritten; nothing below it can. So the gate lists what is about
-									 to be filmed rather than asking for a blind yes — and it puts the
-									 visual bible first, because that is the document that decides
-									 whether the four clips look like one film. -->
-								<div class="mt-4 space-y-2">
-									{#each summaryDocs as d (d.artifact)}
-										<button
-											type="button"
-											class="flex w-full cursor-pointer items-baseline gap-3 rounded-xl px-3 py-2.5 text-left transition-colors {d.key ===
-											'visual_bible'
-												? 'bg-[var(--st-surface-2)]'
-												: 'hover:bg-[var(--st-surface-2)]'}"
-											onclick={() => (gateOpen[d.key] = !gateOpen[d.key])}
-										>
-											<span class="min-w-0 flex-1">
-												<span class="font-display text-sm font-semibold">{d.label}</span>
-												<span class="ml-2 text-xs text-[var(--st-faint)]">{d.note}</span>
-											</span>
-											<span class="shrink-0 text-xs text-[var(--st-faint)]">
-												{gateOpen[d.key] ? 'close' : 'review'}
-											</span>
-										</button>
-										{#if gateOpen[d.key]}
-											<div class="enter rounded-xl bg-[var(--st-bg)] px-4 py-3.5">
-												{@render document(renderDocument(d.file, d.body))}
-											</div>
-										{/if}
-									{/each}
-								</div>
-
-								{#if renderWs}
-									<p class="mt-3 text-xs text-[var(--st-faint)]">shooting has started</p>
-								{:else}
-									<p class="mt-4 text-xs text-[var(--st-faint)]">
-										Ask for a change in the chat while you still can — after this the
-										documents are fixed.
-									</p>
-									<button
-										type="button"
-										disabled={renderLaunching}
-										onclick={launchRender}
-										class="mt-4 cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 font-display text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-50"
-									>
-										{renderLaunching ? 'starting…' : 'start shooting'}
-									</button>
-								{/if}
-							</article>
+							<!-- Text only. The board above already lists the five documents and
+							     opens each one; repeating that here put the same list twice on
+							     one screen, and the button that matters ended up below the
+							     duplicate rather than beside the thing it acts on. Both now live
+							     on the board. -->
+							<p class="enter doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+								{item.text}
+							</p>
 						{:else if item.kind === 'clips' && item.artifact}
 							<div class="enter">
 								{#each item.artifact.files as f (f.name)}

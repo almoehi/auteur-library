@@ -21,7 +21,7 @@
  *  Like every route here it is unauthenticated — this app is a local operator
  *  tool. See the README: bind it to localhost, never expose it.
  *
- *  REQUIRES `OLLAMA_API_KEY` in this app's own environment. The harness reads it
+ *  REQUIRES `GROK_API_KEY` in this app's own environment. The harness reads it
  *  from ~/auteur/.env, but that file is the container's, not ours, and we never
  *  read it from disk at runtime. Copy the value into webui/.env (or export it
  *  before `pnpm dev`); without it this route answers with a plain error telling
@@ -35,12 +35,12 @@ import { SCENE_COUNT_MAX, SCENE_COUNT_MIN, type Brief } from '../../types';
 /** Ollama Cloud — the same provider the workspace's own model registry points
  *  at (see spec.models in the composed workspace), so if a production can run
  *  at all, this key works. */
-const OLLAMA = 'https://ollama.com/api/chat';
+const XAI = 'https://api.x.ai/v1/chat/completions';
 
 /** Cheapest of the four cloud models the harness registers, and verified
  *  working on this account. Planning is a two-paragraph job; it does not need
  *  the reasoning models the screenwriter uses. */
-const MODEL = 'gemma4:cloud';
+const MODEL = 'grok-4.5';
 
 /** A chat message is the point of this surface. Anything past this is someone
  *  pasting a document into the wrong box — cut it off rather than paying to
@@ -55,13 +55,15 @@ const DEFAULT_SCENES = 4;
 
 /** Generation is slow-ish but not minutes-slow; a hang here means the provider
  *  is wedged, and the user is sitting in front of a silent chat waiting. */
-/** A healthy plan comes back in 5-7 seconds. Ninety was chosen for headroom,
- *  but it buys the wrong thing: when a model stalls — because it is refusing,
- *  looping, or the provider is degraded — the user sits in front of a page that
- *  says nothing for a minute and a half, twice over with the retry. Twenty-five
- *  is still four times a healthy call, and it turns a dead wait into a fast,
- *  legible failure. */
-const TIMEOUT_MS = 25_000;
+/** A healthy plan comes back in about 40 seconds — measured, on the real system
+ *  prompt rather than a toy one. That is slow for a chat, and it is the price of
+ *  a model that will actually write the material: every faster option tested
+ *  refuses it outright.
+ *
+ *  75s leaves room for a bad minute without buying the thing a long timeout
+ *  usually buys, which is a user watching a dead page. Past this the provider is
+ *  wedged, and saying so beats waiting. */
+const TIMEOUT_MS = 75_000;
 
 /** A synopsis and a story parse identically — both are a JSON string. The only
  *  cheap way to tell them apart is length, and a screenwriter agent handed four
@@ -161,7 +163,7 @@ function extractJson(raw: string): Draft | null {
 }
 
 async function ask(key: string, system: string, user: string): Promise<string> {
-	const res = await fetch(OLLAMA, {
+	const res = await fetch(XAI, {
 		method: 'POST',
 		headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
 		body: JSON.stringify({
@@ -170,6 +172,7 @@ async function ask(key: string, system: string, user: string): Promise<string> {
 				{ role: 'system', content: system },
 				{ role: 'user', content: user }
 			],
+			response_format: { type: 'json_object' },
 			stream: false
 		}),
 		signal: AbortSignal.timeout(TIMEOUT_MS)
@@ -180,10 +183,10 @@ async function ask(key: string, system: string, user: string): Promise<string> {
 	// in the body, but a helpful error that dumps "what we sent" is exactly how
 	// keys end up in a terminal scrollback. Status and the provider's own words
 	// are enough to tell a 401 from a rate limit.
-	if (!res.ok) throw new Error(`ollama ${res.status}: ${text.slice(0, 200)}`);
+	if (!res.ok) throw new Error(`grok ${res.status}: ${text.slice(0, 200)}`);
 
-	const body = JSON.parse(text) as { message?: { content?: string } };
-	return body.message?.content ?? '';
+	const body = JSON.parse(text) as { choices?: { message?: { content?: string } }[] };
+	return body.choices?.[0]?.message?.content ?? '';
 }
 
 /** kebab-case, ASCII only: the slug becomes `<slug>@1.0` in a URL path, and the
@@ -273,14 +276,14 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!revising && !pitch) throw error(400, 'Missing prompt');
 	if (prior !== null && !feedback) throw error(400, 'Missing feedback for revision');
 
-	const key = env.OLLAMA_API_KEY;
+	const key = env.GROK_API_KEY;
 	if (!key) {
 		// Not an exception: it is the state of a machine where nobody has set
 		// the variable yet, and the fix is one line. Say the line.
 		return json({
 			ok: false,
 			error:
-				'OLLAMA_API_KEY is not set — copy it from ~/auteur/.env into webui/.env and restart the dev server.'
+				'GROK_API_KEY is not set — copy it from ~/auteur/.env into webui/.env and restart the dev server.'
 		});
 	}
 
