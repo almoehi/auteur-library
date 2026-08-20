@@ -806,6 +806,17 @@ function renderPlannerTaskBlock(docs: ApprovedDocs, hasReferenceMaterial: boolea
         Schedule ONE film shooting task per scene in the APPROVED SCENE LIST below.
         Each scene becomes a ~5-15 second video clip rendered by the minimax workflow.
 
+        # REGISTER AN ARTIFACT FOR EVERY TASK — this is what the gate checks:
+        For each scene, call create_task first, then immediately call
+        create_artifact(task_id=<the id that call returned>) for the clip that task
+        will produce. One artifact per shoot task, holding that scene's mp4. A task
+        with no artifact fails the gate and the whole shooting plan is rejected.
+
+        Your standing instructions warn against a 1:1 task-per-artifact mapping and
+        tell you to batch files into one artifact. That is about files within a
+        scene, not about scenes: here one task produces one clip, so one artifact
+        each is correct and required. Do not group several scenes into one artifact.
+
         # Instructions when generating task descriptions:
         - use shoot-scene skill
         - determine and state the number of cuts based on the scene descriptions
