@@ -75,6 +75,15 @@ export function addRef(name: string, description: string, bytes: Uint8Array): Re
 	return row;
 }
 
+export function describeRef(stored: string, description: string): boolean {
+	const rows = listRefs();
+	const row = rows.find((r) => r.stored === stored);
+	if (!row) return false;
+	row.description = description.trim();
+	writeManifest(rows);
+	return true;
+}
+
 export function removeRef(stored: string): boolean {
 	const rows = listRefs();
 	const row = rows.find((r) => r.stored === stored);

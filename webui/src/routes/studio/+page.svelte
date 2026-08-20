@@ -206,6 +206,66 @@
 	let sending = $state(false);
 	let composer = $state<HTMLTextAreaElement | null>(null);
 
+	/* ── reference files ───────────────────────────────────────────────────────
+	 *  Faces, rooms, movements you want the render to copy. They are staged on
+	 *  the server until the plan is approved, because there is nowhere to put
+	 *  them before that — the harness keeps artifacts inside a workspace, and
+	 *  the one that needs them is the render workspace, which does not exist
+	 *  yet. Launching the render consumes them, which is why the list empties
+	 *  itself at that point rather than lingering into the next film.
+	 */
+	type RefFile = { id: string; name: string; description: string; size: number };
+	let refFiles = $state<RefFile[]>([]);
+	let refBusy = $state(false);
+	let refError = $state('');
+	let refDragging = $state(false);
+
+	async function loadRefFiles() {
+		try {
+			const r = await fetch('/studio/api/refs');
+			if (!r.ok) return;
+			refFiles = ((await r.json()) as { files: RefFile[] }).files;
+		} catch {
+			/* the staging area is optional; never let it break the composer */
+		}
+	}
+
+	async function attachRefs(list: FileList | null) {
+		if (!list?.length || refBusy) return;
+		refBusy = true;
+		refError = '';
+		try {
+			const fd = new FormData();
+			for (const f of Array.from(list)) {
+				fd.append('file', f);
+				fd.append('description', '');
+			}
+			const r = await fetch('/studio/api/refs', { method: 'POST', body: fd });
+			const d = (await r.json()) as { ok: boolean; error?: string; files?: RefFile[] };
+			if (!d.ok) refError = d.error ?? 'could not attach that';
+			if (d.files) refFiles = d.files;
+		} catch (e) {
+			refError = String(e);
+		} finally {
+			refBusy = false;
+		}
+	}
+
+	async function dropRef(id: string) {
+		const r = await fetch(`/studio/api/refs?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+		const d = (await r.json()) as { files?: RefFile[] };
+		if (d.files) refFiles = d.files;
+	}
+
+	async function describeRefFile(id: string, description: string) {
+		await fetch('/studio/api/refs', {
+			method: 'PATCH',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ id, description })
+		});
+	}
+
+
 	// --- plan editing (only the latest plan, only before launch) -----------------
 
 	let editingPlan = $state(false);
@@ -598,8 +658,34 @@
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			now = Date.now();
+
+			// Say what the crew was actually given. A workflow that failed to load
+			// does not stop the shoot — it quietly removes an option the agents
+			// would otherwise have had, and that is invisible unless said here.
+			const extras: string[] = [];
+			const loadedWf = r.library?.workflows.filter((w) => w.ok).map((w) => w.name) ?? [];
+			const failedWf = r.library?.workflows.filter((w) => !w.ok) ?? [];
+			const loadedSk = r.library?.skills.filter((k) => k.ok).map((k) => k.name) ?? [];
+			const failedSk = r.library?.skills.filter((k) => !k.ok) ?? [];
+			if (loadedWf.length) extras.push(`Extra workflows loaded: ${loadedWf.join(', ')}.`);
+			if (loadedSk.length) extras.push(`Extra skills loaded: ${loadedSk.join(', ')}.`);
+			for (const f of [...failedWf, ...failedSk]) {
+				extras.push(`${f.name} did not load — ${f.detail ?? 'no reason given'}. The shoot goes on without it.`);
+			}
+			if (r.refs?.imported.length) {
+				extras.push(
+					`Reference material attached: ${r.refs.imported.join(', ')}. The crew cannot see these — they go to the render as reference input, guided by the descriptions you wrote.`
+				);
+			}
+			if (r.refs?.error) {
+				extras.push(`Your reference files could not be attached — ${r.refs.error}`);
+			}
+
 			pushStudio(
-				'Shooting has started. Clips are rendered scene by scene — usually 15–20 minutes — and appear here as they land.'
+				[
+					'Shooting has started. Clips are rendered scene by scene — usually 15–20 minutes — and appear here as they land.',
+					...extras
+				].join('\n\n')
 			);
 			persist();
 			startPolling();
@@ -1216,6 +1302,10 @@
 	});
 
 	onMount(() => {
+		// Staged references survive a reload — they live on the server, not in
+		// this tab — so the composer has to ask for them rather than assume none.
+		void loadRefFiles();
+
 		// A run left behind by a reload picks up where it was: the run identity is
 		// restored and the poller re-attaches. Document and clip items rebuild
 		// themselves from poll state; the conversation itself is not replayed.
@@ -1818,6 +1908,34 @@
 							{/if}
 						</p>
 					{/if}
+					{#if refFiles.length}
+						<div class="mb-2 space-y-1.5">
+							{#each refFiles as f (f.id)}
+								<div class="flex items-center gap-2 rounded-xl bg-[var(--st-surface)] px-3 py-2">
+									<span class="max-w-[9rem] shrink-0 truncate font-mono text-[11px] text-[var(--st-muted)]">
+										{f.name}
+									</span>
+									<input
+										value={f.description}
+										placeholder="what is this — the crew cannot see the file, only this line"
+										onchange={(e) => describeRefFile(f.id, e.currentTarget.value)}
+										class="min-w-0 flex-1 border-0 bg-transparent text-xs outline-none placeholder:text-[var(--st-faint)]"
+									/>
+									<button
+										type="button"
+										aria-label="remove {f.name}"
+										class="shrink-0 cursor-pointer px-1 text-xs text-[var(--st-faint)] hover:text-[var(--st-text)]"
+										onclick={() => dropRef(f.id)}
+									>
+										×
+									</button>
+								</div>
+							{/each}
+						</div>
+					{/if}
+					{#if refError}
+						<p class="mb-2 px-2 text-xs text-[var(--st-muted)]">{refError}</p>
+					{/if}
 					<p class="mb-1.5 px-2 text-xs text-[var(--st-faint)]">{composerHint}</p>
 					<div
 						class="rounded-3xl bg-[var(--st-surface)] p-3"
@@ -1844,6 +1962,32 @@
 						<div class="flex items-center justify-between gap-3 px-2 pt-1 pb-1">
 							{#if !planningWs}
 								<div class="flex items-center gap-1.5">
+									<label
+										title="Attach a face, a room, a movement for the render to copy"
+										class="mr-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+									>
+										<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true">
+											<path
+												d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
+												stroke="currentColor"
+												stroke-width="1.6"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+										</svg>
+										<span class="sr-only">attach reference files</span>
+										<input
+											type="file"
+											multiple
+											accept="image/*,video/*"
+											class="hidden"
+											disabled={refBusy}
+											onchange={(e) => {
+												attachRefs((e.currentTarget as HTMLInputElement).files);
+												(e.currentTarget as HTMLInputElement).value = '';
+											}}
+										/>
+									</label>
 									<span class="mr-1 text-xs text-[var(--st-faint)]">scenes</span>
 									{#each SCENE_CHOICES as n (n)}
 										<button

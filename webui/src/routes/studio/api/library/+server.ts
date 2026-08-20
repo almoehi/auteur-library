@@ -70,7 +70,7 @@ export const GET: RequestHandler = async () => {
 };
 
 interface SaveBody {
-	kind?: 'workflow' | 'skill';
+	kind?: 'workflow' | 'skill' | 'workflow-toggle' | 'skill-toggle';
 	name?: string;
 	jsonContent?: string;
 	yamlContent?: string;
@@ -96,6 +96,23 @@ export const POST: RequestHandler = async ({ request }) => {
 			error:
 				'the name must be lowercase letters, digits and underscores, 3–49 characters, starting with a letter — it becomes the agents’ tool name'
 		});
+	}
+
+	// Turning an entry on or off must not require the caller to hold its
+	// content. A two-megabyte ComfyUI graph does not belong in a round-trip
+	// whose entire purpose is one boolean.
+	if (body.kind === 'workflow-toggle' || body.kind === 'skill-toggle') {
+		const enabled = body.enabled !== false;
+		if (body.kind === 'skill-toggle') {
+			const cur = listSkills().find((x) => x.name === name);
+			if (!cur) return json({ ok: false, error: `no skill called ${name}` });
+			saveSkill({ ...cur, enabled });
+		} else {
+			const cur = listWorkflows().find((x) => x.name === name);
+			if (!cur) return json({ ok: false, error: `no workflow called ${name}` });
+			saveWorkflow({ ...cur, enabled });
+		}
+		return json({ ok: true, saved: name });
 	}
 
 	if (body.kind === 'skill') {

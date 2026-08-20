@@ -46,8 +46,18 @@ export const SCENE_COUNT_MAX = 6;
 /** What POST /studio/api/launch answers with. It always returns 200:
  *  a down container and a rejected YAML are both normal states here, to be drawn
  *  as a banner rather than thrown. */
+/** What the render launch loaded into the workspace after opening it. Absent
+ *  for the planning stage, which needs neither. */
+export interface LaunchExtras {
+	library?: {
+		workflows: { name: string; ok: boolean; detail?: string }[];
+		skills: { name: string; ok: boolean; detail?: string }[];
+	};
+	refs?: { artifactId?: string; imported: string[]; error?: string };
+}
+
 export type LaunchResult =
-	| { ok: true; workspaceId: string }
+	| ({ ok: true; workspaceId: string } & LaunchExtras)
 	| {
 			ok: false;
 			/** true when the harness could not be reached at all (nobody started

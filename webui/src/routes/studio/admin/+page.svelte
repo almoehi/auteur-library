@@ -125,23 +125,7 @@
 
 <svelte:head><title>tuning · auteur</title></svelte:head>
 
-<main class="studio min-h-screen pt-20 pb-24">
-	<div class="mx-auto max-w-[52rem] px-5">
-		<header class="mb-8 flex items-baseline justify-between gap-4">
-			<div>
-				<p class="text-[10px] font-bold tracking-[0.3em] text-[var(--st-faint)] uppercase">
-					auteur tuning
-				</p>
-				<h1 class="font-display mt-1 text-xl font-semibold">Prompts and models</h1>
-			</div>
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a
-				href="/studio"
-				class="text-xs text-[var(--st-faint)] underline-offset-4 hover:text-[var(--st-muted)] hover:underline"
-			>
-				back to the studio
-			</a>
-		</header>
+<h1 class="font-display mb-2 text-xl font-semibold">Prompts and models</h1>
 
 		<p class="mb-8 text-sm leading-relaxed text-[var(--st-muted)]">
 			These are the fixed instructions the crew works from. Changes apply to the next
@@ -262,24 +246,3 @@
 				{data.path}
 			</p>
 		{/if}
-	</div>
-</main>
-
-<style>
-	.studio {
-		--st-bg: var(--color-bg);
-		--st-surface: var(--color-surface);
-		--st-surface-2: #1e1e1e;
-		--st-text: var(--color-text);
-		--st-muted: var(--color-muted);
-		--st-faint: #565656;
-		--st-accent: var(--color-coral);
-		--st-accent-strong: var(--color-coral-dark);
-		background: var(--st-bg);
-		color: var(--st-text);
-		font-family: var(--font-body);
-	}
-	.studio :global(h1) {
-		font-family: var(--font-display);
-	}
-</style>

@@ -6,7 +6,7 @@
  */
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { MAX_REF_BYTES, addRef, listRefs, removeRef } from '../../refs.server';
+import { MAX_REF_BYTES, addRef, describeRef, listRefs, removeRef } from '../../refs.server';
 
 function view() {
 	const rows = listRefs();
@@ -52,6 +52,21 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	return json({ ok: true, added, ...view() });
+};
+
+/** The description is the whole value of a reference file to an agent, and it
+ *  is the one field somebody will want to fix after dropping five files in a
+ *  hurry. Editing it must not mean re-uploading the file. */
+export const PATCH: RequestHandler = async ({ request }) => {
+	let body: { id?: string; description?: string };
+	try {
+		body = (await request.json()) as { id?: string; description?: string };
+	} catch {
+		throw error(400, 'Body must be JSON');
+	}
+	if (!body.id) throw error(400, 'id is required');
+	const ok = describeRef(body.id, body.description ?? '');
+	return json({ ok, ...view() });
 };
 
 export const DELETE: RequestHandler = async ({ url }) => {
