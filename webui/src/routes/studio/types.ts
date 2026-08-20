@@ -93,7 +93,7 @@ export type StageKey =
 export interface ChatItem {
 	id: string;
 	who: 'user' | 'studio';
-	kind: 'text' | 'plan' | 'artifact' | 'clips' | 'error' | 'approval' | 'activity';
+	kind: 'text' | 'plan' | 'artifact' | 'clips' | 'error' | 'approval' | 'activity' | 'board' | 'shootboard';
 	/** plain text content (kind=text, error, approval) */
 	text?: string;
 	/** the expanded brief awaiting the user's yes (kind=plan) */

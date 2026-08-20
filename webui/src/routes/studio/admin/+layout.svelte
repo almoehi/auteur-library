@@ -20,7 +20,7 @@
 	const path = $derived(page.url.pathname.replace(/\/$/, '') || '/studio/admin');
 </script>
 
-<main class="studio min-h-screen pt-20 pb-24">
+<main class="studio min-h-screen pt-10 pb-24">
 	<div class="mx-auto max-w-[52rem] px-5">
 		<header class="mb-7">
 			<div class="flex items-baseline justify-between gap-4">

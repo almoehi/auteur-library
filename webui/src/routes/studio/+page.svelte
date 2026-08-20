@@ -180,6 +180,169 @@
 	/** artifact key -> the filename it came from. The renderer needs it to tell a
 	 *  JSON visual bible from a markdown document. */
 	let docFile = $state<Record<string, string>>({});
+
+	/** Where the document can be downloaded, and which task wrote it — both were
+	 *  carried on the per-document card until the board replaced it. */
+	let docUrl = $state<Record<string, string>>({});
+	let docTaskId = $state<Record<string, string>>({});
+
+	/** Posted once, the moment planning starts, so the five steps are on screen
+	 *  before any of them has finished. */
+	let boardId = $state('');
+
+	/* ── past productions ──────────────────────────────────────────────────────
+	 *  A run used to exist only in the tab that started it. The server now keeps
+	 *  a bookmark per production, and this is the way back to one.
+	 */
+	type Production = {
+		slug: string;
+		title: string;
+		sceneCount: number;
+		planningWs?: string;
+		renderWs?: string;
+		startedAt: number;
+		updatedAt: number;
+		pitch?: string;
+	};
+	let history = $state<Production[]>([]);
+	let sidebarOpen = $state(false);
+
+	async function loadHistory() {
+		try {
+			const r = await fetch('/studio/api/history');
+			if (!r.ok) return;
+			history = ((await r.json()) as { productions: Production[] }).productions;
+		} catch {
+			/* the list is a convenience; never let it break the studio */
+		}
+	}
+
+	/** Reopening writes the resume payload and reloads.
+	 *
+	 *  Deliberately not a soft in-place swap: restoring a run means rebuilding
+	 *  the transcript, the poller, the document phases and the revision chain
+	 *  from scratch, and there is already one tested path that does all of that —
+	 *  the one that runs on load. Reusing it is worth the reload. */
+	function reopen(p: Production) {
+		try {
+			sessionStorage.setItem(
+				RESUME_KEY,
+				JSON.stringify({
+					brief: {
+						slug: p.slug,
+						title: p.title,
+						story: p.pitch ?? '',
+						style: '',
+						sceneCount: p.sceneCount,
+						seed: 0
+					},
+					launchedBrief: {
+						slug: p.slug,
+						title: p.title,
+						story: p.pitch ?? '',
+						style: '',
+						sceneCount: p.sceneCount,
+						seed: 0
+					},
+					planningWs: p.planningWs ?? '',
+					renderWs: p.renderWs ?? '',
+					assemblySent: false,
+					startedAt: p.startedAt
+				})
+			);
+		} catch {
+			/* private mode — fall through to a plain reload, which starts fresh */
+		}
+		location.href = '/studio';
+	}
+
+	async function dropFromHistory(p: Production, e: MouseEvent) {
+		e.stopPropagation();
+		const r = await fetch(`/studio/api/history?slug=${encodeURIComponent(p.slug)}`, {
+			method: 'DELETE'
+		});
+		if (r.ok) history = ((await r.json()) as { productions: Production[] }).productions;
+	}
+
+	/** "today", "yesterday", then the date — the grouping people actually use
+	 *  when looking for something they made recently. */
+	function whenLabel(ts: number): string {
+		const d = new Date(ts);
+		const today = new Date();
+		const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+		if (same(d, today)) return 'today';
+		const y = new Date(today);
+		y.setDate(y.getDate() - 1);
+		if (same(d, y)) return 'yesterday';
+		return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+	}
+
+	type BoardState = 'waiting' | 'writing' | 'done' | 'rewriting' | 'failed';
+
+	/** The five planning steps with the state each is actually in.
+	 *
+	 *  Derived rather than pushed, so the board is never a snapshot of a moment
+	 *  that has passed — the row for the document being written now is the same
+	 *  row that will carry it when it is done. */
+	const board = $derived.by(() => {
+		const tasks = planningPoll?.tasks ?? [];
+		return PLANNING_STEPS.map((step) => {
+			const t = tasks.find((x) => x.key === step.task);
+			const phase = docPhase[step.artifact];
+			let state: BoardState = 'waiting';
+			if (phase === 'regen') state = 'rewriting';
+			else if (phase === 'posted') state = 'done';
+			else if (t && DEAD.includes(t.status)) state = 'failed';
+			else if (t && !DONE.includes(t.status)) state = 'writing';
+			return {
+				key: step.artifact,
+				label: step.label,
+				state,
+				body: docBody[step.artifact],
+				file: docFile[step.artifact],
+				url: docUrl[step.artifact]
+			};
+		});
+	});
+
+	const boardDone = $derived(board.filter((b) => b.state === 'done').length);
+
+	/** The shoot, one row per scene.
+	 *
+	 *  A render is minutes of nothing — no output until the clip exists, and the
+	 *  harness reports the task as "running" throughout whether it is writing a
+	 *  prompt, waiting for a GPU, or stuck. So this says what can honestly be
+	 *  said: which scene, what stage it has reached, and how long it has been
+	 *  there. The elapsed number is the important one. It is what turns "this
+	 *  feels slow" into a judgement someone can actually make. */
+	const shootBoard = $derived.by(() => {
+		const tasks = (renderPoll?.tasks ?? []).filter((t) => /shoot[_ ]?scene/i.test(t.key ?? t.title ?? ''));
+		const arts = renderPoll?.artifacts ?? [];
+		return tasks
+			.map((t) => {
+				const n = sceneNo(t.key ?? '', t.title ?? '');
+				const art = arts.find((a) => sceneNo(a.key ?? '', a.name ?? '') === n && /clip/i.test(a.key ?? ''));
+				const done = art?.status === 'approved';
+				const failed = DEAD.includes(t.status);
+				return {
+					n,
+					title: (t.title ?? `Scene ${n}`).replace(/^Shoot\s+/i, ''),
+					state: done ? 'done' : failed ? 'failed' : 'running',
+					retries: retryCounts.get(t.key ?? '') ?? 0
+				};
+			})
+			.sort((a, b) => a.n - b.n);
+	});
+
+	/** Set when the shoot workspace opens, so a row can say how long it has been
+	 *  going. Per-scene start times are not available — the harness dispatches
+	 *  them together — so this is the honest granularity. */
+	const shootElapsed = $derived(startedAt ? Math.floor((now - startedAt) / 1000) : 0);
+
+	function mmss(sec: number): string {
+		const m = Math.floor(sec / 60);
+		return m < 1 ? `${sec}s` : `${m}m ${String(sec % 60).padStart(2, '0')}s`;
+	}
 	let approvalId = $state('');
 
 	/** The chain reset in flight, or null. `armed` flips once the reset task was
@@ -226,7 +389,7 @@
 	 *  One afternoon of that cost real money before anyone noticed, because from
 	 *  outside a retry loop looks exactly like slow work. */
 	const RETRY_ALARM = 3;
-	let retryCounts = new Map<string, number>();
+	let retryCounts = $state(new Map<string, number>());
 	let retryWarned = new Set<string>();
 
 	async function pollActivity(target: string) {
@@ -655,6 +818,9 @@
 			}
 			launchedBrief = b;
 			planningWs = r.workspaceId;
+			// Before anything has been written. The point of the board is to show
+			// the shape of the work while it is still empty.
+			if (!boardId) boardId = pushItem({ who: 'studio', kind: 'board' }).id;
 			startedAt = Date.now();
 			now = Date.now();
 			editingPlan = false;
@@ -733,12 +899,8 @@
 				extras.push(`Your reference files could not be attached — ${r.refs.error}`);
 			}
 
-			pushStudio(
-				[
-					'Shooting has started. Clips are rendered scene by scene — usually 15–20 minutes — and appear here as they land.',
-					...extras
-				].join('\n\n')
-			);
+			pushItem({ who: 'studio', kind: 'shootboard' });
+			if (extras.length) pushStudio(extras.join('\n\n'));
 			persist();
 			startPolling();
 		} catch (e) {
@@ -965,20 +1127,12 @@
 				docBody[step.artifact] = body;
 				docFile[step.artifact] = name;
 			}
-			const old = latestDocItem[step.artifact];
-			if (old) superseded[old] = true;
-			const item = pushItem({
-				who: 'studio',
-				kind: 'artifact',
-				artifact: {
-					key: step.artifact,
-					title: step.label,
-					taskId: t.id,
-					files: [{ name, url: fileUrl(planningWs, a.id, name) }],
-					body: body ?? undefined
-				}
-			});
-			latestDocItem[step.artifact] = item.id;
+			// No card per document any more. They land in the board that was posted
+			// when the run started, which is the only way to see the five as a set
+			// with the one still being written marked as such — a card that appears
+			// on completion can only ever show what is already finished.
+			docUrl[step.artifact] = fileUrl(planningWs, a.id, name);
+			docTaskId[step.artifact] = t.id;
 		}
 
 		// The approval gate: all five documents on screen, no revision in flight.
@@ -987,7 +1141,8 @@
 			const item = pushItem({
 				who: 'studio',
 				kind: 'approval',
-				text: 'The plans are ready. Start shooting? GPU time begins here.'
+				text:
+					'The plan is ready. Read anything you want to check above — once shooting starts, none of it can be changed.\n\nIf you want a particular face, room or movement in the film, attach it with the clip on the message box before you start. That is the last moment it can be handed to the crew.\n\nShooting uses GPU time and costs money.'
 			});
 			approvalId = item.id;
 		}
@@ -1372,6 +1527,7 @@
 		// Staged references survive a reload — they live on the server, not in
 		// this tab — so the composer has to ask for them rather than assume none.
 		void loadRefFiles();
+		void loadHistory();
 
 		// A run left behind by a reload picks up where it was: the run identity is
 		// restored and the poller re-attaches. Document and clip items rebuild
@@ -1593,29 +1749,113 @@
 	 the task rail stay put while only the conversation moves — the layout every
 	 chat client converges on. 100dvh (not vh) keeps it correct on mobile Safari,
 	 where the URL bar changes the viewport height mid-scroll. -->
-<main class="studio flex h-[100dvh] flex-col overflow-hidden pt-20">
-	<div class="mx-auto flex min-h-0 w-full max-w-[66rem] flex-1 flex-col px-5">
-		<header class="mb-4 flex shrink-0 items-baseline justify-between gap-4">
-			<p class="text-[10px] font-bold tracking-[0.3em] text-[var(--st-faint)] uppercase">
-				auteur studio
-			</p>
-			{#if brief}
+<div class="studio flex h-[100dvh] overflow-hidden">
+	<!-- ── past productions ────────────────────────────────────────────────────
+	     Off-canvas below lg, because the transcript is the page on a phone and a
+	     permanent rail would take a third of it. Above lg it is simply there:
+	     going back to a run should not cost a click to reveal the way back. -->
+	{#if sidebarOpen}
+		<button
+			type="button"
+			aria-label="close the production list"
+			class="fixed inset-0 z-30 cursor-default bg-black/50 lg:hidden"
+			onclick={() => (sidebarOpen = false)}
+		></button>
+	{/if}
+
+	<aside
+		class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--st-surface-2)] bg-[var(--st-bg)] transition-transform lg:static lg:z-auto lg:translate-x-0 {sidebarOpen
+			? 'translate-x-0'
+			: '-translate-x-full'}"
+	>
+		<div class="px-3 pt-4 pb-2">
+			<button
+				type="button"
+				onclick={() => {
+					reset();
+					sidebarOpen = false;
+				}}
+				class="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--st-surface)]"
+			>
+				<svg viewBox="0 0 16 16" class="size-4 shrink-0 text-[var(--st-muted)]" fill="none" aria-hidden="true">
+					<path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+				</svg>
+				<span class="font-display font-semibold">New production</span>
+			</button>
+		</div>
+
+		<nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+			{#if history.length}
+				<p class="px-3 pt-3 pb-1.5 text-[10px] font-bold tracking-[0.2em] text-[var(--st-faint)] uppercase">
+					recent
+				</p>
+				{#each history as p (p.slug)}
+					{@const current = brief?.slug === p.slug}
+					<div class="group relative">
+						<button
+							type="button"
+							onclick={() => reopen(p)}
+							class="w-full cursor-pointer rounded-xl px-3 py-2 pr-8 text-left transition-colors {current
+								? 'bg-[var(--st-surface)]'
+								: 'hover:bg-[var(--st-surface)]'}"
+						>
+							<span class="block truncate text-[13px] text-[var(--st-text)]">{p.title}</span>
+							<span class="mt-0.5 block text-[11px] text-[var(--st-faint)]">
+								{whenLabel(p.updatedAt)} · {p.sceneCount} scenes{p.renderWs ? ' · shot' : ''}
+							</span>
+						</button>
+						<button
+							type="button"
+							aria-label="remove {p.title} from the list"
+							onclick={(e) => dropFromHistory(p, e)}
+							class="absolute top-2 right-1.5 cursor-pointer rounded-lg px-1.5 py-1 text-xs text-[var(--st-faint)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)] focus:opacity-100"
+						>
+							×
+						</button>
+					</div>
+				{/each}
+			{:else}
+				<p class="px-3 pt-4 text-xs leading-relaxed text-[var(--st-faint)]">
+					Films you start show up here, so you can come back to one after closing the tab.
+				</p>
+			{/if}
+		</nav>
+
+		<!-- Tuning lives at the bottom because it is a settings surface, not a
+		     destination — the same place every app of this shape puts one. -->
+		<div class="border-t border-[var(--st-surface-2)] px-3 py-3">
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+			<a
+				href="/studio/admin"
+				class="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+			>
+				<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" aria-hidden="true">
+					<path d="M3 5h10M3 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					<circle cx="6" cy="5" r="1.8" fill="var(--st-bg)" stroke="currentColor" stroke-width="1.5" />
+					<circle cx="10.5" cy="11" r="1.8" fill="var(--st-bg)" stroke="currentColor" stroke-width="1.5" />
+				</svg>
+				Prompts &amp; models
+			</a>
+		</div>
+	</aside>
+
+	<main class="flex min-w-0 flex-1 flex-col overflow-hidden pt-4 lg:pt-8">
+		<div class="mx-auto flex min-h-0 w-full max-w-[66rem] flex-1 flex-col px-5">
+			<header class="mb-4 flex shrink-0 items-center gap-3">
 				<button
 					type="button"
-					class="cursor-pointer text-xs text-[var(--st-faint)] underline-offset-4 hover:text-[var(--st-muted)] hover:underline"
-					onclick={reset}
+					aria-label="show past productions"
+					class="-ml-1.5 cursor-pointer rounded-lg p-1.5 text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)] lg:hidden"
+					onclick={() => (sidebarOpen = true)}
 				>
-					new production
+					<svg viewBox="0 0 16 16" class="size-5" fill="none" aria-hidden="true">
+						<path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					</svg>
 				</button>
-			{/if}
-					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-					<a
-						href="/studio/admin"
-						class="cursor-pointer text-xs text-[var(--st-faint)] underline-offset-4 hover:text-[var(--st-muted)] hover:underline"
-					>
-						tuning
-					</a>
-		</header>
+				<p class="text-[10px] font-bold tracking-[0.3em] text-[var(--st-faint)] uppercase">
+					auteur studio
+				</p>
+			</header>
 
 		<div
 			class="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-10"
@@ -1679,6 +1919,168 @@
 							<p class="enter doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
 								{item.text}
 							</p>
+						{:else if item.kind === 'board'}
+							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+								<div class="mb-4 flex items-baseline justify-between gap-3">
+									<h3 class="font-display text-base font-semibold">The plan</h3>
+									<span class="font-mono text-[11px] text-[var(--st-faint)]">
+										{boardDone} of {board.length}
+									</span>
+								</div>
+
+								<div class="divide-y divide-[var(--st-surface-2)]">
+									{#each board as row (row.key)}
+										<div class="py-3 first:pt-0 last:pb-0">
+											<div class="flex items-center gap-3">
+												<!-- State reads without colour too: a spinner spins, a
+												     check is a check. Colour alone would fail anyone who
+												     cannot separate the green from the grey. -->
+												<span class="flex size-4 shrink-0 items-center justify-center">
+													{#if row.state === 'done'}
+														<svg viewBox="0 0 16 16" class="size-4 text-[#5b8f6e]" fill="none" aria-hidden="true">
+															<path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+														</svg>
+													{:else if row.state === 'writing' || row.state === 'rewriting'}
+														<span class="spin size-3.5 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"></span>
+													{:else if row.state === 'failed'}
+														<svg viewBox="0 0 16 16" class="size-4 text-[#c4614b]" fill="none" aria-hidden="true">
+															<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+														</svg>
+													{:else}
+														<span class="size-1.5 rounded-full bg-[var(--st-faint)]"></span>
+													{/if}
+												</span>
+
+												<span
+													class="font-display flex-1 text-sm font-semibold {row.state === 'waiting'
+														? 'text-[var(--st-faint)]'
+														: 'text-[var(--st-text)]'}"
+												>
+													{row.label}
+												</span>
+
+												{#if row.state === 'done'}
+													<button
+														type="button"
+														class="cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 transition-colors hover:text-[var(--st-text)] hover:underline"
+														onclick={() => (expanded[row.key] = !expanded[row.key])}
+													>
+														{expanded[row.key] ? 'close' : 'read'}
+													</button>
+												{:else if row.state === 'rewriting'}
+													<span class="text-xs text-[var(--st-faint)]">rewriting</span>
+												{:else if row.state === 'writing'}
+													<span class="text-xs text-[var(--st-faint)]">writing…</span>
+												{:else if row.state === 'failed'}
+													<span class="text-xs text-[var(--st-muted)]">stalled</span>
+												{/if}
+											</div>
+
+											{#if row.state === 'done' && expanded[row.key]}
+												<div class="mt-3 border-l border-[var(--st-surface-2)] pl-4">
+													{#if row.body}
+														{@render document(renderDocument(row.file ?? '', row.body))}
+													{:else if row.url}
+														<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+														<a href={row.url} class="text-xs text-[var(--st-muted)] underline" download>
+															download the file
+														</a>
+													{/if}
+
+													<div class="mt-4">
+														<button
+															type="button"
+															onclick={() => (changeOpen[row.key] = !changeOpen[row.key])}
+															class="cursor-pointer text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+														>
+															request a change
+														</button>
+														{#if changeOpen[row.key]}
+															<form
+																class="mt-3 flex gap-2"
+																onsubmit={(e) => {
+																	e.preventDefault();
+																	requestChange(row.key, row.key);
+																}}
+															>
+																<label class="sr-only" for="change-{row.key}">What should change</label>
+																<input
+																	id="change-{row.key}"
+																	bind:value={changeText[row.key]}
+																	placeholder="what should change in this document"
+																	class="min-w-0 flex-1 rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--st-faint)] focus:border-[var(--st-muted)]"
+																/>
+																<button
+																	type="submit"
+																	disabled={changeBusy[row.key] || !(changeText[row.key] ?? '').trim()}
+																	class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+																>
+																	send
+																</button>
+															</form>
+															<p class="mt-2 text-xs text-[var(--st-faint)]">
+																This step is rewritten, and everything built on it is refreshed after it.
+															</p>
+														{/if}
+													</div>
+												</div>
+											{/if}
+										</div>
+									{/each}
+								</div>
+							</article>
+						{:else if item.kind === 'shootboard'}
+							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+								<div class="mb-1 flex items-baseline justify-between gap-3">
+									<h3 class="font-display text-base font-semibold">Shooting</h3>
+									<span class="font-mono text-[11px] text-[var(--st-faint)] tabular-nums">
+										{mmss(shootElapsed)}
+									</span>
+								</div>
+								<p class="mb-4 text-xs leading-relaxed text-[var(--st-muted)]">
+									Each scene is written into a prompt, then rendered on a GPU. A clip usually
+									takes several minutes and there is no output until it is finished — the timer
+									is the only thing that moves.
+								</p>
+
+								{#if shootBoard.length}
+									<div class="divide-y divide-[var(--st-surface-2)]">
+										{#each shootBoard as row (row.n)}
+											<div class="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+												<span class="flex size-4 shrink-0 items-center justify-center">
+													{#if row.state === 'done'}
+														<svg viewBox="0 0 16 16" class="size-4 text-[#5b8f6e]" fill="none" aria-hidden="true">
+															<path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+														</svg>
+													{:else if row.state === 'failed'}
+														<svg viewBox="0 0 16 16" class="size-4 text-[#c4614b]" fill="none" aria-hidden="true">
+															<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+														</svg>
+													{:else}
+														<span class="spin size-3.5 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"></span>
+													{/if}
+												</span>
+												<span class="min-w-0 flex-1 truncate text-sm">{row.title}</span>
+												<span class="shrink-0 text-xs text-[var(--st-faint)]">
+													{#if row.state === 'done'}
+														ready
+													{:else if row.state === 'failed'}
+														stalled
+													{:else if row.retries >= 3}
+														<span class="text-[var(--st-muted)]">retried {row.retries}×</span>
+													{:else}
+														rendering
+													{/if}
+												</span>
+											</div>
+										{/each}
+									</div>
+								{:else}
+									<p class="text-sm text-[var(--st-faint)]">
+										Working out how many scenes to shoot…
+									</p>
+								{/if}
+							</article>
 						{:else if item.kind === 'activity' && item.activity}
 							<!-- Quiet by design. These are constant during a run, and a
 							     progress line that shouts competes with the documents the
@@ -2165,9 +2567,28 @@
 			{/if}
 		</div>
 	</div>
-</main>
+	</main>
+</div>
 
 <style>
+	/* The one moving thing on the page, and it earns it: during a render nothing
+	   else changes for minutes, so stillness would read as a hang. Anyone who has
+	   asked the system to stop animating gets a static ring instead — the state
+	   is already carried by the shape and the word beside it. */
+	.spin {
+		animation: st-spin 0.9s linear infinite;
+	}
+	@keyframes st-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.spin {
+			animation: none;
+		}
+	}
+
 	/* The studio wears the ratemyd brand: the app's own near-black surfaces, coral
 	 * accent and type pairing. The --st-* names stay as the component's internal
 	 * vocabulary so the markup never hardcodes a colour — only this block maps

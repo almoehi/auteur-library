@@ -27,6 +27,7 @@ import { readOverrides } from '../../overrides.server';
 import { loadLibraryInto, type LoadReport } from '../../harness.server';
 import { importStagedRefs, type RefImportResult } from '../../refs-import.server';
 import { listRefs } from '../../refs.server';
+import { recordProduction } from '../../history.server';
 import {
 	briefToWorkspaceId,
 	renderWorkspaceId,
@@ -208,6 +209,17 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		return json({ ok: false, error: detail }, { status: 200 });
 	}
 	if (harnessError) return json({ ok: false, error: harnessError }, { status: 200 });
+
+	// Bookmark it. Until this existed a run lived only in the tab that started
+	// it: close the tab and the film was still on the harness but unreachable,
+	// because nothing remembered its id.
+	recordProduction({
+		slug: brief.slug,
+		title: brief.title,
+		sceneCount: brief.sceneCount,
+		pitch: typeof brief.story === 'string' ? brief.story.slice(0, 200) : undefined,
+		...(stage === 'planning' ? { planningWs: workspaceId } : { renderWs: workspaceId })
+	});
 
 	// The workspace is live from here on. Everything below adds to it and can
 	// only fail partially: the production is already running, so a workflow that
