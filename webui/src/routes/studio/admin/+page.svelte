@@ -12,7 +12,7 @@
 	 */
 	import { onMount } from 'svelte';
 
-	type Group = { id: string; title: string; affects: string };
+	type Group = { id: string; title: string; affects: string; when: string };
 	type Item = {
 		id: string;
 		group: string;
@@ -147,9 +147,9 @@
 <h1 class="font-display mb-2 text-xl font-semibold">Prompts and models</h1>
 
 		<p class="mb-8 text-sm leading-relaxed text-[var(--st-muted)]">
-			These are the fixed instructions the crew works from. Changes apply to the next
-			production — a running one composed its workspace at launch and cannot be edited.
-			Clearing a box restores the shipped default.
+			These are the fixed instructions the crew works from. When a change takes effect
+			depends on the stage — each group says so. Clearing a box restores the shipped
+			default.
 		</p>
 
 		{#if err}
@@ -180,6 +180,9 @@
 								</span>
 								<span class="mt-1.5 block text-xs leading-relaxed text-[var(--st-muted)]">
 									{g.affects}
+								</span>
+								<span class="mt-1.5 block text-xs leading-relaxed text-[var(--st-faint)]">
+									{g.when}
 								</span>
 							</span>
 							<span class="shrink-0 font-mono text-[11px] text-[var(--st-faint)]">

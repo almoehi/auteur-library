@@ -41,22 +41,25 @@ export type GroupId = 'plan' | 'documents' | 'shoot';
 /** The three stages, in the order they happen. The description says what the
  *  stage decides, not what it is called — someone opening this panel has a
  *  complaint about the film, not about the architecture. */
-export const GROUPS: { id: GroupId; title: string; affects: string }[] = [
+export const GROUPS: { id: GroupId; title: string; affects: string; when: string }[] = [
 	{
 		id: 'plan',
 		title: 'Plan',
+		when: 'Applies to your next message in the chat — these run live, not from a workspace.',
 		affects:
 			'Your one sentence becomes a title, a story and a visual style. Change these if the briefs come back with the wrong tone, the wrong level of explicitness, or a story you did not ask for.'
 	},
 	{
 		id: 'documents',
 		title: 'Documents',
+		when: 'Applies to the next production. A running one wrote these into its workspace at launch and cannot be changed.',
 		affects:
 			'The screenplay, cast, scenes, art direction and visual bible — everything you read and approve before any GPU time is spent. Change these if the plan is right but the documents are thin, inconsistent, or miss what matters.'
 	},
 	{
 		id: 'shoot',
 		title: 'Shoot',
+		when: 'Applies to the next production. A running one wrote these into its workspace at launch and cannot be changed.',
 		affects:
 			'What happens after you approve: how scenes become render tasks, and the exact words the video model receives. Change these if the documents read well but the clips do not look like them.'
 	}
