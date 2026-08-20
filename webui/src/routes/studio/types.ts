@@ -20,6 +20,10 @@ export interface Brief {
 	slug: string;
 	/** short human title shown in the UI (becomes spec.description) */
 	title: string;
+	/** Two or three sentences saying what the film is. Shown instead of the
+	 *  story, which runs to four hundred words nobody reads before deciding
+	 *  whether the plan is right. The story is one click away and unchanged. */
+	summary?: string;
 	/** the prose the screenwriter agent adapts — this becomes spec.story.plot */
 	story: string;
 	/** one sentence naming the visual medium, e.g.

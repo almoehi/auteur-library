@@ -2221,12 +2221,33 @@
 									<h3 class="font-display text-lg leading-snug font-semibold tracking-tight">
 										{item.plan.title}
 									</h3>
+									<!-- The summary, not the story. Four hundred words of prose is
+									     what the crew needs and not what a person reads before deciding
+									     whether this is the film they asked for — and asking them to
+									     read it to find out buries the decision under the material.
+									     The story is one click away and entirely unchanged. -->
 									<p class="doc mt-3 text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
-										{item.plan.story}
+										{item.plan.summary || item.plan.story}
 									</p>
 									<p class="mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
 										{item.plan.style}
 									</p>
+									{#if item.plan.summary}
+										<button
+											type="button"
+											class="mt-3 cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 hover:text-[var(--st-text)] hover:underline"
+											onclick={() => (expanded[item.id] = !expanded[item.id])}
+										>
+											{expanded[item.id] ? 'hide the full story' : 'read the full story'}
+										</button>
+										{#if expanded[item.id]}
+											<p
+												class="doc enter mt-3 rounded-xl bg-[var(--st-bg)] px-4 py-3.5 text-[0.95rem] leading-[1.75] text-[var(--st-muted)]"
+											>
+												{item.plan.story}
+											</p>
+										{/if}
+									{/if}
 									<p class="mt-3 text-xs text-[var(--st-faint)]">
 										{item.plan.sceneCount} scenes
 										{#if item.id === latestPlanId && !planningWs}

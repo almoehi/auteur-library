@@ -82,13 +82,40 @@ const MIN_STORY_WORDS = 120;
 
 /** The JSON contract, shared verbatim by the fresh and the revise prompts so
  *  the two paths can never drift apart on what a valid answer looks like. */
-const JSON_CONTRACT = `Answer with a single JSON object and nothing else. No prose before or after it, no markdown code fences. The object has exactly these keys:
+/** The shape of the answer, and the craft rules that make the answer usable.
+ *
+ *  Not editable in the panel: this is the wire format plus the constraints the
+ *  rest of the pipeline physically imposes — a clip is 5-15 seconds whatever the
+ *  prompt says, and the render generates audio whether or not anyone wrote any.
+ *  Taste lives in the register; this is what the machine needs to be true.
+ *
+ *  Takes the scene count because the story has to survive being cut into exactly
+ *  that many pieces. Told to write "3 to 6 places" while the user asked for two
+ *  scenes, the model wrote six locations and the scheduler then threw four away.
+ */
+function jsonContract(sceneCount: number): string {
+	return `Answer with a single JSON object and nothing else. No prose before or after it, no markdown code fences. The object has exactly these keys:
 
 "title": 2-5 words. The name of the film.
 
-"story": 200-500 words of PROSE. An actual short story, not a synopsis and not bullet points: it has a beginning, a turn, and an ending, and it is written in full sentences and paragraphs. Name your characters and describe how they look, because an artist has only your words to draw from. Move the story through 3 to 6 distinct physical places and describe each one. Write it as a story someone would read aloud.
+"summary": 2-3 sentences, plain and concrete. What happens, to whom, where. This is the only part most people will read before deciding whether the plan is right, so it says what the film IS — not what it is about, not what it explores. No adjectives you would not use out loud.
 
-"style": ONE sentence. It must name a concrete visual medium as a noun, and then say how that medium is handled. Good: "2D digital comic book illustration with bold ink outlines and flat cel-shading". "Hand-painted watercolour storybook art with soft bleeding edges". "Stop-motion felt puppetry shot on a miniature set". The words "cinematic", "beautiful", "stunning", "high quality", "4k", "masterpiece" and every other empty praise word are FORBIDDEN — they describe nothing. Every single image in this film inherits this sentence verbatim, so it must describe a medium a person could actually work in.`;
+"story": 200-500 words of PROSE. An actual short story, not a synopsis and not bullet points: a beginning, a turn, an ending, in full sentences and paragraphs.
+
+  It will be filmed as exactly ${sceneCount} ${sceneCount === 1 ? 'scene' : 'scenes'}, and each scene becomes ONE clip of five to fifteen seconds. So write ${sceneCount} ${sceneCount === 1 ? 'moment' : 'moments'} that each fit in that much screen time — a held look, a crossing of a room, one exchange — and nothing that would need a minute to play. Everything that happens must be visible: a decision shows as an action, not as a thought.
+
+  Name every character and describe how they look — face, build, hair, what they are wearing. Whoever draws them has only your words. Keep two or three named people at most; each one costs description in every shot they appear in.
+
+  Their appearance must not change between scenes. No costume change, no different hair, no "later that night" wardrobe. The film is cut from separate renders, and anything that changes will look like a different person.
+
+  Use as many places as the story actually needs, and no more. One room is a perfectly good film. Do not move people between locations to add variety — a story that stays in one place and lets something happen there is easier to shoot and easier to believe.
+
+  Write what is heard as well as what is seen: the room's own sound, what the voices sound like, what is silent. The render produces audio, and if the story is quiet about it the sound is invented shot by shot with nothing to keep it consistent.
+
+"style": ONE sentence. It must name a concrete visual medium as a noun, and then say how that medium is handled. Good: "2D digital comic book illustration with bold ink outlines and flat cel-shading". "Hand-painted watercolour storybook art with soft bleeding edges". "Stop-motion felt puppetry shot on a miniature set". The words "cinematic", "beautiful", "stunning", "high quality", "4k", "masterpiece" and every other empty praise word are FORBIDDEN — they describe nothing. Every single image in this film inherits this sentence verbatim, so it must describe a medium a person could actually work in.
+
+ONE RULE ABOVE ALL OF THESE: the pitch wins. Everything above describes a good default, not a requirement to override what was actually asked for. If the pitch names a place, stay there. If it names a look, a length, a mood, a character — that is the instruction, and these notes bend around it. Never add locations, characters or events the pitch did not ask for merely because the guidance above mentions them.`;
+}
 
 /** The register matters as much as the format. This studio feeds an adult
  *  creator platform, so the default a general model reaches for — a whimsical
@@ -108,14 +135,14 @@ const JSON_CONTRACT = `Answer with a single JSON object and nothing else. No pro
  *  pitch. One retry only: past that it is a provider problem, and a third call
  *  just makes the user wait longer for the same error. */
 const SYSTEM_TERSE = `Output one JSON object. No other text. No code fences.
-{"title": "2-5 words", "story": "a 300-word short story in prose paragraphs, with named characters whose appearance is described and 3-6 described locations", "style": "one sentence naming a visual medium as a noun and how it is handled, e.g. 2D digital comic book illustration with bold ink outlines; never the words cinematic or high quality"}`;
+{"title": "2-5 words", "summary": "2-3 plain sentences: what happens, to whom, where", "story": "a 300-word short story in prose paragraphs, with named characters whose appearance is described and 3-6 described locations", "style": "one sentence naming a visual medium as a noun and how it is handled, e.g. 2D digital comic book illustration with bold ink outlines; never the words cinematic or high quality"}`;
 
 /** Terse retry for the revise path — same format hammer, plus the one rule the
  *  revision cannot lose: only change what the feedback asks. */
 const SYSTEM_TERSE_REVISE = `Output one JSON object. No other text. No code fences. Revise the given brief according to the feedback; change ONLY what the feedback asks and keep everything else as it is.
-{"title": "2-5 words", "story": "a 300-word short story in prose paragraphs, with named characters whose appearance is described and 3-6 described locations", "style": "one sentence naming a visual medium as a noun and how it is handled; never the words cinematic or high quality"}`;
+{"title": "2-5 words", "summary": "2-3 plain sentences: what happens, to whom, where", "story": "a 300-word short story in prose paragraphs, with named characters whose appearance is described and 3-6 described locations", "style": "one sentence naming a visual medium as a noun and how it is handled; never the words cinematic or high quality"}`;
 
-type Draft = { title: string; story: string; style: string };
+type Draft = { title: string; summary: string; story: string; style: string };
 
 /** Models like to wrap. Strip fences, then take everything between the first
  *  `{` and the last `}` — that survives both a preamble and a trailing
@@ -136,12 +163,15 @@ function extractJson(raw: string): Draft | null {
 	const d = parsed as Partial<Draft> | null;
 	if (!d || typeof d !== 'object') return null;
 	const title = typeof d.title === 'string' ? d.title.trim() : '';
+	const summary = typeof d.summary === 'string' ? d.summary.trim() : '';
 	const story = typeof d.story === 'string' ? d.story.trim() : '';
 	const style = typeof d.style === 'string' ? d.style.trim() : '';
 	if (!title || !story || !style) return null;
 	if (story.split(/\s+/).length < MIN_STORY_WORDS) return null;
 
-	return { title, story, style };
+	// A missing summary is not worth rejecting a good brief over — the card
+	// falls back to the story's own opening, which is the same sentences anyway.
+	return { title, summary, story, style };
 }
 
 async function ask(key: string, model: string, system: string, user: string): Promise<string> {
@@ -284,7 +314,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// editable — it is the wire format, not a matter of taste.
 	const register = textFor('brief_register', overrides);
 	const role = textFor(revising ? 'brief_reviser' : 'brief_writer', overrides);
-	const system = `${role}\n\n${register}\n\n${JSON_CONTRACT}`;
+	const system = `${role}\n\n${register}\n\n${jsonContract(sceneCount)}`;
 	const systemTerse = revising ? SYSTEM_TERSE_REVISE : SYSTEM_TERSE;
 	const message = revising
 		? [
@@ -323,6 +353,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const brief: Brief = {
 		slug,
 		title: draft.title,
+		summary: draft.summary || undefined,
 		story: draft.story,
 		style: draft.style,
 		sceneCount,
