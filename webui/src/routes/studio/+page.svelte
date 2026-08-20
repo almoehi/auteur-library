@@ -30,6 +30,7 @@
 	 *                          itself sends no CORS headers)
 	 */
 	import { onMount } from 'svelte';
+	import { parseEventLog, type ActivityRow } from './activity';
 	import { renderDocument, type Block } from './render-doc';
 	import {
 		SCENE_COUNT_MAX,
@@ -205,6 +206,27 @@
 	let input = $state('');
 	let sending = $state(false);
 	let composer = $state<HTMLTextAreaElement | null>(null);
+
+	/* ── the harness's own account of itself ──────────────────────────────────
+	 *  Its event log carries the things that matter most and show up nowhere
+	 *  else: a task sent back by a quality gate, an agent that could not start,
+	 *  the crew's own analysis of a failure. Without this the studio shows
+	 *  "running" while the harness quietly retries the same rejection, which is
+	 *  indistinguishable from slow work and has cost this project whole
+	 *  afternoons.
+	 */
+	let seenActivity = $state(new Set<string>());
+
+	async function pollActivity(target: string) {
+		const r = await call('get-event-log', {}, target);
+		if (!r.ok) return;
+		for (const row of parseEventLog(r.data)) {
+			if (seenActivity.has(row.id)) continue;
+			seenActivity.add(row.id);
+			pushItem({ who: 'studio', kind: 'activity', activity: row });
+		}
+	}
+
 
 	/* ── reference files ───────────────────────────────────────────────────────
 	 *  Faces, rooms, movements you want the render to copy. They are staged on
@@ -462,7 +484,7 @@
 		const text = input.trim();
 		if (!text || sending) return;
 		input = '';
-		grow(composer);
+		shrink(composer);
 		pushItem({ who: 'user', kind: 'text', text });
 		sending = true;
 		try {
@@ -735,6 +757,9 @@
 		let fresh: PollState | null = null;
 		try {
 			const r = await call('poll-state', {}, target);
+			// Fetched alongside, never instead: a failing event log must not stop
+			// the state poll that drives everything else on screen.
+			void pollActivity(target).catch(() => {});
 			if (r.offline) {
 				offline = true;
 				quiet += 1;
@@ -1246,6 +1271,18 @@
 		el.style.height = `${el.scrollHeight}px`;
 	}
 
+	/** Back to one row.
+	 *
+	 *  Not grow() with an empty value: clearing `input` is a state assignment
+	 *  that has not reached the DOM yet when this runs, so measuring scrollHeight
+	 *  here measures the message that was just sent and the box stays tall.
+	 *  Dropping the inline height hands the size back to the rows attribute,
+	 *  which needs no measurement to be right. */
+	function shrink(el: HTMLTextAreaElement | null) {
+		if (!el) return;
+		el.style.height = '';
+	}
+
 	function useExample(text: string) {
 		input = text;
 		composer?.focus();
@@ -1612,6 +1649,47 @@
 							<p class="enter doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
 								{item.text}
 							</p>
+						{:else if item.kind === 'activity' && item.activity}
+							<!-- Quiet by design. These are constant during a run, and a
+							     progress line that shouts competes with the documents the
+							     user is actually here to read. Trouble is the exception:
+							     a rejection or a failure gets colour, because that is the
+							     one case where not noticing is expensive. -->
+							{@const a = item.activity}
+							<div class="enter flex items-start gap-2.5 py-0.5">
+								<span
+									class="mt-[0.45rem] size-1.5 shrink-0 rounded-full {a.tone === 'bad'
+										? 'bg-[#c4614b]'
+										: a.tone === 'warn'
+											? 'bg-[#b98a3e]'
+											: a.tone === 'good'
+												? 'bg-[#5b8f6e]'
+												: 'bg-[var(--st-faint)]'}"
+								></span>
+								<div class="min-w-0">
+									<p
+										class="text-[0.82rem] leading-relaxed {a.tone === 'bad' || a.tone === 'warn'
+											? 'text-[var(--st-muted)]'
+											: 'text-[var(--st-faint)]'}"
+									>
+										{a.text}
+									</p>
+									{#if a.detail}
+										<details class="mt-0.5">
+											<summary
+												class="cursor-pointer text-[0.72rem] text-[var(--st-faint)] hover:text-[var(--st-muted)]"
+											>
+												what it said
+											</summary>
+											<p
+												class="doc mt-1 border-l border-[var(--st-surface-2)] pl-3 font-mono text-[0.72rem] leading-relaxed text-[var(--st-muted)]"
+											>
+												{a.detail}
+											</p>
+										</details>
+									{/if}
+								</div>
+							</div>
 						{:else if item.kind === 'error'}
 							<div class="enter rounded-2xl bg-[var(--st-surface)] p-4">
 								<p class="text-xs font-semibold text-[#f2d7cd]">

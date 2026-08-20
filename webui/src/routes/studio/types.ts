@@ -93,7 +93,7 @@ export type StageKey =
 export interface ChatItem {
 	id: string;
 	who: 'user' | 'studio';
-	kind: 'text' | 'plan' | 'artifact' | 'clips' | 'error' | 'approval';
+	kind: 'text' | 'plan' | 'artifact' | 'clips' | 'error' | 'approval' | 'activity';
 	/** plain text content (kind=text, error, approval) */
 	text?: string;
 	/** the expanded brief awaiting the user's yes (kind=plan) */
@@ -107,6 +107,14 @@ export interface ChatItem {
 		taskId: string;
 		files: { name: string; url: string }[];
 		body?: string;
+	};
+	/** one line of the harness's own progress log (kind=activity) */
+	activity?: {
+		id: string;
+		at: number;
+		tone: 'step' | 'good' | 'warn' | 'bad';
+		text: string;
+		detail?: string;
 	};
 	at: number;
 }
