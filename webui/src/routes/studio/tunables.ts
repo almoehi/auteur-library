@@ -32,6 +32,14 @@ export interface Tunable {
 	fallback: string;
 }
 
+/** The provider's own name for each registry id. The panel and the workspace
+ *  YAML speak in ids; anything calling xAI directly — the brief writer does —
+ *  needs the name the API answers to. */
+export const MODEL_API_NAME: Record<string, string> = {
+	'grok-4-5': 'grok-4.5',
+	'grok-4-3': 'grok-4.3'
+};
+
 /** Models the registry offers. Ids match spec.models in the workspace YAML. */
 export const MODEL_CHOICES = [
 	{ id: 'grok-4-5', note: 'writes explicit material — 8.3s' },
@@ -39,6 +47,41 @@ export const MODEL_CHOICES = [
 ] as const;
 
 export const TUNABLES: Tunable[] = [
+	{
+		id: 'brief_register',
+		label: 'Tone and limits',
+		affects:
+			'How explicit the writing is allowed to be, and what it must never contain. Everything downstream inherits this — the screenplay, the scenes, the prompts the video model receives. The single biggest lever on what kind of film comes out.',
+		agent: 'brief_writer',
+		model: 'grok-4-5',
+		fallback: `This brief is for an adult creator platform. Write for grown-ups: the register is sensual, flirtatious, charged, confident. Tension, longing, power play and seduction are the material you work with.
+
+Hard rules you never break:
+- Every character is an unmistakably adult. Never write a character who is, looks, or is described as a minor, and never place characters in school or childhood settings.
+- Suggestive, not explicit. You write the charge and the anticipation — the glance, the pause, the line that lands. You do not write graphic sexual acts or anatomical description.
+- No violence or coercion as titillation. Desire here is mutual and wanted.
+- Do not default to a whimsical fable, a children's story, or talking animals unless the pitch explicitly asks for it.`
+	},
+	{
+		id: 'brief_writer',
+		label: 'Brief writer',
+		affects:
+			'Turns your one sentence into the title, story and visual style that the whole production is built from. This is the first thing that touches what you typed.',
+		runBy: 'brief_writer',
+		model: 'grok-4-5',
+		fallback: `You are a development executive. You turn a one-line pitch into a production brief for a short film.`
+	},
+	{
+		id: 'brief_reviser',
+		label: 'Brief reviser',
+		affects:
+			'Runs when you ask for a change to the brief in the chat. Its job is restraint: apply the feedback and leave everything else alone.',
+		runBy: 'brief_writer',
+		model: 'grok-4-5',
+		fallback: `You are a development executive revising an existing production brief for a short film.
+
+You are given the current brief (title, story, style) and the client's feedback on it. Apply the feedback and nothing else: change only what the feedback asks to change, and keep every part the feedback does not mention as close to the current brief as the requested change allows — same title unless asked, same character names unless asked, same style sentence unless asked.`
+	},
 	{
 		id: 'prompt_writer',
 		label: 'Prompt writer',
@@ -357,7 +400,7 @@ export const TUNABLES: Tunable[] = [
 	},
 	{
 		id: 'planner',
-		label: 'Planner',
+		label: 'Shot scheduler',
 		affects:
 			'Creates one shoot task per scene and hands each the anchors it needs. If this breaks, no clips are rendered at all.',
 		agent: 'planner',
@@ -391,6 +434,7 @@ export const TUNABLES: Tunable[] = [
 
 /** Agent -> default model, the reset target for the model dropdowns. */
 export const DEFAULT_MODELS: Record<string, string> = {
+	brief_writer: 'grok-4-5',
 	prompt_writer: 'grok-4-5',
 	screenwriter: 'grok-4-5',
 	casting_director: 'grok-4-5',

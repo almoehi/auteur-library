@@ -31,6 +31,8 @@ import { env } from '$env/dynamic/private';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SCENE_COUNT_MAX, SCENE_COUNT_MIN, type Brief } from '../../types';
+import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
+import { readOverrides } from '../../overrides.server';
 
 /** Ollama Cloud — the same provider the workspace's own model registry points
  *  at (see spec.models in the composed workspace), so if a production can run
@@ -40,7 +42,12 @@ const XAI = 'https://api.x.ai/v1/chat/completions';
 /** Cheapest of the four cloud models the harness registers, and verified
  *  working on this account. Planning is a two-paragraph job; it does not need
  *  the reasoning models the screenwriter uses. */
-const MODEL = 'grok-4.5';
+/** Resolved per request from the tuning panel, like the workspace agents are.
+ *  The panel speaks in registry ids; xAI needs its own name for the model. */
+function modelName(o: ReturnType<typeof readOverrides>): string {
+	const id = modelFor('brief_writer', o);
+	return MODEL_API_NAME[id] ?? 'grok-4.5';
+}
 
 /** A chat message is the point of this surface. Anything past this is someone
  *  pasting a document into the wrong box — cut it off rather than paying to
@@ -55,15 +62,15 @@ const DEFAULT_SCENES = 4;
 
 /** Generation is slow-ish but not minutes-slow; a hang here means the provider
  *  is wedged, and the user is sitting in front of a silent chat waiting. */
-/** A healthy plan comes back in about 40 seconds — measured, on the real system
- *  prompt rather than a toy one. That is slow for a chat, and it is the price of
- *  a model that will actually write the material: every faster option tested
- *  refuses it outright.
+/** Measured twice on the real prompt: 40s and 72s for the same kind of request.
+ *  That spread is the provider's, not ours, and it is the number that matters —
+ *  a limit set near the fast case fires on the slow one, and the user loses a
+ *  working brief to a stopwatch.
  *
- *  75s leaves room for a bad minute without buying the thing a long timeout
- *  usually buys, which is a user watching a dead page. Past this the provider is
- *  wedged, and saying so beats waiting. */
-const TIMEOUT_MS = 75_000;
+ *  150s is therefore generous on purpose. It is not a guess at how long this
+ *  takes; it is the point past which the provider is wedged rather than busy,
+ *  and waiting has stopped being useful. */
+const TIMEOUT_MS = 150_000;
 
 /** A synopsis and a story parse identically — both are a JSON string. The only
  *  cheap way to tell them apart is length, and a screenwriter agent handed four
@@ -90,34 +97,9 @@ const JSON_CONTRACT = `Answer with a single JSON object and nothing else. No pro
  *  front costs nothing and saves a revision round on every production. The
  *  content bar stays where the platform's own does: sensual and suggestive,
  *  never explicit, and every character an adult. */
-const REGISTER = `This brief is for an adult creator platform. Write for grown-ups: the register is sensual, flirtatious, charged, confident. Tension, longing, power play and seduction are the material you work with.
-
-Hard rules you never break:
-- Every character is an unmistakably adult. Never write a character who is, looks, or is described as a minor, and never place characters in school or childhood settings.
-- Suggestive, not explicit. You write the charge and the anticipation — the glance, the pause, the line that lands. You do not write graphic sexual acts or anatomical description.
-- No violence or coercion as titillation. Desire here is mutual and wanted.
-- Do not default to a whimsical fable, a children's story, or talking animals unless the pitch explicitly asks for it.`;
-
-const SYSTEM = `You are a development executive. You turn a one-line pitch into a production brief for a short film.
-
-${REGISTER}
-
-${JSON_CONTRACT}`;
-
-/** The revise path's system prompt: same contract, but the model is holding an
- *  existing brief and one message of feedback. The instruction that matters is
- *  the conservative one — change only what the feedback asks for. A model told
- *  merely to "revise" will happily rewrite the whole story, and the user who
- *  asked to rename one character then has to re-read four paragraphs to find
- *  out what else moved. */
-const SYSTEM_REVISE = `You are a development executive revising an existing production brief for a short film.
-
-${REGISTER}
-
-You are given the current brief (title, story, style) and the client's feedback on it. Apply the feedback and nothing else: change only what the feedback asks to change, and keep every part the feedback does not mention as close to the current brief as the requested change allows — same title unless asked, same character names unless asked, same style sentence unless asked.
-
-${JSON_CONTRACT}`;
-
+/** The register and the two role prompts moved to the tuning registry, where
+ *  they can be edited without a deploy — a copy kept here could only ever drift
+ *  from the one actually used. */
 /** The retry's system prompt. Models that talk their way past a long
  *  instruction block will usually obey a short one, and what fails here is
  *  almost always the wrapper (a code fence, a "Here's your brief:" preamble),
@@ -162,12 +144,12 @@ function extractJson(raw: string): Draft | null {
 	return { title, story, style };
 }
 
-async function ask(key: string, system: string, user: string): Promise<string> {
+async function ask(key: string, model: string, system: string, user: string): Promise<string> {
 	const res = await fetch(XAI, {
 		method: 'POST',
 		headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
 		body: JSON.stringify({
-			model: MODEL,
+			model,
 			messages: [
 				{ role: 'system', content: system },
 				{ role: 'user', content: user }
@@ -276,6 +258,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!revising && !pitch) throw error(400, 'Missing prompt');
 	if (prior !== null && !feedback) throw error(400, 'Missing feedback for revision');
 
+	const overrides = readOverrides();
+
 	const key = env.GROK_API_KEY;
 	if (!key) {
 		// Not an exception: it is the state of a machine where nobody has set
@@ -294,7 +278,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		revising ? clampScenes(prior?.sceneCount, DEFAULT_SCENES) : DEFAULT_SCENES
 	);
 
-	const system = revising ? SYSTEM_REVISE : SYSTEM;
+	// Composed here rather than at module load: the register and the two role
+	// prompts are editable in the tuning panel, and a brief written before an
+	// edit and one written after should differ. The JSON contract is not
+	// editable — it is the wire format, not a matter of taste.
+	const register = textFor('brief_register', overrides);
+	const role = textFor(revising ? 'brief_reviser' : 'brief_writer', overrides);
+	const system = `${role}\n\n${register}\n\n${JSON_CONTRACT}`;
 	const systemTerse = revising ? SYSTEM_TERSE_REVISE : SYSTEM_TERSE;
 	const message = revising
 		? [
@@ -311,8 +301,9 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	let draft: Draft | null;
 	try {
-		draft = extractJson(await ask(key, system, message));
-		if (!draft) draft = extractJson(await ask(key, systemTerse, message));
+		const model = modelName(overrides);
+		draft = extractJson(await ask(key, model, system, message));
+		if (!draft) draft = extractJson(await ask(key, model, systemTerse, message));
 	} catch (e) {
 		const detail = e instanceof Error ? e.message : String(e);
 		return json({ ok: false, error: `planning failed — ${detail}` });
