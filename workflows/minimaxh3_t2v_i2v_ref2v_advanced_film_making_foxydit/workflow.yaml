@@ -29,10 +29,13 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
-gpu_types: [h100]  # l40s incompatible on cu13: nodes 636/663 call sageattn() directly → XID-43.
-                   # Narrowed from [a100, h100, blackwell] to h100 alone: with several types
-                   # listed there is no way from here to say which one gets picked, and the
-                   # point of the change was to be on the fastest. No fallback is the cost.
+gpu_types: [a100]  # Measured, not assumed. l40s was already excluded upstream for
+                   # calling sageattn() directly on cu13 (XID-43). Narrowing this to
+                   # h100 to chase speed produced, on every render:
+                   #   CUDA error: no kernel image is available for execution on the
+                   #   device [node=125 type=SamplerCustomAdvanced]
+                   # — the image carries no sm_90 kernels. Of the three the bundle
+                   # originally listed, a100 is the one that actually runs.
 ports:
   params:
     - name: steps
