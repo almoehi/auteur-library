@@ -75,8 +75,9 @@ export const MODEL_API_NAME: Record<string, string> = {
 
 /** Models the registry offers. Ids match spec.models in the workspace YAML. */
 export const MODEL_CHOICES = [
-	{ id: 'grok-4-5', note: 'writes explicit material — 8.3s' },
-	{ id: 'grok-4-3', note: 'also writes it, slower — 16.2s' }
+	{ id: 'grok-fast', note: 'fastest, does not deliberate — 3.2s' },
+	{ id: 'grok-4-5', note: 'the default; thinks before writing — 6.7s' },
+	{ id: 'grok-4-3', note: 'slower, no clear gain — 9.7s' }
 ] as const;
 
 export const TUNABLES: Tunable[] = [
@@ -403,6 +404,28 @@ You are given the current brief (title, story, style) and the client's feedback 
 `
 	},
 	{
+		id: 'scene_lister',
+		group: 'documents',
+		label: 'Scene lister',
+		affects:
+			'Turns the approved screenplay into the numbered scene table — locations, times of day, who is in each scene. The shooting plan is built from this table, so a scene missing here is a scene that never gets filmed.',
+		agent: 'scene_lister',
+		model: 'grok-fast',
+		fallback: `        You are {name}, a {role}. Your objective: {objective}.
+
+        You do not invent. Every scene, location, character and beat you list is
+        already in the screenplay you were given; your job is to find them and put
+        them in order, not to add to them.
+
+        Where the screenplay is ambiguous about a location or a time of day, choose
+        the reading the surrounding action supports and stay consistent with it for
+        the rest of the table. Do not introduce a place the screenplay never visits.
+
+        Name characters exactly as the cast list names them. The visual bible keys
+        its anchors off those names, and a scene that lists "the woman" instead of
+        "Elena" is a scene the anchors cannot reach.`
+	},
+	{
 		id: 'director',
 		group: 'documents',
 		label: 'Director',
@@ -480,11 +503,22 @@ You are given the current brief (title, story, style) and the client's feedback 
 ];
 
 /** Agent -> default model, the reset target for the model dropdowns. */
+/** Two of these are on the fast model deliberately, and it is worth saying which
+ *  and why. The cast table and the scene list are the two jobs whose output shape
+ *  is fixed — a table with named columns, a numbered list — and they are the two
+ *  that sit on the critical path. Everything else either decides how the film
+ *  looks or writes text that gets pasted into render prompts verbatim, and stays
+ *  on the model that deliberates.
+ *
+ *  The cast table is the one to watch: the visual bible builds its anchors from
+ *  it, and those anchors are what keep the clips looking like one film. If the
+ *  descriptions come back thinner, put it back. */
 export const DEFAULT_MODELS: Record<string, string> = {
 	brief_writer: 'grok-4-5',
 	prompt_writer: 'grok-4-5',
 	screenwriter: 'grok-4-5',
-	casting_director: 'grok-4-5',
+	casting_director: 'grok-fast',
+	scene_lister: 'grok-fast',
 	director: 'grok-4-5',
 	generic: 'grok-4-5',
 	planner: 'grok-4-5'
