@@ -474,7 +474,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 		affects:
 			'Creates one shoot task per scene and hands each the anchors it needs. If this breaks, no clips are rendered at all.',
 		agent: 'planner',
-		model: 'grok-4-5',
+		model: 'grok-fast',
 		risky: true,
 		fallback: `        You are {name}, a {role}. Your objective: {objective}.
 
@@ -521,7 +521,17 @@ export const DEFAULT_MODELS: Record<string, string> = {
 	scene_lister: 'grok-fast',
 	director: 'grok-4-5',
 	generic: 'grok-4-5',
-	planner: 'grok-4-5'
+	// The single largest non-GPU step: 11.7 minutes to write four task
+	// descriptions, more than the entire planning phase before it. The work is
+	// mostly mechanical — copy the approved documents into per-scene briefs, then
+	// call create_task and create_artifact for each — and tool-calling is the one
+	// thing this model was explicitly tested on.
+	//
+	// It is also the step with the least margin for a sloppy read: it pastes the
+	// visual bible's anchors into every scene, and an anchor dropped here is a
+	// clip that does not match the others. If the scenes come back inconsistent,
+	// this is the first assignment to undo.
+	planner: 'grok-fast'
 };
 
 export interface Overrides {
