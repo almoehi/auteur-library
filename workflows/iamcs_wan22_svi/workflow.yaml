@@ -255,44 +255,53 @@ models:
     type: vae
     files:
       - url: https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors
+        sha256: 2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b
 
   - name: umt5_xxl_fp8_e4m3fn_scaled
     type: clip
     files:
       - url: https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors
+        sha256: c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68
 
   - name: wan2.2_i2v_high_noise_14B_Q5_K_M
     type: unet
     files:
       - url: https://huggingface.co/bullerwins/Wan2.2-I2V-A14B-GGUF/resolve/main/wan2.2_i2v_high_noise_14B_Q5_K_M.gguf
+        sha256: 5fcf6055d2cdd225015b841c3aad562b8bdefdb898f62a02f4d4883048338f1b
 
   - name: wan2.2_i2v_low_noise_14B_Q5_K_M
     type: unet
     files:
       - url: https://huggingface.co/bullerwins/Wan2.2-I2V-A14B-GGUF/resolve/main/wan2.2_i2v_low_noise_14B_Q5_K_M.gguf
+        sha256: 0bf93cad34a5b435b8d9054c5984fb94d351747c03fcb63a713d5a533b425066
 
   - name: wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022
     type: lora
     files:
       - url: https://huggingface.co/lightx2v/Wan2.2-Distill-Loras/resolve/main/wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors
+        sha256: 887c3bdeb74e83859c920438e16ca31f39ab18ce189abc5f0e36f8348c5bbb19
 
   - name: SVI_v2_PRO_Wan2.2-I2V-A14B_HIGH_lora_rank_128_fp16
     type: lora
     files:
       - url: https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/LoRAs/Stable-Video-Infinity/v2.0/SVI_v2_PRO_Wan2.2-I2V-A14B_HIGH_lora_rank_128_fp16.safetensors
+        sha256: 6ddfead305cb315612bfe47291aada7431ca6bba688e88df3b2b43788ee11679
 
   - name: wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022
     type: lora
     files:
       - url: https://huggingface.co/lightx2v/Wan2.2-Distill-Loras/resolve/main/wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022.safetensors
+        sha256: 8833bd4fd7c8eabebf0bc8ee5cfaf47f4f310ce116928a02c1adf8941dd4b0f1
 
   - name: SVI_v2_PRO_Wan2.2-I2V-A14B_LOW_lora_rank_128_fp16
     type: lora
     files:
       - url: https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/LoRAs/Stable-Video-Infinity/v2.0/SVI_v2_PRO_Wan2.2-I2V-A14B_LOW_lora_rank_128_fp16.safetensors
+        sha256: eae247da55aab0ee67f8ad99fa46aac09b69156e2ae7080b4737d611780aa7af
 
   - name: rife49
     type: rife
     files:
       - url: https://huggingface.co/marduk191/rife/resolve/main/rife49.pth
         filename: rife49.pth
+        sha256: e55fd00f3cc184e3c65961f4bb827a9da022e78eed36b055242c0ac30000d533
