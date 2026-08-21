@@ -275,10 +275,18 @@ const WORKFLOWS_BLOCK = `  workflows:
       url: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit@dszabo`;
 
 function profilesBlock(seed: number): string {
+	// steps=4 because that is what the workflow is built around: it ships a
+	// LightX2V 4-step turbo LoRA, and its own notes put steps=4 at 2-4 minutes a
+	// clip against 10-18 at steps=8. We were on 8, and measured 7-9 minutes a clip
+	// — which is the slow path, not a better one. 6-10 also work, so 8 was valid;
+	// it just paid three times the render time for a LoRA it was bypassing.
+	//
+	// gpuType is inert here: the workflow bundle declares its own gpu_types and
+	// those win. It stays because the profile schema wants a value.
 	return `  profiles:
     draft:
-      image: { width: 720, height: 480, steps: 8, seed: ${seed} }
-      video: { width: 720, height: 480, steps: 8, fps: 30, seed: ${seed} }
+      image: { width: 720, height: 480, steps: 4, seed: ${seed} }
+      video: { width: 720, height: 480, steps: 4, fps: 30, seed: ${seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
 }
@@ -839,7 +847,12 @@ function renderPlannerTaskBlock(docs: ApprovedDocs, hasReferenceMaterial: boolea
         ground truth for the story.${refClause}
 
         Schedule ONE film shooting task per scene in the APPROVED SCENE LIST below.
-        Each scene becomes a ~5-15 second video clip rendered by the minimax workflow.
+        Each scene becomes ONE video clip rendered by the minimax workflow.
+
+        Set video_length to 6 seconds on every render unless a scene genuinely
+        cannot be read in that time. Render cost is close to linear in duration,
+        and "5-15 seconds" left to judgement came back as fifteen every time —
+        three times the wait for a beat that plays in six.
 
         # REGISTER AN ARTIFACT FOR EVERY TASK — this is what the gate checks:
         For each scene, call create_task first, then immediately call
