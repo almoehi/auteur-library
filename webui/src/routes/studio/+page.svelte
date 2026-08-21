@@ -1477,6 +1477,19 @@
 		latestDocItem = {};
 		docBody = {};
 		docFile = {};
+		docUrl = {};
+		docTaskId = {};
+		// The board is posted once per production, guarded by this id. Left set, the
+		// guard held on the second run and the board never appeared — the tasks were
+		// running, the rail showed them, and the transcript showed nothing.
+		boardId = '';
+		// Per-run too: the activity feed dedupes against this, the retry alarm
+		// counts against these, and the stop button arms into these.
+		seenActivity = new Set<string>();
+		retryCounts = new Map<string, number>();
+		retryWarned = new Set<string>();
+		stopArmed = false;
+		stopping = false;
 		gateOpen = {};
 		approvalId = '';
 		chain = null;
