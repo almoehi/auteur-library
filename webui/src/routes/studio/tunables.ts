@@ -404,28 +404,6 @@ You are given the current brief (title, story, style) and the client's feedback 
 `
 	},
 	{
-		id: 'scene_lister',
-		group: 'documents',
-		label: 'Scene lister',
-		affects:
-			'Turns the approved screenplay into the numbered scene table — locations, times of day, who is in each scene. The shooting plan is built from this table, so a scene missing here is a scene that never gets filmed.',
-		agent: 'scene_lister',
-		model: 'grok-fast',
-		fallback: `        You are {name}, a {role}. Your objective: {objective}.
-
-        You do not invent. Every scene, location, character and beat you list is
-        already in the screenplay you were given; your job is to find them and put
-        them in order, not to add to them.
-
-        Where the screenplay is ambiguous about a location or a time of day, choose
-        the reading the surrounding action supports and stay consistent with it for
-        the rest of the table. Do not introduce a place the screenplay never visits.
-
-        Name characters exactly as the cast list names them. The visual bible keys
-        its anchors off those names, and a scene that lists "the woman" instead of
-        "Elena" is a scene the anchors cannot reach.`
-	},
-	{
 		id: 'director',
 		group: 'documents',
 		label: 'Director',
@@ -518,7 +496,6 @@ export const DEFAULT_MODELS: Record<string, string> = {
 	prompt_writer: 'grok-4-5',
 	screenwriter: 'grok-4-5',
 	casting_director: 'grok-fast',
-	scene_lister: 'grok-fast',
 	director: 'grok-4-5',
 	generic: 'grok-4-5',
 	// The single largest non-GPU step: 11.7 minutes to write four task

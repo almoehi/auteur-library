@@ -53,7 +53,6 @@ function resolveTuning(o?: Overrides) {
 		screenwriter: agent('screenwriter'),
 		planner: agent('planner'),
 		director: agent('director'),
-		scene_lister: agent('scene_lister'),
 		casting_director: agent('casting_director'),
 		generic: agent('generic'),
 		prompt_writer: agent('prompt_writer'),
@@ -623,25 +622,6 @@ const AGENT_DIRECTOR = (a: AgentTuning) => `    director:
 ${indentBlock(a.prompt, 8)}
       readOnly: false`;
 
-/** Splits the scene list off the director.
- *
- *  Both used to be the same agent, which meant one model for two different jobs:
- *  the art direction decides what the film looks like, the scene list turns a
- *  screenplay into a table. Sharing an agent meant they had to share a model, so
- *  the mechanical one could not be made faster without also changing the one
- *  that sets the look. And it bought nothing anyway — art direction runs beside
- *  the cast list now and finishes early, so speeding it up saves no wall clock,
- *  while the scene list sits on the critical path. */
-const AGENT_SCENE_LISTER = (a: AgentTuning) => `    scene_lister:
-        id: scene_lister
-        name: "Scene Lister"
-        model: ${a.model}
-        role: "Script Supervisor"
-        objective: "Break an approved screenplay into a numbered scene table without inventing anything that is not in it"
-        systemPrompt: >
-${indentBlock(a.prompt, 8)}
-        readOnly: false`;
-
 const AGENT_CASTING_DIRECTOR = (a: AgentTuning) => `    casting_director:
       id: casting_director
       name: "Casting Director"
@@ -727,7 +707,7 @@ function planningTasksBlock(
     - id: create_scenes
       title: "Create Scene List"
       description: "Break the screenplay into a numbered scene list with location and action summaries."
-      agent: scene_lister
+      agent: director
       requires:
         tasks:
           - write_screenplay
@@ -983,7 +963,6 @@ ${AGENT_SCREENWRITER(tuned.screenwriter)}
 ${AGENT_PLANNER(tuned.planner)}
 
 ${AGENT_DIRECTOR(tuned.director)}
-${AGENT_SCENE_LISTER(tuned.scene_lister)}
 
 ${AGENT_CASTING_DIRECTOR(tuned.casting_director)}
 
