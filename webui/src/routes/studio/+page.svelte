@@ -996,6 +996,19 @@
 		// through startPolling (which bumps runId), so a stale tick simply exits.
 		const target = activeWs;
 		if (!target || id !== runId) return;
+
+		// The board carries the documents AND the button that starts the shoot, so
+		// a production without one cannot be approved at all — there is nothing to
+		// press. It was posted in exactly one place, at launch, behind a guard that
+		// a stale id could hold shut; that happened, and the run became
+		// unapprovable while the rail cheerfully showed it progressing.
+		//
+		// So it is posted from here as well. Whatever went wrong upstream — a
+		// resumed tab, a guard left set, a launch path that did not run — the next
+		// poll puts it back.
+		if (planningWs && !boardId) {
+			boardId = pushItem({ who: 'studio', kind: 'board' }).id;
+		}
 		// Only a poll that actually answered may be used to decide anything.
 		// A failed poll is never progress.
 		let answered = false;
@@ -1982,9 +1995,19 @@
 								</p>
 							</div>
 						{:else if item.kind === 'text'}
-							<p class="enter doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
-								{item.text}
-							</p>
+							<div class="enter">
+								<p class="doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">{item.text}</p>
+								{#if !renderWs}
+									<button
+										type="button"
+										disabled={renderLaunching || !!chain || boardDone < board.length}
+										onclick={launchRender}
+										class="font-display mt-3 cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+									>
+										{renderLaunching ? 'starting…' : 'start shooting'}
+									</button>
+								{/if}
+							</div>
 						{:else if item.kind === 'board'}
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
 								<div class="mb-4 flex items-baseline justify-between gap-3">
@@ -2437,6 +2460,11 @@
 								{/if}
 							</article>
 						{:else if item.kind === 'approval'}
+							<!-- A second way to start the shoot. The board has the real one, and
+							     this is deliberately duplicate: for one evening the button lived
+							     only there, the board failed to post, and an otherwise finished
+							     plan could not be approved by any means at all. A control that
+							     gates the entire run should not have exactly one home. -->
 							<!-- Text only. The board above already lists the five documents and
 							     opens each one; repeating that here put the same list twice on
 							     one screen, and the button that matters ended up below the
