@@ -655,6 +655,37 @@
 		void fetch(`/api/file?${q.toString()}`).catch(() => {});
 	}
 
+	/** Give a video element that failed a second chance.
+	 *
+	 *  A clip's src is set the moment the clip is posted, which is also the moment
+	 *  its local copy starts downloading — so the first request can still land on
+	 *  the harness, and the harness is exactly what is unreliable at the end of a
+	 *  run. An element that loses that race is stuck: a <video> that has errored
+	 *  never retries, so the card sits black at 0:00 and pressing play does
+	 *  nothing, even after the local copy has finished and would serve instantly.
+	 *
+	 *  The retry costs nothing when the first load worked, which is most of them.
+	 *  The changing query is only there to stop the browser reusing its own cached
+	 *  failure — the file route ignores it. */
+	const videoAttempts = new WeakMap<HTMLVideoElement, number>();
+
+	function recoverVideo(el: HTMLVideoElement, url: string): void {
+		const n = videoAttempts.get(el) ?? 0;
+		if (n >= 4) return;
+		videoAttempts.set(el, n + 1);
+		// Backing off: the copy is several megabytes, so the first retry can be
+		// too early. Measured against a cold cache the recovery landed on the third
+		// try, which is uncomfortably close to the end — four reach ~15s, wide
+		// enough for the largest clip a run has produced.
+		setTimeout(
+			() => {
+				el.src = `${url}${url.includes('?') ? '&' : '?'}retry=${n + 1}`;
+				el.load();
+			},
+			1500 * (n + 1)
+		);
+	}
+
 	/** Reads a planning document as text. Cache-busted: after a chain reset the
 	 *  same artifact id carries new bytes. Returns null on failure — the chat
 	 *  item then degrades to a link, never an empty box. */
@@ -1841,6 +1872,7 @@
 			controls
 			playsinline
 			preload="metadata"
+			onerror={(e) => recoverVideo(e.currentTarget as HTMLVideoElement, url)}
 			class="video-with-controls block aspect-video w-full bg-black"
 		></video>
 		<figcaption class="px-4 py-3 text-sm text-[var(--st-muted)]">{caption || name}</figcaption>
