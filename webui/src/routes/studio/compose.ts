@@ -335,44 +335,6 @@ function modelsBlock(grokKey: string): string {
       settings:
         contextWindow: 131072
 
-    # The judges, and only the judges. The policy evaluator is a separate service
-    # (/app/policy/server.js) that knows exactly one provider: it appends
-    # "/api/chat" to whatever endpoint the model carries, which against api.x.ai
-    # is a 404 — "Ollama API error" with an x.ai documentation link, which is how
-    # this was found. So the gates run on Ollama while the writers run on Grok.
-    #
-    # The risk this leaves: an Ollama judge may refuse to evaluate explicit
-    # material, which fails the gate rather than passing it. If that happens the
-    # answer is to drop the policies, not to change the judge — there is no other
-    # provider this service can reach.
-    - id: judge
-      name: "Gemma 4 (Ollama Cloud) — policy judge"
-      provider: ollama
-      model: "gemma4:cloud"
-      endpoint: "https://ollama.com"
-      streaming: false
-      reasoningEffort: default
-      temperature: 0.2
-      capabilities:
-        - chat
-      settings:
-        contextWindow: 131072
-
-    - id: grok-fast
-      name: "Grok 4.20 non-reasoning (xAI)"
-      provider: grok
-      model: "grok-4.20-0309-non-reasoning"
-      endpoint: "https://api.x.ai/v1"
-      apiKeys:
-        token: ${yamlDoubleQuoted(grokKey)}
-      streaming: false
-      reasoningEffort: default
-      temperature: 0.4
-      capabilities:
-        - chat
-      settings:
-        contextWindow: 131072
-
     - id: grok-4-3
       name: "Grok 4.3 (xAI)"
       provider: grok
@@ -392,7 +354,7 @@ function modelsBlock(grokKey: string): string {
 const POLICY_SCREENPLAY_QUALITY = `    screenplay-quality:
         id: screenplay-quality
         description: "Screenplay faithfully adapts the source story with proper formatting"
-        model: judge
+        model: grok-4-5
         modality: text
         grading: Binary
         evalPrompt: >
@@ -411,7 +373,7 @@ const POLICY_SCREENPLAY_QUALITY = `    screenplay-quality:
 const POLICY_CAST_QUALITY = `    cast-quality:
         id: cast-quality
         description: "Cast list accurately reflects characters and captures their essence"
-        model: judge
+        model: grok-4-5
         modality: text
         grading: Binary
         evalPrompt: >
@@ -443,7 +405,7 @@ const POLICY_CAST_QUALITY = `    cast-quality:
 const POLICY_SCENES_QUALITY = `    scenes-quality:
         id: scenes-quality
         description: "Scene breakdown covers all narrative beats with clear location and action"
-        model: judge
+        model: grok-4-5
         modality: text
         grading: Binary
         evalPrompt: >
@@ -462,7 +424,7 @@ const POLICY_SCENES_QUALITY = `    scenes-quality:
 const POLICY_ENSURE_TASKS_CREATED = `    ensure-tasks-created:
         id: ensure-tasks-created
         description: "Make sure all tasks identified by a planner have been created and scheduled for processing"
-        model: judge
+        model: grok-4-5
         modality: text
         grading: Binary
         evalPrompt: >
@@ -492,7 +454,7 @@ const POLICY_ENSURE_TASKS_CREATED = `    ensure-tasks-created:
 const POLICY_RENDER_COVERAGE_FROM_ARTIFACTS = `    ensure-render-covers-all-scenes:
         id: ensure-render-covers-all-scenes
         description: "Verifies render tasks were scheduled for every scene in the approved scene list without skipping any."
-        model: judge
+        model: grok-4-5
         modality: text
         grading: Binary
         evalPrompt: >
@@ -529,7 +491,7 @@ const POLICY_RENDER_COVERAGE_FROM_ARTIFACTS = `    ensure-render-covers-all-scen
 const POLICY_RENDER_COVERAGE_FROM_PROMPT = `    ensure-render-covers-all-scenes:
         id: ensure-render-covers-all-scenes
         description: "Verifies render tasks were scheduled for every scene in the scene list embedded in the planner prompt without skipping any."
-        model: judge
+        model: grok-4-5
         modality: text
         grading: Binary
         evalPrompt: >
@@ -565,7 +527,7 @@ const POLICY_RENDER_COVERAGE_FROM_PROMPT = `    ensure-render-covers-all-scenes:
 const POLICY_RENDER_TASKS_HAVE_ARTIFACTS = `    ensure-render-tasks-have-artifacts:
         id: ensure-render-tasks-have-artifacts
         description: "Every render task created by the scheduler must have at least one artifact registered"
-        model: judge
+        model: grok-4-5
         modality: text
         grading: Binary
         evalPrompt: >
