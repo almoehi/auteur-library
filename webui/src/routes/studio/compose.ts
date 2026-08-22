@@ -335,6 +335,21 @@ function modelsBlock(grokKey: string): string {
       settings:
         contextWindow: 131072
 
+    - id: grok-fast
+      name: "Grok 4.20 non-reasoning (xAI)"
+      provider: grok
+      model: "grok-4.20-0309-non-reasoning"
+      endpoint: "https://api.x.ai/v1"
+      apiKeys:
+        token: ${yamlDoubleQuoted(grokKey)}
+      streaming: false
+      reasoningEffort: default
+      temperature: 0.4
+      capabilities:
+        - chat
+      settings:
+        contextWindow: 131072
+
     - id: grok-4-3
       name: "Grok 4.3 (xAI)"
       provider: grok
