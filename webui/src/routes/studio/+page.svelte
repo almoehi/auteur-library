@@ -225,7 +225,7 @@
 	 *  the one that runs on load. Reusing it is worth the reload. */
 	function reopen(p: Production) {
 		try {
-			sessionStorage.setItem(
+			localStorage.setItem(
 				RESUME_KEY,
 				JSON.stringify({
 					brief: {
@@ -1499,26 +1499,88 @@
 
 	// --- resume / reset -----------------------------------------------------------------
 
+	/** Everything a reload has to bring back.
+	 *
+	 *  This used to save the run's identity only, on the theory that the
+	 *  transcript would rebuild itself from poll state. It does — right up until
+	 *  the workspace agent dies, which is when a reload is most likely and the
+	 *  poll returns nothing. A finished production would then reload into an
+	 *  empty page: the clips still on disk, the conversation simply gone.
+	 *
+	 *  So the transcript is saved as itself. The clip cards keep working because
+	 *  their urls resolve against the local copy, not the harness.
+	 */
+	function snapshot(withBodies: boolean) {
+		return {
+			brief,
+			launchedBrief,
+			planningWs,
+			renderWs,
+			assemblySent,
+			startedAt,
+			// the conversation
+			chat: withBodies
+				? chat
+				: chat.map((i) =>
+						i.artifact?.body ? { ...i, artifact: { ...i.artifact, body: undefined } } : i
+					),
+			superseded,
+			latestPlanId,
+			boardId,
+			approvalId,
+			gateOpen,
+			// document cards and the revision chain behind them
+			docPhase,
+			docAccepted,
+			latestDocItem,
+			docBody: withBodies ? docBody : {},
+			docFile,
+			docUrl,
+			docTaskId,
+			// the guards that stop a live poll re-posting what is already shown
+			clipPosted: [...clipPosted],
+			failedNoted: [...failedNoted],
+			preAssemblyIds: [...preAssemblyIds],
+			seenActivity: [...seenActivity],
+			shootsAnnounced,
+			finalPosted,
+			finalByNameOnly
+		};
+	}
+
 	function persist() {
-		try {
-			sessionStorage.setItem(
-				RESUME_KEY,
-				JSON.stringify({
-					brief,
-					launchedBrief,
-					planningWs,
-					renderWs,
-					assemblySent,
-					startedAt
-				})
-			);
-		} catch {
-			/* private mode throws on write — resume is a nicety, not a feature */
+		// Document bodies are most of the payload and the least of the loss: the
+		// transcript still reads, the cards fall back to a link. So a run too big
+		// for the quota drops them rather than saving nothing at all.
+		for (const withBodies of [true, false]) {
+			try {
+				localStorage.setItem(RESUME_KEY, JSON.stringify(snapshot(withBodies)));
+				return;
+			} catch {
+				/* quota, or private mode — try smaller, then give up */
+			}
 		}
 	}
 
+	/** Save whenever the conversation grows.
+	 *
+	 *  The explicit calls elsewhere mark milestones — a launch, an approval, the
+	 *  final cut — and between them the transcript fills with documents, clips and
+	 *  progress lines that a reload would otherwise lose. Debounced because
+	 *  activity arrives in bursts on each poll, and one write per burst is
+	 *  plenty. */
+	let persistTimer: ReturnType<typeof setTimeout> | null = null;
+	$effect(() => {
+		chat.length;
+		if (!brief || !(planningWs || renderWs)) return;
+		if (persistTimer) clearTimeout(persistTimer);
+		persistTimer = setTimeout(persist, 800);
+	});
+
 	function forget() {
+		if (persistTimer) clearTimeout(persistTimer);
 		try {
+			localStorage.removeItem(RESUME_KEY);
 			sessionStorage.removeItem(RESUME_KEY);
 		} catch {
 			/* ignore */
@@ -1668,16 +1730,9 @@
 		// themselves from poll state; the conversation itself is not replayed.
 		let resumed = false;
 		try {
-			const raw = sessionStorage.getItem(RESUME_KEY);
+			const raw = localStorage.getItem(RESUME_KEY) ?? sessionStorage.getItem(RESUME_KEY);
 			if (raw) {
-				const s = JSON.parse(raw) as {
-					brief?: Brief;
-					launchedBrief?: Brief;
-					planningWs?: string;
-					renderWs?: string;
-					assemblySent?: boolean;
-					startedAt?: number;
-				};
+				const s = JSON.parse(raw) as Partial<ReturnType<typeof snapshot>>;
 				if (s.brief && (s.planningWs || s.renderWs)) {
 					resumed = true;
 					brief = s.brief;
@@ -1691,9 +1746,35 @@
 						shootsAnnounced = true;
 						finalByNameOnly = true;
 					}
-					pushStudio('Production restored — it picks up where it left off.');
-					const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
-					latestPlanId = item.id;
+
+					// A saved conversation is restored as itself. Anything older —
+					// written before transcripts were saved — falls back to the plan
+					// card, which is what it used to do.
+					if (s.chat?.length) {
+						chat = s.chat;
+						superseded = s.superseded ?? {};
+						latestPlanId = s.latestPlanId ?? '';
+						boardId = s.boardId ?? '';
+						approvalId = s.approvalId ?? '';
+						gateOpen = s.gateOpen ?? {};
+						docPhase = s.docPhase ?? {};
+						docAccepted = s.docAccepted ?? {};
+						latestDocItem = s.latestDocItem ?? {};
+						docBody = s.docBody ?? {};
+						docFile = s.docFile ?? {};
+						docUrl = s.docUrl ?? {};
+						docTaskId = s.docTaskId ?? {};
+						for (const id of s.clipPosted ?? []) clipPosted.add(id);
+						for (const id of s.failedNoted ?? []) failedNoted.add(id);
+						for (const id of s.preAssemblyIds ?? []) preAssemblyIds.add(id);
+						seenActivity = new Set(s.seenActivity ?? []);
+						shootsAnnounced = s.shootsAnnounced ?? shootsAnnounced;
+						finalPosted = s.finalPosted ?? false;
+						finalByNameOnly = s.finalByNameOnly ?? finalByNameOnly;
+					} else {
+						const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
+						latestPlanId = item.id;
+					}
 					startPolling();
 				}
 			}
