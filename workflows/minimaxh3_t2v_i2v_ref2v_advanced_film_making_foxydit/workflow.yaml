@@ -29,13 +29,12 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
-gpu_types: [a100]  # Measured, not assumed. l40s was already excluded upstream for
-                   # calling sageattn() directly on cu13 (XID-43). Narrowing this to
-                   # h100 to chase speed produced, on every render:
-                   #   CUDA error: no kernel image is available for execution on the
-                   #   device [node=125 type=SamplerCustomAdvanced]
-                   # — the image carries no sm_90 kernels. Of the three the bundle
-                   # originally listed, a100 is the one that actually runs.
+gpu_types: [a100]  # Narrowed from [a100, h100, blackwell], measured rather than assumed:
+                   # h100 gives "CUDA error: no kernel image is available for execution
+                   # on the device [node=125 type=SamplerCustomAdvanced]" on every render
+                   # — the image carries no sm_90 kernels. l40s was already excluded
+                   # upstream for calling sageattn() directly on cu13 (XID-43). Of the
+                   # three, a100 is the one that actually runs.
 ports:
   params:
     - name: steps
@@ -125,30 +124,36 @@ models:
     type: unet
     files:
       - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+        sha256: e889202c41dafb67b10d67b97f0d8541508036a6090af23425a5c2615d03c47a
 
   - name: qwen3vl_32b_minimax_h3_nvfp4_awq
     type: clip
     files:
       - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+        sha256: 35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6
 
   - name: minimax_h3_audio_vae_fp32
     type: vae
     files:
       - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+        sha256: 8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48
 
   - name: minimax_h3_video_vae_fp16
     type: vae
     files:
       - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+        sha256: 7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522
 
   - name: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy
     type: lora
     dest: loras/MINIMAX/
     files:
       - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        sha256: fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1
 
   - name: rife49
     type: rife
     files:
       - url: https://huggingface.co/marduk191/rife/resolve/main/rife49.pth
         filename: rife49.pth
+        sha256: e55fd00f3cc184e3c65961f4bb827a9da022e78eed36b055242c0ac30000d533
