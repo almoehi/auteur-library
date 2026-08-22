@@ -19,6 +19,7 @@ export interface HarnessEvent {
 	attempt?: number;
 	reason?: string;
 	summary?: string;
+	message?: string;
 }
 
 export type ActivityTone = 'step' | 'good' | 'warn' | 'bad';
@@ -114,6 +115,19 @@ export function toActivity(e: HarnessEvent): ActivityRow | null {
 			const detail = (e.reason ?? '').replace(/^[a-z-]+:\s*/, '').trim() || undefined;
 			return { id, at, tone, text, detail };
 		}
+
+		case 'workflow-load-error':
+			// A render workflow that did not load is not a warning about a task —
+			// it is a capability the whole production no longer has, and it shows up
+			// as "a task" because the event carries no key. Say what it is, and keep
+			// the harness's own message: it names the workflow.
+			return {
+				id,
+				at,
+				tone: 'bad',
+				text: 'A render workflow could not be loaded — anything that needed it cannot run.',
+				detail: (e.message ?? e.reason ?? '').trim() || undefined
+			};
 
 		case 'rca':
 			return {
