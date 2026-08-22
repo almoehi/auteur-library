@@ -811,6 +811,12 @@ function renderPlannerTaskBlock(docs: ApprovedDocs, hasReferenceMaterial: boolea
         and "5-15 seconds" left to judgement came back as fifteen every time —
         three times the wait for a beat that plays in six.
 
+        # BEFORE YOU FINISH — count and check:
+        Count the numbered scenes in the APPROVED SCENE LIST. Count the tasks you
+        created and the artifacts you registered. All three numbers must be equal.
+        If they are not, fix it before completing — do not finish a partial plan
+        intending to extend it, you will not get the chance.
+
         # REGISTER AN ARTIFACT FOR EVERY TASK — this is what the gate checks:
         For each scene, call create_task first, then immediately call
         create_artifact(task_id=<the id that call returned>) for the clip that task

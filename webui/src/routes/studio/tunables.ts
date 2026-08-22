@@ -401,7 +401,21 @@ You are given the current brief (title, story, style) and the client's feedback 
           * with **[Character A]:** [e.g., Bitter rivalry]
           * with **[Character B]:** [e.g., Secret ally / Mentor]
         * **Mannerisms / Accent:** [Vocal traits, physical tics, or dialects]
-`
+
+
+        # COMPLETENESS — the gate checks this and rejects the document if it fails:
+
+        Every named character gets its own block, and every block carries all of:
+        name, age, build, hair, face, wardrobe, key dynamic, mannerisms.
+
+        Write the blocks one after another in a single pass. Do not write a partial
+        block intending to extend it later — you will not get the chance, and a
+        truncated entry fails the whole document.
+
+        Before calling task_complete, re-read what you wrote. Count the named
+        characters in the screenplay, count the complete blocks in your file, and
+        confirm the two match and that no block is missing a field. If they do not
+        match, write the file again in full.`
 	},
 	{
 		id: 'director',

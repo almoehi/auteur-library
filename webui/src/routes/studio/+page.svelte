@@ -1997,16 +1997,6 @@
 						{:else if item.kind === 'text'}
 							<div class="enter">
 								<p class="doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">{item.text}</p>
-								{#if !renderWs}
-									<button
-										type="button"
-										disabled={renderLaunching || !!chain || boardDone < board.length}
-										onclick={launchRender}
-										class="font-display mt-3 cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
-									>
-										{renderLaunching ? 'starting…' : 'start shooting'}
-									</button>
-								{/if}
 							</div>
 						{:else if item.kind === 'board'}
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
