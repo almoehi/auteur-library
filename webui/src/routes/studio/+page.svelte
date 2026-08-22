@@ -634,6 +634,27 @@
 		return `/api/file?${q.toString()}`;
 	}
 
+	/** Take a copy of a clip on the server, now, while the workspace agent is
+	 *  still alive to serve it.
+	 *
+	 *  Every clip URL goes through the harness, and the harness needs a living
+	 *  workspace agent to resolve an artifact. The agent reliably dies at the
+	 *  assembly step — so without this, finishing the shoot and failing the
+	 *  assembly leaves every rendered clip unplayable, which is the wrong way
+	 *  round: the clips are the expensive part and they were already finished.
+	 *
+	 *  Fire-and-forget on purpose. A failed copy costs a clip its safety net; a
+	 *  copy that blocked the poll loop would cost the run its progress display. */
+	function keepClip(ws: string, artifactId: string, fileKey: string): void {
+		const q = new URLSearchParams({
+			workspace: ws,
+			artifact: artifactId,
+			file: fileKey,
+			warm: '1'
+		});
+		void fetch(`/api/file?${q.toString()}`).catch(() => {});
+	}
+
 	/** Reads a planning document as text. Cache-busted: after a chain reset the
 	 *  same artifact id carries new bytes. Returns null on failure — the chat
 	 *  item then degrades to a link, never an empty box. */
@@ -1301,6 +1322,9 @@
 			if (clipPosted.has(a.id)) continue;
 			clipPosted.add(a.id);
 			const name = firstFileOfKind(a, 'video');
+			// Before anything else is done with it — this is the one moment the
+			// clip is known to exist and the agent is known to be answering.
+			keepClip(renderWs, a.id, name);
 			const isFinal =
 				assemblySent &&
 				(ASSEMBLE_RE.test(`${a.key} ${a.name} ${name}`) ||
