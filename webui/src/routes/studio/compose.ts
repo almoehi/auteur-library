@@ -698,7 +698,7 @@ function planningTasksBlock(
         - INT. or EXT.
         - Location name
         - Time of day (DAY / NIGHT / DUSK etc.)
-        - One-sentence action summary capturing the narrative and emotional beat
+        - A one-sentence action summary that captures the storytelling and specific action
         - List of involved characters in that scene
         Format as a structured markdown table.
 
