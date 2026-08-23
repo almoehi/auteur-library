@@ -29,12 +29,23 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
-gpu_types: [a100]  # Narrowed from [a100, h100, blackwell], measured rather than assumed:
-                   # h100 gives "CUDA error: no kernel image is available for execution
-                   # on the device [node=125 type=SamplerCustomAdvanced]" on every render
-                   # — the image carries no sm_90 kernels. l40s was already excluded
-                   # upstream for calling sageattn() directly on cu13 (XID-43). Of the
-                   # three, a100 is the one that actually runs.
+gpu_types: [h100]  # h100 failed every render with "CUDA error: no kernel image is available
+                   # for execution on the device [node=125 SamplerCustomAdvanced]" —
+                   # twice, because the first fix was a guess. Removing SolAttnPatch, the
+                   # Triton INT8 attention three nodes upstream, changed nothing: the same
+                   # error came back, so that node is back in place.
+                   #
+                   # The cause is SageAttention, which the two patches at 157 and 663
+                   # apply and which resolves its kernel at runtime — with no sm_90 build,
+                   # this is the error you get. It is the same failure that excluded l40s
+                   # upstream (sm_89 + cu13, XID-43), and the deploy has a switch for
+                   # exactly this: the h100 endpoint is now deployed with
+                   # SAGE_ATTENTION=0 via `deploy-modal.sh --comfy 0.32.0 --disable-sage
+                   # h100`. Note the --comfy pin: the script defaults to 0.31.1 and would
+                   # otherwise deploy a different app than the one in use.
+                   #
+                   # Back to a100 if this still fails, and maxAttempts is 2 either way.
+
 ports:
   params:
     - name: steps
