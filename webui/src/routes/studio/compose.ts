@@ -281,7 +281,12 @@ function profilesBlock(seed: number): string {
 	// it just paid three times the render time for a LoRA it was bypassing.
 	//
 	// gpuType is inert here: the workflow bundle declares its own gpu_types and
-	// those win. It stays because the profile schema wants a value.
+	// those win. It stays because the profile schema wants a value — but it says
+	// a100 rather than l40s now, because l40s is not merely unused, it cannot run
+	// this workflow at all. Its SageAttention kernels are sm_80 only, so l40s
+	// (sm_89) and h100 (sm_90) both die in the sampler and a100 is the one card
+	// that works. Leaving a dead card named here invites someone to trust it the
+	// day the bundle stops overriding.
 	//
 	// fps=48 is not a preference, it is the workflow's arithmetic. The model
 	// renders at 24fps native and a RIFE pass doubles the frames, so 48 is the
@@ -295,7 +300,7 @@ function profilesBlock(seed: number): string {
       image: { width: 720, height: 480, steps: 4, seed: ${seed} }
       video: { width: 720, height: 480, steps: 4, fps: 48, seed: ${seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
+      compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }`;
 }
 
 /** The model registry.
@@ -1112,6 +1117,12 @@ const DIRECT_WORKFLOWS = `  workflows:
  *  scenes of the last run came back 480x864 and 720x480 — each worker had
  *  decided for itself. Fixing it in the profile is what stops that. */
 function directProfiles(spec: DirectSpec): string {
+	// PROBE, not a settled value: steps back to 4 with the frame left at the
+	// larger size, to find out which half of the last change carried the quality
+	// jump. If the clip holds up it was the resolution and the steps can stay
+	// cheap; if it falls back to plastic it was the sampling and 8 is the floor.
+	// Whichever it is, the next commit sets the real number.
+	//
 	// steps=8 rather than the turbo LoRA's nominal 4. Four is the fast path and
 	// it shows: the realism detailer was trained at 1024 and its own gallery was
 	// rendered at eight, and everything we produced at four came back a little
@@ -1122,10 +1133,10 @@ function directProfiles(spec: DirectSpec): string {
 	// (steps or resolution) was the one that mattered.
 	return `  profiles:
     draft:
-      image: { width: ${spec.width}, height: ${spec.height}, steps: 8, seed: ${spec.seed} }
-      video: { width: ${spec.width}, height: ${spec.height}, steps: 8, fps: 48, seed: ${spec.seed} }
+      image: { width: ${spec.width}, height: ${spec.height}, steps: 4, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: 4, fps: 48, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
+      compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }`;
 }
 
 const DIRECT_AGENT = (model: string) => `    generic:

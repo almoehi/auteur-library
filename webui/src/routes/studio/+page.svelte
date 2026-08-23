@@ -973,7 +973,12 @@
 			// 32 as the workflow requires.
 			width: item.shot.orientation === 'portrait' ? 576 : 1024,
 			height: item.shot.orientation === 'portrait' ? 1024 : 576,
-			seed: Math.floor(Math.random() * 1_000_000_000)
+			// PINNED, for the steps 4-vs-8 comparison that is about to run. The seed
+			// decides the whole clip, so with a random one the two renders are two
+			// different clips rather than one clip sampled twice — at n=1 the
+			// difference you would be looking at is the seed, and the step count
+			// would tell you nothing. Back to Math.random() once the number settles.
+			seed: 733_912_004
 		};
 		shotBusy[itemId] = true;
 		try {
