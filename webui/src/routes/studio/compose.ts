@@ -630,6 +630,33 @@ const AGENT_PROMPT_WRITER = (a: AgentTuning) => `    # specific agent & model de
 ${indentBlock(a.prompt, 8)}
       readOnly: false`;
 
+/** Fill the style hole in the art-direction prompt.
+ *
+ *  The prompt names the production's one binding visual medium and then shows
+ *  `${style}` where that medium belongs — but the substitution was never
+ *  written. The agent read the placeholder as literal text and invented a
+ *  medium from the screenplay instead, so a brief asking for "handheld
+ *  smartphone amateur video with visible noise and tight shaky close framing"
+ *  came back as "35mm film photograph, fine organic film grain, naturalistic
+ *  independent-cinema look" — and every render prompt pasted that in verbatim.
+ *  The style the user typed reached no agent at all.
+ *
+ *  Replaced through a function rather than a string: the style is the user's
+ *  own sentence, and a `$&` or `$'` inside it would otherwise be read as a
+ *  replacement pattern instead of as text.
+ *
+ *  Throws if the hole is gone, which only an admin override can do. Dropping
+ *  the style in silence is the bug being fixed here; a launch that stops and
+ *  says so leaves something to fix. */
+function fillStyle(prompt: string, style: string): string {
+	const filled = prompt.replaceAll('${style}', () => style);
+	if (!filled.includes(style))
+		throw new Error(
+			'the art direction prompt has no ${style} placeholder — the production style has nowhere to go'
+		);
+	return filled;
+}
+
 /** The five planning tasks, verbatim from the proven template. Two holes:
  *  the scene count in create_scenes and the style sentence in
  *  write_art_direction. The schedule_video_renders task is deliberately absent
@@ -727,7 +754,7 @@ function planningTasksBlock(
         artifacts:
           - screenplay
       prompt: >
-${indentBlock(tuned.write_art_direction, 8)}
+${indentBlock(fillStyle(tuned.write_art_direction, style), 8)}
       artifacts:
         - id: art_direction
           name: "Art Direction"
