@@ -151,6 +151,21 @@ models:
       - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
         sha256: fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1
 
+  # Realism adapter for human subjects. The stack's own style vocabulary only
+  # goes so far: prompts can ask for pores and uneven tone, and the base model
+  # still returns airbrushed skin. This is trained for exactly that gap — faces
+  # in close-up, skin texture instead of smoothing, coherent eyes.
+  #
+  # It patches the shared attention projections and ships standard H3 keys, so
+  # it applies to the fl2va weights here even though it is published for
+  # t2v/i2v/r2v.
+  - name: h3-realism-people-t2v-i2v-r2v
+    type: lora
+    dest: loras/MINIMAX/
+    files:
+      - url: https://huggingface.co/fal/MiniMax-H3-Realism-People-LoRA/resolve/main/h3-realism-people-t2v-i2v-r2v.safetensors
+        sha256: acc529601d2da117fb81179e76c56e488a3beab1171659d305f04fa3655b787e
+
   - name: rife49
     type: rife
     files:

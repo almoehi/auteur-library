@@ -331,6 +331,11 @@
         "lora": "MINIMAX\\minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
         "strength": 0.7
       },
+      "lora_2": {
+        "on": true,
+        "lora": "MINIMAX\\h3-realism-people-t2v-i2v-r2v.safetensors",
+        "strength": 0.8
+      },
       "\u2795 Add Lora": ""
     },
     "class_type": "Power Lora Loader (rgthree)",
