@@ -334,7 +334,7 @@
       "lora_2": {
         "on": true,
         "lora": "MINIMAX\\h3-realism-people-t2v-i2v-r2v.safetensors",
-        "strength": 0.8
+        "strength": 1.0
       },
       "\u2795 Add Lora": ""
     },

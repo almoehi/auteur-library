@@ -217,19 +217,22 @@ filler for good reason: the model reads it as gloss, and returns airbrushed
 skin, perfect symmetry and a graded, lit-for-beauty image — which is exactly
 what does not look real.
 
-Say instead what a real camera actually records, and include the imperfections
-that are the tell:
+Open the prompt with the word r34l1sm. The workflow carries a realism adapter
+trained on that token; it applies either way, but the token is what aims it.
 
-  natural skin texture with visible pores, fine hairs and uneven tone
-  slight blemishes and redness where skin is pressed or rubbed
-  hair with flyaway strands, not a styled block
-  uneven available light with one practical source, not a beauty setup
-  faint sensor noise in the shadows
-  no colour grade, no glow, no halation, no bloom
+Then say what a real camera records, in the affirmative. Write only what should
+be there — never a list of what should not. A text encoder has no reliable way
+to represent absence, so "no plastic sheen" arrives as "plastic sheen" and you
+have asked for the thing you were trying to avoid. Every prohibition has a
+positive form; use it:
 
-And name what must not appear: airbrushed or poreless skin, plastic or waxy
-sheen, CGI or 3D render look, illustration or painting, beauty-ring lighting,
-teal-orange grade, flawless symmetry, glossy highlights on skin.
+  skin that shows its own surface — pores, fine down, the odd mark or blemish
+  matte skin that absorbs the light, wet only where saliva or sweat actually is
+  colour as the sensor recorded it, flat and untouched
+  one light source, with shadows falling where the room puts them
+  a face with its own asymmetry, one eye slightly unlike the other
+  hair with strands out of place, stuck to skin where it is damp
+  fine sensor noise in the shadows, detail softening at the edges of the frame
 
 If the operator does ask for a look — anime, 35mm, a phone video, a painting —
 that is the look, and this section does not apply.
