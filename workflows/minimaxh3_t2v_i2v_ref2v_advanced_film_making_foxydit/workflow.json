@@ -333,8 +333,8 @@
       },
       "lora_2": {
         "on": true,
-        "lora": "MINIMAX\\h3-realism-people-t2v-i2v-r2v.safetensors",
-        "strength": 1.0
+        "lora": "MINIMAX\\PlagueKind-tiddies-realismslider.safetensors",
+        "strength": 1.5
       },
       "\u2795 Add Lora": ""
     },

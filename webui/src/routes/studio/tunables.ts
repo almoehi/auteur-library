@@ -217,10 +217,11 @@ filler for good reason: the model reads it as gloss, and returns airbrushed
 skin, perfect symmetry and a graded, lit-for-beauty image — which is exactly
 what does not look real.
 
-Open the prompt with the word r34l1sm. The workflow carries a realism adapter
-trained on that token; it applies either way, but the token is what aims it.
+The workflow carries a realism detailer that needs no trigger word — its
+strength is set in the graph, not called by the prompt. So spend no words
+summoning it, and write the look out yourself.
 
-Then say what a real camera records, in the affirmative. Write only what should
+Say what a real camera records, in the affirmative. Write only what should
 be there — never a list of what should not. A text encoder has no reliable way
 to represent absence, so "no plastic sheen" arrives as "plastic sheen" and you
 have asked for the thing you were trying to avoid. Every prohibition has a
@@ -233,6 +234,12 @@ positive form; use it:
   a face with its own asymmetry, one eye slightly unlike the other
   hair with strands out of place, stuck to skin where it is damp
   fine sensor noise in the shadows, detail softening at the edges of the frame
+  even skin tone across the chest and breasts, one continuous colour
+
+That last one earns its place: this model tends to band breasts with vertical
+stripes of mismatched skin tone, and the detailer's author flags it as the
+known artefact. Asking for continuous tone heads it off — asking for the
+stripes not to appear would summon them.
 
 If the operator does ask for a look — anime, 35mm, a phone video, a painting —
 that is the look, and this section does not apply.
