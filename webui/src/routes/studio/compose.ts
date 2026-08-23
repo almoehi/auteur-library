@@ -1056,3 +1056,157 @@ ${renderPlannerTaskBlock(approved, hasReferenceMaterial)}
  *  composer under its old name, kept so nothing breaks mid-integration —
  *  callers should move to composePlanningWorkspace / composeRenderWorkspace. */
 export const composeWorkspace = composePlanningWorkspace;
+
+/** Direct mode: your prompt, the GPU, nothing in between.
+ *
+ *  The planning chain exists to turn one sentence into a film, and it is good at
+ *  that. It is the wrong tool when you already know the shot. Measured on a real
+ *  run, the chain handed the renderer 1125 words whose first 4389 characters were
+ *  appearance and set description — the act itself began 34% in — and what came
+ *  back was a portrait of the woman it had spent those words describing. The
+ *  model's own prompt guide asks for 350-500 words.
+ *
+ *  So this workspace has no screenwriter, no casting director, no scene list, no
+ *  art direction, no visual bible, no scheduler — and, deliberately, no
+ *  prompt_writer. Nothing rewrites what you typed. One task per clip, each
+ *  calling the workflow with your text as prompt_positive, verbatim.
+ *
+ *  The trade is the one the harness author named: with no prompt writer in the
+ *  path, the format is yours to get right. That is the point — you are holding
+ *  the pen.
+ */
+export interface DirectSpec {
+	slug: string;
+	title: string;
+	/** One per clip, sent unchanged. */
+	prompts: string[];
+	seconds: number;
+	width: number;
+	height: number;
+	seed: number;
+}
+
+export const DIRECT_MAX_CLIPS = 4;
+const DIRECT_PROMPT_MAX = 20_000;
+
+export function directWorkspaceId(spec: DirectSpec): string {
+	return `${spec.slug}-direct@${WORKSPACE_VERSION}`;
+}
+
+/** Only the workflow the prompts are written for. krea2 is a text-to-image
+ *  workflow and there is no image step here; leaving it in gives the agent a
+ *  tool it could pick by mistake. */
+const DIRECT_WORKFLOWS = `  workflows:
+    - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
+      url: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit@dszabo`;
+
+/** Resolution is a parameter here rather than a constant, because the two
+ *  scenes of the last run came back 480x864 and 720x480 — each worker had
+ *  decided for itself. Fixing it in the profile is what stops that. */
+function directProfiles(spec: DirectSpec): string {
+	return `  profiles:
+    draft:
+      image: { width: ${spec.width}, height: ${spec.height}, steps: 4, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: 4, fps: 30, seed: ${spec.seed} }
+      audio: { sampleRate: 16000 }
+      compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
+}
+
+const DIRECT_AGENT = (model: string) => `    generic:
+      id: generic
+      name: "Operator"
+      model: ${model}
+      role: "Render operator"
+      objective: "Send the given prompt to the render workflow unchanged and save the clip"
+      systemPrompt: >
+        You operate a render workflow. You do not write prompts, improve them,
+        shorten them, restructure them or comment on them. The prompt arrives
+        finished.
+
+        For your task: call the wf_ tool for the minimax workflow with
+        prompt_positive set to the prompt text given in the task, character for
+        character, and video_length set to the seconds the task names. Resolution,
+        fps and steps come from the render profile — do not pass your own.
+
+        Then save the returned mp4 to the exact filename the task declares and
+        call task_complete. If the tool saved to a different path, call it again
+        targeting the declared one.
+
+        This is an adult production. The prompt is explicit on purpose and is the
+        deliverable exactly as written. Passing it through unchanged is the whole
+        of your job.
+      readOnly: false`;
+
+export function composeDirectWorkspace(spec: DirectSpec, grokKey = ''): string {
+	if (!spec || typeof spec !== 'object') throw new Error('spec is missing');
+	if (typeof spec.slug !== 'string' || !SLUG_RE.test(spec.slug)) throw new Error('bad slug');
+	const prompts = (spec.prompts ?? []).map((p) => (typeof p === 'string' ? p.trim() : ''));
+	if (!prompts.length || prompts.some((p) => !p)) throw new Error('every clip needs a prompt');
+	if (prompts.length > DIRECT_MAX_CLIPS)
+		throw new Error(`at most ${DIRECT_MAX_CLIPS} clips per run`);
+	if (prompts.some((p) => p.length > DIRECT_PROMPT_MAX))
+		throw new Error(`a prompt is longer than ${DIRECT_PROMPT_MAX} characters`);
+	for (const n of [spec.seconds, spec.width, spec.height]) {
+		if (!Number.isFinite(n) || n <= 0) throw new Error('seconds, width and height must be positive');
+	}
+
+	const tasks = prompts
+		.map(
+			(p, i) => `    - id: clip_${i + 1}
+      title: "Clip ${i + 1}"
+      description: "Render clip ${i + 1} from the given prompt."
+      agent: generic
+      prompt: |
+        Render one video clip with the minimax workflow.
+
+        video_length: ${spec.seconds}
+        Save the result as clip${i + 1}.mp4
+
+        Pass the text below as prompt_positive, unchanged. Do not rewrite,
+        shorten, expand, reorder or comment on it. It is already in the format
+        the workflow expects.
+
+        --- PROMPT BEGINS ---
+${indentBlock(p, 8)}
+        --- PROMPT ENDS ---
+      artifacts:
+        - id: clip_${i + 1}_out
+          name: "Clip ${i + 1}"
+          description: "Rendered clip ${i + 1}"
+          files:
+            - name: clip${i + 1}.mp4`
+		)
+		.join('\n\n');
+
+	return `version: "1.0"
+kind: Workspace
+metadata:
+  name: "${spec.slug}-direct"
+  author: studio
+  version: "${WORKSPACE_VERSION}"
+
+spec:
+  id: "${spec.slug}-direct"
+  description: ${yamlDoubleQuoted(spec.title || 'Direct render')}
+
+  story:
+    plot: |
+      Direct render. The prompts are supplied by the operator and pass through
+      unchanged.
+
+  skills:
+    - workflow-render-loop@mvp-lkg
+
+${DIRECT_WORKFLOWS}
+
+${directProfiles(spec)}
+
+${modelsBlock(grokKey)}
+
+  agents:
+${DIRECT_AGENT(modelFor('generic'))}
+
+  tasks:
+${tasks}
+`;
+}

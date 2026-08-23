@@ -2071,6 +2071,24 @@
 				<p class="text-[10px] font-bold tracking-[0.3em] text-[var(--st-faint)] uppercase">
 					auteur studio
 				</p>
+				<!-- Two ways to reach the renderer, and they are different jobs rather
+					 than a beginner and an expert door: this one builds a film out of a
+					 sentence, the other sends a prompt you already have. -->
+				<nav class="ml-auto flex gap-1.5" aria-label="mode">
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a
+						href="/studio/direct"
+						class="font-display rounded-full bg-[var(--st-surface)] px-3 py-1 text-xs font-semibold text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+					>
+						simple
+					</a>
+					<span
+						aria-current="page"
+						class="font-display rounded-full bg-[var(--st-accent)] px-3 py-1 text-xs font-semibold text-white"
+					>
+						advanced
+					</span>
+				</nav>
 			</header>
 
 		<div

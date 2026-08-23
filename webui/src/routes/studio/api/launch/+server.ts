@@ -34,7 +34,10 @@ import {
 	renderWorkspaceId,
 	composePlanningWorkspace,
 	composeRenderWorkspace,
-	type ApprovedDocs
+	composeDirectWorkspace,
+	directWorkspaceId,
+	type ApprovedDocs,
+	type DirectSpec
 } from '../../compose';
 
 /** Same host as the proxy uses: the golem router matches on the Host header and
@@ -53,73 +56,20 @@ import { HARNESS } from '$lib/harness';
  *  the one thing this file cannot afford to get wrong, because a mismatch opens
  *  an id nothing polls. */
 
-export const POST: RequestHandler = async ({ request, fetch }) => {
-
-	// Tuned prompts and model choices from the admin panel, if any. Read per
-	// launch so an edit between two productions takes effect on the next one
-	// without restarting the dev server.
-	const overrides = readOverrides();
-
-	// The worker agents only ever see a key that travels on the model itself, so
-	// a missing one is not a degraded run — it is a workspace that opens and then
-	// fails every task with 401. Cheaper to refuse here than to spend the slug.
-	const grokKey = (env.GROK_API_KEY ?? '').trim();
-	if (!grokKey) {
-		return json({
-			ok: false,
-			error:
-				'GROK_API_KEY is not set — copy it from ~/auteur/.env into webui/.env and restart the dev server.'
-		});
-	}
-
-	let payload: { brief?: Brief; stage?: unknown; approved?: unknown };
-	try {
-		payload = await request.json();
-	} catch {
-		throw error(400, 'Body must be JSON');
-	}
-
-	const brief = payload.brief;
-	if (!brief || typeof brief !== 'object') throw error(400, 'Missing brief');
-	if (!brief.slug || !SLUG_RE.test(brief.slug)) throw error(400, 'Bad slug');
-
-	const stage = payload.stage;
-	if (stage !== 'planning' && stage !== 'render') {
-		throw error(400, "stage must be 'planning' or 'render'");
-	}
-
-	let workspaceId: string;
-	let yaml: string;
-	try {
-		if (stage === 'planning') {
-			workspaceId = briefToWorkspaceId(brief);
-			yaml = composePlanningWorkspace(brief, overrides, grokKey);
-		} else {
-			// The render workspace's planner prompt carries the approved planning
-			// documents inline — the two workspaces share nothing on the harness
-			// side, so the text itself is the only bridge. No docs, no shoot.
-			const approved = payload.approved;
-			if (!approved || typeof approved !== 'object') {
-				throw error(400, 'Missing approved docs for render stage');
-			}
-			workspaceId = renderWorkspaceId(brief);
-			// Staged now, imported once the workspace is open — but the planner's
-			// prompt is written here, so it has to be told in advance.
-			yaml = composeRenderWorkspace(
-				brief,
-				approved as ApprovedDocs,
-				overrides,
-				grokKey,
-				listRefs().length > 0
-			);
-		}
-	} catch (e) {
-		// Let our own 400s through; anything else is a compose bug — a bug in
-		// our code, not a harness failure — so say that plainly instead of
-		// letting it read as "the container is down".
-		if (e && typeof e === 'object' && 'status' in e) throw e;
-		return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
-	}
+/** Everything after composing: log the YAML, prefetch, open, bookmark, and push
+ *  the local library in. Shared because direct mode needs all of it and none of
+ *  the brief handling around it — and because the one thing this file cannot
+ *  afford is two copies of the open sequence drifting apart. */
+async function openWorkspace(
+	workspaceId: string,
+	yaml: string,
+	grokKey: string,
+	fetch: typeof globalThis.fetch,
+	record: { slug: string; title: string; sceneCount: number; pitch?: string },
+	opts: { planning?: boolean; withLibrary?: boolean } = {}
+): Promise<Response> {
+	const planning = opts.planning ?? false;
+	const withLibrary = opts.withLibrary ?? false;
 
 	// Printed before the open, on purpose. A malformed compose is otherwise
 	// invisible: the harness rejects it with a one-line message that says
@@ -230,13 +180,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	// Bookmark it. Until this existed a run lived only in the tab that started
 	// it: close the tab and the film was still on the harness but unreachable,
 	// because nothing remembered its id.
-	recordProduction({
-		slug: brief.slug,
-		title: brief.title,
-		sceneCount: brief.sceneCount,
-		pitch: typeof brief.story === 'string' ? brief.story.slice(0, 200) : undefined,
-		...(stage === 'planning' ? { planningWs: workspaceId } : { renderWs: workspaceId })
-	});
+	recordProduction({ ...record, ...(planning ? { planningWs: workspaceId } : { renderWs: workspaceId }) });
 
 	// The workspace is live from here on. Everything below adds to it and can
 	// only fail partially: the production is already running, so a workflow that
@@ -248,10 +192,114 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	// would be work nothing consumes.
 	let library: LoadReport | undefined;
 	let refs: RefImportResult | undefined;
-	if (stage === 'render') {
+	if (withLibrary) {
 		library = await loadLibraryInto(workspaceId);
 		refs = await importStagedRefs(workspaceId);
 	}
 
 	return json({ ok: true, workspaceId, library, refs }, { status: 200 });
+}
+
+export const POST: RequestHandler = async ({ request, fetch }) => {
+
+	// Tuned prompts and model choices from the admin panel, if any. Read per
+	// launch so an edit between two productions takes effect on the next one
+	// without restarting the dev server.
+	const overrides = readOverrides();
+
+	// The worker agents only ever see a key that travels on the model itself, so
+	// a missing one is not a degraded run — it is a workspace that opens and then
+	// fails every task with 401. Cheaper to refuse here than to spend the slug.
+	const grokKey = (env.GROK_API_KEY ?? '').trim();
+	if (!grokKey) {
+		return json({
+			ok: false,
+			error:
+				'GROK_API_KEY is not set — copy it from ~/auteur/.env into webui/.env and restart the dev server.'
+		});
+	}
+
+	let payload: { brief?: Brief; stage?: unknown; approved?: unknown; direct?: unknown };
+	try {
+		payload = await request.json();
+	} catch {
+		throw error(400, 'Body must be JSON');
+	}
+
+	const stage = payload.stage;
+	if (stage !== 'planning' && stage !== 'render' && stage !== 'direct') {
+		throw error(400, "stage must be 'planning', 'render' or 'direct'");
+	}
+
+	// Direct mode carries a spec instead of a brief: there is no plan to open,
+	// only prompts to render. It leaves before the brief checks below, which ask
+	// for a story and a scene count that this stage does not have.
+	if (stage === 'direct') {
+		const spec = payload.direct as DirectSpec | undefined;
+		if (!spec || typeof spec !== 'object') throw error(400, 'Missing direct spec');
+		if (!spec.slug || !SLUG_RE.test(spec.slug)) throw error(400, 'Bad slug');
+		let directYaml: string;
+		try {
+			directYaml = composeDirectWorkspace(spec, grokKey);
+		} catch (e) {
+			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
+		}
+		return await openWorkspace(
+			directWorkspaceId(spec),
+			directYaml,
+			grokKey,
+			fetch,
+			{
+				slug: spec.slug,
+				title: spec.title || 'Direct render',
+				sceneCount: spec.prompts?.length ?? 0,
+				pitch: spec.prompts?.[0]?.slice(0, 200)
+			},
+			{ withLibrary: true }
+		);
+	}
+
+	const brief = payload.brief;
+	if (!brief || typeof brief !== 'object') throw error(400, 'Missing brief');
+	if (!brief.slug || !SLUG_RE.test(brief.slug)) throw error(400, 'Bad slug');
+
+	let workspaceId: string;
+	let yaml: string;
+	try {
+		if (stage === 'planning') {
+			workspaceId = briefToWorkspaceId(brief);
+			yaml = composePlanningWorkspace(brief, overrides, grokKey);
+		} else {
+			// The render workspace's planner prompt carries the approved planning
+			// documents inline — the two workspaces share nothing on the harness
+			// side, so the text itself is the only bridge. No docs, no shoot.
+			const approved = payload.approved;
+			if (!approved || typeof approved !== 'object') {
+				throw error(400, 'Missing approved docs for render stage');
+			}
+			workspaceId = renderWorkspaceId(brief);
+			// Staged now, imported once the workspace is open — but the planner's
+			// prompt is written here, so it has to be told in advance.
+			yaml = composeRenderWorkspace(
+				brief,
+				approved as ApprovedDocs,
+				overrides,
+				grokKey,
+				listRefs().length > 0
+			);
+		}
+	} catch (e) {
+		// Let our own 400s through; anything else is a compose bug — a bug in
+		// our code, not a harness failure — so say that plainly instead of
+		// letting it read as "the container is down".
+		if (e && typeof e === 'object' && 'status' in e) throw e;
+		return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
+	}
+
+	return await openWorkspace(workspaceId, yaml, grokKey, fetch, {
+		slug: brief.slug,
+		title: brief.title,
+		sceneCount: brief.sceneCount,
+		pitch: typeof brief.story === 'string' ? brief.story.slice(0, 200) : undefined
+	}, { planning: stage === 'planning', withLibrary: stage === 'render' });
 };
