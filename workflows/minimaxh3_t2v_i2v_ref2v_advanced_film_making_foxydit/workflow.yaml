@@ -29,12 +29,21 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
-gpu_types: [a100]  # Narrowed from [a100, h100, blackwell], measured rather than assumed:
-                   # h100 gives "CUDA error: no kernel image is available for execution
-                   # on the device [node=125 type=SamplerCustomAdvanced]" on every render
-                   # — the image carries no sm_90 kernels. l40s was already excluded
-                   # upstream for calling sageattn() directly on cu13 (XID-43). Of the
-                   # three, a100 is the one that actually runs.
+gpu_types: [h100]  # h100 used to fail every render with "CUDA error: no kernel image is
+                   # available for execution on the device [node=125
+                   # SamplerCustomAdvanced]", which read as the image lacking sm_90
+                   # kernels and cost a pinned run in retries before it was reverted.
+                   # The sampler was only where it surfaced: SolAttnPatch sat three
+                   # nodes upstream compiling Triton INT8 attention, and Triton builds
+                   # per architecture. Its own use_tma=false says it knows about Hopper
+                   # and does not use it. That node is a speed optimisation for consumer
+                   # cards, it is not required, and it is now removed — so this is worth
+                   # h100, which is substantially faster.
+                   #
+                   # If it still fails the next suspects are the two Sage attention
+                   # patches above it (157, 663); l40s was already excluded upstream for
+                   # calling sageattn() directly on cu13 (XID-43). maxAttempts is 2, so a
+                   # bad pin costs two renders rather than an afternoon.
 ports:
   params:
     - name: steps
