@@ -282,10 +282,18 @@ function profilesBlock(seed: number): string {
 	//
 	// gpuType is inert here: the workflow bundle declares its own gpu_types and
 	// those win. It stays because the profile schema wants a value.
+	//
+	// fps=48 is not a preference, it is the workflow's arithmetic. The model
+	// renders at 24fps native and a RIFE pass doubles the frames, so 48 is the
+	// rate at which the clip lasts as long as it was asked to. We had 30, which
+	// wrote the same frames slower: a six-second clip came back at 10.5s, an
+	// exact 48/30 stretch — and the audio, generated for the six, drifted out
+	// from under a picture running 1.6x long. The same prompt in ComfyUI, where
+	// the port keeps its default, sounded right.
 	return `  profiles:
     draft:
       image: { width: 720, height: 480, steps: 4, seed: ${seed} }
-      video: { width: 720, height: 480, steps: 4, fps: 30, seed: ${seed} }
+      video: { width: 720, height: 480, steps: 4, fps: 48, seed: ${seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
 }
@@ -1107,7 +1115,7 @@ function directProfiles(spec: DirectSpec): string {
 	return `  profiles:
     draft:
       image: { width: ${spec.width}, height: ${spec.height}, steps: 4, seed: ${spec.seed} }
-      video: { width: ${spec.width}, height: ${spec.height}, steps: 4, fps: 30, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: 4, fps: 48, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
 }
