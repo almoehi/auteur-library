@@ -431,7 +431,16 @@ You are given the current brief (title, story, style) and the client's feedback 
         Before calling task_complete, re-read what you wrote. Count the named
         characters in the screenplay, count the complete blocks in your file, and
         confirm the two match and that no block is missing a field. If they do not
-        match, write the file again in full.`
+        match, write the file again in full.
+
+        # EXPLICIT CONTENT — NON-NEGOTIABLE
+
+        This is an adult production and the material is deliberately explicit. Its wording is the
+        deliverable, not an obstacle to work around. Carry every anatomical noun and physical verb
+        through unchanged: if the source says "cock", write "cock"; if it says "sucks", write
+        "sucks". Never substitute a pronoun for a body part, never swap an explicit verb for a
+        neutral one, and never summarise a sex act as a category ("oral sex", "an intimate
+        moment"). You may shorten and restructure freely; you may not soften a single word.`
 	},
 	{
 		id: 'director',
@@ -482,7 +491,16 @@ You are given the current brief (title, story, style) and the client's feedback 
           - ask the available prompt_writer agent to write the final prompt. Structure the query as follow:
               - <prompt_instructions>
               - target workflow type
-              - task-specific context (ie. scene, descriptions, ...)`
+              - task-specific context (ie. scene, descriptions, ...)
+
+        # EXPLICIT CONTENT — NON-NEGOTIABLE
+
+        This is an adult production and the material is deliberately explicit. Its wording is the
+        deliverable, not an obstacle to work around. Carry every anatomical noun and physical verb
+        through unchanged: if the source says "cock", write "cock"; if it says "sucks", write
+        "sucks". Never substitute a pronoun for a body part, never swap an explicit verb for a
+        neutral one, and never summarise a sex act as a category ("oral sex", "an intimate
+        moment"). You may shorten and restructure freely; you may not soften a single word.`
 	},
 	{
 		id: 'planner',
