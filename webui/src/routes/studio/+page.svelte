@@ -205,6 +205,26 @@
 	 *  workspace `<slug>-direct`, so this is true however we arrived. */
 	const simpleRun = $derived(/-direct@/.test(renderWs));
 
+	/** The slug this run is filed under, the same one the history sidebar shows.
+	 *  Derived rather than stored: the planning workspace is `<slug>@v` and the
+	 *  render one `<slug>-shoot@v` or `<slug>-direct@v`, so the ids already carry
+	 *  it and cannot disagree with a copy. */
+	const runSlug = $derived(
+		planningWs
+			? planningWs.split('@')[0]
+			: renderWs
+				? renderWs.split('@')[0].replace(/-(shoot|direct)$/, '')
+				: ''
+	);
+
+	/** One saved conversation per run, plus a pointer at the live one.
+	 *  Before this there was a single slot, so opening an older run from the
+	 *  sidebar could only rebuild a guess of it — a synthetic brief, an advanced
+	 *  plan card, and the planning rail sitting in `waiting` over a simple run
+	 *  that never had a plan. The conversation itself is the state; keep it. */
+	const runKey = (slug: string) => `auteur-studio-run-${slug}`;
+	const POINTER_KEY = 'auteur-studio-current';
+
 	let startedAt = $state(0);
 	let now = $state(Date.now());
 
@@ -277,6 +297,18 @@
 	 *  the one that runs on load. Reusing it is worth the reload. */
 	function reopen(p: Production) {
 		try {
+			// The run's own conversation, if it was saved: what you typed, the
+			// prompt or the plan you approved, the documents, the clips. Pointing
+			// at it is the whole of reopening.
+			if (localStorage.getItem(runKey(p.slug))) {
+				localStorage.setItem(POINTER_KEY, p.slug);
+				location.href = '/studio';
+				return;
+			}
+			// Older runs, saved before conversations were kept. All that can be
+			// rebuilt is the identity — enough to poll the workspace and show what
+			// is in it, not enough to show how it got there.
+			localStorage.removeItem(POINTER_KEY);
 			localStorage.setItem(
 				RESUME_KEY,
 				JSON.stringify({
@@ -299,7 +331,11 @@
 					planningWs: p.planningWs ?? '',
 					renderWs: p.renderWs ?? '',
 					assemblySent: false,
-					startedAt: p.startedAt
+					startedAt: p.startedAt,
+					// A simple run never had a brief. Handing one back draws the
+					// advanced plan card over a run that has no plan, with a start
+					// button that would open a second workspace.
+					...(/-direct@/.test(p.renderWs ?? '') ? { brief: null, launchedBrief: null } : {})
 				})
 			);
 		} catch {
@@ -1646,6 +1682,16 @@
 	 *  brings the real task, shoot entries from the render poll once the planner
 	 *  created them, N static ghosts from the brief before that. */
 	const rail = $derived.by<RailEntry[]>(() => {
+		// A simple run is one task per clip. Showing it the planning chain listed
+		// every document it will never write as `waiting`, above the clip that was
+		// actually running — a rail describing the other mode.
+		if (simpleRun) {
+			return (renderPoll?.tasks ?? [])
+				.slice()
+				.sort((x, y) => sceneNo(x.key) - sceneNo(y.key))
+				.map((t) => ({ id: t.id, label: t.key, status: mapStatus(t.status) }));
+		}
+
 		const b = brief;
 		if (!b) return [];
 		// The rail speaks the workspace's own vocabulary: these are the exact task
@@ -1768,12 +1814,15 @@
 	}
 
 	function persist() {
+		const slug = runSlug;
+		if (!slug) return;
 		// Document bodies are most of the payload and the least of the loss: the
 		// transcript still reads, the cards fall back to a link. So a run too big
 		// for the quota drops them rather than saving nothing at all.
 		for (const withBodies of [true, false]) {
 			try {
-				localStorage.setItem(RESUME_KEY, JSON.stringify(snapshot(withBodies)));
+				localStorage.setItem(runKey(slug), JSON.stringify(snapshot(withBodies)));
+				localStorage.setItem(POINTER_KEY, slug);
 				return;
 			} catch {
 				/* quota, or private mode — try smaller, then give up */
@@ -1799,6 +1848,10 @@
 	function forget() {
 		if (persistTimer) clearTimeout(persistTimer);
 		try {
+			// Only the pointer. Each run's conversation stays where it is — that is
+			// what the sidebar is for, and starting a new production is not a
+			// reason to lose the last one.
+			localStorage.removeItem(POINTER_KEY);
 			localStorage.removeItem(RESUME_KEY);
 			sessionStorage.removeItem(RESUME_KEY);
 		} catch {
@@ -1961,20 +2014,29 @@
 
 		let resumed = false;
 		try {
-			const raw = localStorage.getItem(RESUME_KEY) ?? sessionStorage.getItem(RESUME_KEY);
+			const pointer = localStorage.getItem(POINTER_KEY);
+			const raw =
+				(pointer && localStorage.getItem(runKey(pointer))) ??
+				localStorage.getItem(RESUME_KEY) ??
+				sessionStorage.getItem(RESUME_KEY);
 			if (raw) {
 				const s = JSON.parse(raw) as Partial<ReturnType<typeof snapshot>>;
-				// A simple-mode run has no brief — there is no plan, only a prompt —
-				// so requiring one meant a reload during a simple render dropped the
-				// run on the floor: the clip finished on the harness with nothing
-				// left watching for it.
-				if ((s.brief || s.chat?.length) && (s.planningWs || s.renderWs)) {
+				// A workspace to poll is the whole requirement. Requiring a brief on
+				// top of it meant a simple run could not be resumed at all — there is
+				// no plan in one, only a prompt — and a reload mid-render left the
+				// clip finishing on the harness with nothing watching for it.
+				if (s.planningWs || s.renderWs) {
 					resumed = true;
 					brief = s.brief ?? null;
 					launchedBrief = s.launchedBrief ?? s.brief ?? null;
 					sceneCount = s.brief?.sceneCount ?? sceneCount;
 					planningWs = s.planningWs ?? '';
 					renderWs = s.renderWs ?? '';
+					// The mode follows the run you opened. Landing in a simple run with
+					// the advanced composer under it is the same mismatch as the rail:
+					// the page describing one mode while showing the other.
+					if (/-direct@/.test(renderWs)) mode = 'simple';
+					else if (s.planningWs) mode = 'advanced';
 					assemblySent = s.assemblySent ?? false;
 					startedAt = s.startedAt || Date.now();
 					if (assemblySent) {
