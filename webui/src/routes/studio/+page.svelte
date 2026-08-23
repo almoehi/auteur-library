@@ -189,15 +189,21 @@
 	let latestPlanId = $state('');
 	let sceneCount = $state(4);
 
-	/** True while a simple-mode render is the live workspace. The render poll is
-	 *  shared with advanced, and everything in it that reaches for a manager —
-	 *  the assembly trigger above all — has no counterpart here: a direct
-	 *  workspace holds one task per clip and nothing that could answer. */
-	let simpleRun = $state(false);
 
 	let planningWs = $state('');
 	let renderWs = $state('');
 	const activeWs = $derived(renderWs || planningWs);
+
+	/** Whether the live render workspace is a simple-mode one. Read off the id
+	 *  rather than carried as a flag, because a flag has to be set on every road
+	 *  in and one of them was missed: reopening a past run from the sidebar
+	 *  restored the workspace without it, the single clip task counted as a
+	 *  finished shoot, and the page asked a workspace with no assembler to
+	 *  assemble — which it answered, at length, in the transcript.
+	 *
+	 *  The id cannot be missed. composeDirectWorkspace names every direct
+	 *  workspace `<slug>-direct`, so this is true however we arrived. */
+	const simpleRun = $derived(/-direct@/.test(renderWs));
 
 	let startedAt = $state(0);
 	let now = $state(Date.now());
@@ -941,7 +947,6 @@
 				return;
 			}
 			item.shot.launched = true;
-			simpleRun = true;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			// The render poll narrates a shoot it announces first; there is no
@@ -1731,7 +1736,6 @@
 			planningWs,
 			renderWs,
 			assemblySent,
-			simpleRun,
 			startedAt,
 			// the conversation
 			chat: withBodies
@@ -1840,7 +1844,6 @@
 		chain = null;
 		shootsAnnounced = false;
 		assemblySent = false;
-		simpleRun = false;
 		shotBusy = {};
 		lastRequest = '';
 		finalPosted = false;
@@ -1961,15 +1964,18 @@
 			const raw = localStorage.getItem(RESUME_KEY) ?? sessionStorage.getItem(RESUME_KEY);
 			if (raw) {
 				const s = JSON.parse(raw) as Partial<ReturnType<typeof snapshot>>;
-				if (s.brief && (s.planningWs || s.renderWs)) {
+				// A simple-mode run has no brief — there is no plan, only a prompt —
+				// so requiring one meant a reload during a simple render dropped the
+				// run on the floor: the clip finished on the harness with nothing
+				// left watching for it.
+				if ((s.brief || s.chat?.length) && (s.planningWs || s.renderWs)) {
 					resumed = true;
-					brief = s.brief;
-					launchedBrief = s.launchedBrief ?? s.brief;
-					sceneCount = s.brief.sceneCount;
+					brief = s.brief ?? null;
+					launchedBrief = s.launchedBrief ?? s.brief ?? null;
+					sceneCount = s.brief?.sceneCount ?? sceneCount;
 					planningWs = s.planningWs ?? '';
 					renderWs = s.renderWs ?? '';
 					assemblySent = s.assemblySent ?? false;
-					simpleRun = s.simpleRun ?? false;
 					startedAt = s.startedAt || Date.now();
 					if (assemblySent) {
 						shootsAnnounced = true;
@@ -2000,7 +2006,7 @@
 						shootsAnnounced = s.shootsAnnounced ?? shootsAnnounced;
 						finalPosted = s.finalPosted ?? false;
 						finalByNameOnly = s.finalByNameOnly ?? finalByNameOnly;
-					} else {
+					} else if (brief) {
 						const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
 						latestPlanId = item.id;
 					}
@@ -2941,7 +2947,7 @@
 							 happening, and it makes a stall visible as a stall. -->
 						<p class="flex items-center gap-2.5 text-xs text-[var(--st-faint)]">
 							<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
-							<span>{brief && planningWs ? 'the crew is replying' : 'planning'}</span>
+							<span>{mode === 'simple' ? 'writing the prompt' : brief && planningWs ? 'the crew is replying' : 'planning'}</span>
 							{#if sendingFor > 1}
 								<span class="tabular-nums">{sendingFor}s</span>
 							{/if}
