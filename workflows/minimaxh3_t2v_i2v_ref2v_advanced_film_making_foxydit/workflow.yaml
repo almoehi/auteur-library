@@ -29,7 +29,7 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
-gpu_types: [a100, h100, blackwell]  # l40s incompatible on cu13: nodes 636/663 call sageattn() directly → XID-43
+gpu_types: [a100, h100, blackwell] # l40s incompatible on cu13: nodes 636/663 call sageattn() directly → XID-43
 ports:
   params:
     - name: steps
@@ -144,6 +144,7 @@ models:
     dest: loras/MINIMAX/
     files:
       - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        filename: MINIMAX/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
         sha256: fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1
 
   - name: rife49

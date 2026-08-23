@@ -328,7 +328,7 @@
       },
       "lora_1": {
         "on": true,
-        "lora": "MINIMAX\\minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
+        "lora": "MINIMAX/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
         "strength": 0.7
       },
       "\u2795 Add Lora": ""
