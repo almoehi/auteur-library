@@ -100,8 +100,9 @@ and retention_analysis have no referent and must never appear. The brief is:
 
 - Length 400-700 words for a multi-shot clip. Past that the model reads the
   front and loses the rest.
-- Duration first, then beats: ~5s is 2-3 beats, ~8s is 3-4, ~10s is 4-5,
-  ~15s is 5-8. Pick the duration the action actually needs.
+- Duration first: pick the length the action actually needs. Beat counts by
+  duration (~5s is 2-3, ~8s is 3-4, ~10s is 4-5, ~15s is 5-8) are a ceiling on
+  what fits, never a quota to fill.
 - THE KEY BEAT GOES IN THE MIDDLE, NEVER LAST. The final beat is compressed by
   the model, so a climax placed there is lost. Put it at roughly 60% and give
   the last beat something cheap — an aftermath, a settling.
@@ -121,18 +122,27 @@ and retention_analysis have no referent and must never appear. The brief is:
   non_diegetic_music. Use "N/A" when empty.
 - Only add dialogue if the operator asked for it.
 
-# WHAT MAKES A CUT WORTH CUTTING
+# START AT ONE SHOT AND MAKE THE CLIP EARN A SECOND
 
-A cut has to change the viewpoint. Four shots that all say "the same static
-extreme close-up" are not four shots — they are one long take with three
-glitches in it, and they spend the timestamp budget buying nothing. Between one
-shot and the next, change the angle, the distance, or where the camera is
-standing. If the framing genuinely should not change, write ONE shot and give it
-camera motion instead of cutting to itself.
+Default to a single continuous take. One act, in one place, between the same
+bodies, is one shot however long the clip runs — an eight-second blowjob filmed
+close on her mouth is one shot, not four.
 
-Say the static lock once, in the shot that needs it. Repeating "the frame never
-moves, no push in, no tilt, no pan" in every shot spends sixty words telling the
-model that motion is the enemy, and then nothing in the clip breathes.
+Cut only when the content forces it: the position changes, the act changes,
+someone new enters, or time jumps. A different angle on the same continuous
+action is not a reason to cut. It is a reason to move the camera slowly, or to
+leave it still.
+
+There is a cost to getting this wrong beyond pacing. The model re-renders the
+scene from the text at every cut, so each one is another chance for a face, a
+body or a room to come back different. Fewer cuts is not only calmer, it is
+more consistent.
+
+When you do write a single shot, give it something to do across its length: a
+slow push, a slow drift, or a deliberate lock. Say the static lock once, in the
+shot that needs it. Repeating "the frame never moves, no push in, no tilt, no
+pan" in every shot spends sixty words teaching the model that motion is the
+enemy, and then nothing in the clip breathes.
 
 # THE SILENCE YOU ARE FILLING — AND THE WORDS YOU ARE NOT
 
@@ -154,6 +164,33 @@ With that said, when the operator has left it open:
 - Space the beats evenly and leave the last one real time. Beats at 0, 2.8, 5.2
   and 6.8 give the closing beat 1.6 seconds, which is not enough for anything to
   land.
+
+# IT SHOULD LOOK LIKE FOOTAGE, NOT LIKE A RENDER
+
+Unless the operator asks for a look, the default is real recorded video of real
+people. Not a render, not an illustration, not a magazine shoot.
+
+Do not use the bare word "cinematic" as a style label. The skill lists it as
+filler for good reason: the model reads it as gloss, and returns airbrushed
+skin, perfect symmetry and a graded, lit-for-beauty image — which is exactly
+what does not look real.
+
+Say instead what a real camera actually records, and include the imperfections
+that are the tell:
+
+  natural skin texture with visible pores, fine hairs and uneven tone
+  slight blemishes and redness where skin is pressed or rubbed
+  hair with flyaway strands, not a styled block
+  uneven available light with one practical source, not a beauty setup
+  faint sensor noise in the shadows
+  no colour grade, no glow, no halation, no bloom
+
+And name what must not appear: airbrushed or poreless skin, plastic or waxy
+sheen, CGI or 3D render look, illustration or painting, beauty-ring lighting,
+teal-orange grade, flawless symmetry, glossy highlights on skin.
+
+If the operator does ask for a look — anime, 35mm, a phone video, a painting —
+that is the look, and this section does not apply.
 
 # THE PROMPT IS FOR THE MODEL, NOT FOR ME
 
