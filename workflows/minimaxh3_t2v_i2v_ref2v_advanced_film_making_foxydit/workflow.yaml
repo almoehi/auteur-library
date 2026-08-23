@@ -29,22 +29,30 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
-gpu_types: [h100]  # h100 failed every render with "CUDA error: no kernel image is available
-                   # for execution on the device [node=125 SamplerCustomAdvanced]" —
-                   # twice, because the first fix was a guess. Removing SolAttnPatch, the
-                   # Triton INT8 attention three nodes upstream, changed nothing: the same
-                   # error came back, so that node is back in place.
+gpu_types: [a100]  # a100 only, and now we know why rather than guessing at it.
                    #
-                   # The cause is SageAttention, which the two patches at 157 and 663
-                   # apply and which resolves its kernel at runtime — with no sm_90 build,
-                   # this is the error you get. It is the same failure that excluded l40s
-                   # upstream (sm_89 + cu13, XID-43), and the deploy has a switch for
-                   # exactly this: the h100 endpoint is now deployed with
-                   # SAGE_ATTENTION=0 via `deploy-modal.sh --comfy 0.32.0 --disable-sage
-                   # h100`. Note the --comfy pin: the script defaults to 0.31.1 and would
-                   # otherwise deploy a different app than the one in use.
+                   # Every other card fails in the sampler with "CUDA error: no
+                   # kernel image is available" — l40s (sm_89) upstream, h100 (sm_90)
+                   # here, twice. The traceback names the caller:
                    #
-                   # Back to a100 if this still fails, and maxAttempts is 2 either way.
+                   #   ComfyUI-KJNodes/nodes/ltxv_nodes.py  minimax_sageattn_forward
+                   #     -> _sageattn_int8_fp8_nhd -> sageattention/quant.py per_channel_fp8
+                   #
+                   # That forward is installed by node 663
+                   # MiniMaxH3MemoryEfficientSageAttentionPatch, so the failing kernels are
+                   # SageAttention's, and the wheel in the image evidently carries sm_80
+                   # only. a100 is sm_80. That is the whole pattern.
+                   #
+                   # Two fixes that do NOT work, both already tried on a live run:
+                   #   - removing SolAttnPatch (636). Wrong node; it is three steps
+                   #     downstream of the one in the traceback.
+                   #   - deploying the endpoint with SAGE_ATTENTION=0. That flips
+                   #     ComfyUI's own --use-sage-attention; it cannot reach a patch a
+                   #     workflow node installs into the model at graph build time.
+                   #
+                   # The untried fix is to bypass 157 and 663 — both Sage patches — and
+                   # let 636 handle attention alone. Worth an attempt if the h100's speed
+                   # is ever wanted; not worth it while a100 renders fine.
 
 ports:
   params:
