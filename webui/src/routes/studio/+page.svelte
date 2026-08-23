@@ -109,6 +109,18 @@
 	const welcomeFor = (m: 'simple' | 'advanced') =>
 		m === 'simple' ? WELCOME_SIMPLE : WELCOME_TEXT;
 
+	/** The greeting is a property of the empty page, not a message in the
+	 *  conversation — so switching modes rewrites it where it stands. Pushing a
+	 *  fresh one each time stacked a paragraph per switch, and flipping twice to
+	 *  compare the two modes left four of them. */
+	let welcomeId = $state('');
+
+	function showWelcome() {
+		const existing = welcomeId && chat.find((c) => c.id === welcomeId);
+		if (existing) existing.text = welcomeFor(mode);
+		else welcomeId = pushStudio(welcomeFor(mode)).id;
+	}
+
 	/** Seed pitches for the audience this plugs into: adult creators making promo
 	 *  and teaser content for their own profiles. They set the register in one
 	 *  glance — confident, sensual, character-led — which a blank input never
@@ -992,7 +1004,7 @@
 		} catch {
 			/* private mode — the switch still works for this session */
 		}
-		if (!chat.some((c) => c.who === 'user')) pushStudio(welcomeFor(next));
+		if (!chat.some((c) => c.who === 'user')) showWelcome();
 	}
 
 	// --- planning the plan ----------------------------------------------------------
@@ -1847,7 +1859,8 @@
 		offlineNoted = false;
 		planningLaunchAttempts = 0;
 		renderLaunchAttempts = 0;
-		pushStudio(WELCOME_TEXT);
+		welcomeId = '';
+		showWelcome();
 	}
 
 	// --- small UI helpers ------------------------------------------------------------------
@@ -1997,7 +2010,7 @@
 		} catch {
 			/* nothing to resume */
 		}
-		if (!resumed) pushStudio(welcomeFor(mode));
+		if (!resumed) showWelcome();
 
 		// Elapsed time is shown in whole minutes, so a 15s clock is plenty.
 		const clock = setInterval(() => (now = Date.now()), 15_000);
