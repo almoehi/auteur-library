@@ -102,11 +102,33 @@ export type StageKey =
 export interface ChatItem {
 	id: string;
 	who: 'user' | 'studio';
-	kind: 'text' | 'plan' | 'artifact' | 'clips' | 'error' | 'approval' | 'activity' | 'board' | 'shootboard';
+	kind:
+		| 'text'
+		| 'plan'
+		| 'shot'
+		| 'artifact'
+		| 'clips'
+		| 'error'
+		| 'approval'
+		| 'activity'
+		| 'board'
+		| 'shootboard';
 	/** plain text content (kind=text, error, approval) */
 	text?: string;
 	/** the expanded brief awaiting the user's yes (kind=plan) */
 	plan?: Brief;
+	/** simple mode's render prompt, awaiting the user's yes (kind=shot).
+	 *  `prompt` is the literal text the workflow will receive — editable on the
+	 *  card, because a prompt nobody can see is how the planning chain spent
+	 *  months shipping briefs that described a face instead of a scene. */
+	shot?: {
+		prompt: string;
+		seconds: number;
+		orientation: 'portrait' | 'landscape';
+		why: string;
+		/** Set once this card has been sent to render, so it stops offering. */
+		launched?: boolean;
+	};
 	/** a planning document or rendered clip presented in the transcript
 	 *  (kind=artifact, clips). `taskId` is what reset-task needs for a revision;
 	 *  `body` is the fetched text of a planning document, absent for videos. */

@@ -86,10 +86,28 @@
 	const OFFLINE_TEXT =
 		'The harness is not responding. Start the container: cd ~/auteur && ./run.sh';
 
+	/** Which door this session is using. Simple by default: it is the one that
+	 *  produced usable clips today, and the planning chain is a twenty-minute
+	 *  round trip to find out whether it did. Remembered across visits — a mode
+	 *  is a working habit, not a per-run choice. */
+	let mode = $state<'simple' | 'advanced'>('simple');
+	const MODE_KEY = 'auteur-studio-mode';
+
 	const WELCOME_TEXT =
 		'Describe the film in one sentence. We start with a plan — screenplay, cast, ' +
 		'art direction — and you approve every document here. ' +
 		'No GPU time is used until you approve.';
+
+	/** Simple mode's opening. It says what the mode actually does, because the
+	 *  difference that matters is not "fewer steps" — it is that you see the exact
+	 *  text the model receives, and can change it, before anything is spent. */
+	const WELCOME_SIMPLE =
+		'Describe the shot you want. I write the render prompt, you read it and ' +
+		'change anything you like, then it goes straight to the model. ' +
+		'No GPU time is used until you press render.';
+
+	const welcomeFor = (m: 'simple' | 'advanced') =>
+		m === 'simple' ? WELCOME_SIMPLE : WELCOME_TEXT;
 
 	/** Seed pitches for the audience this plugs into: adult creators making promo
 	 *  and teaser content for their own profiles. They set the register in one
@@ -101,6 +119,16 @@
 		'a slow burn between two rivals who keep pretending they are not interested',
 		'a teasing introduction to a character who is used to being adored'
 	];
+
+	/** Simple mode is given one shot, not a film, so its seeds name the act and
+	 *  the camera rather than a premise. */
+	const EXAMPLES_SIMPLE = [
+		'a blonde woman on her knees sucking a black man, filmed close on her mouth',
+		'two women on a bed, one going down on the other, handheld from the side',
+		'she rides him facing the camera, phone propped on the nightstand'
+	];
+
+	const examples = $derived(mode === 'simple' ? EXAMPLES_SIMPLE : EXAMPLES);
 
 	/** Survives an accidental reload mid-run. Chat items are rebuilt from poll
 	 *  state on resume; only the run identity is persisted. */
@@ -148,6 +176,12 @@
 	let launchedBrief = $state<Brief | null>(null);
 	let latestPlanId = $state('');
 	let sceneCount = $state(4);
+
+	/** True while a simple-mode render is the live workspace. The render poll is
+	 *  shared with advanced, and everything in it that reaches for a manager —
+	 *  the assembly trigger above all — has no counterpart here: a direct
+	 *  workspace holds one task per clip and nothing that could answer. */
+	let simpleRun = $state(false);
 
 	let planningWs = $state('');
 	let renderWs = $state('');
@@ -707,6 +741,9 @@
 	 *  flickers between two strings on every submit is noise on a surface whose
 	 *  whole job is to stay calm for twenty minutes. */
 	const composerHint = $derived.by(() => {
+		// Simple mode has no plan to refine and no crew to message: every line is
+		// another shot, whether it is the first or the fifth.
+		if (mode === 'simple') return 'Describe the shot — one clip per message';
 		if (!brief) return 'New film — describe the idea in one sentence';
 		if (!planningWs) return 'Refining the plan — describe what to change';
 		if (!renderWs) return 'Message to the planning crew lead';
@@ -773,6 +810,8 @@
 	const showExamples = $derived(!brief && !sending && !chat.some((c) => c.who === 'user'));
 
 	const composerPlaceholder = $derived.by(() => {
+		if (mode === 'simple')
+			return 'a blonde woman on her knees sucking a black man, filmed close on her mouth';
 		if (!brief) return 'a late-night confession from someone who knows exactly what they want';
 		if (!planningWs) return 'make it more suggestive, keep the same character';
 		return 'a question or request for the crew';
@@ -786,12 +825,174 @@
 		pushItem({ who: 'user', kind: 'text', text });
 		sending = true;
 		try {
-			if (!brief) await planFromIdea(text);
+			// Simple mode never plans. Every message is a scene to render, and the
+			// answer is the prompt itself — offered for reading and editing before
+			// it costs anything.
+			if (mode === 'simple') await shotFromRequest(text);
+			else if (!brief) await planFromIdea(text);
 			else if (!planningWs) await refinePlan(text);
 			else await managerChat(text);
 		} finally {
 			sending = false;
 		}
+	}
+
+	// --- simple mode: one prompt, one clip -------------------------------------------
+
+	/** Ask the writer for a render prompt. `pin` carries a duration or a frame the
+	 *  user has already moved on the card: both change the beat structure — the
+	 *  timestamps come from the duration and the camera language from the shape of
+	 *  the frame — so the prompt is written again rather than patched. */
+	async function callShotPrompt(
+		request: string,
+		pin?: { seconds?: number; orientation?: 'portrait' | 'landscape' }
+	): Promise<ChatItem['shot'] | null> {
+		let res: Response;
+		try {
+			res = await fetch('/studio/api/shotprompt', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ request, ...pin })
+			});
+		} catch (e) {
+			pushError(`Could not reach the prompt writer: ${e}`);
+			return null;
+		}
+		if (!res.ok) {
+			const m = (await res.json().catch(() => null)) as { message?: string } | null;
+			pushError(m?.message || `The prompt could not be written (${res.status}).`);
+			return null;
+		}
+		const r = (await res.json()) as { ok: boolean; shot?: ChatItem['shot']; error?: string };
+		if (!r.ok || !r.shot) {
+			pushError(r.error || 'The prompt could not be written.');
+			return null;
+		}
+		return r.shot;
+	}
+
+	/** What the user typed, kept so a rewrite asks for the same scene again rather
+	 *  than editing the prompt the model last produced. */
+	let lastRequest = $state('');
+
+	async function shotFromRequest(request: string) {
+		const shot = await callShotPrompt(request);
+		if (!shot) return;
+		lastRequest = request;
+		pushItem({ who: 'studio', kind: 'shot', shot });
+	}
+
+	/** Rewrite the card in place. The old one collapses rather than disappearing:
+	 *  a prompt that was nearly right is worth being able to look back at. */
+	async function rewriteShot(itemId: string) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.shot || shotBusy[itemId]) return;
+		shotBusy[itemId] = true;
+		try {
+			const shot = await callShotPrompt(lastRequest || item.shot.prompt, {
+				seconds: item.shot.seconds,
+				orientation: item.shot.orientation
+			});
+			if (!shot) return;
+			superseded[itemId] = true;
+			pushItem({ who: 'studio', kind: 'shot', shot });
+		} finally {
+			shotBusy[itemId] = false;
+		}
+	}
+
+	/** Send the card's prompt — the edited text, whatever is in the box now — to
+	 *  the renderer. The clip comes back through the same poll, cache and player
+	 *  the planning chain uses; only the road to the GPU is shorter. */
+	async function renderShot(itemId: string) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return;
+		const spec = {
+			slug: `direct-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+			title: lastRequest.slice(0, 60) || 'Direct render',
+			prompts: [item.shot.prompt],
+			seconds: item.shot.seconds,
+			width: item.shot.orientation === 'portrait' ? 480 : 720,
+			height: item.shot.orientation === 'portrait' ? 864 : 480,
+			seed: Math.floor(Math.random() * 1_000_000_000)
+		};
+		shotBusy[itemId] = true;
+		try {
+			const res = await fetch('/studio/api/launch', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ stage: 'direct', direct: spec })
+			});
+			const r = (await res.json()) as { ok?: boolean; error?: string; workspaceId?: string };
+			if (!r.ok || !r.workspaceId) {
+				pushError(r.error || 'The render could not start.');
+				return;
+			}
+			item.shot.launched = true;
+			simpleRun = true;
+			renderWs = r.workspaceId;
+			startedAt = Date.now();
+			// The render poll narrates a shoot it announces first; there is no
+			// shoot here, only this clip, so the announcement is already spent.
+			shootsAnnounced = true;
+			pushStudio(`Rendering ${item.shot.seconds}s, ${item.shot.orientation}.`);
+			persist();
+			startPolling();
+		} catch (e) {
+			pushError(`The render could not start: ${e}`);
+		} finally {
+			shotBusy[itemId] = false;
+		}
+	}
+
+	/** Moving the duration or the frame rewrites the prompt rather than relabelling
+	 *  it. Both are structural: timestamps are derived from the duration, and the
+	 *  camera language from the shape of the frame. A card that said 6 seconds over
+	 *  beats written for 10 would be a card that lies. */
+	async function respin(
+		itemId: string,
+		pin: { seconds: number; orientation: 'portrait' | 'landscape' }
+	) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return;
+		shotBusy[itemId] = true;
+		try {
+			const shot = await callShotPrompt(lastRequest || item.shot.prompt, pin);
+			if (!shot) return;
+			superseded[itemId] = true;
+			pushItem({ who: 'studio', kind: 'shot', shot: { ...shot, ...pin } });
+		} finally {
+			shotBusy[itemId] = false;
+		}
+	}
+
+	function setShotSeconds(itemId: string, seconds: number) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.shot || item.shot.seconds === seconds) return;
+		void respin(itemId, { seconds, orientation: item.shot.orientation });
+	}
+
+	function setShotOrientation(itemId: string, orientation: 'portrait' | 'landscape') {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.shot || item.shot.orientation === orientation) return;
+		void respin(itemId, { seconds: item.shot.seconds, orientation });
+	}
+
+	let shotBusy = $state<Record<string, boolean>>({});
+
+	/** Switching modes changes what the composer does with the next message and
+	 *  nothing else. The transcript stays: a card you already rendered is still
+	 *  worth looking at from the other side of the switch, and a run in flight
+	 *  keeps polling. */
+	function setMode(next: 'simple' | 'advanced') {
+		if (mode === next) return;
+		mode = next;
+		try {
+			localStorage.setItem(MODE_KEY, next);
+		} catch {
+			/* private mode — the switch still works for this session */
+		}
+		if (!chat.some((c) => c.who === 'user')) pushStudio(welcomeFor(next));
 	}
 
 	// --- planning the plan ----------------------------------------------------------
@@ -1382,6 +1583,7 @@
 		// is a success, the proven instruction goes to the manager.
 		if (
 			!assemblySent &&
+			!simpleRun &&
 			shoots.length > 0 &&
 			shoots.every((t) => DONE.includes(t.status)) &&
 			tasks.every((t) => !DEAD.includes(t.status))
@@ -1517,6 +1719,7 @@
 			planningWs,
 			renderWs,
 			assemblySent,
+			simpleRun,
 			startedAt,
 			// the conversation
 			chat: withBodies
@@ -1625,6 +1828,9 @@
 		chain = null;
 		shootsAnnounced = false;
 		assemblySent = false;
+		simpleRun = false;
+		shotBusy = {};
+		lastRequest = '';
 		finalPosted = false;
 		editingPlan = false;
 		expanded = {};
@@ -1728,6 +1934,15 @@
 		// A run left behind by a reload picks up where it was: the run identity is
 		// restored and the poller re-attaches. Document and clip items rebuild
 		// themselves from poll state; the conversation itself is not replayed.
+		// Before anything is written to the transcript: the greeting, the composer
+		// and the rail all read it.
+		try {
+			const saved = localStorage.getItem(MODE_KEY);
+			if (saved === 'simple' || saved === 'advanced') mode = saved;
+		} catch {
+			/* default stands */
+		}
+
 		let resumed = false;
 		try {
 			const raw = localStorage.getItem(RESUME_KEY) ?? sessionStorage.getItem(RESUME_KEY);
@@ -1741,6 +1956,7 @@
 					planningWs = s.planningWs ?? '';
 					renderWs = s.renderWs ?? '';
 					assemblySent = s.assemblySent ?? false;
+					simpleRun = s.simpleRun ?? false;
 					startedAt = s.startedAt || Date.now();
 					if (assemblySent) {
 						shootsAnnounced = true;
@@ -1781,7 +1997,7 @@
 		} catch {
 			/* nothing to resume */
 		}
-		if (!resumed) pushStudio(WELCOME_TEXT);
+		if (!resumed) pushStudio(welcomeFor(mode));
 
 		// Elapsed time is shown in whole minutes, so a 15s clock is plenty.
 		const clock = setInterval(() => (now = Date.now()), 15_000);
@@ -2075,19 +2291,17 @@
 					 than a beginner and an expert door: this one builds a film out of a
 					 sentence, the other sends a prompt you already have. -->
 				<nav class="ml-auto flex gap-1.5" aria-label="mode">
-					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-					<a
-						href="/studio/direct"
-						class="font-display rounded-full bg-[var(--st-surface)] px-3 py-1 text-xs font-semibold text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-					>
-						simple
-					</a>
-					<span
-						aria-current="page"
-						class="font-display rounded-full bg-[var(--st-accent)] px-3 py-1 text-xs font-semibold text-white"
-					>
-						advanced
-					</span>
+					{#each [['simple', 'simple'], ['advanced', 'advanced']] as [val, label] (val)}
+						<button
+							type="button"
+							aria-pressed={mode === val}
+							class="font-display cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition-colors {mode ===
+							val
+								? 'bg-[var(--st-accent)] text-white'
+								: 'bg-[var(--st-surface)] text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+							onclick={() => setMode(val as 'simple' | 'advanced')}>{label}</button
+						>
+					{/each}
 				</nav>
 			</header>
 
@@ -2403,6 +2617,87 @@
 								</p>
 								<p class="doc mt-2 text-sm leading-relaxed text-[var(--st-muted)]">{item.text}</p>
 							</div>
+						{:else if item.kind === 'shot' && item.shot}
+							{@const n = item.shot.prompt.trim() ? item.shot.prompt.trim().split(/\s+/).length : 0}
+							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+								<div class="mb-3 flex items-baseline justify-between gap-4">
+									<h3 class="font-display text-base font-semibold">The prompt</h3>
+									<span
+										class="text-xs tabular-nums {n > 700
+											? 'font-semibold text-[#e0a03a]'
+											: 'text-[var(--st-faint)]'}"
+									>
+										{n} / 700 words
+									</span>
+								</div>
+
+								<!-- The literal text the workflow will receive. Editable, because the
+									 planning chain's render prompts were invisible and that is how it
+									 shipped briefs describing a face instead of a scene. -->
+								<label class="sr-only" for="shot-{item.id}">Render prompt</label>
+								<textarea
+									id="shot-{item.id}"
+									bind:value={item.shot.prompt}
+									rows="10"
+									spellcheck="false"
+									readonly={item.shot.launched}
+									class="block w-full resize-y rounded-xl bg-[var(--st-bg)] p-3 font-mono text-[13px] leading-relaxed text-[var(--st-text)] outline-none read-only:text-[var(--st-muted)]"
+								></textarea>
+
+								{#if item.shot.why}
+									<p class="mt-2.5 text-xs text-[var(--st-faint)]">{item.shot.why}</p>
+								{/if}
+
+								{#if !item.shot.launched}
+									<div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+										<div class="flex items-center gap-1.5">
+											<span class="mr-1 text-xs text-[var(--st-faint)]">seconds</span>
+											{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
+												<button
+													type="button"
+													class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {item
+														.shot.seconds === sec
+														? 'bg-[var(--st-accent)] font-semibold text-white'
+														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+													onclick={() => setShotSeconds(item.id, sec)}>{sec}</button
+												>
+											{/each}
+										</div>
+										<div class="flex items-center gap-1.5">
+											<span class="mr-1 text-xs text-[var(--st-faint)]">frame</span>
+											{#each [['portrait', 'portrait'], ['landscape', 'landscape']] as [val, label] (val)}
+												<button
+													type="button"
+													class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {item
+														.shot.orientation === val
+														? 'bg-[var(--st-accent)] font-semibold text-white'
+														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+													onclick={() =>
+														setShotOrientation(item.id, val as 'portrait' | 'landscape')}
+													>{label}</button
+												>
+											{/each}
+										</div>
+									</div>
+
+									<div class="mt-5 flex flex-wrap items-center gap-2.5">
+										<button
+											type="button"
+											disabled={shotBusy[item.id]}
+											class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:opacity-40"
+											onclick={() => renderShot(item.id)}
+										>
+											{shotBusy[item.id] ? 'starting…' : 'render this'}
+										</button>
+										<button
+											type="button"
+											disabled={shotBusy[item.id]}
+											class="cursor-pointer rounded-full px-3 py-2 text-sm text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)] disabled:opacity-40"
+											onclick={() => rewriteShot(item.id)}>write it again</button
+										>
+									</div>
+								{/if}
+							</article>
 						{:else if item.kind === 'plan' && item.plan}
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
 								{#if editingPlan && item.id === latestPlanId}
@@ -2642,7 +2937,7 @@
 
 					{#if showExamples}
 						<div class="flex flex-wrap gap-2 pt-1">
-							{#each EXAMPLES as ex (ex)}
+							{#each examples as ex (ex)}
 								<button
 									type="button"
 									class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-2 text-left text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
@@ -2764,6 +3059,10 @@
 											}}
 										/>
 									</label>
+									<!-- Scene count is the planning chain's knob: it decides how many
+										 documents get written and how many clips get scheduled. Simple
+										 mode renders the one shot on the card. -->
+									{#if mode === 'advanced'}
 									<span class="mr-1 text-xs text-[var(--st-faint)]">scenes</span>
 									{#each SCENE_CHOICES as n (n)}
 										<button
@@ -2781,6 +3080,7 @@
 											{n}
 										</button>
 									{/each}
+									{/if}
 								</div>
 							{:else}
 								<span></span>
