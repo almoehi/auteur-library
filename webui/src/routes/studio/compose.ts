@@ -1112,10 +1112,18 @@ const DIRECT_WORKFLOWS = `  workflows:
  *  scenes of the last run came back 480x864 and 720x480 — each worker had
  *  decided for itself. Fixing it in the profile is what stops that. */
 function directProfiles(spec: DirectSpec): string {
+	// steps=8 rather than the turbo LoRA's nominal 4. Four is the fast path and
+	// it shows: the realism detailer was trained at 1024 and its own gallery was
+	// rendered at eight, and everything we produced at four came back a little
+	// plastic no matter which adapter was loaded. The workflow's port notes put
+	// 6-10 inside the turbo LoRA's range at strength 0.6-1.0, and ours sits at
+	// 0.7. The cost is real — the notes say 2-4 minutes a clip becomes 10-18 —
+	// so this is a setting to revisit once we know which half of the change
+	// (steps or resolution) was the one that mattered.
 	return `  profiles:
     draft:
-      image: { width: ${spec.width}, height: ${spec.height}, steps: 4, seed: ${spec.seed} }
-      video: { width: ${spec.width}, height: ${spec.height}, steps: 4, fps: 48, seed: ${spec.seed} }
+      image: { width: ${spec.width}, height: ${spec.height}, steps: 8, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: 8, fps: 48, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: l40s, timeoutSec: 1800, maxAttempts: 2 }`;
 }

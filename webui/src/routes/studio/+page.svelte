@@ -966,8 +966,13 @@
 			title: lastRequest.slice(0, 60) || 'Direct render',
 			prompts: [item.shot.prompt],
 			seconds: item.shot.seconds,
-			width: item.shot.orientation === 'portrait' ? 480 : 720,
-			height: item.shot.orientation === 'portrait' ? 864 : 480,
+			// The detailer was trained at 1024 and 480 across cannot hold what it
+			// encodes: pores, fine hair and uneven tone are high-frequency detail
+			// with nowhere to sit at that width, which is most of why the clips
+			// read as almost-real. Both frames go up a step, staying divisible by
+			// 32 as the workflow requires.
+			width: item.shot.orientation === 'portrait' ? 576 : 1024,
+			height: item.shot.orientation === 'portrait' ? 1024 : 576,
 			seed: Math.floor(Math.random() * 1_000_000_000)
 		};
 		shotBusy[itemId] = true;
