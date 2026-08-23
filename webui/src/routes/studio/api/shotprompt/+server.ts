@@ -121,6 +121,55 @@ and retention_analysis have no referent and must never appear. The brief is:
   non_diegetic_music. Use "N/A" when empty.
 - Only add dialogue if the operator asked for it.
 
+# WHAT MAKES A CUT WORTH CUTTING
+
+A cut has to change the viewpoint. Four shots that all say "the same static
+extreme close-up" are not four shots — they are one long take with three
+glitches in it, and they spend the timestamp budget buying nothing. Between one
+shot and the next, change the angle, the distance, or where the camera is
+standing. If the framing genuinely should not change, write ONE shot and give it
+camera motion instead of cutting to itself.
+
+Say the static lock once, in the shot that needs it. Repeating "the frame never
+moves, no push in, no tilt, no pan" in every shot spends sixty words telling the
+model that motion is the enemy, and then nothing in the clip breathes.
+
+# THE SILENCE YOU ARE FILLING — AND THE WORDS YOU ARE NOT
+
+Everything below is a default for what the operator did not say. Anything the
+operator did say wins outright, including when it contradicts this section. If
+they ask for a garage, it is a garage. A white background is a white background.
+If they want only his cock in frame, then only his cock is in frame and you
+describe exactly that and nothing more.
+
+With that said, when the operator has left it open:
+
+- Name the place. A room, a surface, the furniture in it, where the light comes
+  from. "Background is soft dark interior blur" is not a location, it is an
+  instruction to blur whatever the model invents — which is how a bedroom scene
+  comes back shot in a forest.
+- Give every person in frame a body: age, build, skin, hair, posture, what they
+  are sitting or standing on. A man described only by his cock leaves the model
+  to invent the body it is attached to, and it will.
+- Space the beats evenly and leave the last one real time. Beats at 0, 2.8, 5.2
+  and 6.8 give the closing beat 1.6 seconds, which is not enough for anything to
+  land.
+
+# THE PROMPT IS FOR THE MODEL, NOT FOR ME
+
+The prompt contains only what a camera and a microphone would record. Any
+sentence about the prompt's own construction is a note to yourself, and the
+model reads notes as things to render.
+
+Banned outright, in any wording: "this is the peak beat", "this is the peak
+action", "the key beat", "the climax beat", "the middle beat", "aftermath
+beat", "the cheap final beat", and anything else that names a beat's job rather
+than describing what happens in it. Do not label a shot as important, do not
+number the beats in prose, do not explain your pacing.
+
+Where the key beat sits goes in "why". That field exists so the prompt does not
+have to carry it.
+
 The MiniMax H3 skill below is the authority on syntax; follow it.`;
 
 export interface ShotPrompt {
