@@ -57,17 +57,6 @@ function stack(picks: Pick[]): { lora: Lora; strength: number }[] {
 	return out;
 }
 
-/** A short, stable fingerprint of the stack, so the same selection always
- *  produces the same bundle name. If the harness caches bundles by name that
- *  works in our favour; if it caches by URL, the URL carries the same
- *  selection anyway. Either way a different stack is never a stale hit. */
-function fingerprint(entries: { lora: Lora; strength: number }[]): string {
-	const s = entries.map((e) => `${e.lora.key}${e.strength}`).join('|');
-	let h = 5381;
-	for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
-	return h.toString(36);
-}
-
 function buildJson(entries: { lora: Lora; strength: number }[]): string {
 	const graph = JSON.parse(readFileSync(basePath('workflow.json'), 'utf8')) as Record<
 		string,
@@ -118,7 +107,20 @@ function modelBlock(entries: { lora: Lora; strength: number }[]): string {
 const OPEN = '  # <<LORAS>>';
 const CLOSE = '  # <</LORAS>>';
 
-function buildYaml(entries: { lora: Lora; strength: number }[], name: string): string {
+/** The bundle's own `name` is left exactly as the base file has it.
+ *
+ *  An earlier version stamped a fingerprint of the adapter stack onto it, as
+ *  insurance against the harness caching bundles by name. It does not cache by
+ *  name — it checks it, and refuses a bundle whose name disagrees with the
+ *  workspace entry that asked for it:
+ *
+ *    WorkflowDownloader: YAML name mismatch — expected "…foxydit", got "…foxydit_h6e2h0"
+ *
+ *  Which is a better guarantee than the one being bought, and the insurance was
+ *  the only thing that failed. Two adapter stacks now differ by URL alone, and
+ *  since every run opens a fresh workspace there is nothing for a stale bundle
+ *  to persist into. */
+function buildYaml(entries: { lora: Lora; strength: number }[]): string {
 	const src = readFileSync(basePath('workflow.yaml'), 'utf8');
 	const a = src.indexOf(OPEN);
 	const b = src.indexOf(CLOSE);
@@ -130,19 +132,17 @@ function buildYaml(entries: { lora: Lora; strength: number }[], name: string): s
 	const body =
 		`  # Generated for one clip. Edit webui/src/routes/studio/loras.ts, not this.\n` +
 		modelBlock(entries);
-	return (head + body + tail).replace(/^name: .*$/m, `name: ${name}`);
+	return head + body + tail;
 }
 
 export const GET: RequestHandler = async ({ params }) => {
-	const picks = parsePicks(params.sel ?? '');
-	const entries = stack(picks);
-	const name = `${BUNDLE}_${fingerprint(entries)}`;
+	const entries = stack(parsePicks(params.sel ?? ''));
 
 	if (params.file === 'workflow.json') {
 		return text(buildJson(entries), { headers: { 'content-type': 'application/json' } });
 	}
 	if (params.file === 'workflow.yaml' || params.file === 'workflow.yml') {
-		return text(buildYaml(entries, name), { headers: { 'content-type': 'text/yaml' } });
+		return text(buildYaml(entries), { headers: { 'content-type': 'text/yaml' } });
 	}
 	throw error(404, 'a bundle is workflow.yaml and workflow.json, nothing else');
 };
