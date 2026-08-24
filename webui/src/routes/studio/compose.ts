@@ -26,7 +26,7 @@
  *  what makes a launch reproducible and these functions testable.
  */
 import { SCENE_COUNT_MAX, SCENE_COUNT_MIN, SLUG_RE, type Brief } from './types';
-import { BASE, formatPicks, type Pick } from './loras';
+import { formatPicks, type Pick } from './loras';
 import { modelFor, textFor, type Overrides } from './tunables';
 
 /** metadata.version, and the half of the workspace id after the `@`.
@@ -1132,10 +1132,12 @@ export function directWorkspaceId(spec: DirectSpec): string {
  *  `name` stays constant on purpose, so the tool the agent is told to call is
  *  called the same thing on every run. */
 function directWorkflows(origin: string, picks: Pick[]): string {
-	const sel = formatPicks([
-		...BASE.map((l) => ({ key: l.key, strength: l.strength })),
-		...picks
-	]);
+	// Only the picks. The pair every clip loads is added by the endpoint that
+	// builds the bundle, and naming it here as well was not merely redundant: the
+	// parser caps a selection at MAX_PICKS, so once that cap came down to two the
+	// two base entries filled it and the actual choices were dropped off the end.
+	// Every render between then and now ran on the base pair alone.
+	const sel = formatPicks(picks);
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml`;
