@@ -45,9 +45,20 @@ export interface Lora {
 	kind: 'base' | 'act' | 'detail';
 }
 
-/** Always loaded, both of them, in every clip. The turbo adapter is what makes
- *  four steps possible and the detailer is what keeps skin from reading as
- *  plastic; neither has anything to do with what is happening in the shot. */
+/** Always loaded, all three, in every clip. None of them has anything to do with
+ *  what is happening in the shot: the turbo adapter is what makes four steps
+ *  possible, the realism slider keeps skin from reading as plastic, and mystic
+ *  keeps bodies resolving instead of coming apart.
+ *
+ *  Mystic was a pick until a doggy clip — a position with no adapter of its own —
+ *  came back visibly better with it than without. Nothing about it is specific to
+ *  that position, so keeping it as a pick meant it competed for a slot with the
+ *  moans or the breast physics on every other clip, and won on the ones where it
+ *  was least needed.
+ *
+ *  That is one clip's evidence, extrapolated. It also raises the ceiling to five
+ *  adapters where the verified-good configuration had four, so if clips start
+ *  coming back muddy this is the first line to question. */
 export const BASE: Lora[] = [
 	{
 		key: 'turbo',
@@ -69,6 +80,26 @@ export const BASE: Lora[] = [
 		/** author: realistic band 1.0-2.0, breaks past 2.0 */
 		band: [1.0, 2.0],
 		use: 'skin texture — pores, freckles, uneven tone',
+		kind: 'base'
+	}
+	,
+	{
+		key: 'mystic',
+		label: 'Mystic XXX v3',
+		file: 'MysticXXX_MMH3-V3.safetensors',
+		url: 'https://civitai.com/api/download/models/3260276?fileId=3143593',
+		sha256: '99307e313784cbea7d9ee2a56ecb8794272f1024737985b824eca8c5c619a0b6',
+		strength: 0.9,
+		/** author: '0.5 - 0.9', runs 0.9 themselves */
+		band: [0.5, 0.9],
+		// Described here as general scene quality until someone asked whether it
+		// would help a doggy shot. That description was mine and it was wrong: the
+		// author's own headline is "Unlock Real Anatomy in T2V — finally,
+		// text-to-video with proper anatomy", which is a different thing entirely
+		// and is the thing that keeps failing in this workflow. It is also native
+		// to t2v, unlike every position adapter the catalogue search turned up,
+		// which were all i2v-only.
+		use: 'anatomy — limbs, joins and bodies resolving instead of coming apart',
 		kind: 'base'
 	}
 ];
@@ -187,26 +218,8 @@ export const CATALOGUE: Lora[] = [
 		trigger: 'cumshot',
 		use: 'the shot ends in ejaculation and that ending is the point',
 		kind: 'detail'
-	},
-	{
-		key: 'mystic',
-		label: 'Mystic XXX v3',
-		file: 'MysticXXX_MMH3-V3.safetensors',
-		url: 'https://civitai.com/api/download/models/3260276?fileId=3143593',
-		sha256: '99307e313784cbea7d9ee2a56ecb8794272f1024737985b824eca8c5c619a0b6',
-		strength: 0.9,
-		/** author: '0.5 - 0.9', runs 0.9 themselves */
-		band: [0.5, 0.9],
-		// Described here as general scene quality until someone asked whether it
-		// would help a doggy shot. That description was mine and it was wrong: the
-		// author's own headline is "Unlock Real Anatomy in T2V — finally,
-		// text-to-video with proper anatomy", which is a different thing entirely
-		// and is the thing that keeps failing in this workflow. It is also native
-		// to t2v, unlike every position adapter the catalogue search turned up,
-		// which were all i2v-only.
-		use: 'bodies that do not resolve — limbs, joins, anatomy coming out wrong. Reach for it when the act has no adapter of its own',
-		kind: 'detail'
 	}
+
 ];
 
 const BY_KEY = new Map([...BASE, ...CATALOGUE].map((l) => [l.key, l]));
@@ -293,6 +306,9 @@ and are not yours to pick. From the lists below choose:
 
   - exactly one ACT: the thing that is happening in this shot
   - at most one DETAIL, and only when it is central to the shot
+
+The anatomy corrector is no longer on this list; it loads on every clip now, so
+you never need to ask for it and it no longer costs you a slot.
   - ${MAX_PICKS} in total, never more
 
 Prefer the act alone. A detail earns its place only when the request turns on

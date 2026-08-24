@@ -238,9 +238,12 @@ where a body could plausibly be turned either way. Spend the words there.
 
 For the act adapters this matters less, because they were trained on the
 geometry and know it. Doggy has no adapter in this workflow, so a doggy brief
-carries the geometry on its own and needs the description to be exact — and it
-is the case where the mystic adapter earns its slot, since that one is trained
-to make bodies resolve rather than to know a position.
+carries the geometry on its own and needs the description to be exact.
+
+Be straight with yourself about doggy in particular: this workflow renders it
+badly and there is no adapter that fixes it. Pinning the geometry helps and does
+not solve it. Write the brief as exactly as you can and expect it to need
+another attempt.
 
 # THE SILENCE YOU ARE FILLING — AND THE WORDS YOU ARE NOT
 
