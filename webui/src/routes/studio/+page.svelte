@@ -963,32 +963,27 @@
 	/** Send the card's prompt — the edited text, whatever is in the box now — to
 	 *  the renderer. The clip comes back through the same poll, cache and player
 	 *  the planning chain uses; only the road to the GPU is shorter. */
-	async function renderShot(itemId: string) {
-		const item = chat.find((c) => c.id === itemId);
-		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return;
+	/** Send one shot to the renderer, wherever it came from.
+	 *
+	 *  Both the writer's card and the fix a diagnosis produced go through here.
+	 *  They were about to be two copies of the same forty lines, and the copy the
+	 *  fix used would have been the one that quietly stopped matching. */
+	async function launchShot(
+		shot: NonNullable<ChatItem['shot']>,
+		announce = true
+	): Promise<boolean> {
 		const spec = {
 			slug: `direct-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
 			title: lastRequest.slice(0, 60) || 'Direct render',
-			prompts: [item.shot.prompt],
-			seconds: item.shot.seconds,
-			// The detailer was trained at 1024 and 480 across cannot hold what it
-			// encodes: pores, fine hair and uneven tone are high-frequency detail
-			// with nowhere to sit at that width, which is most of why the clips
-			// read as almost-real. Both frames go up a step, staying divisible by
-			// 32 as the workflow requires.
-			width: item.shot.orientation === 'portrait' ? 576 : 1024,
-			height: item.shot.orientation === 'portrait' ? 1024 : 576,
-			// Random again: both tunings it was pinned for are settled. While it was
-			// fixed it did its job — three runs came back as the same room, the same
-			// woman and the same pose, so the step count and the adapter strength
-			// were the only things being compared. If another setting needs the same
-			// treatment, pinning it is this one line.
+			prompts: [shot.prompt],
+			seconds: shot.seconds,
+			width: shot.orientation === 'portrait' ? 576 : 1024,
+			height: shot.orientation === 'portrait' ? 1024 : 576,
 			seed: Math.floor(Math.random() * 1_000_000_000),
-			loras: item.shot.loras ?? [],
-			wroteLoras: item.shot.wroteLoras ?? item.shot.loras ?? [],
+			loras: shot.loras ?? [],
+			wroteLoras: shot.wroteLoras ?? shot.loras ?? [],
 			request: lastRequest
 		};
-		shotBusy[itemId] = true;
 		try {
 			const res = await fetch('/studio/api/launch', {
 				method: 'POST',
@@ -998,19 +993,29 @@
 			const r = (await res.json()) as { ok?: boolean; error?: string; workspaceId?: string };
 			if (!r.ok || !r.workspaceId) {
 				pushError(r.error || 'The render could not start.');
-				return;
+				return false;
 			}
-			item.shot.launched = true;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			// The render poll narrates a shoot it announces first; there is no
 			// shoot here, only this clip, so the announcement is already spent.
 			shootsAnnounced = true;
-			pushStudio(`Rendering ${item.shot.seconds}s, ${item.shot.orientation}.`);
+			if (announce) pushStudio(`Rendering ${shot.seconds}s, ${shot.orientation}.`);
 			persist();
 			startPolling();
+			return true;
 		} catch (e) {
 			pushError(`The render could not start: ${e}`);
+			return false;
+		}
+	}
+
+	async function renderShot(itemId: string) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return;
+		shotBusy[itemId] = true;
+		try {
+			if (await launchShot(item.shot)) item.shot.launched = true;
 		} finally {
 			shotBusy[itemId] = false;
 		}
@@ -1144,19 +1149,42 @@
 	 *  a private copy and losing it. Failures are ignored on purpose — a studio
 	 *  that will not load because the verdict history did not is a bad trade for a
 	 *  row of buttons. */
+	interface LogRow {
+		workspace: string;
+		launched?: { key: string; strength: number }[];
+		steps?: number;
+		width?: number;
+		height?: number;
+		seconds?: number;
+		fps?: number;
+		seed?: number;
+		wallSeconds?: number;
+		outcome?: string;
+	}
+	let logRow = $state<Record<string, LogRow>>({});
+
 	async function loadVerdicts() {
 		try {
 			const res = await fetch('/studio/api/renders?limit=200');
-			const { rows } = (await res.json()) as {
-				rows: { workspace: string; outcome?: string; note?: string }[];
-			};
+			const { rows } = (await res.json()) as { rows: LogRow[] };
 			for (const r of rows ?? []) {
-				if (r.outcome === 'kept' || r.outcome === 'rejected') verdict[r.workspace] = r.outcome;
+				logRow[r.workspace] = r;
+				if (r.outcome === 'kept' || r.outcome === 'rejected') {
+					verdict[r.workspace] = r.outcome as 'kept' | 'rejected';
+				}
 			}
 		} catch {
 			// see above
 		}
 	}
+
+	/** The fix a diagnosis produced, held until you decide what to do with it.
+	 *
+	 *  It used to be pushed straight into the transcript as another card. That
+	 *  works, but it puts a second launch button on screen for the same clip and
+	 *  buries the diagnosis three hundred pixels below the thing it is about. It
+	 *  reads better attached to the clip it explains. */
+	let fix = $state<Record<string, NonNullable<ChatItem['shot']>>>({});
 	/** Set only once a replacement card actually exists. The card used to announce
 	 *  "the next attempt is below" from the verdict alone, which is a sentence
 	 *  that reads as a fact and was not one — a diagnosis interrupted mid-flight
@@ -1195,6 +1223,7 @@
 				return;
 			}
 			r.shot.wroteLoras = (r.shot.loras ?? []).map((p) => ({ ...p }));
+			fix[workspace] = r.shot;
 			// The diagnosis is what the note field was for. Written by whoever
 			// actually looked rather than typed from memory, and it turns a row
 			// that says a clip failed into one that says how.
@@ -1205,7 +1234,6 @@
 					body: JSON.stringify({ workspace, note: r.shot.why })
 				}).catch(() => {});
 			}
-			pushItem({ who: 'studio', kind: 'shot', shot: r.shot });
 			diagnosed[workspace] = true;
 			persist();
 		} catch (e) {
@@ -1213,6 +1241,29 @@
 		} finally {
 			diagnosing[workspace] = false;
 		}
+	}
+
+	let fixBusy = $state<Record<string, boolean>>({});
+
+	async function renderFix(workspace: string) {
+		const shot = fix[workspace];
+		if (!shot || fixBusy[workspace]) return;
+		fixBusy[workspace] = true;
+		try {
+			await launchShot(shot);
+		} finally {
+			fixBusy[workspace] = false;
+		}
+	}
+
+	/** For when you want to read the whole brief, or change it, before spending
+	 *  three minutes on it. The fix arrives as a summary; this is the long form. */
+	function openFix(workspace: string) {
+		const shot = fix[workspace];
+		if (!shot) return;
+		pushItem({ who: 'studio', kind: 'shot', shot });
+		delete fix[workspace];
+		persist();
 	}
 
 	function setShotOrientation(itemId: string, orientation: 'portrait' | 'landscape') {
@@ -1601,7 +1652,9 @@
 								finished: true,
 								...(dead ? { outcome: 'failed' } : {})
 							})
-						}).catch(() => {});
+						})
+							.then(() => loadVerdicts())
+							.catch(() => {});
 					}
 					stopPolling();
 					return;
@@ -3259,6 +3312,35 @@
 								<!-- The only quality signal in the app that a person has to give
 									 on purpose. Everything else is inferred; this is asked. -->
 								{#if ws}
+									{@const row = logRow[ws]}
+									<!-- What it was actually made with. Until this line existed the
+										 answer lived in a Docker log, which is where it was read from
+										 the first time anyone asked. -->
+									{#if row}
+										<div
+											class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--st-faint)]"
+										>
+											{#if row.launched?.length}
+												<span class="text-[var(--st-muted)]">
+													{row.launched
+														.map((p) => `${loraFor(p.key)?.label ?? p.key} ${p.strength}`)
+														.join(' · ')}
+												</span>
+											{:else}
+												<span>no adapters beyond the standard pair</span>
+											{/if}
+											<span class="tabular-nums"
+												>{row.steps} steps · {row.width}×{row.height} · {row.fps}fps · {row.seconds}s</span
+											>
+											{#if row.wallSeconds}
+												<span class="tabular-nums"
+													>{Math.floor(row.wallSeconds / 60)}m {row.wallSeconds % 60}s</span
+												>
+											{/if}
+											<span class="tabular-nums opacity-60">seed {row.seed}</span>
+										</div>
+									{/if}
+
 									<div class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
 										{#if !v}
 											<span class="text-xs text-[var(--st-faint)]">how was it?</span>
@@ -3276,21 +3358,53 @@
 											<span class="text-xs text-[var(--st-faint)]">noted as good.</span>
 										{:else if diagnosing[ws]}
 											<span class="flex items-center gap-2 text-xs text-[var(--st-faint)]">
-												<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
-												<span>looking at the clip and writing the fix</span>
+												<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+												></span>
+												<span>looking at the clip and working out the fix</span>
 											</span>
-										{:else}
-											<span class="text-xs text-[var(--st-faint)]">
-												{diagnosed[ws] ? 'noted — the next attempt is below.' : 'noted.'}
-											</span>
+										{:else if !fix[ws]}
+											<span class="text-xs text-[var(--st-faint)]">noted.</span>
 											<button
 												type="button"
 												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-												onclick={() => diagnose(ws)}
-												>{diagnosed[ws] ? 'look again' : 'work out why'}</button
+												onclick={() => diagnose(ws)}>work out why</button
 											>
 										{/if}
 									</div>
+
+									{#if fix[ws]}
+										{@const f = fix[ws]}
+										<div class="mt-2.5 rounded-2xl bg-[var(--st-surface)] p-4">
+											<p class="text-[13px] leading-relaxed text-[var(--st-text)]">{f.why}</p>
+											{#if f.loras?.length}
+												<p class="mt-2 text-xs text-[var(--st-muted)]">
+													next attempt with {f.loras
+														.map((p) => `${loraFor(p.key)?.label ?? p.key} ${p.strength}`)
+														.join(' · ')}
+												</p>
+											{/if}
+											<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+												<button
+													type="button"
+													disabled={fixBusy[ws]}
+													class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:opacity-40"
+													onclick={() => renderFix(ws)}
+												>
+													{fixBusy[ws] ? 'starting…' : 'render the fix'}
+												</button>
+												<button
+													type="button"
+													class="cursor-pointer rounded-full px-3 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+													onclick={() => openFix(ws)}>read the brief first</button
+												>
+												<button
+													type="button"
+													class="cursor-pointer rounded-full px-3 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+													onclick={() => diagnose(ws)}>look again</button
+												>
+											</div>
+										</div>
+									{/if}
 								{/if}
 							</div>
 						{/if}
