@@ -26,6 +26,7 @@
  *  what makes a launch reproducible and these functions testable.
  */
 import { SCENE_COUNT_MAX, SCENE_COUNT_MIN, SLUG_RE, type Brief } from './types';
+import { BASE, formatPicks, type Pick } from './loras';
 import { modelFor, textFor, type Overrides } from './tunables';
 
 /** metadata.version, and the half of the workspace id after the `@`.
@@ -1097,6 +1098,12 @@ export interface DirectSpec {
 	width: number;
 	height: number;
 	seed: number;
+	/** The adapters this clip asked for, on top of the always-loaded pair. */
+	loras?: Pick[];
+	/** Where the harness should fetch the generated bundle from — this app, at
+	 *  the name Docker knows it by. Set on the server, never accepted from the
+	 *  browser: it is a URL the harness will fetch and execute a graph from. */
+	studioOrigin: string;
 }
 
 export const DIRECT_MAX_CLIPS = 4;
@@ -1108,10 +1115,25 @@ export function directWorkspaceId(spec: DirectSpec): string {
 
 /** Only the workflow the prompts are written for. krea2 is a text-to-image
  *  workflow and there is no image step here; leaving it in gives the agent a
- *  tool it could pick by mistake. */
-const DIRECT_WORKFLOWS = `  workflows:
+ *  tool it could pick by mistake.
+ *
+ *  The url is a link to this app rather than a `name@branch` registry ref,
+ *  because the adapter stack is decided per clip and a bundle in git cannot be.
+ *  The studio generates the bundle when the harness asks for it — see
+ *  routes/studio/api/wf. Everything else about the bundle, ports included,
+ *  still comes from the copy in git; only the adapter list is written fresh.
+ *
+ *  `name` stays constant on purpose, so the tool the agent is told to call is
+ *  called the same thing on every run. */
+function directWorkflows(origin: string, picks: Pick[]): string {
+	const sel = formatPicks([
+		...BASE.map((l) => ({ key: l.key, strength: l.strength })),
+		...picks
+	]);
+	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
-      url: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit@dszabo`;
+      url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml`;
+}
 
 /** Resolution is a parameter here rather than a constant, because the two
  *  scenes of the last run came back 480x864 and 720x480 — each worker had
@@ -1234,7 +1256,7 @@ spec:
   skills:
     - workflow-render-loop@mvp-lkg
 
-${DIRECT_WORKFLOWS}
+${directWorkflows(spec.studioOrigin, spec.loras ?? [])}
 
 ${directProfiles(spec)}
 

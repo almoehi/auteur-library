@@ -238,6 +238,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		const spec = payload.direct as DirectSpec | undefined;
 		if (!spec || typeof spec !== 'object') throw error(400, 'Missing direct spec');
 		if (!spec.slug || !SLUG_RE.test(spec.slug)) throw error(400, 'Bad slug');
+		// Set here rather than taken from the payload. The harness fetches a
+		// workflow graph from this address and runs it, so the browser does not
+		// get a say in where that address points.
+		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
 		let directYaml: string;
 		try {
 			directYaml = composeDirectWorkspace(spec, grokKey);

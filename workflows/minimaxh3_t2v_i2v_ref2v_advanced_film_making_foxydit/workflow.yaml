@@ -162,6 +162,14 @@ models:
     files:
       - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
         sha256: 7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522
+  # <<LORAS>> — everything between these markers is regenerated per clip.
+  #
+  # The two below are the pair every clip gets. Anything else is chosen while
+  # the prompt is being written and spliced in here by the studio, because a
+  # file committed ahead of time cannot know whether this shot needs the
+  # penis detailer or the pussy one. Edit the pair here; edit the rest in
+  # webui/src/routes/studio/loras.ts.
+
 
   - name: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy
     type: lora
@@ -190,6 +198,8 @@ models:
       - url: https://civitai.com/api/download/models/3229050?fileId=3111384
         filename: PlagueKind-tiddies-realismslider.safetensors
         sha256: e5c8c275af58663a664ad2922cc10a248bff70b941043375d2c82d9cc55b7030
+
+  # <</LORAS>>
 
   - name: rife49
     type: rife
