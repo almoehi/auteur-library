@@ -1656,7 +1656,14 @@
 				const anyDead = ts.some((t) => DEAD.includes(t.status));
 				// Rendering ends when the final film was posted, or when a shoot
 				// failed permanently and no assembly will be requested.
-				finished = terminal && (finalPosted || (anyDead && !assemblySent));
+				//
+				// Simple mode has neither. There is one clip and no assembly step, so
+				// `finalPosted` — which needs `assemblySent` before a clip can count
+				// as the film — stays false for the entire run, and a successful run
+				// never concluded. Only failures did, through the anyDead branch,
+				// which is why every finished row in the render log was missing its
+				// elapsed time while every failed one had it.
+				finished = simpleRun ? terminal : terminal && (finalPosted || (anyDead && !assemblySent));
 			} else {
 				const allPosted = PLANNING_STEPS.every((s) => docPhase[s.artifact] === 'posted');
 				const anyDead = ts.some((t) => DEAD.includes(t.status));
