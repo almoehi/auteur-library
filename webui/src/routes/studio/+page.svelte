@@ -919,6 +919,10 @@
 			return null;
 		}
 		const r = (await res.json()) as { ok: boolean; shot?: ChatItem['shot']; error?: string };
+		// Snapshot the writer's own choice the moment it arrives. Everything after
+		// this can be edited on the card; this copy is what the edit is measured
+		// against, so it is taken before anyone can touch it.
+		if (r.shot) r.shot.wroteLoras = (r.shot.loras ?? []).map((p) => ({ ...p }));
 		if (!r.ok || !r.shot) {
 			pushError(r.error || 'The prompt could not be written.');
 			return null;
@@ -980,7 +984,9 @@
 			// were the only things being compared. If another setting needs the same
 			// treatment, pinning it is this one line.
 			seed: Math.floor(Math.random() * 1_000_000_000),
-			loras: item.shot.loras ?? []
+			loras: item.shot.loras ?? [],
+			wroteLoras: item.shot.wroteLoras ?? item.shot.loras ?? [],
+			request: lastRequest
 		};
 		shotBusy[itemId] = true;
 		try {
@@ -1430,6 +1436,21 @@
 			}
 			if (finished) {
 				if (sawAllDone) {
+					// Close the render log's row for this run. Fire and forget: the
+					// row is evidence, and a clip that rendered must not look failed
+					// because the bookkeeping call did.
+					if (renderWs) {
+						const dead = ts.some((t) => DEAD.includes(t.status));
+						void fetch('/studio/api/renders', {
+							method: 'POST',
+							headers: { 'content-type': 'application/json' },
+							body: JSON.stringify({
+								workspace: renderWs,
+								finished: true,
+								...(dead ? { outcome: 'failed' } : {})
+							})
+						}).catch(() => {});
+					}
 					stopPolling();
 					return;
 				}

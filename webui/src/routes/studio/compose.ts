@@ -1100,6 +1100,12 @@ export interface DirectSpec {
 	seed: number;
 	/** The adapters this clip asked for, on top of the always-loaded pair. */
 	loras?: Pick[];
+	/** What the writer chose before anyone touched the card, and what you typed
+	 *  to get it. Neither reaches the workspace — they are here so the launch can
+	 *  write down what was tried, and so a card you corrected is recorded as a
+	 *  correction rather than as the writer having been right all along. */
+	wroteLoras?: Pick[];
+	request?: string;
 	/** Where the harness should fetch the generated bundle from — this app, at
 	 *  the name Docker knows it by. Set on the server, never accepted from the
 	 *  browser: it is a URL the harness will fetch and execute a graph from. */
@@ -1138,6 +1144,11 @@ function directWorkflows(origin: string, picks: Pick[]): string {
 /** Resolution is a parameter here rather than a constant, because the two
  *  scenes of the last run came back 480x864 and 720x480 — each worker had
  *  decided for itself. Fixing it in the profile is what stops that. */
+/** The two numbers the render profile is built from, named so the render log
+ *  records what actually ran rather than a second copy of it that can drift. */
+export const DIRECT_STEPS = 8;
+export const DIRECT_FPS = 48;
+
 function directProfiles(spec: DirectSpec): string {
 	// steps=8, chosen by watching the clips move.
 	//
@@ -1165,8 +1176,8 @@ function directProfiles(spec: DirectSpec): string {
 	// surface ever needs revisiting, that pairing has not actually been tested.
 	return `  profiles:
     draft:
-      image: { width: ${spec.width}, height: ${spec.height}, steps: 8, seed: ${spec.seed} }
-      video: { width: ${spec.width}, height: ${spec.height}, steps: 8, fps: 48, seed: ${spec.seed} }
+      image: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, fps: ${DIRECT_FPS}, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }`;
 }

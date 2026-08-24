@@ -130,6 +130,11 @@ export interface ChatItem {
 		/** The adapters the writer chose for this shot, shown on the card so the
 		 *  choice is visible before it costs a render rather than after. */
 		loras?: Pick[];
+		/** The same list as the writer first returned it, kept untouched while
+		 *  `loras` is edited. The two are compared at launch: where they differ,
+		 *  a person disagreed with the writer, and that is the only free quality
+		 *  signal this app produces. */
+		wroteLoras?: Pick[];
 		/** Set once this card has been sent to render, so it stops offering. */
 		launched?: boolean;
 	};

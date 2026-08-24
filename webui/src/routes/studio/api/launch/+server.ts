@@ -28,6 +28,7 @@ import { readOverrides } from '../../overrides.server';
 import { loadLibraryInto, type LoadReport } from '../../harness.server';
 import { importStagedRefs, type RefImportResult } from '../../refs-import.server';
 import { listRefs } from '../../refs.server';
+import { recordRender } from '../../renders.server';
 import { recordProduction } from '../../history.server';
 import {
 	briefToWorkspaceId,
@@ -37,7 +38,9 @@ import {
 	composeDirectWorkspace,
 	directWorkspaceId,
 	type ApprovedDocs,
-	type DirectSpec
+	type DirectSpec,
+	DIRECT_STEPS,
+	DIRECT_FPS
 } from '../../compose';
 
 /** Same host as the proxy uses: the golem router matches on the Host header and
@@ -248,6 +251,26 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		} catch (e) {
 			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
 		}
+		// Written before the workspace opens rather than after, so a launch that
+		// dies on the way still leaves a record of what was attempted — those are
+		// the interesting ones to go back to, and a row that only appears on
+		// success is a log of the good days.
+		recordRender({
+			workspace: directWorkspaceId(spec),
+			slug: spec.slug,
+			at: Date.now(),
+			request: spec.request ?? '',
+			prompt: spec.prompts?.[0] ?? '',
+			wrote: spec.wroteLoras ?? spec.loras ?? [],
+			launched: spec.loras ?? [],
+			steps: DIRECT_STEPS,
+			width: spec.width,
+			height: spec.height,
+			seconds: spec.seconds,
+			fps: DIRECT_FPS,
+			seed: spec.seed
+		});
+
 		return await openWorkspace(
 			directWorkspaceId(spec),
 			directYaml,
