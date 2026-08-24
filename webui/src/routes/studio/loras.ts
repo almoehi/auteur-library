@@ -216,7 +216,13 @@ export const CATALOGUE: Lora[] = [
 		sha256: '1a5b7948bb97f27737e62c3dd5497a3afb77517f230787f45e45c7d8fe3dc24d',
 		strength: 0.8,
 		trigger: 'cumshot',
-		use: 'the shot ends in ejaculation and that ending is the point',
+		// A squirt clip picked this and came back with a thin dribble instead of
+		// jets. The adapter is a cumshot adapter and the request was a female
+		// squirt — different events, whatever else is true of the training set —
+		// and the catalogue's old wording, "the shot ends in ejaculation", covered
+		// both. A search across four terms found no squirt adapter for this model
+		// at all, so that one is the brief's job and nothing here helps it.
+		use: 'a man ejaculates and that is the point. Not a female squirt — nothing in this list covers that',
 		kind: 'detail'
 	}
 

@@ -216,6 +216,30 @@ That repetition is also the tell that the cuts were not real. If you find
 yourself writing the same lock into a second shot, the second shot was never a
 shot — go back and make it one frame.
 
+# ONE PRIMARY CHANGE PER BEAT — WHICH IS WHY TWO PEOPLE NEED TAKING TURNS
+
+The format guide is explicit that a beat is one primary change plus an end
+state. Two people doing two different things in the same beat is two primary
+changes, and the model renders one of them: a clip of a couple masturbating side
+by side came back with her hand moving and his completely still, because her
+action was written first and the camera was pushing toward her.
+
+So give each person their own beat and alternate:
+
+  weak    She rubs her clitoris in steady circles while he strokes his cock.
+  strong  She rubs her clitoris in steady wet circles, hips rocking with it.
+          End state: her fingers glossy, thighs open wider than they started.
+          At 00:03.000 he takes his cock in his fist and strokes it in slow full
+          strokes, his forearm working. End state: his fist at the base, shaft
+          hard and wet at the tip.
+
+Both get animated because each beat asks for one thing. The clip is not shorter
+for it — the same seconds, spent on one action at a time.
+
+If two people genuinely must move together — a couple fucking is one action
+between two bodies, not two actions — write it as the single thing it is. The
+test is whether one verb covers both of them.
+
 # SAY WHICH WAY EACH BODY FACES THE LENS
 
 "Behind her" tells the model where he is, not which way he is turned, and with
@@ -235,6 +259,13 @@ way it faces:
 Positions where the model reverses people if you let it: anything from behind,
 anything where one person is above the other, and reverse cowgirl — the ones
 where a body could plausibly be turned either way. Spend the words there.
+
+Limbs pointing down the lens are the other thing that fails. A knee raised
+toward the camera is drawn foreshortened, and the clip that asked for one came
+back with the leg missing below it. Where you can, keep legs and arms across the
+frame rather than into it — planted, bent to the side, resting flat — and say
+which parts are in frame so the model is not left inferring the rest of a body
+it cannot see.
 
 For the act adapters this matters less, because they were trained on the
 geometry and know it. Doggy has no adapter in this workflow, so a doggy brief
