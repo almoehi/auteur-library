@@ -1274,6 +1274,26 @@
 		persist();
 	}
 
+	/** Move one adapter's strength on a card that has not been sent yet.
+	 *
+	 *  The writer is held inside the range its author published, because it is
+	 *  choosing a number from a description and has no way to check the result.
+	 *  You are not held to it. You have the clip in front of you, and the author's
+	 *  range came from their material rather than yours — so the band is shown as
+	 *  a reference and the slider goes past it. */
+	function setLoraStrength(itemId: string, key: string, value: number) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.shot || item.shot.launched) return;
+		const n = Math.round(Math.min(2, Math.max(0, value)) * 20) / 20;
+		item.shot.loras = (item.shot.loras ?? []).map((p) => (p.key === key ? { ...p, strength: n } : p));
+	}
+
+	/** Back to what the adapter's author recommends. */
+	function resetLoraStrength(itemId: string, key: string) {
+		const l = loraFor(key);
+		if (l) setLoraStrength(itemId, key, l.strength);
+	}
+
 	function setShotOrientation(itemId: string, orientation: 'portrait' | 'landscape') {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.shot || item.shot.orientation === orientation) return;
@@ -3041,6 +3061,47 @@
 												</button>
 											{/each}
 										</div>
+
+										<!-- One slider per chosen adapter. The number starts on the
+											 author's own recommendation, which is the only figure here
+											 that came from someone rendering with it. The band beside it
+											 is what they published; the slider goes past it on purpose,
+											 because you can see the clip and they could not. -->
+										{#each picked as p (p.key)}
+											{@const l = loraFor(p.key)}
+											{#if l}
+												<div class="mt-2.5 flex items-center gap-3">
+													<span class="w-40 shrink-0 truncate text-xs text-[var(--st-muted)]"
+														>{l.label}</span
+													>
+													<input
+														type="range"
+														min="0"
+														max="2"
+														step="0.05"
+														value={p.strength}
+														aria-label="{l.label} strength"
+														oninput={(e) =>
+															setLoraStrength(item.id, p.key, Number(e.currentTarget.value))}
+														class="h-1 min-w-0 flex-1 cursor-pointer accent-[var(--st-accent)]"
+													/>
+													<button
+														type="button"
+														title="back to the author's recommendation, {l.strength}"
+														onclick={() => resetLoraStrength(item.id, p.key)}
+														class="w-9 shrink-0 cursor-pointer text-right text-xs tabular-nums {p.strength ===
+														l.strength
+															? 'text-[var(--st-muted)]'
+															: 'text-[var(--st-text)]'}">{p.strength.toFixed(2)}</button
+													>
+													<span
+														class="w-24 shrink-0 text-right text-xs tabular-nums text-[var(--st-faint)]"
+													>
+														{l.band ? `${l.band[0]}–${l.band[1]}` : `author ${l.strength}`}
+													</span>
+												</div>
+											{/if}
+										{/each}
 									{/if}
 								</div>
 
