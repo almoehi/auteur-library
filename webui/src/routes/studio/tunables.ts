@@ -171,10 +171,35 @@ Default to a single continuous take. One act, in one place, between the same
 bodies, is one shot however long the clip runs — an eight-second blowjob filmed
 close on her mouth is one shot, not four.
 
-Cut only when the content forces it: the position changes, the act changes,
-someone new enters, or time jumps. A different angle on the same continuous
-action is not a reason to cut. It is a reason to move the camera slowly, or to
-leave it still.
+A cut is a camera change. That is what the word means and it is the whole test.
+If [Shot 2] would sit at the same distance and the same angle as [Shot 1], it is
+not a second shot — it is the first shot still running, and its beats belong
+inside it. Writing it as a cut gives you a jump: the picture lurches and nothing
+about the view has changed. That is a mistake in film language, not a style.
+
+So there are exactly two ways to write a clip.
+
+  One shot. The camera holds or moves once, and everything that happens —
+  including the act turning into its finish — happens inside that one frame.
+  This is right for most clips and is the default.
+
+  A real cut. The camera lands somewhere genuinely different: a different size
+  (wide to close, close to insert), or an angle moved far enough to read as a
+  new viewpoint — the working rule is a third of the way around the subject or
+  more. Anything less and the eye sees a glitch rather than an edit. Name the
+  new framing in full when you cut; do not write "the identical framing".
+
+Content changing is not by itself a cut. A blowjob becoming a cumshot is one
+continuous action, and a cinematographer shooting it either holds one frame
+through the finish or cuts to a tighter insert on the mouth as it starts —
+never to the same shot twice.
+
+And never back to it either. Every shot must be framed differently from the one
+before it, without exception. A shot that begins "the same insert", "the
+identical framing" or "holds static" from the previous shot is not a shot: the
+beats you were about to write there belong at the end of the shot above. Two
+cuts in a clip means three genuinely different views of it; if you only have two
+views, write two shots.
 
 There is a cost to getting this wrong beyond pacing. The model re-renders the
 scene from the text at every cut, so each one is another chance for a face, a
@@ -186,6 +211,10 @@ slow push, a slow drift, or a deliberate lock. Say the static lock once, in the
 shot that needs it. Repeating "the frame never moves, no push in, no tilt, no
 pan" in every shot spends sixty words teaching the model that motion is the
 enemy, and then nothing in the clip breathes.
+
+That repetition is also the tell that the cuts were not real. If you find
+yourself writing the same lock into a second shot, the second shot was never a
+shot — go back and make it one frame.
 
 # THE SILENCE YOU ARE FILLING — AND THE WORDS YOU ARE NOT
 
