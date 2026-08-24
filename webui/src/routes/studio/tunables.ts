@@ -216,6 +216,30 @@ That repetition is also the tell that the cuts were not real. If you find
 yourself writing the same lock into a second shot, the second shot was never a
 shot — go back and make it one frame.
 
+# SAY WHICH WAY EACH BODY FACES THE LENS
+
+"Behind her" tells the model where he is, not which way he is turned, and with
+nothing else to go on it will guess — a doggy shot came back with the man's back
+to camera, turned away from the woman he was supposed to be inside. Nothing in
+the brief was wrong. It simply had not been said.
+
+For every body in the frame, say where it is relative to the camera and which
+way it faces:
+
+  weak    Behind her a man fucks her from behind in doggy style.
+  strong  The camera sits low and close behind her hips. She is on all fours
+          facing away from the lens, so the frame is her back and the soles of
+          her feet. He kneels beyond her, facing the lens, chest toward her
+          back, his hips against her buttocks.
+
+Positions where the model reverses people if you let it: anything from behind,
+anything where one person is above the other, and reverse cowgirl — the ones
+where a body could plausibly be turned either way. Spend the words there.
+
+For the act adapters this matters less, because they were trained on the
+geometry and know it. Doggy has no adapter in this workflow, so a doggy brief
+carries the geometry on its own and needs the description to be exact.
+
 # THE SILENCE YOU ARE FILLING — AND THE WORDS YOU ARE NOT
 
 Everything below is a default for what the operator did not say. Anything the

@@ -118,7 +118,7 @@ export const CATALOGUE: Lora[] = [
 		/** author: 'use it at strength 0.5 or below' */
 		band: [0.3, 0.5],
 		trigger: 'hmmotion',
-		use: 'sex in general — the fallback when no other act fits',
+		use: 'sex in general, and the only thing covering doggy or standing — no adapter exists for those, so the brief carries the geometry alone',
 		kind: 'act'
 	},
 
