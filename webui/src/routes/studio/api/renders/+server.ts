@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ url }) => {
  *  is a caller confused about which row it is looking at, and silently accepting
  *  it would corrupt the one record we have. */
 export const POST: RequestHandler = async ({ request }) => {
-	let body: { workspace?: unknown; finished?: unknown; outcome?: unknown };
+	let body: { workspace?: unknown; finished?: unknown; outcome?: unknown; note?: unknown };
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -36,7 +36,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	const workspace = typeof body.workspace === 'string' ? body.workspace.trim() : '';
 	if (!workspace) throw error(400, 'workspace is required');
 
-	const patch: { wallSeconds?: number; outcome?: 'kept' | 'rejected' | 'failed' } = {};
+	const patch: {
+		wallSeconds?: number;
+		outcome?: 'kept' | 'rejected' | 'failed';
+		note?: string;
+	} = {};
 	// The elapsed time is worked out here from the launch already on the row,
 	// rather than sent by the caller. The page would have to keep a clock across
 	// reloads to send it, and a clock that survives a reload is a thing to get
@@ -48,6 +52,10 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (body.outcome === 'kept' || body.outcome === 'rejected' || body.outcome === 'failed') {
 		patch.outcome = body.outcome;
 	}
+	// Capped rather than rejected when long: someone typing what went wrong is
+	// doing the app a favour, and losing the whole note to a length rule they
+	// were never shown is a good way to stop them doing it again.
+	if (typeof body.note === 'string') patch.note = body.note.trim().slice(0, 2000);
 	if (!Object.keys(patch).length) throw error(400, 'nothing to update');
 
 	// A miss means the row was never written — an older run, or a launch from

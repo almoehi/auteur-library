@@ -65,6 +65,13 @@ export interface RenderRow {
 	/** What became of the clip. `kept` and `rejected` need a person to say so;
 	 *  `failed` the harness can say on its own. */
 	outcome?: 'kept' | 'rejected' | 'failed';
+	/** What was wrong with it, in your words.
+	 *
+	 *  A verdict alone says a clip missed; it does not say whether the anatomy
+	 *  came apart, the motion stalled, or it simply rendered something other than
+	 *  what was asked for — and those want three different fixes. This is the
+	 *  field that makes a rejection actionable instead of merely counted. */
+	note?: string;
 }
 
 function ensure(): void {

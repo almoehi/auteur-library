@@ -147,6 +147,9 @@ export interface ChatItem {
 		taskId: string;
 		files: { name: string; url: string }[];
 		body?: string;
+		/** Which run produced this, so a verdict given on a card you scrolled back
+		 *  to lands on that run's row and not on whichever one is current. */
+		workspace?: string;
 	};
 	/** one line of the harness's own progress log (kind=activity) */
 	activity?: {

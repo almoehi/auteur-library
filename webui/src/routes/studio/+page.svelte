@@ -1063,6 +1063,40 @@
 		item.shot.loras = [...kept, { key, strength: lora.strength }];
 	}
 
+	/** Your verdict on a finished clip, and what was wrong with it.
+	 *
+	 *  Keyed by workspace rather than held on the chat item, so scrolling back to
+	 *  an older clip shows the verdict you already gave it and cannot collect a
+	 *  second one. Nothing here reads the log back — the file is the record, this
+	 *  is only what the page needs to stop offering a button you already pressed.
+	 */
+	let verdict = $state<Record<string, 'kept' | 'rejected'>>({});
+	let noteDraft = $state<Record<string, string>>({});
+	let noteSaved = $state<Record<string, boolean>>({});
+
+	async function rate(workspace: string, outcome: 'kept' | 'rejected') {
+		if (!workspace) return;
+		verdict[workspace] = outcome;
+		// Fire and forget, like the run's own closing call. A verdict that fails to
+		// save is a lost row; a verdict that blocks the page is a lost afternoon.
+		void fetch('/studio/api/renders', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ workspace, outcome })
+		}).catch(() => {});
+	}
+
+	async function saveNote(workspace: string) {
+		const note = (noteDraft[workspace] ?? '').trim();
+		if (!workspace || !note) return;
+		noteSaved[workspace] = true;
+		void fetch('/studio/api/renders', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ workspace, note })
+		}).catch(() => {});
+	}
+
 	function setShotOrientation(itemId: string, orientation: 'portrait' | 'landscape') {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.shot || item.shot.orientation === orientation) return;
@@ -1675,7 +1709,8 @@
 					key: a.key,
 					title: isFinal ? 'A film' : a.name || name,
 					taskId: '',
-					files: [{ name, url: fileUrl(renderWs, a.id, name) }]
+					files: [{ name, url: fileUrl(renderWs, a.id, name) }],
+					workspace: renderWs
 				}
 			});
 			if (isFinal) {
@@ -3093,10 +3128,66 @@
 								{item.text}
 							</p>
 						{:else if item.kind === 'clips' && item.artifact}
+							{@const ws = item.artifact.workspace ?? ''}
+							{@const v = verdict[ws]}
 							<div class="enter">
 								{#each item.artifact.files as f (f.name)}
 									{@render videoCard(f.name, f.url, item.text ?? item.artifact.title)}
 								{/each}
+
+								<!-- The only quality signal in the app that a person has to give
+									 on purpose. Everything else is inferred; this is asked. -->
+								{#if ws}
+									<div class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+										{#if !v}
+											<span class="text-xs text-[var(--st-faint)]">how was it?</span>
+											<button
+												type="button"
+												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+												onclick={() => rate(ws, 'kept')}>good</button
+											>
+											<button
+												type="button"
+												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+												onclick={() => rate(ws, 'rejected')}>not good</button
+											>
+										{:else if v === 'kept'}
+											<span class="text-xs text-[var(--st-faint)]">noted as good.</span>
+										{:else}
+											<span class="text-xs text-[var(--st-faint)]">noted.</span>
+										{/if}
+									</div>
+
+									{#if v === 'rejected'}
+										{#if noteSaved[ws]}
+											<p class="mt-2 text-xs text-[var(--st-faint)]">
+												thanks — that goes in the log with the settings this ran with.
+											</p>
+										{:else}
+											<!-- A verdict says a clip missed; it does not say whether the
+												 anatomy came apart, the motion stalled, or it rendered
+												 something else entirely. Those want different fixes. -->
+											<div class="mt-2.5 flex flex-wrap items-start gap-2">
+												<label class="sr-only" for="note-{item.id}">What was wrong</label>
+												<input
+													id="note-{item.id}"
+													bind:value={noteDraft[ws]}
+													placeholder="what was wrong with it?"
+													class="min-w-0 flex-1 rounded-xl bg-[var(--st-bg)] px-3.5 py-2 text-[13px] text-[var(--st-text)] outline-none placeholder:text-[var(--st-faint)]"
+													onkeydown={(e) => {
+														if (e.key === 'Enter') saveNote(ws);
+													}}
+												/>
+												<button
+													type="button"
+													disabled={!(noteDraft[ws] ?? '').trim()}
+													class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-2 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:opacity-40"
+													onclick={() => saveNote(ws)}>save</button
+												>
+											</div>
+										{/if}
+									{/if}
+								{/if}
 							</div>
 						{/if}
 					{/each}
