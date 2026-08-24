@@ -240,6 +240,11 @@ export function parsePicks(seg: string): Pick[] {
 		const key = part.slice(0, cut);
 		const n = Number(part.slice(cut + 1));
 		if (!BY_KEY.has(key) || !Number.isFinite(n)) continue;
+		// Base adapters are never picks. They load on every clip regardless, and
+		// letting one through here would let it fill the cap below and push a real
+		// choice off the end — which is exactly what happened once already, and
+		// silently, because the url looked correct while the graph was not.
+		if (BY_KEY.get(key)!.kind === 'base') continue;
 		out.push({ key, strength: Math.min(3, Math.max(0, n)) });
 	}
 	return out.slice(0, MAX_PICKS);

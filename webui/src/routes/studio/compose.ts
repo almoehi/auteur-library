@@ -1137,7 +1137,10 @@ function directWorkflows(origin: string, picks: Pick[]): string {
 	// parser caps a selection at MAX_PICKS, so once that cap came down to two the
 	// two base entries filled it and the actual choices were dropped off the end.
 	// Every render between then and now ran on the base pair alone.
-	const sel = formatPicks(picks);
+	// `base` when nothing was chosen, rather than an empty segment: the url would
+	// otherwise collapse to /wf//workflow.yaml, which matches no route, and a clip
+	// the writer found no adapter for would fail to render at all.
+	const sel = formatPicks(picks) || 'base';
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml`;
