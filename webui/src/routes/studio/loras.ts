@@ -197,7 +197,14 @@ export const CATALOGUE: Lora[] = [
 		strength: 0.9,
 		/** author: '0.5 - 0.9', runs 0.9 themselves */
 		band: [0.5, 0.9],
-		use: 'general explicit-scene quality, no particular act',
+		// Described here as general scene quality until someone asked whether it
+		// would help a doggy shot. That description was mine and it was wrong: the
+		// author's own headline is "Unlock Real Anatomy in T2V — finally,
+		// text-to-video with proper anatomy", which is a different thing entirely
+		// and is the thing that keeps failing in this workflow. It is also native
+		// to t2v, unlike every position adapter the catalogue search turned up,
+		// which were all i2v-only.
+		use: 'bodies that do not resolve — limbs, joins, anatomy coming out wrong. Reach for it when the act has no adapter of its own',
 		kind: 'detail'
 	}
 ];
