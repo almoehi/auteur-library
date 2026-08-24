@@ -130,7 +130,7 @@ export const CATALOGUE: Lora[] = [
 		sha256: '017dd1adddc1be3ec0605dd2e7de97138eb2c6c6ba24be402cf47f103ac1f1b3',
 		strength: 0.8,
 		trigger: 'penis',
-		use: 'a cock is visible in the shot',
+		use: 'the cock itself is the subject — the frame is on it, not merely containing it',
 		kind: 'detail'
 	},
 	{
@@ -141,7 +141,7 @@ export const CATALOGUE: Lora[] = [
 		sha256: '3080f4fbcbba4fc06bd09240c7eedb6a5128eb0e19feb001cdf97a7a0941a6ee',
 		strength: 0.8,
 		trigger: 'hmpussy',
-		use: 'a pussy is visible in the shot',
+		use: 'her pussy is the subject — the frame is on it, not merely containing it',
 		kind: 'detail'
 	},
 	{
@@ -285,10 +285,16 @@ it — a shot that ends in a cumshot needs the cumshot adapter, a shot where the
 moaning is the point needs the moaning one. A detail that is merely true of the
 frame is not worth an adapter slot, and adding it costs something real.
 
-Never take both anatomy detailers. penis and pussy draw the same region of the
-frame, and a clip rendered with both came back with that region incoherent while
-everything around it was correct. If a shot shows both, choose the one the shot
-is actually about.
+The two anatomy detailers are the ones to be most careful with. They draw a
+small region of the frame very hard, and every clip so far that carried one came
+back with that region incoherent — a penetration rendered as one fused mass
+rather than a shaft and an opening. Take one only when that anatomy is what the
+frame is built around, and never both: they draw the same pixels and disagree.
+
+Where a shot shows a join — penetration, a mouth on a cock — the act adapter
+already knows how the parts meet. Adding a detailer on top of it is the case
+that has failed, so prefer the act alone unless the request is specifically
+about how one of the parts looks.
 
 Return them in the "loras" field as [{"key":"bj","strength":1.2}, …].
 
