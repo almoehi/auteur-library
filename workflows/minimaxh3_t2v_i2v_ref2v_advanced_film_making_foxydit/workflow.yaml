@@ -3,9 +3,8 @@
 # https://civitai.com/models/2834514/minimax-h3-t2v-i2v-ref2v-advanced-filmmaking-workflow-or-all-speedups-qol-features
 #
 # ─── Custom Nodes ─────────────────────────────────────────────────────────────
-# SolAttnPatch                           https://github.com/kijai/ComfyUI-SolAttn_triton @ 842c4eaa7d91dbaef3fee3ccdbf36a39521e82fc
 # MiniMaxH3ImageToVideo, ResolutionSelector, VAEDecodeAudio — built-in ComfyUI (comfy_extras/nodes_minimax_h3, nodes_resolution, nodes_audio)
-# MiniMaxH3MemoryEfficientSageAttentionPatch, PathchSageAttentionKJ — ComfyUI-KJNodes (already in nodes.lock)
+# PathchSageAttentionKJ                  ComfyUI-KJNodes (already in nodes.lock)
 # VHS_VideoCombine                       https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite (already in nodes.lock)
 # Power Lora Loader / Any Switch (rgthree) https://github.com/rgthree/rgthree-comfy (already in nodes.lock)
 # ComfyMathExpression                    https://github.com/evanspearman/ComfyMath (already in nodes.lock)
@@ -13,8 +12,41 @@
 # easy cleanGpuUsed / easy seed          https://github.com/yolain/ComfyUI-Easy-Use (already in nodes.lock)
 # SpectrumApplyMiniMaxH3                 NOT included — workflow exported in EasyCache mode (use one or the other)
 #
-# ─── Append to serverless-comfy/nodes.lock ────────────────────────────────────
-# https://github.com/kijai/ComfyUI-SolAttn_triton.git 842c4eaa7d91dbaef3fee3ccdbf36a39521e82fc
+# MiniMaxH3MemoryEfficientSageAttentionPatch (ComfyUI-KJNodes) was REMOVED from the graph
+# (was node 663, between PathchSageAttentionKJ and SolAttnPatch): it is_experimental=True,
+# EXPERIMENTAL VRAM-reduction accelerator with NO enable/disable input at all — it unconditionally
+# monkeypatches every transformer block's attn.forward to a custom fp8+int8 hybrid kernel.
+# On H100 (sm_90) this hits `torch.AcceleratorError: CUDA error: no kernel image is available
+# for execution on the device` in sageattention's per_channel_fp8(). Root cause (confirmed by
+# directly inspecting the deployed almoehi/serverless-comfy-modal-cu13 image): the installed
+# `sageattention` v2.2.0 package is missing its `_qattn_sm89` AND `_qattn_sm90` compiled CUDA
+# extensions entirely (only `_qattn_sm80` built) — sageattention has no documented CUDA 13.x
+# support (tops out at CUDA 12.8), so this image's CUDA 13.3 nvcc silently fails to produce
+# sm89/sm90 kernel objects at build time. This is a genuine runtime-image gap, not fixable from
+# this workflow (spike tracked in video-harness#107). Since 663 has no toggle, the only fix is
+# removing it from the graph; nothing downstream depends on its side effects beyond the model
+# reference, so PathchSageAttentionKJ's (157) output now feeds directly into SolAttnPatch (636).
+#
+# SolAttnPatch (636, ComfyUI-SolAttn_triton) was investigated as a second suspect (the workflow
+# author's own gpu_types comment already named "nodes 636/663" as sageattn() callers causing
+# XID-43 on L40S) but is CONFIRMED SAFE and kept: its own kernels are architecture-agnostic
+# Triton (no fp8/Hopper-specific dispatch), and it gracefully composes with/delegates to whatever
+# attn.forward preceded it. An H100 e2e run with only 663 removed (636 kept, sage_attention
+# forced "disabled") passed ALL CHECKS. The `AssertionError: SM90 kernel is not available` seen
+# in earlier testing was misattributed to 636 — it actually always came from node 157's `"auto"`
+# mode calling `sageattn()` directly (see below), which was still enabled in that test.
+#
+# PathchSageAttentionKJ (157) sage_attention: kept at its original "auto" default in this file.
+# `"auto"` calls sageattention.sageattn() directly and hits `assert SM90_ENABLED` in
+# sageattention/core.py for the same sm89/sm90-missing-extension reason as 663 above (same
+# root cause, tracked in video-harness#107). Rather than hardcoding "disabled" here — which
+# would also kill SageAttention's real speedup on GPUs where it works fine (a100, blackwell) —
+# this is force-overridden to "disabled" dynamically, ONLY for blacklisted GPU types, at
+# render-dispatch time: see `SAGE_BLACKLIST_GPU_TYPES` in
+# video-harness/src/render/backend/gpu-types.ts and `withSageAttentionGpuOverride()` in
+# video-harness/src/render/manifest.ts (called from workflow-agent.ts before bindWorkflow).
+# That override reads this workflow's `sage_attention` param port (below) — remove both once
+# video-harness#107 is resolved.
 #
 
 name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
@@ -29,7 +61,10 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
-gpu_types: [a100, h100, blackwell] # l40s incompatible on cu13: nodes 636/663 call sageattn() directly → XID-43
+gpu_types: [a100, h100, blackwell] # l40s excluded pending re-verification: original "nodes 636/663 → XID-43"
+# diagnosis predates the fix above (663 removed, 636 confirmed independently safe, sage_attention
+# now dynamically disabled per SAGE_BLACKLIST_GPU_TYPES) — l40s is in that blacklist too, so this
+# may now work; not re-tested on real L40S hardware, left excluded until verified.
 ports:
   params:
     - name: steps
@@ -78,6 +113,13 @@ ports:
       constraints: { min: 1, max: 120 }
       required: false
       default: 48
+    - name: sage_attention
+      kind: enum
+      description: "PathchSageAttentionKJ attention-kernel mode. Leave at 'auto' — the render platform force-overrides this to 'disabled' when dispatching to a GPU where the runtime image's SageAttention build lacks working kernels (see SAGE_BLACKLIST_GPU_TYPES / video-harness#107), regardless of the value set here."
+      binding: sage_attention@157
+      constraints: { enum: [disabled, auto, sageattn_qk_int8_pv_fp16_cuda, sageattn_qk_int8_pv_fp16_triton, sageattn_qk_int8_pv_fp8_cuda, "sageattn_qk_int8_pv_fp8_cuda++", sageattn3, sageattn3_per_block_mean] }
+      required: false
+      default: auto
   outputs:
     - name: output_video
       kind: video
