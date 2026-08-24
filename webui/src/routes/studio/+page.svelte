@@ -1136,6 +1136,11 @@
 	}
 
 	let diagnosing = $state<Record<string, boolean>>({});
+	/** Set only once a replacement card actually exists. The card used to announce
+	 *  "the next attempt is below" from the verdict alone, which is a sentence
+	 *  that reads as a fact and was not one — a diagnosis interrupted mid-flight
+	 *  left the claim on screen with nothing under it, and no way to tell. */
+	let diagnosed = $state<Record<string, boolean>>({});
 
 	/** Show the clip to a model that can see, and put the next attempt on a card.
 	 *
@@ -1180,6 +1185,7 @@
 				}).catch(() => {});
 			}
 			pushItem({ who: 'studio', kind: 'shot', shot: r.shot });
+			diagnosed[workspace] = true;
 			persist();
 		} catch (e) {
 			pushError(`the diagnosis failed — ${e}`);
@@ -3252,13 +3258,14 @@
 												<span>looking at the clip and writing the fix</span>
 											</span>
 										{:else}
-											<span class="text-xs text-[var(--st-faint)]"
-												>noted — the next attempt is below.</span
-											>
+											<span class="text-xs text-[var(--st-faint)]">
+												{diagnosed[ws] ? 'noted — the next attempt is below.' : 'noted.'}
+											</span>
 											<button
 												type="button"
 												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-												onclick={() => diagnose(ws)}>look again</button
+												onclick={() => diagnose(ws)}
+												>{diagnosed[ws] ? 'look again' : 'work out why'}</button
 											>
 										{/if}
 									</div>
