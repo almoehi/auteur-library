@@ -932,17 +932,27 @@
 
 	/** Frame size, as three named steps rather than a pair of numbers.
 	 *
-	 *  Both sides have to divide by 32 — the workflow requires it — which is why
-	 *  these are not the round figures the names suggest: 720p is 1280x704, not
-	 *  1280x720. The names are what you think in; the numbers are what renders.
+	 *  Two constraints, and together they leave far fewer sizes than either does
+	 *  alone. Both sides must divide by 32, which the workflow requires. And the
+	 *  ratio must be one the harness recognises — it validates the profile
+	 *  against a fixed list and rejects the workspace outright otherwise:
 	 *
-	 *  The cost is pixels and pixels are render time. 720p is 1.5x the area of
-	 *  the middle step, and the middle step is what every clip so far was made
-	 *  at, so it stays the default. */
+	 *    480x832 is not a supported aspect ratio (expected one of: 1:1, 16:9,
+	 *    9:16, 4:3, 3:4, 3:2, 2:3, 21:9)
+	 *
+	 *  A first attempt at this offered 480p and 720p at 832x480 and 1280x704,
+	 *  which divide by 32 and are not 16:9 — 1.733 and 1.818 against 1.778 — so
+	 *  both were refused before a GPU was touched. Between 256 and 1920 there are
+	 *  exactly three 16:9 sizes whose sides both divide by 32, and these are they.
+	 *
+	 *  Named for the short edge, which is what they actually are. The steps are
+	 *  wide apart because that is where the arithmetic put them: a quarter of the
+	 *  pixels, the middle, and two and a quarter times. 576p stays the default —
+	 *  every clip so far was made at it. */
 	const RESOLUTIONS = {
-		'480p': { long: 832, short: 480 },
+		'288p': { long: 512, short: 288 },
 		'576p': { long: 1024, short: 576 },
-		'720p': { long: 1280, short: 704 }
+		'864p': { long: 1536, short: 864 }
 	} as const;
 	type ResKey = keyof typeof RESOLUTIONS;
 	const RES_KEYS = Object.keys(RESOLUTIONS) as ResKey[];
