@@ -334,7 +334,7 @@
       "lora_2": {
         "on": true,
         "lora": "MINIMAX\\PlagueKind-tiddies-realismslider.safetensors",
-        "strength": 1.9
+        "strength": 1.6
       },
       "\u2795 Add Lora": ""
     },
