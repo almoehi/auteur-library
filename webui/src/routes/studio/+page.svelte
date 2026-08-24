@@ -1136,6 +1136,27 @@
 	}
 
 	let diagnosing = $state<Record<string, boolean>>({});
+
+	/** Put back the verdicts already given, from the log that has them.
+	 *
+	 *  They were held only in this tab, so a reload lost them and offered the same
+	 *  clip for rating a second time. The log is the record; the page was keeping
+	 *  a private copy and losing it. Failures are ignored on purpose — a studio
+	 *  that will not load because the verdict history did not is a bad trade for a
+	 *  row of buttons. */
+	async function loadVerdicts() {
+		try {
+			const res = await fetch('/studio/api/renders?limit=200');
+			const { rows } = (await res.json()) as {
+				rows: { workspace: string; outcome?: string; note?: string }[];
+			};
+			for (const r of rows ?? []) {
+				if (r.outcome === 'kept' || r.outcome === 'rejected') verdict[r.workspace] = r.outcome;
+			}
+		} catch {
+			// see above
+		}
+	}
 	/** Set only once a replacement card actually exists. The card used to announce
 	 *  "the next attempt is below" from the verdict alone, which is a sentence
 	 *  that reads as a fact and was not one — a diagnosis interrupted mid-flight
@@ -2184,6 +2205,7 @@
 		// this tab — so the composer has to ask for them rather than assume none.
 		void loadRefFiles();
 		void loadHistory();
+		void loadVerdicts();
 
 		// A run left behind by a reload picks up where it was: the run identity is
 		// restored and the poller re-attaches. Document and clip items rebuild
