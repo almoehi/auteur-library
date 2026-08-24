@@ -245,6 +245,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// workflow graph from this address and runs it, so the browser does not
 		// get a say in where that address points.
 		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
+		// Counted here, before openWorkspace imports them — the import clears the
+		// staging area, so afterwards there is nothing left to count. Server-side
+		// for the same reason as the origin: it decides what graph gets built.
+		spec.refImages = listRefs().length;
 		let directYaml: string;
 		try {
 			directYaml = composeDirectWorkspace(spec, grokKey);

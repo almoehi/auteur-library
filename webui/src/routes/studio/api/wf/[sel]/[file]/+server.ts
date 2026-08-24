@@ -23,7 +23,15 @@ import { error, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BASE, loraFor, parseBaseOverrides, parsePicks, type Lora, type Pick } from '../../../../loras';
+import {
+	BASE,
+	loraFor,
+	parseBaseOverrides,
+	parsePicks,
+	parseRefCount,
+	type Lora,
+	type Pick
+} from '../../../../loras';
 
 const BUNDLE = 'minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit';
 
@@ -61,7 +69,73 @@ function stack(picks: Pick[], baseAt: Record<string, number> = {}): { lora: Lora
 	return out;
 }
 
-function buildJson(entries: { lora: Lora; strength: number }[]): string {
+/** Reference-to-video, grafted in only when a clip actually has references.
+ *
+ *  The model does this natively — MiniMaxH3ReferenceToVideo takes up to nine
+ *  reference images and the prompt addresses them as <Picture i> — but the API
+ *  export this bundle was built from kept only the text-to-video branch, so the
+ *  node has never been in our graph. Everything it needs is: clip, vae,
+ *  audio_vae, prompt, width, height and length all already exist and are the
+ *  same sources the image-to-video node uses.
+ *
+ *  Nothing here runs for a clip without references. That is the whole safety
+ *  argument: with none attached the graph is byte-identical to what it was, so
+ *  if this turns out to be wrong there is nothing to roll back — you just do not
+ *  attach a picture. Removing it for good is deleting this function and its one
+ *  call site.
+ *
+ *  Field names come from comfy_extras/nodes_minimax_h3.py rather than from
+ *  reading the UI export's widget order, which is positional and would have been
+ *  a guess. ref_image_size is the one that is easy to miss: "match" scales each
+ *  reference to the generation's pixel area, "max" uses a 2048px short edge for
+ *  better identity at several times the cost. Identity is the entire point of
+ *  attaching a face, so this takes "max".
+ */
+const REF_NODE = '136';
+
+function addReferencePath(
+	graph: Record<string, { class_type?: string; inputs?: Record<string, unknown> }>,
+	count: number
+): void {
+	if (count < 1) return;
+
+	const refs: Record<string, unknown> = {};
+	for (let i = 0; i < count; i++) {
+		const id = `ref_${i}`;
+		// A plain LoadImage: the reference node downscales for itself, so the
+		// crop-and-resize loader the original export used buys nothing here, and
+		// core nodes are the ones whose API shape is not in doubt. The filename is
+		// what the harness swaps for the uploaded file.
+		graph[id] = { class_type: 'LoadImage', inputs: { image: `${id}.png` } };
+		refs[`ref_images.ref_image_${i}`] = [id, 0];
+	}
+
+	graph[REF_NODE] = {
+		class_type: 'MiniMaxH3ReferenceToVideo',
+		inputs: {
+			clip: ['128', 0],
+			vae: ['119', 0],
+			audio_vae: ['120', 0],
+			prompt: ['138', 0],
+			width: ['wh_width', 0],
+			height: ['wh_height', 0],
+			length: ['131', 1],
+			ref_image_size: 'max',
+			...refs
+		}
+	};
+
+	// Into the same two switch slots the image-to-video node occupies, which is
+	// where the original export sent them: conditioning to 648, latent to 682.
+	// rgthree's Any Switch takes the first non-null, so this wins over the
+	// text-only path without that path having to be removed.
+	const cond = graph['648']?.inputs;
+	const latent = graph['682']?.inputs;
+	if (cond) cond.any_01 = [REF_NODE, 0];
+	if (latent) latent.any_01 = [REF_NODE, 1];
+}
+
+function buildJson(entries: { lora: Lora; strength: number }[], refCount = 0): string {
 	const graph = JSON.parse(readFileSync(basePath('workflow.json'), 'utf8')) as Record<
 		string,
 		{ class_type?: string; inputs?: Record<string, unknown> }
@@ -83,6 +157,7 @@ function buildJson(entries: { lora: Lora; strength: number }[]): string {
 			strength: e.strength
 		};
 	});
+	addReferencePath(graph, refCount);
 	return JSON.stringify(graph, null, 2);
 }
 
@@ -124,7 +199,27 @@ const CLOSE = '  # <</LORAS>>';
  *  the only thing that failed. Two adapter stacks now differ by URL alone, and
  *  since every run opens a fresh workspace there is nothing for a stale bundle
  *  to persist into. */
-function buildYaml(entries: { lora: Lora; strength: number }[]): string {
+/** The image ports, declared only when there are references to fill them.
+ *
+ *  Same shape the iamcs_wan22_svi bundle in this repo already uses — kind:
+ *  image, binding slot@nodeId — which is the only worked example of an image
+ *  input anywhere here, so it is the one to copy rather than invent from. */
+function inputsBlock(count: number): string {
+	if (count < 1) return '';
+	const rows = ['  inputs:'];
+	for (let i = 0; i < count; i++) {
+		rows.push(
+			`    - name: reference_image_${i + 1}`,
+			`      kind: image`,
+			`      description: "Reference image ${i + 1}. The prompt addresses it as <Picture ${i + 1}>."`,
+			`      binding: image@ref_${i}`,
+			`      required: true`
+		);
+	}
+	return rows.join('\n') + '\n';
+}
+
+function buildYaml(entries: { lora: Lora; strength: number }[], refCount = 0): string {
 	const src = readFileSync(basePath('workflow.yaml'), 'utf8');
 	const a = src.indexOf(OPEN);
 	const b = src.indexOf(CLOSE);
@@ -136,18 +231,23 @@ function buildYaml(entries: { lora: Lora; strength: number }[]): string {
 	const body =
 		`  # Generated for one clip. Edit webui/src/routes/studio/loras.ts, not this.\n` +
 		modelBlock(entries);
-	return head + body + tail;
+	const out = head + body + tail;
+	// The ports block already exists in the base file with only params under it;
+	// the image inputs are spliced in ahead of them so the two sit together.
+	const ins = inputsBlock(refCount);
+	return ins ? out.replace(/^ports:\n/m, `ports:\n${ins}`) : out;
 }
 
 export const GET: RequestHandler = async ({ params }) => {
 	const sel = params.sel ?? '';
 	const entries = stack(parsePicks(sel), parseBaseOverrides(sel));
+	const refCount = parseRefCount(sel);
 
 	if (params.file === 'workflow.json') {
-		return text(buildJson(entries), { headers: { 'content-type': 'application/json' } });
+		return text(buildJson(entries, refCount), { headers: { 'content-type': 'application/json' } });
 	}
 	if (params.file === 'workflow.yaml' || params.file === 'workflow.yml') {
-		return text(buildYaml(entries), { headers: { 'content-type': 'text/yaml' } });
+		return text(buildYaml(entries, refCount), { headers: { 'content-type': 'text/yaml' } });
 	}
 	throw error(404, 'a bundle is workflow.yaml and workflow.json, nothing else');
 };

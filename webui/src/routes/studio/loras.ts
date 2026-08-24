@@ -326,6 +326,20 @@ export function parseBaseOverrides(seg: string): Record<string, number> {
 	return out;
 }
 
+/** How many reference images this clip was launched with.
+ *
+ *  Carried in the same path segment as everything else, as `ref-<n>`, and read
+ *  separately for the same reason the base strengths are: it is not a pick and
+ *  must never occupy a pick slot. Zero means the bundle is built exactly as it
+ *  was before any of this existed. */
+export function parseRefCount(seg: string): number {
+	for (const raw of decodeURIComponent(seg).split(',')) {
+		const m = /^ref-(\d+)$/.exec(raw.trim());
+		if (m) return Math.min(9, Math.max(0, Number(m[1])));
+	}
+	return 0;
+}
+
 export function formatPicks(picks: Pick[]): string {
 	return picks.map((p) => `${p.key}-${p.strength}`).join(',');
 }

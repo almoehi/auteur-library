@@ -1102,6 +1102,9 @@ export interface DirectSpec {
 	loras?: Pick[];
 	/** Per-clip strengths for the always-loaded adapters, where you moved one. */
 	baseLoras?: Record<string, number>;
+	/** How many reference images were staged for this clip. Zero builds exactly
+	 *  the graph that existed before references were possible. */
+	refImages?: number;
 	/** What the writer chose before anyone touched the card, and what you typed
 	 *  to get it. Neither reaches the workspace — they are here so the launch can
 	 *  write down what was tried, and so a card you corrected is recorded as a
@@ -1136,7 +1139,8 @@ export function directWorkspaceId(spec: DirectSpec): string {
 function directWorkflows(
 	origin: string,
 	picks: Pick[],
-	baseAt: Record<string, number>
+	baseAt: Record<string, number>,
+	refs: number
 ): string {
 	// Only the picks. The pair every clip loads is added by the endpoint that
 	// builds the bundle, and naming it here as well was not merely redundant: the
@@ -1149,9 +1153,10 @@ function directWorkflows(
 	// The base adapters travel too, carrying their strengths. They cannot be
 	// mistaken for picks — the parser refuses base keys on that side — so this is
 	// a number for each, never a slot.
-	const sel =
-		formatPicks([...BASE.map((l) => ({ key: l.key, strength: baseAt[l.key] ?? l.strength })), ...picks]) ||
-		'base';
+	const base = BASE.map((l) => ({ key: l.key, strength: baseAt[l.key] ?? l.strength }));
+	// `ref-<n>` rides in the same segment. It is not a pick and the parser that
+	// reads picks ignores it, so it cannot take a slot from an adapter.
+	const sel = [formatPicks([...base, ...picks]), refs > 0 ? `ref-${refs}` : ''].filter(Boolean).join(',') || 'base';
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml`;
@@ -1213,6 +1218,14 @@ const DIRECT_AGENT = (model: string) => `    generic:
         prompt_positive set to the prompt text given in the task, character for
         character, and video_length set to the seconds the task names. Resolution,
         fps and steps come from the render profile — do not pass your own.
+
+        When the task names reference images, the workflow has one image port per
+        reference. Call artifact_index to find the user_reference_material
+        artifact, get_artifact_url for each file in it, and pass those URLs to
+        the reference_image_1, reference_image_2 … parameters in the order the
+        task lists them. The prompt already refers to them as <Picture 1>,
+        <Picture 2> and so on, so the order is what makes those tags land on the
+        right face.
 
         Then save the returned mp4 to the exact filename the task declares and
         call task_complete. If the tool saved to a different path, call it again
@@ -1283,7 +1296,7 @@ spec:
   skills:
     - workflow-render-loop@mvp-lkg
 
-${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {})}
+${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refImages ?? 0)}
 
 ${directProfiles(spec)}
 
