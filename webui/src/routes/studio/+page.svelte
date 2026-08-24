@@ -930,14 +930,70 @@
 		return r.shot;
 	}
 
+	/** Frame size, as three named steps rather than a pair of numbers.
+	 *
+	 *  Both sides have to divide by 32 — the workflow requires it — which is why
+	 *  these are not the round figures the names suggest: 720p is 1280x704, not
+	 *  1280x720. The names are what you think in; the numbers are what renders.
+	 *
+	 *  The cost is pixels and pixels are render time. 720p is 1.5x the area of
+	 *  the middle step, and the middle step is what every clip so far was made
+	 *  at, so it stays the default. */
+	const RESOLUTIONS = {
+		'480p': { long: 832, short: 480 },
+		'576p': { long: 1024, short: 576 },
+		'720p': { long: 1280, short: 704 }
+	} as const;
+	type ResKey = keyof typeof RESOLUTIONS;
+	const RES_KEYS = Object.keys(RESOLUTIONS) as ResKey[];
+
+	function frameFor(res: ResKey, orientation: 'portrait' | 'landscape') {
+		const { long, short } = RESOLUTIONS[res] ?? RESOLUTIONS['576p'];
+		return orientation === 'portrait'
+			? { width: short, height: long }
+			: { width: long, height: short };
+	}
+
+	/** What the composer is set to for the next clip.
+	 *
+	 *  These used to exist only on the card, which meant the writer produced a
+	 *  brief at whatever it felt like and changing the length or the frame threw
+	 *  that brief away and asked for another — the beats are derived from the
+	 *  duration and the camera language from the shape, so a change there is a
+	 *  rewrite, not a relabel. Setting them before you send spends one call
+	 *  instead of two.
+	 *
+	 *  Kept across reloads: these are how you work, not what this clip is. */
+	const SETUP_KEY = 'auteur-studio-setup';
+	let wantSeconds = $state(8);
+	let wantOrientation = $state<'portrait' | 'landscape'>('portrait');
+	let wantRes = $state<ResKey>('576p');
+
+	function saveSetup() {
+		try {
+			localStorage.setItem(
+				SETUP_KEY,
+				JSON.stringify({ s: wantSeconds, o: wantOrientation, r: wantRes })
+			);
+		} catch {
+			/* a preference that will not persist is not worth an error */
+		}
+	}
+
 	/** What the user typed, kept so a rewrite asks for the same scene again rather
 	 *  than editing the prompt the model last produced. */
 	let lastRequest = $state('');
 
 	async function shotFromRequest(request: string) {
-		const shot = await callShotPrompt(request);
+		// Pinned from the composer, so the brief arrives written for this length
+		// and this frame rather than being rewritten into them afterwards.
+		const shot = await callShotPrompt(request, {
+			seconds: wantSeconds,
+			orientation: wantOrientation
+		});
 		if (!shot) return;
 		lastRequest = request;
+		shot.resolution = wantRes;
 		pushItem({ who: 'studio', kind: 'shot', shot });
 	}
 
@@ -977,8 +1033,7 @@
 			title: lastRequest.slice(0, 60) || 'Direct render',
 			prompts: [shot.prompt],
 			seconds: shot.seconds,
-			width: shot.orientation === 'portrait' ? 576 : 1024,
-			height: shot.orientation === 'portrait' ? 1024 : 576,
+			...frameFor((shot.resolution as ResKey) ?? wantRes, shot.orientation),
 			seed: Math.floor(Math.random() * 1_000_000_000),
 			loras: shot.loras ?? [],
 			baseLoras: shot.baseLoras ?? {},
@@ -1036,8 +1091,21 @@
 		try {
 			const shot = await callShotPrompt(lastRequest || item.shot.prompt, pin);
 			if (!shot) return;
+			// The frame size and any adapter strengths you had moved survive the
+			// rewrite. Only the brief is being written again; the settings around it
+			// were your decisions and losing them silently is how a rewrite turns
+			// into a step backwards.
 			superseded[itemId] = true;
-			pushItem({ who: 'studio', kind: 'shot', shot: { ...shot, ...pin } });
+			pushItem({
+				who: 'studio',
+				kind: 'shot',
+				shot: {
+					...shot,
+					...pin,
+					resolution: item.shot.resolution ?? wantRes,
+					baseLoras: item.shot.baseLoras
+				}
+			});
 		} finally {
 			shotBusy[itemId] = false;
 		}
@@ -2311,6 +2379,17 @@
 		void loadRefFiles();
 		void loadHistory();
 		void loadVerdicts();
+		try {
+			const raw = localStorage.getItem(SETUP_KEY);
+			if (raw) {
+				const v = JSON.parse(raw) as { s?: number; o?: string; r?: string };
+				if (typeof v.s === 'number' && v.s >= 4 && v.s <= 15) wantSeconds = v.s;
+				if (v.o === 'portrait' || v.o === 'landscape') wantOrientation = v.o;
+				if (v.r && v.r in RESOLUTIONS) wantRes = v.r as ResKey;
+			}
+		} catch {
+			/* a preference that will not load is not worth an error */
+		}
 
 		// A run left behind by a reload picks up where it was: the run identity is
 		// restored and the poller re-attaches. Document and clip items rebuild
@@ -3194,6 +3273,25 @@
 											{/each}
 										</div>
 										<div class="flex items-center gap-1.5">
+											<!-- Unlike seconds and frame shape, this changes no words in
+												 the brief, so it is set in place and costs no rewrite. -->
+											<span class="mr-1 text-xs text-[var(--st-faint)]">size</span>
+											{#each RES_KEYS as r (r)}
+												{@const f = frameFor(r, item.shot.orientation)}
+												<button
+													type="button"
+													title="{f.width}x{f.height}"
+													class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {(item
+														.shot.resolution ?? '576p') === r
+														? 'bg-[var(--st-accent)] font-semibold text-white'
+														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+													onclick={() => {
+														if (item.shot) item.shot.resolution = r;
+													}}>{r}</button
+												>
+											{/each}
+										</div>
+										<div class="flex items-center gap-1.5">
 											<span class="mr-1 text-xs text-[var(--st-faint)]">frame</span>
 											{#each [['portrait', 'portrait'], ['landscape', 'landscape']] as [val, label] (val)}
 												<button
@@ -3662,7 +3760,66 @@
 
 						<div class="flex items-center justify-between gap-3 px-2 pt-1 pb-1">
 							{#if !planningWs}
-								<div class="flex items-center gap-1.5">
+								<div class="flex flex-wrap items-center gap-1.5">
+									<!-- Length, frame and size, set before the brief is written rather
+										 than after it. The first two used to live only on the card,
+										 where changing either threw the brief away and asked for
+										 another: the beats come from the duration and the camera
+										 language from the shape, so a change there is a rewrite. Set
+										 here they cost nothing, because the writer is told first. -->
+									{#if mode === 'simple'}
+										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+											{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
+												<button
+													type="button"
+													title="clip length in seconds"
+													class="cursor-pointer rounded-full px-2 py-1 text-xs tabular-nums transition-colors {wantSeconds ===
+													sec
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+													onclick={() => {
+														wantSeconds = sec;
+														saveSetup();
+													}}>{sec}s</button
+												>
+											{/each}
+										</div>
+
+										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+											{#each RES_KEYS as r (r)}
+												{@const f = frameFor(r, wantOrientation)}
+												<button
+													type="button"
+													title="{f.width}x{f.height} — bigger frames cost render time"
+													class="cursor-pointer rounded-full px-2 py-1 text-xs tabular-nums transition-colors {wantRes ===
+													r
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+													onclick={() => {
+														wantRes = r;
+														saveSetup();
+													}}>{r}</button
+												>
+											{/each}
+										</div>
+
+										<button
+											type="button"
+											title={wantOrientation === 'portrait' ? 'portrait — tap for landscape' : 'landscape — tap for portrait'}
+											class="flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-bg)] px-2.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+											onclick={() => {
+												wantOrientation = wantOrientation === 'portrait' ? 'landscape' : 'portrait';
+												saveSetup();
+											}}
+										>
+											<span
+												class="block rounded-[2px] border border-current {wantOrientation === 'portrait'
+													? 'h-3 w-2'
+													: 'h-2 w-3'}"
+											></span>
+											<span class="tabular-nums">{wantOrientation === 'portrait' ? '9:16' : '16:9'}</span>
+										</button>
+									{/if}
 									<label
 										title="Attach a face, a room, a movement for the render to copy"
 										class="mr-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"

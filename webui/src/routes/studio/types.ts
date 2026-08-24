@@ -133,6 +133,10 @@ export interface ChatItem {
 		/** Strengths for the always-loaded adapters, where you moved one on this
 		 *  card. Absent keys use the catalogue's figure. */
 		baseLoras?: Record<string, number>;
+		/** Frame size step — '480p', '576p' or '720p'. Unlike the length and the
+		 *  frame shape this does not change a word of the brief, so moving it
+		 *  never costs a rewrite. */
+		resolution?: string;
 		/** The same list as the writer first returned it, kept untouched while
 		 *  `loras` is edited. The two are compared at launch: where they differ,
 		 *  a person disagreed with the writer, and that is the only free quality
