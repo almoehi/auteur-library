@@ -27,7 +27,8 @@ import { SLUG_RE, type Brief } from '../../types';
 import { readOverrides } from '../../overrides.server';
 import { loadLibraryInto, type LoadReport } from '../../harness.server';
 import { importStagedRefs, type RefImportResult } from '../../refs-import.server';
-import { listRefs } from '../../refs.server';
+import { listRefs, readRef } from '../../refs.server';
+import { pruneStashes, stashRefs } from '../../refstash.server';
 import { recordRender } from '../../renders.server';
 import { recordProduction } from '../../history.server';
 import {
@@ -245,10 +246,16 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// workflow graph from this address and runs it, so the browser does not
 		// get a say in where that address points.
 		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
-		// Counted here, before openWorkspace imports them — the import clears the
-		// staging area, so afterwards there is nothing left to count. Server-side
-		// for the same reason as the origin: it decides what graph gets built.
-		spec.refImages = listRefs().length;
+		// Copied here, before openWorkspace imports them — the import clears the
+		// staging area, and the bundle generator needs these files minutes later
+		// when the harness asks for the graph. Server-side for the same reason as
+		// the origin: it decides what gets rendered.
+		const staged = listRefs();
+		const bytes = staged
+			.map((r) => ({ bytes: readRef(r.stored), name: r.name }))
+			.filter((f): f is { bytes: Buffer; name: string } => !!f.bytes);
+		spec.refImages = stashRefs(spec.slug, bytes).length;
+		pruneStashes();
 		let directYaml: string;
 		try {
 			directYaml = composeDirectWorkspace(spec, grokKey);

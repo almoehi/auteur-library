@@ -340,6 +340,19 @@ export function parseRefCount(seg: string): number {
 	return 0;
 }
 
+/** The run this bundle belongs to, as `run-<slug>`.
+ *
+ *  Needed because the reference images are served from the same directory the
+ *  bundle is, and the generator has to know whose they are. Parsed with its own
+ *  pattern rather than the pair-splitter, since a slug is full of dashes. */
+export function parseRunSlug(seg: string): string {
+	for (const raw of decodeURIComponent(seg).split(',')) {
+		const m = /^run-([a-z0-9-]{4,80})$/.exec(raw.trim());
+		if (m) return m[1];
+	}
+	return '';
+}
+
 export function formatPicks(picks: Pick[]): string {
 	return picks.map((p) => `${p.key}-${p.strength}`).join(',');
 }

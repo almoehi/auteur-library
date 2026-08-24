@@ -1130,13 +1130,12 @@ export interface DirectSpec {
  *  has always been. */
 function refClause(count: number): string {
 	if (count < 1) return '';
+	// Informational only. The images are wired into the graph as bundle assets,
+	// so the agent has nothing to do about them — but a task that renders with
+	// three faces and never mentions them reads as a mistake to anyone looking.
 	return `
-        This clip has ${count} reference image${count > 1 ? 's' : ''}. They are the
-        files in the user_reference_material artifact. Call artifact_index to
-        find it, get_artifact_url for each file, and pass those URLs to
-        reference_image_1${count > 1 ? ` … reference_image_${count}` : ''} in the
-        order artifact_index lists them — that order is what decides which face
-        each <Picture n> tag in the prompt refers to.
+        This clip renders with ${count} reference image${count > 1 ? 's' : ''}, already wired into
+        the workflow. You do not need to pass them; call the tool as usual.
 `;
 }
 
@@ -1163,7 +1162,8 @@ function directWorkflows(
 	origin: string,
 	picks: Pick[],
 	baseAt: Record<string, number>,
-	refs: number
+	refs: number,
+	slug: string
 ): string {
 	// Only the picks. The pair every clip loads is added by the endpoint that
 	// builds the bundle, and naming it here as well was not merely redundant: the
@@ -1179,7 +1179,12 @@ function directWorkflows(
 	const base = BASE.map((l) => ({ key: l.key, strength: baseAt[l.key] ?? l.strength }));
 	// `ref-<n>` rides in the same segment. It is not a pick and the parser that
 	// reads picks ignores it, so it cannot take a slot from an adapter.
-	const sel = [formatPicks([...base, ...picks]), refs > 0 ? `ref-${refs}` : ''].filter(Boolean).join(',') || 'base';
+	// `run-<slug>` rather than a count: the generator serves this clip's
+	// reference images from the same directory it serves the bundle from, so it
+	// needs to know whose they are, not merely how many.
+	const sel =
+		[formatPicks([...base, ...picks]), refs > 0 ? `run-${slug}` : ''].filter(Boolean).join(',') ||
+		'base';
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml`;
@@ -1241,14 +1246,6 @@ const DIRECT_AGENT = (model: string) => `    generic:
         prompt_positive set to the prompt text given in the task, character for
         character, and video_length set to the seconds the task names. Resolution,
         fps and steps come from the render profile — do not pass your own.
-
-        When the task names reference images, the workflow has one image port per
-        reference. Call artifact_index to find the user_reference_material
-        artifact, get_artifact_url for each file in it, and pass those URLs to
-        the reference_image_1, reference_image_2 … parameters in the order the
-        task lists them. The prompt already refers to them as <Picture 1>,
-        <Picture 2> and so on, so the order is what makes those tags land on the
-        right face.
 
         Then save the returned mp4 to the exact filename the task declares and
         call task_complete. If the tool saved to a different path, call it again
@@ -1319,7 +1316,7 @@ spec:
   skills:
     - workflow-render-loop@mvp-lkg
 
-${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refImages ?? 0)}
+${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refImages ?? 0, spec.slug)}
 
 ${directProfiles(spec)}
 

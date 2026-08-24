@@ -20,6 +20,7 @@
  *  now names that host explicitly.
  */
 import { error, text } from '@sveltejs/kit';
+import { contentTypeFor, readStashed, stashedNames } from '../../../../refstash.server';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -28,7 +29,7 @@ import {
 	loraFor,
 	parseBaseOverrides,
 	parsePicks,
-	parseRefCount,
+	parseRunSlug,
 	type Lora,
 	type Pick
 } from '../../../../loras';
@@ -95,20 +96,24 @@ const REF_NODE = '136';
 
 function addReferencePath(
 	graph: Record<string, { class_type?: string; inputs?: Record<string, unknown> }>,
-	count: number
+	assets: string[]
 ): void {
-	if (count < 1) return;
+	if (!assets.length) return;
 
 	const refs: Record<string, unknown> = {};
-	for (let i = 0; i < count; i++) {
+	assets.forEach((base, i) => {
 		const id = `ref_${i}`;
 		// A plain LoadImage: the reference node downscales for itself, so the
 		// crop-and-resize loader the original export used buys nothing here, and
-		// core nodes are the ones whose API shape is not in doubt. The filename is
-		// what the harness swaps for the uploaded file.
-		graph[id] = { class_type: 'LoadImage', inputs: { image: `${id}.png` } };
+		// core nodes are the ones whose API shape is not in doubt.
+		//
+		// The filename is the asset basename, and that is the whole mechanism:
+		// the harness scans the graph for strings matching a name in the bundle's
+		// `assets` list and replaces each one with a URL it can serve. Nothing
+		// else has to carry the image — no port, no agent, no artifact.
+		graph[id] = { class_type: 'LoadImage', inputs: { image: base } };
 		refs[`ref_images.ref_image_${i}`] = [id, 0];
-	}
+	});
 
 	graph[REF_NODE] = {
 		class_type: 'MiniMaxH3ReferenceToVideo',
@@ -135,7 +140,7 @@ function addReferencePath(
 	if (latent) latent.any_01 = [REF_NODE, 1];
 }
 
-function buildJson(entries: { lora: Lora; strength: number }[], refCount = 0): string {
+function buildJson(entries: { lora: Lora; strength: number }[], assets: string[] = []): string {
 	const graph = JSON.parse(readFileSync(basePath('workflow.json'), 'utf8')) as Record<
 		string,
 		{ class_type?: string; inputs?: Record<string, unknown> }
@@ -157,7 +162,7 @@ function buildJson(entries: { lora: Lora; strength: number }[], refCount = 0): s
 			strength: e.strength
 		};
 	});
-	addReferencePath(graph, refCount);
+	addReferencePath(graph, assets);
 	return JSON.stringify(graph, null, 2);
 }
 
@@ -199,27 +204,25 @@ const CLOSE = '  # <</LORAS>>';
  *  the only thing that failed. Two adapter stacks now differ by URL alone, and
  *  since every run opens a fresh workspace there is nothing for a stale bundle
  *  to persist into. */
-/** The image ports, declared only when there are references to fill them.
+/** The reference images, declared as bundle assets.
  *
- *  Same shape the iamcs_wan22_svi bundle in this repo already uses — kind:
- *  image, binding slot@nodeId — which is the only worked example of an image
- *  input anywhere here, so it is the one to copy rather than invent from. */
-function inputsBlock(count: number): string {
-	if (count < 1) return '';
-	const rows = ['  inputs:'];
-	for (let i = 0; i < count; i++) {
-		rows.push(
-			`    - name: reference_image_${i + 1}`,
-			`      kind: image`,
-			`      description: "Reference image ${i + 1}. The prompt addresses it as <Picture ${i + 1}>."`,
-			`      binding: image@ref_${i}`,
-			`      required: true`
-		);
-	}
-	return rows.join('\n') + '\n';
+ *  This replaces an earlier attempt that declared them as `ports.inputs` of
+ *  kind image and left the worker agent to find the uploaded artifact and pass
+ *  URLs. The agent did its half correctly — it located the files unprompted —
+ *  and the render still died on a 404 fetching them from the exchange bucket.
+ *
+ *  Assets are the mechanism the guide actually describes for getting a static
+ *  file into a graph: the harness fetches each basename from the directory the
+ *  workflow JSON came from, which is this endpoint, and substitutes a URL for
+ *  every string in the graph that matches. That removes both things that
+ *  failed — no artifact URL, and no agent in the path.
+ */
+function assetsBlock(assets: string[]): string {
+	if (!assets.length) return '';
+	return ['assets:', ...assets.map((a) => `  - ${a}`)].join('\n') + '\n';
 }
 
-function buildYaml(entries: { lora: Lora; strength: number }[], refCount = 0): string {
+function buildYaml(entries: { lora: Lora; strength: number }[], assets: string[] = []): string {
 	const src = readFileSync(basePath('workflow.yaml'), 'utf8');
 	const a = src.indexOf(OPEN);
 	const b = src.indexOf(CLOSE);
@@ -232,22 +235,34 @@ function buildYaml(entries: { lora: Lora; strength: number }[], refCount = 0): s
 		`  # Generated for one clip. Edit webui/src/routes/studio/loras.ts, not this.\n` +
 		modelBlock(entries);
 	const out = head + body + tail;
-	// The ports block already exists in the base file with only params under it;
-	// the image inputs are spliced in ahead of them so the two sit together.
-	const ins = inputsBlock(refCount);
-	return ins ? out.replace(/^ports:\n/m, `ports:\n${ins}`) : out;
+	// Ahead of `ports:`, at the top level — assets are a sibling of ports and
+	// models, not a member of either.
+	const block = assetsBlock(assets);
+	return block ? out.replace(/^ports:/m, `${block}\nports:`) : out;
 }
 
 export const GET: RequestHandler = async ({ params }) => {
 	const sel = params.sel ?? '';
+	const slug = parseRunSlug(sel);
+	const assets = slug ? stashedNames(slug) : [];
+
+	// The images sit beside the bundle because that is where the harness looks
+	// for an asset: the directory the workflow JSON came from.
+	if (slug && /^ref_\d+\./.test(params.file ?? '')) {
+		const bytes = readStashed(slug, params.file);
+		if (!bytes) throw error(404, 'no such reference image for this run');
+		return new Response(new Uint8Array(bytes), {
+			headers: { 'content-type': contentTypeFor(params.file), 'content-length': String(bytes.length) }
+		});
+	}
+
 	const entries = stack(parsePicks(sel), parseBaseOverrides(sel));
-	const refCount = parseRefCount(sel);
 
 	if (params.file === 'workflow.json') {
-		return text(buildJson(entries, refCount), { headers: { 'content-type': 'application/json' } });
+		return text(buildJson(entries, assets), { headers: { 'content-type': 'application/json' } });
 	}
 	if (params.file === 'workflow.yaml' || params.file === 'workflow.yml') {
-		return text(buildYaml(entries, refCount), { headers: { 'content-type': 'text/yaml' } });
+		return text(buildYaml(entries, assets), { headers: { 'content-type': 'text/yaml' } });
 	}
-	throw error(404, 'a bundle is workflow.yaml and workflow.json, nothing else');
+	throw error(404, 'a bundle is workflow.yaml, workflow.json and its reference images');
 };
