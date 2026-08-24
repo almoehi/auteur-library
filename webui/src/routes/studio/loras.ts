@@ -294,10 +294,13 @@ moaning is the point needs the moaning one. A detail that is merely true of the
 frame is not worth an adapter slot, and adding it costs something real.
 
 The two anatomy detailers are the ones to be most careful with. They draw a
-small region of the frame very hard, and every clip so far that carried one came
-back with that region incoherent — a penetration rendered as one fused mass
-rather than a shaft and an opening. Take one only when that anatomy is what the
-frame is built around, and never both: they draw the same pixels and disagree.
+small region of the frame very hard, and on a penetration shot that is enough to
+wreck it: the same POV missionary brief rendered as one fused mass with the
+penis detailer loaded, and correctly — a shaft entering an opening — with the
+act adapter alone. Tested both ways, twice broken and then fixed by removing it.
+
+Take one only when that anatomy is what the frame is built around, and never
+both: they draw the same pixels and disagree.
 
 Where a shot shows a join — penetration, a mouth on a cock — the act adapter
 already knows how the parts meet. Adding a detailer on top of it is the case
