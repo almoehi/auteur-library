@@ -171,13 +171,21 @@ export const CATALOGUE: Lora[] = [
 	},
 	{
 		key: 'cum',
-		label: 'Cumshot (CoachBate)',
-		file: 'MiniMax-H3_cum_coachbate_v1_07000.safetensors',
-		url: 'https://civitai.com/api/download/models/3207014?fileId=3099046',
-		sha256: '0d30b04818137f199085c82258ec200610002cfd9d1f1ce1d3375dee7cea6520',
+		label: 'HMCumshot V2',
+		file: 'HMCumshot_V2.safetensors',
+		// CoachBate's cumshot adapter was here and had to go: civitai answers 403
+		// for both of its files, with a valid token that every other entry in this
+		// list downloads with, and no availability or early-access flag in the API
+		// to explain it. A clip that picked it did not fail fast either — the
+		// download retried for seventeen minutes before the run gave up.
+		//
+		// This one is from the same author as aio, pussy and penis, so it is built
+		// to sit alongside them rather than argue with them.
+		url: 'https://civitai.com/api/download/models/3238531?fileId=3121030',
+		sha256: '1a5b7948bb97f27737e62c3dd5497a3afb77517f230787f45e45c7d8fe3dc24d',
 		strength: 0.8,
-		trigger: 'CBL0ADZ',
-		use: 'the shot ends in ejaculation',
+		trigger: 'cumshot',
+		use: 'the shot ends in ejaculation and that ending is the point',
 		kind: 'detail'
 	},
 	{
