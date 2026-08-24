@@ -1086,6 +1086,52 @@
 		}).catch(() => {});
 	}
 
+	/** Three stills off the clip that is already on screen: near the start, the
+	 *  middle where the key beat sits, and near the end.
+	 *
+	 *  Drawn from the <video> element rather than cut server-side. The host has no
+	 *  ffmpeg, the harness's copy sits behind a docker exec this app should not be
+	 *  making, and the browser has the decoded frames already. Scaled down on the
+	 *  way out — the model reads a malformed hand at 768 across as well as at
+	 *  1024, and three full-size stills is a megabyte of base64 for nothing. */
+	async function grabFrames(video: HTMLVideoElement, count = 3): Promise<string[]> {
+		const dur = video.duration;
+		if (!Number.isFinite(dur) || dur <= 0) return [];
+		const wasAt = video.currentTime;
+		const scale = Math.min(1, 768 / (video.videoWidth || 768));
+		const canvas = document.createElement('canvas');
+		canvas.width = Math.round((video.videoWidth || 768) * scale);
+		canvas.height = Math.round((video.videoHeight || 432) * scale);
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return [];
+
+		const out: string[] = [];
+		for (let i = 0; i < count; i++) {
+			const at = dur * (0.15 + (0.7 * i) / Math.max(1, count - 1));
+			try {
+				await new Promise<void>((resolve, reject) => {
+					const done = () => {
+						video.removeEventListener('seeked', done);
+						resolve();
+					};
+					video.addEventListener('seeked', done);
+					// A clip that will not seek must not hang the button forever.
+					setTimeout(() => {
+						video.removeEventListener('seeked', done);
+						reject(new Error('seek timed out'));
+					}, 4000);
+					video.currentTime = at;
+				});
+				ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+				out.push(canvas.toDataURL('image/jpeg', 0.82));
+			} catch {
+				break;
+			}
+		}
+		video.currentTime = wasAt;
+		return out;
+	}
+
 	async function saveNote(workspace: string) {
 		const note = (noteDraft[workspace] ?? '').trim();
 		if (!workspace || !note) return;
@@ -1095,6 +1141,50 @@
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ workspace, note })
 		}).catch(() => {});
+		void diagnose(workspace);
+	}
+
+	let diagnosing = $state<Record<string, boolean>>({});
+
+	/** Show the clip to a model that can see, and put the next attempt on a card.
+	 *
+	 *  A diagnosis you have to act on by hand is a diagnosis most people read and
+	 *  close, so what comes back is a whole shot — prompt and adapters both —
+	 *  ready to send. Nothing is spent until you send it. */
+	async function diagnose(workspace: string) {
+		if (!workspace || diagnosing[workspace]) return;
+		const video = document.querySelector<HTMLVideoElement>(
+			`video[data-clip="${CSS.escape(workspace)}"]`
+		);
+		if (!video) {
+			pushError('the clip is not on screen any more, so there is nothing to look at.');
+			return;
+		}
+		diagnosing[workspace] = true;
+		try {
+			const frames = await grabFrames(video);
+			if (!frames.length) {
+				pushError('could not read any frames out of that clip.');
+				return;
+			}
+			const res = await fetch('/studio/api/diagnose', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ workspace, note: noteDraft[workspace] ?? '', frames })
+			});
+			const r = (await res.json()) as { ok?: boolean; shot?: ChatItem['shot']; error?: string };
+			if (!r.ok || !r.shot) {
+				pushError(r.error || 'the diagnosis did not come back with anything usable.');
+				return;
+			}
+			r.shot.wroteLoras = (r.shot.loras ?? []).map((p) => ({ ...p }));
+			pushItem({ who: 'studio', kind: 'shot', shot: r.shot });
+			persist();
+		} catch (e) {
+			pushError(`the diagnosis failed — ${e}`);
+		} finally {
+			diagnosing[workspace] = false;
+		}
 	}
 
 	function setShotOrientation(itemId: string, orientation: 'portrait' | 'landscape') {
@@ -2328,7 +2418,7 @@
 	</div>
 {/snippet}
 
-{#snippet videoCard(name: string, url: string, caption: string)}
+{#snippet videoCard(name: string, url: string, caption: string, clipKey = '')}
 	<figure class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
 		<!-- The app-wide CSS in layout.css hides every native media control on
 		     <video> unless the element opts in with .video-with-controls. -->
@@ -2338,6 +2428,8 @@
 			controls
 			playsinline
 			preload="metadata"
+			data-clip={clipKey || null}
+			crossorigin="anonymous"
 			onerror={(e) => recoverVideo(e.currentTarget as HTMLVideoElement, url)}
 			class="video-with-controls block aspect-video w-full bg-black"
 		></video>
@@ -3132,7 +3224,7 @@
 							{@const v = verdict[ws]}
 							<div class="enter">
 								{#each item.artifact.files as f (f.name)}
-									{@render videoCard(f.name, f.url, item.text ?? item.artifact.title)}
+									{@render videoCard(f.name, f.url, item.text ?? item.artifact.title, ws)}
 								{/each}
 
 								<!-- The only quality signal in the app that a person has to give
@@ -3155,13 +3247,27 @@
 											<span class="text-xs text-[var(--st-faint)]">noted as good.</span>
 										{:else}
 											<span class="text-xs text-[var(--st-faint)]">noted.</span>
+											{#if !noteSaved[ws] && !diagnosing[ws]}
+												<button
+													type="button"
+													class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+													onclick={() => diagnose(ws)}>work out why</button
+												>
+											{/if}
 										{/if}
 									</div>
 
 									{#if v === 'rejected'}
 										{#if noteSaved[ws]}
-											<p class="mt-2 text-xs text-[var(--st-faint)]">
-												thanks — that goes in the log with the settings this ran with.
+											<p class="mt-2 flex items-center gap-2 text-xs text-[var(--st-faint)]">
+												{#if diagnosing[ws]}
+													<span
+														class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+													></span>
+													<span>looking at the clip and writing the next attempt</span>
+												{:else}
+													<span>noted, with the settings this ran with.</span>
+												{/if}
 											</p>
 										{:else}
 											<!-- A verdict says a clip missed; it does not say whether the
