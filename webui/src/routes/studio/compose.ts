@@ -1117,38 +1117,34 @@ const DIRECT_WORKFLOWS = `  workflows:
  *  scenes of the last run came back 480x864 and 720x480 — each worker had
  *  decided for itself. Fixing it in the profile is what stops that. */
 function directProfiles(spec: DirectSpec): string {
-	// steps=4, settled by running both against the same pinned seed. 4 renders in
-	// 121s and 8 in 174s, and the cheaper one is also the better one: at 8 the
-	// freckles blend away, the pores go, the flyaway hair clumps, and a sheen
-	// appears on the nose and cheekbone. At 4 all of that survives.
+	// steps=8, chosen by watching the clips move.
 	//
-	// Which is what the LoRA stack should have told us. The turbo adapter is
-	// lightx2v_turbo_4step — a distillation trained to arrive in exactly four.
-	// Running eight does not give it longer to think, it carries it past the
-	// schedule it was distilled for, and over-stepping a distilled sampler
-	// over-smooths. The plastic look we spent three adapters chasing was partly
-	// something we were doing to it.
+	// The cost is real and worth knowing before touching this: 8 renders in 174s
+	// against 121s at 4, so every clip takes about 44% longer.
 	//
-	// The earlier note here argued for 8 on the grounds that the detailer's
-	// gallery was rendered at eight steps. True, but with the author's turbo, not
-	// this one — the wrong analogy, and it cost several slow renders.
+	// Both were rendered from the same pinned seed, so the two clips are the same
+	// room, the same woman and the same pose with only the sampling between them.
+	// Compared as still frames, 4 looked the more photographic of the two — the
+	// freckles survive, the pores hold, the flyaway hair stays separate, and 8
+	// puts a sheen on the nose and cheekbone. Compared as moving clips, which is
+	// what this tool actually produces, 8 was the better one. A still cannot show
+	// how a clip holds together frame to frame, so the moving comparison is the
+	// one that decides it.
 	//
-	// A caveat worth keeping: this is one seed. The mechanism is sound and the
-	// difference is visible, but if a later clip looks thin, 6 is inside the
-	// adapter's stated range and is the next thing to try, not 8.
+	// An earlier version of this note argued that 8 carries the turbo adapter past
+	// the schedule it was distilled for, lightx2v_turbo_4step being a four-step
+	// distillation. That was put too strongly. The workflow's own port notes place
+	// 6-10 inside the adapter's range at strength 0.6-1.0, and ours sits at 0.7 —
+	// so 8 is a documented setting that buys a different look for more time, not a
+	// setting being abused.
 	//
-	// steps=8 rather than the turbo LoRA's nominal 4. Four is the fast path and
-	// it shows: the realism detailer was trained at 1024 and its own gallery was
-	// rendered at eight, and everything we produced at four came back a little
-	// plastic no matter which adapter was loaded. The workflow's port notes put
-	// 6-10 inside the turbo LoRA's range at strength 0.6-1.0, and ours sits at
-	// 0.7. The cost is real — the notes say 2-4 minutes a clip becomes 10-18 —
-	// so this is a setting to revisit once we know which half of the change
-	// (steps or resolution) was the one that mattered.
+	// 6 is the middle if the render time starts to hurt, and is equally inside the
+	// range. And the slider at 1.6 was tuned with 4 steps underneath it, so if the
+	// surface ever needs revisiting, that pairing has not actually been tested.
 	return `  profiles:
     draft:
-      image: { width: ${spec.width}, height: ${spec.height}, steps: 4, seed: ${spec.seed} }
-      video: { width: ${spec.width}, height: ${spec.height}, steps: 4, fps: 48, seed: ${spec.seed} }
+      image: { width: ${spec.width}, height: ${spec.height}, steps: 8, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: 8, fps: 48, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }`;
 }
