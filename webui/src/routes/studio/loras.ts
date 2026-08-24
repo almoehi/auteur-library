@@ -220,3 +220,45 @@ export function parsePicks(seg: string): Pick[] {
 export function formatPicks(picks: Pick[]): string {
 	return picks.map((p) => `${p.key}-${p.strength}`).join(',');
 }
+
+/** The catalogue as the writer reads it.
+ *
+ *  Generated from the list above rather than written out again in the prompt,
+ *  because the two would drift and the drift would be silent: the writer would
+ *  keep naming an adapter that had been removed, the render would quietly lose
+ *  it, and nothing anywhere would say so.
+ */
+export function catalogueForWriter(): string {
+	const line = (l: Lora) =>
+		`  ${l.key.padEnd(8)}${String(l.strength).padEnd(6)}${l.use}` +
+		(l.trigger ? `  [trigger: ${l.trigger}]` : '');
+	const acts = CATALOGUE.filter((l) => l.kind === 'act').map(line).join('\n');
+	const details = CATALOGUE.filter((l) => l.kind === 'detail').map(line).join('\n');
+
+	return `ADAPTERS
+
+Along with the prompt, choose the adapters this clip is rendered with. Two are
+loaded on every clip regardless — the speed distillation and the skin detailer —
+and are not yours to pick. From the lists below choose:
+
+  - exactly one ACT: the thing that is happening in this shot
+  - any DETAILS that are true of this shot, and none that are not
+  - ${MAX_PICKS} at most, in total
+
+Return them in the "loras" field as [{"key":"bj","strength":1.2}, …]. The number
+beside each is the adapter author's own recommendation; use it unless the
+request gives you a reason not to, and stay inside 0 to 2.
+
+Choose on what the shot actually contains, not on what sounds related. An
+adapter for something that is not in the frame does not sit idle — a loaded
+adapter is always acting, and one trained on the wrong thing pulls the image
+toward it. Where a trigger word is listed, the shot lands closer if that word
+appears naturally somewhere in the prompt text; the word aims the adapter, it
+does not switch it on.
+
+ACTS — choose exactly one
+${acts}
+
+DETAILS — choose any that are true of this shot
+${details}`;
+}

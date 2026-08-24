@@ -22,6 +22,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readOverrides } from '../../overrides.server';
 import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
+import { MAX_PICKS, catalogueForWriter, loraFor, type Pick } from '../../loras';
 
 const XAI = 'https://api.x.ai/v1/chat/completions';
 
@@ -61,6 +62,40 @@ export interface ShotPrompt {
 	seconds: number;
 	orientation: 'portrait' | 'landscape';
 	why: string;
+	/** The adapters this shot asked for, on top of the pair every clip loads. */
+	loras: Pick[];
+}
+
+/** Keep only what the catalogue actually contains, and only as much of it as a
+ *  render should carry.
+ *
+ *  A model choosing from a list will occasionally name something that is not on
+ *  it, and an adapter that does not exist is a bundle the harness cannot build
+ *  — so unknown keys are dropped here rather than at the far end of a launch.
+ *  The same goes for the act rule: the list says choose one, and if two come
+ *  back the first is kept rather than the request being failed, because a clip
+ *  rendered with one act is a clip and an error is not.
+ */
+function readLoras(raw: unknown): Pick[] {
+	if (!Array.isArray(raw)) return [];
+	const out: Pick[] = [];
+	let act = false;
+	for (const item of raw) {
+		if (!item || typeof item !== 'object') continue;
+		const { key, strength } = item as { key?: unknown; strength?: unknown };
+		if (typeof key !== 'string') continue;
+		const lora = loraFor(key);
+		if (!lora || lora.kind === 'base') continue;
+		if (out.some((p) => p.key === key)) continue;
+		if (lora.kind === 'act') {
+			if (act) continue;
+			act = true;
+		}
+		const n = Number(strength);
+		out.push({ key, strength: Number.isFinite(n) && n > 0 ? Math.min(2, n) : lora.strength });
+		if (out.length >= MAX_PICKS) break;
+	}
+	return out;
 }
 
 /** The model is asked for four keys and reliably returns four keys, but a card
@@ -76,7 +111,8 @@ function readReply(raw: unknown): ShotPrompt | null {
 		prompt,
 		seconds: Number.isFinite(n) ? Math.min(15, Math.max(4, n)) : 10,
 		orientation: o.orientation === 'landscape' ? 'landscape' : 'portrait',
-		why: typeof o.why === 'string' ? o.why.trim() : ''
+		why: typeof o.why === 'string' ? o.why.trim() : '',
+		loras: readLoras(o.loras)
 	};
 }
 
@@ -123,7 +159,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	const model = MODEL_API_NAME[modelFor('shot_writer', overrides)] ?? MODEL_FALLBACK;
 
 	const skill = skillText();
-	const system = skill ? `${writer}\n\n---\n\n${skill}` : writer;
+	// The catalogue goes in last, after the syntax guide, because it is the part
+	// that changes: adapters are added and dropped as they are found, and the
+	// block is generated from the list rather than written into the tunable so
+	// the two can never disagree about what exists.
+	const parts = [writer, skill, catalogueForWriter()].filter(Boolean);
+	const system = parts.join('\n\n---\n\n');
 	const user = pinned.length ? `${want}\n\n---\n\n${pinned.join('\n')}` : want;
 
 	let res: Response;

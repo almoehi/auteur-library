@@ -123,6 +123,7 @@ A single JSON object, no fences, no markdown, with exactly these keys:
   "seconds"     integer 4-15, the duration the prompt is written for
   "why"         one sentence: the beat count and where the key beat sits
   "orientation" "portrait" or "landscape", whichever the scene calls for
+  "loras"       the adapters this shot renders with — see ADAPTERS at the end
 
 # THE FORMAT — Template A, and only Template A
 

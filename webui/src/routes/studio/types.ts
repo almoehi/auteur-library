@@ -5,6 +5,7 @@
  *  in this file has a runtime cost beyond a couple of constants — it exists so
  *  those three never disagree about what a production is.
  */
+import type { Pick } from './loras';
 
 /** Everything a production is described by, before any YAML exists.
  *
@@ -126,6 +127,9 @@ export interface ChatItem {
 		seconds: number;
 		orientation: 'portrait' | 'landscape';
 		why: string;
+		/** The adapters the writer chose for this shot, shown on the card so the
+		 *  choice is visible before it costs a render rather than after. */
+		loras?: Pick[];
 		/** Set once this card has been sent to render, so it stops offering. */
 		launched?: boolean;
 	};

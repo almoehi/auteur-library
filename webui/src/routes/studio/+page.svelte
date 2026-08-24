@@ -44,6 +44,7 @@
 		type ProxyResult,
 		type Task
 	} from './types';
+	import { CATALOGUE, MAX_PICKS, loraFor } from './loras';
 
 	/** Polling cadence, unchanged from the previous surface: the harness author
 	 *  asked not to hammer the status endpoints. 15s while things move, 30s once
@@ -978,7 +979,8 @@
 			// woman and the same pose, so the step count and the adapter strength
 			// were the only things being compared. If another setting needs the same
 			// treatment, pinning it is this one line.
-			seed: Math.floor(Math.random() * 1_000_000_000)
+			seed: Math.floor(Math.random() * 1_000_000_000),
+			loras: item.shot.loras ?? []
 		};
 		shotBusy[itemId] = true;
 		try {
@@ -1033,6 +1035,26 @@
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.shot || item.shot.seconds === seconds) return;
 		void respin(itemId, { seconds, orientation: item.shot.orientation });
+	}
+
+	/** Add or remove one adapter on a card that has not been sent yet.
+	 *
+	 *  The writer chooses, and this is where you disagree with it — before the
+	 *  render rather than after, which is the whole reason the choice is on the
+	 *  card at all. Acts replace each other rather than stacking, the same rule
+	 *  the writer is given, because a clip is one thing happening. */
+	function toggleLora(itemId: string, key: string) {
+		const item = chat.find((c) => c.id === itemId);
+		const lora = loraFor(key);
+		if (!item?.shot || item.shot.launched || !lora) return;
+		const picks = item.shot.loras ?? [];
+		if (picks.some((p) => p.key === key)) {
+			item.shot.loras = picks.filter((p) => p.key !== key);
+			return;
+		}
+		const kept = lora.kind === 'act' ? picks.filter((p) => loraFor(p.key)?.kind !== 'act') : picks;
+		if (kept.length >= MAX_PICKS) return;
+		item.shot.loras = [...kept, { key, strength: lora.strength }];
 	}
 
 	function setShotOrientation(itemId: string, orientation: 'portrait' | 'landscape') {
@@ -2710,6 +2732,7 @@
 							</div>
 						{:else if item.kind === 'shot' && item.shot}
 							{@const n = item.shot.prompt.trim() ? item.shot.prompt.trim().split(/\s+/).length : 0}
+							{@const picked = item.shot.loras ?? []}
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
 								<div class="mb-3 flex items-baseline justify-between gap-4">
 									<h3 class="font-display text-base font-semibold">The prompt</h3>
@@ -2738,6 +2761,48 @@
 								{#if item.shot.why}
 									<p class="mt-2.5 text-xs text-[var(--st-faint)]">{item.shot.why}</p>
 								{/if}
+
+								<!-- What this clip renders with. The writer picks; you overrule it
+									 here, before the GPU rather than after. Two more adapters load on
+									 every clip regardless and are not listed — they are not choices. -->
+								<div class="mt-4 border-t border-[var(--st-line)] pt-3.5">
+									<div class="mb-2 flex items-baseline gap-2">
+										<span class="text-xs text-[var(--st-faint)]">adapters</span>
+										{#if picked.length === 0}
+											<span class="text-xs text-[var(--st-faint)]">— none chosen</span>
+										{/if}
+									</div>
+									{#if item.shot.launched}
+										<div class="flex flex-wrap gap-1.5">
+											{#each picked as p (p.key)}
+												<span
+													class="rounded-md bg-[var(--st-bg)] px-2 py-0.5 text-xs text-[var(--st-muted)]"
+													>{loraFor(p.key)?.label ?? p.key}
+													<span class="tabular-nums opacity-60">{p.strength}</span></span
+												>
+											{/each}
+										</div>
+									{:else}
+										<div class="flex flex-wrap gap-1.5">
+											{#each CATALOGUE as l (l.key)}
+												{@const on = picked.some((p) => p.key === l.key)}
+												<button
+													type="button"
+													title="{l.use}{l.trigger ? ` · trigger: ${l.trigger}` : ''}"
+													class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {on
+														? 'bg-[var(--st-accent)] font-semibold text-white'
+														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+													onclick={() => toggleLora(item.id, l.key)}
+												>
+													{l.label}
+													{#if on}<span class="tabular-nums opacity-70"
+															>{picked.find((p) => p.key === l.key)?.strength}</span
+														>{/if}
+												</button>
+											{/each}
+										</div>
+									{/if}
+								</div>
 
 								{#if !item.shot.launched}
 									<div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
