@@ -26,7 +26,7 @@
  *  what makes a launch reproducible and these functions testable.
  */
 import { SCENE_COUNT_MAX, SCENE_COUNT_MIN, SLUG_RE, type Brief } from './types';
-import { formatPicks, type Pick } from './loras';
+import { BASE, formatPicks, type Pick } from './loras';
 import { modelFor, textFor, type Overrides } from './tunables';
 
 /** metadata.version, and the half of the workspace id after the `@`.
@@ -1098,8 +1098,10 @@ export interface DirectSpec {
 	width: number;
 	height: number;
 	seed: number;
-	/** The adapters this clip asked for, on top of the always-loaded pair. */
+	/** The adapters this clip asked for, on top of the always-loaded set. */
 	loras?: Pick[];
+	/** Per-clip strengths for the always-loaded adapters, where you moved one. */
+	baseLoras?: Record<string, number>;
 	/** What the writer chose before anyone touched the card, and what you typed
 	 *  to get it. Neither reaches the workspace — they are here so the launch can
 	 *  write down what was tried, and so a card you corrected is recorded as a
@@ -1131,7 +1133,11 @@ export function directWorkspaceId(spec: DirectSpec): string {
  *
  *  `name` stays constant on purpose, so the tool the agent is told to call is
  *  called the same thing on every run. */
-function directWorkflows(origin: string, picks: Pick[]): string {
+function directWorkflows(
+	origin: string,
+	picks: Pick[],
+	baseAt: Record<string, number>
+): string {
 	// Only the picks. The pair every clip loads is added by the endpoint that
 	// builds the bundle, and naming it here as well was not merely redundant: the
 	// parser caps a selection at MAX_PICKS, so once that cap came down to two the
@@ -1140,7 +1146,12 @@ function directWorkflows(origin: string, picks: Pick[]): string {
 	// `base` when nothing was chosen, rather than an empty segment: the url would
 	// otherwise collapse to /wf//workflow.yaml, which matches no route, and a clip
 	// the writer found no adapter for would fail to render at all.
-	const sel = formatPicks(picks) || 'base';
+	// The base adapters travel too, carrying their strengths. They cannot be
+	// mistaken for picks — the parser refuses base keys on that side — so this is
+	// a number for each, never a slot.
+	const sel =
+		formatPicks([...BASE.map((l) => ({ key: l.key, strength: baseAt[l.key] ?? l.strength })), ...picks]) ||
+		'base';
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml`;
@@ -1272,7 +1283,7 @@ spec:
   skills:
     - workflow-render-loop@mvp-lkg
 
-${directWorkflows(spec.studioOrigin, spec.loras ?? [])}
+${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {})}
 
 ${directProfiles(spec)}
 

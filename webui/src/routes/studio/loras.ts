@@ -278,6 +278,28 @@ export function parsePicks(seg: string): Pick[] {
 	return out.slice(0, MAX_PICKS);
 }
 
+/** The base adapters' strengths, read out of the same path segment.
+ *
+ *  Kept separate from parsePicks on purpose. A base adapter must never be able
+ *  to consume one of the pick slots — that is exactly how the chosen adapters
+ *  got dropped out of a bundle for eight renders — so parsePicks refuses base
+ *  keys outright and this reads them instead. They carry a strength but never a
+ *  slot, and there is no cap here because the base set is fixed. */
+export function parseBaseOverrides(seg: string): Record<string, number> {
+	const out: Record<string, number> = {};
+	for (const raw of decodeURIComponent(seg).split(',')) {
+		const part = raw.trim();
+		const cut = part.lastIndexOf('-');
+		if (cut < 1) continue;
+		const key = part.slice(0, cut);
+		const n = Number(part.slice(cut + 1));
+		const l = BY_KEY.get(key);
+		if (!l || l.kind !== 'base' || !Number.isFinite(n)) continue;
+		out[key] = Math.min(3, Math.max(0, n));
+	}
+	return out;
+}
+
 export function formatPicks(picks: Pick[]): string {
 	return picks.map((p) => `${p.key}-${p.strength}`).join(',');
 }

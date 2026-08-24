@@ -23,7 +23,7 @@ import { error, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BASE, loraFor, parsePicks, type Lora, type Pick } from '../../../../loras';
+import { BASE, loraFor, parseBaseOverrides, parsePicks, type Lora, type Pick } from '../../../../loras';
 
 const BUNDLE = 'minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit';
 
@@ -48,8 +48,12 @@ const LOADER_NODE = '674';
 /** The pair, then the picks. Order matters to the loader only in that later
  *  adapters are applied over earlier ones; the base pair goes first so a shot
  *  adapter is layered on top of the realism pass rather than under it. */
-function stack(picks: Pick[]): { lora: Lora; strength: number }[] {
-	const out = BASE.map((l) => ({ lora: l, strength: l.strength }));
+function stack(picks: Pick[], baseAt: Record<string, number> = {}): { lora: Lora; strength: number }[] {
+	// The base pair always loads. Its strengths can be moved for one clip — the
+	// realism slider and the anatomy corrector are both worth tuning by hand —
+	// but the adapters themselves are not a choice, so an override only ever
+	// changes a number and never whether one is present.
+	const out = BASE.map((l) => ({ lora: l, strength: baseAt[l.key] ?? l.strength }));
 	for (const p of picks) {
 		const l = loraFor(p.key);
 		if (l && !BASE.some((b) => b.key === l.key)) out.push({ lora: l, strength: p.strength });
@@ -136,7 +140,8 @@ function buildYaml(entries: { lora: Lora; strength: number }[]): string {
 }
 
 export const GET: RequestHandler = async ({ params }) => {
-	const entries = stack(parsePicks(params.sel ?? ''));
+	const sel = params.sel ?? '';
+	const entries = stack(parsePicks(sel), parseBaseOverrides(sel));
 
 	if (params.file === 'workflow.json') {
 		return text(buildJson(entries), { headers: { 'content-type': 'application/json' } });

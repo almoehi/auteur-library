@@ -44,7 +44,7 @@
 		type ProxyResult,
 		type Task
 	} from './types';
-	import { CATALOGUE, MAX_PICKS, loraFor } from './loras';
+	import { BASE, CATALOGUE, MAX_PICKS, loraFor } from './loras';
 
 	/** Polling cadence, unchanged from the previous surface: the harness author
 	 *  asked not to hammer the status endpoints. 15s while things move, 30s once
@@ -981,6 +981,7 @@
 			height: shot.orientation === 'portrait' ? 1024 : 576,
 			seed: Math.floor(Math.random() * 1_000_000_000),
 			loras: shot.loras ?? [],
+			baseLoras: shot.baseLoras ?? {},
 			wroteLoras: shot.wroteLoras ?? shot.loras ?? [],
 			request: lastRequest
 		};
@@ -1288,10 +1289,26 @@
 		item.shot.loras = (item.shot.loras ?? []).map((p) => (p.key === key ? { ...p, strength: n } : p));
 	}
 
+	/** Move an always-loaded adapter for this clip only.
+	 *
+	 *  These cannot be switched off — they are what every clip is built on — but
+	 *  the realism slider and the anatomy corrector are both worth a nudge now and
+	 *  then, and until this existed nudging one meant editing the catalogue and
+	 *  committing it. */
+	function setBaseStrength(itemId: string, key: string, value: number) {
+		const item = chat.find((c) => c.id === itemId);
+		const l = loraFor(key);
+		if (!item?.shot || item.shot.launched || !l) return;
+		const n = Math.round(Math.min(2, Math.max(0, value)) * 20) / 20;
+		item.shot.baseLoras = { ...(item.shot.baseLoras ?? {}), [key]: n };
+	}
+
 	/** Back to what the adapter's author recommends. */
 	function resetLoraStrength(itemId: string, key: string) {
 		const l = loraFor(key);
-		if (l) setLoraStrength(itemId, key, l.strength);
+		if (!l) return;
+		if (l.kind === 'base') setBaseStrength(itemId, key, l.strength);
+		else setLoraStrength(itemId, key, l.strength);
 	}
 
 	function setShotOrientation(itemId: string, orientation: 'portrait' | 'landscape') {
@@ -3033,8 +3050,57 @@
 									 The cap is two: four at once produced a clip whose anatomy fell
 									 apart exactly where two adapters overlapped. -->
 								<div class="mt-4 border-t border-[var(--st-line)] pt-3.5">
+									<!-- The always-loaded set, shown rather than hidden. Moving one of
+										 these into the base made it vanish off the card, which is how
+										 you end up asking for an adapter that is already running. They
+										 cannot be switched off — every clip is built on them — but the
+										 realism slider and the anatomy corrector are both worth a nudge,
+										 and doing that used to mean editing the catalogue. -->
+									<div class="mb-3">
+										<div class="mb-2 text-xs text-[var(--st-faint)]">always on</div>
+										{#each BASE as l (l.key)}
+											{@const at = item.shot.baseLoras?.[l.key] ?? l.strength}
+											<div class="mt-1.5 flex items-center gap-3">
+												<span class="w-40 shrink-0 truncate text-xs text-[var(--st-muted)]"
+													>{l.label}</span
+												>
+												{#if item.shot.launched}
+													<span class="flex-1 text-xs tabular-nums text-[var(--st-faint)]"
+														>{at}</span
+													>
+												{:else}
+													<input
+														type="range"
+														min="0"
+														max="2"
+														step="0.05"
+														value={at}
+														aria-label="{l.label} strength"
+														oninput={(e) =>
+															setBaseStrength(item.id, l.key, Number(e.currentTarget.value))}
+														class="h-1 min-w-0 flex-1 cursor-pointer accent-[var(--st-accent)]"
+													/>
+													<button
+														type="button"
+														title="back to {l.strength}"
+														onclick={() => resetLoraStrength(item.id, l.key)}
+														class="w-9 shrink-0 cursor-pointer text-right text-xs tabular-nums {at ===
+														l.strength
+															? 'text-[var(--st-muted)]'
+															: 'text-[var(--st-text)]'}">{at.toFixed(2)}</button
+													>
+													<span
+														class="w-24 shrink-0 text-right text-xs tabular-nums text-[var(--st-faint)]"
+													>
+														{l.band ? `${l.band[0]}–${l.band[1]}` : `author ${l.strength}`}
+													</span>
+												{/if}
+											</div>
+										{/each}
+									</div>
+
 									<div class="mb-2 flex items-baseline gap-2">
-										<span class="text-xs text-[var(--st-faint)]">adapters</span>
+										<span class="text-xs text-[var(--st-faint)]">on top of that</span>
 										{#if picked.length === 0}
 											<span class="text-xs text-[var(--st-faint)]">— none chosen</span>
 										{/if}

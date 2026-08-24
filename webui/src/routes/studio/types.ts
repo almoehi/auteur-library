@@ -130,6 +130,9 @@ export interface ChatItem {
 		/** The adapters the writer chose for this shot, shown on the card so the
 		 *  choice is visible before it costs a render rather than after. */
 		loras?: Pick[];
+		/** Strengths for the always-loaded adapters, where you moved one on this
+		 *  card. Absent keys use the catalogue's figure. */
+		baseLoras?: Record<string, number>;
 		/** The same list as the writer first returned it, kept untouched while
 		 *  `loras` is edited. The two are compared at launch: where they differ,
 		 *  a person disagreed with the writer, and that is the only free quality
