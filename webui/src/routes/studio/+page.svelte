@@ -1071,8 +1071,6 @@
 	 *  is only what the page needs to stop offering a button you already pressed.
 	 */
 	let verdict = $state<Record<string, 'kept' | 'rejected'>>({});
-	let noteDraft = $state<Record<string, string>>({});
-	let noteSaved = $state<Record<string, boolean>>({});
 
 	async function rate(workspace: string, outcome: 'kept' | 'rejected') {
 		if (!workspace) return;
@@ -1084,6 +1082,11 @@
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ workspace, outcome })
 		}).catch(() => {});
+		// A clip that missed is looked at straight away. Asking you to type what
+		// was wrong first was asking for the answer before doing the work — the
+		// model is about to look at the frames and can see it for itself, and the
+		// question only stood between you and the fix.
+		if (outcome === 'rejected') void diagnose(workspace);
 	}
 
 	/** Three stills off the clip that is already on screen: near the start, the
@@ -1132,18 +1135,6 @@
 		return out;
 	}
 
-	async function saveNote(workspace: string) {
-		const note = (noteDraft[workspace] ?? '').trim();
-		if (!workspace || !note) return;
-		noteSaved[workspace] = true;
-		void fetch('/studio/api/renders', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ workspace, note })
-		}).catch(() => {});
-		void diagnose(workspace);
-	}
-
 	let diagnosing = $state<Record<string, boolean>>({});
 
 	/** Show the clip to a model that can see, and put the next attempt on a card.
@@ -1170,7 +1161,7 @@
 			const res = await fetch('/studio/api/diagnose', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ workspace, note: noteDraft[workspace] ?? '', frames })
+				body: JSON.stringify({ workspace, frames })
 			});
 			const r = (await res.json()) as { ok?: boolean; shot?: ChatItem['shot']; error?: string };
 			if (!r.ok || !r.shot) {
@@ -1178,6 +1169,16 @@
 				return;
 			}
 			r.shot.wroteLoras = (r.shot.loras ?? []).map((p) => ({ ...p }));
+			// The diagnosis is what the note field was for. Written by whoever
+			// actually looked rather than typed from memory, and it turns a row
+			// that says a clip failed into one that says how.
+			if (r.shot.why) {
+				void fetch('/studio/api/renders', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ workspace, note: r.shot.why })
+				}).catch(() => {});
+			}
 			pushItem({ who: 'studio', kind: 'shot', shot: r.shot });
 			persist();
 		} catch (e) {
@@ -3245,54 +3246,22 @@
 											>
 										{:else if v === 'kept'}
 											<span class="text-xs text-[var(--st-faint)]">noted as good.</span>
+										{:else if diagnosing[ws]}
+											<span class="flex items-center gap-2 text-xs text-[var(--st-faint)]">
+												<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
+												<span>looking at the clip and writing the fix</span>
+											</span>
 										{:else}
-											<span class="text-xs text-[var(--st-faint)]">noted.</span>
-											{#if !noteSaved[ws] && !diagnosing[ws]}
-												<button
-													type="button"
-													class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-													onclick={() => diagnose(ws)}>work out why</button
-												>
-											{/if}
+											<span class="text-xs text-[var(--st-faint)]"
+												>noted — the next attempt is below.</span
+											>
+											<button
+												type="button"
+												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+												onclick={() => diagnose(ws)}>look again</button
+											>
 										{/if}
 									</div>
-
-									{#if v === 'rejected'}
-										{#if noteSaved[ws]}
-											<p class="mt-2 flex items-center gap-2 text-xs text-[var(--st-faint)]">
-												{#if diagnosing[ws]}
-													<span
-														class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
-													></span>
-													<span>looking at the clip and writing the next attempt</span>
-												{:else}
-													<span>noted, with the settings this ran with.</span>
-												{/if}
-											</p>
-										{:else}
-											<!-- A verdict says a clip missed; it does not say whether the
-												 anatomy came apart, the motion stalled, or it rendered
-												 something else entirely. Those want different fixes. -->
-											<div class="mt-2.5 flex flex-wrap items-start gap-2">
-												<label class="sr-only" for="note-{item.id}">What was wrong</label>
-												<input
-													id="note-{item.id}"
-													bind:value={noteDraft[ws]}
-													placeholder="what was wrong with it?"
-													class="min-w-0 flex-1 rounded-xl bg-[var(--st-bg)] px-3.5 py-2 text-[13px] text-[var(--st-text)] outline-none placeholder:text-[var(--st-faint)]"
-													onkeydown={(e) => {
-														if (e.key === 'Enter') saveNote(ws);
-													}}
-												/>
-												<button
-													type="button"
-													disabled={!(noteDraft[ws] ?? '').trim()}
-													class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-2 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:opacity-40"
-													onclick={() => saveNote(ws)}>save</button
-												>
-											</div>
-										{/if}
-									{/if}
 								{/if}
 							</div>
 						{/if}
