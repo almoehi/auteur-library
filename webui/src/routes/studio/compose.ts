@@ -1158,6 +1158,28 @@ export function directWorkspaceId(spec: DirectSpec): string {
  *
  *  `name` stays constant on purpose, so the tool the agent is told to call is
  *  called the same thing on every run. */
+/** Two settings that came out of measuring where a clip's wait actually goes.
+ *
+ *  A 5-second clip took 4m57s end to end: 37s to open the workspace and start
+ *  the task, 102s between the task starting and the GPU starting, 124s of
+ *  render, and 34s to save and notice. The 102s is an LLM deciding to pass a
+ *  prompt through unchanged, plus the compute endpoint being provisioned.
+ *
+ *  `lazy: false` moves the provisioning to workspace open, where it overlaps the
+ *  agent's startup instead of queueing behind its first tool call. The guide
+ *  recommends exactly this for a workflow expected to render soon after startup,
+ *  which is the only thing a direct workspace exists to do.
+ *
+ *  The Operator runs on grok-fast rather than grok-4.5 for the same 102s. It
+ *  makes no content judgement — the prompt arrives finished and its whole job is
+ *  to hand it over unchanged — and our own note above measures the two at 8.3s
+ *  against 29.6s on ordinary work.
+ *
+ *  The risk in that second change is worth stating: grok-fast has never been
+ *  asked to relay explicit text, and the failure mode if it refuses is the quiet
+ *  one — nothing written, task_complete called, the gate reporting no files, and
+ *  a retry loop. If a run dies that way, this line is the first suspect and
+ *  grok-4-5 is the revert. */
 function directWorkflows(
 	origin: string,
 	picks: Pick[],
@@ -1187,7 +1209,8 @@ function directWorkflows(
 		'base';
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
-      url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml`;
+      url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml
+      lazy: false`;
 }
 
 /** Resolution is a parameter here rather than a constant, because the two
@@ -1234,7 +1257,7 @@ function directProfiles(spec: DirectSpec): string {
 const DIRECT_AGENT = (model: string) => `    generic:
       id: generic
       name: "Operator"
-      model: ${model}
+      model: grok-fast
       role: "Render operator"
       objective: "Send the given prompt to the render workflow unchanged and save the clip"
       systemPrompt: >
