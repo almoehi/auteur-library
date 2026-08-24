@@ -1117,11 +1117,13 @@ const DIRECT_WORKFLOWS = `  workflows:
  *  scenes of the last run came back 480x864 and 720x480 — each worker had
  *  decided for itself. Fixing it in the profile is what stops that. */
 function directProfiles(spec: DirectSpec): string {
-	// PROBE, not a settled value: steps back to 4 with the frame left at the
-	// larger size, to find out which half of the last change carried the quality
-	// jump. If the clip holds up it was the resolution and the steps can stay
-	// cheap; if it falls back to plastic it was the sampling and 8 is the floor.
-	// Whichever it is, the next commit sets the real number.
+	// ARM B of the step-count comparison. Arm A ran at 4 and is measured: 121s of
+	// render, 5m24s wall clock, out at 1024x576 / 48fps / 7.98s with the audio
+	// 11ms off the picture. This arm changes the step count and nothing else —
+	// same pinned seed, same frame, same prompt pasted in by hand — so whatever
+	// separates the two clips is the sampling.
+	//
+	// Set the winner here and drop this comment once the two have been watched.
 	//
 	// steps=8 rather than the turbo LoRA's nominal 4. Four is the fast path and
 	// it shows: the realism detailer was trained at 1024 and its own gallery was
@@ -1133,8 +1135,8 @@ function directProfiles(spec: DirectSpec): string {
 	// (steps or resolution) was the one that mattered.
 	return `  profiles:
     draft:
-      image: { width: ${spec.width}, height: ${spec.height}, steps: 4, seed: ${spec.seed} }
-      video: { width: ${spec.width}, height: ${spec.height}, steps: 4, fps: 48, seed: ${spec.seed} }
+      image: { width: ${spec.width}, height: ${spec.height}, steps: 8, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: 8, fps: 48, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }`;
 }
