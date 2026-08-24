@@ -1117,13 +1117,25 @@ const DIRECT_WORKFLOWS = `  workflows:
  *  scenes of the last run came back 480x864 and 720x480 — each worker had
  *  decided for itself. Fixing it in the profile is what stops that. */
 function directProfiles(spec: DirectSpec): string {
-	// ARM B of the step-count comparison. Arm A ran at 4 and is measured: 121s of
-	// render, 5m24s wall clock, out at 1024x576 / 48fps / 7.98s with the audio
-	// 11ms off the picture. This arm changes the step count and nothing else —
-	// same pinned seed, same frame, same prompt pasted in by hand — so whatever
-	// separates the two clips is the sampling.
+	// steps=4, settled by running both against the same pinned seed. 4 renders in
+	// 121s and 8 in 174s, and the cheaper one is also the better one: at 8 the
+	// freckles blend away, the pores go, the flyaway hair clumps, and a sheen
+	// appears on the nose and cheekbone. At 4 all of that survives.
 	//
-	// Set the winner here and drop this comment once the two have been watched.
+	// Which is what the LoRA stack should have told us. The turbo adapter is
+	// lightx2v_turbo_4step — a distillation trained to arrive in exactly four.
+	// Running eight does not give it longer to think, it carries it past the
+	// schedule it was distilled for, and over-stepping a distilled sampler
+	// over-smooths. The plastic look we spent three adapters chasing was partly
+	// something we were doing to it.
+	//
+	// The earlier note here argued for 8 on the grounds that the detailer's
+	// gallery was rendered at eight steps. True, but with the author's turbo, not
+	// this one — the wrong analogy, and it cost several slow renders.
+	//
+	// A caveat worth keeping: this is one seed. The mechanism is sound and the
+	// difference is visible, but if a later clip looks thin, 6 is inside the
+	// adapter's stated range and is the next thing to try, not 8.
 	//
 	// steps=8 rather than the turbo LoRA's nominal 4. Four is the fast path and
 	// it shows: the realism detailer was trained at 1024 and its own gallery was
@@ -1135,8 +1147,8 @@ function directProfiles(spec: DirectSpec): string {
 	// (steps or resolution) was the one that mattered.
 	return `  profiles:
     draft:
-      image: { width: ${spec.width}, height: ${spec.height}, steps: 8, seed: ${spec.seed} }
-      video: { width: ${spec.width}, height: ${spec.height}, steps: 8, fps: 48, seed: ${spec.seed} }
+      image: { width: ${spec.width}, height: ${spec.height}, steps: 4, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: 4, fps: 48, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }`;
 }
