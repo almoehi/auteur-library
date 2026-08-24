@@ -187,13 +187,22 @@ export interface Pick {
 	strength: number;
 }
 
-/** How many can be stacked before the render turns to soup.
+/** How many can be stacked before the render turns to soup. Base pair excluded.
  *
- *  Not measured — no one has run five adapters through this model and looked.
- *  It is a ceiling to stop a writer stacking everything it can justify, and it
- *  should be replaced with a real number the first time a clip comes back
- *  muddy and the count is the obvious suspect. Base pair excluded. */
-export const MAX_PICKS = 4;
+ *  Four was the opening guess and it did not survive its first outing: a POV
+ *  missionary clip rendered with miss + penis + pussy + breast came back with
+ *  the anatomy at the point of penetration incoherent — everything else in the
+ *  frame correct, that one region not. Two adapters were drawing the same few
+ *  hundred pixels and disagreed.
+ *
+ *  Two is not a measured number either, and saying otherwise would be pretending
+ *  we know something we do not. It is the smallest count that still does the job
+ *  the feature exists for — the act, plus the one thing that most needs helping —
+ *  and it is the safe end to start from when the only evidence in hand is a
+ *  failure at four. If clips start looking underserved, raise it a notch and
+ *  look; do not raise it on the argument that more adapters must be better,
+ *  which is the argument that produced the broken one. */
+export const MAX_PICKS = 2;
 
 /** Parse the selection out of a URL path segment.
  *
@@ -242,8 +251,18 @@ loaded on every clip regardless — the speed distillation and the skin detailer
 and are not yours to pick. From the lists below choose:
 
   - exactly one ACT: the thing that is happening in this shot
-  - any DETAILS that are true of this shot, and none that are not
-  - ${MAX_PICKS} at most, in total
+  - at most one DETAIL, and only when it is central to the shot
+  - ${MAX_PICKS} in total, never more
+
+Prefer the act alone. A detail earns its place only when the request turns on
+it — a shot that ends in a cumshot needs the cumshot adapter, a shot where the
+moaning is the point needs the moaning one. A detail that is merely true of the
+frame is not worth an adapter slot, and adding it costs something real.
+
+Never take both anatomy detailers. penis and pussy draw the same region of the
+frame, and a clip rendered with both came back with that region incoherent while
+everything around it was correct. If a shot shows both, choose the one the shot
+is actually about.
 
 Return them in the "loras" field as [{"key":"bj","strength":1.2}, …]. The number
 beside each is the adapter author's own recommendation; use it unless the

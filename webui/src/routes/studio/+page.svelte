@@ -2764,7 +2764,9 @@
 
 								<!-- What this clip renders with. The writer picks; you overrule it
 									 here, before the GPU rather than after. Two more adapters load on
-									 every clip regardless and are not listed — they are not choices. -->
+									 every clip regardless and are not listed — they are not choices.
+									 The cap is two: four at once produced a clip whose anatomy fell
+									 apart exactly where two adapters overlapped. -->
 								<div class="mt-4 border-t border-[var(--st-line)] pt-3.5">
 									<div class="mb-2 flex items-baseline gap-2">
 										<span class="text-xs text-[var(--st-faint)]">adapters</span>
