@@ -1117,6 +1117,29 @@ export interface DirectSpec {
 	studioOrigin: string;
 }
 
+/** The line that tells a task its references exist.
+ *
+ *  The agent's standing instructions describe what to do "when the task names
+ *  reference images", and the first run with pictures attached proved how much
+ *  work "names" was doing: the images uploaded, the artifact came back approved,
+ *  the graph had its three image ports — and the task said nothing, so there was
+ *  nothing for the agent to act on. The capability was wired end to end and
+ *  silent at the last inch.
+ *
+ *  Empty for a clip with no references, which keeps the task text exactly as it
+ *  has always been. */
+function refClause(count: number): string {
+	if (count < 1) return '';
+	return `
+        This clip has ${count} reference image${count > 1 ? 's' : ''}. They are the
+        files in the user_reference_material artifact. Call artifact_index to
+        find it, get_artifact_url for each file, and pass those URLs to
+        reference_image_1${count > 1 ? ` … reference_image_${count}` : ''} in the
+        order artifact_index lists them — that order is what decides which face
+        each <Picture n> tag in the prompt refers to.
+`;
+}
+
 export const DIRECT_MAX_CLIPS = 4;
 const DIRECT_PROMPT_MAX = 20_000;
 
@@ -1260,7 +1283,7 @@ export function composeDirectWorkspace(spec: DirectSpec, grokKey = ''): string {
 
         video_length: ${spec.seconds}
         Save the result as clip${i + 1}.mp4
-
+${refClause(spec.refImages ?? 0)}
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
         shorten, expand, reorder or comment on it. It is already in the format
         the workflow expects.
