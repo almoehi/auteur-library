@@ -2775,7 +2775,11 @@
 					 than a beginner and an expert door: this one builds a film out of a
 					 sentence, the other sends a prompt you already have. -->
 				<nav class="ml-auto flex gap-1.5" aria-label="mode">
-					{#each [['simple', 'simple'], ['advanced', 'advanced']] as [val, label] (val)}
+					<!-- Named for what they produce rather than how hard they are. "simple"
+						 and "advanced" said which one was for beginners, which is not the
+						 question anyone actually has in front of this toggle — the question
+						 is whether they want one clip now or a planned production. -->
+					{#each [['simple', 'one clip', 'Describe a clip, read the prompt, render it'], ['advanced', 'full production', 'Screenplay, cast, scenes and art direction first, then a multi-scene shoot']] as [val, label, hint] (val)}
 						<button
 							type="button"
 							aria-pressed={mode === val}
@@ -2783,6 +2787,7 @@
 							val
 								? 'bg-[var(--st-accent)] text-white'
 								: 'bg-[var(--st-surface)] text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+							title={hint}
 							onclick={() => setMode(val as 'simple' | 'advanced')}>{label}</button
 						>
 					{/each}
