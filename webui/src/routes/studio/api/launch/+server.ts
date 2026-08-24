@@ -65,7 +65,7 @@ async function openWorkspace(
 	yaml: string,
 	grokKey: string,
 	fetch: typeof globalThis.fetch,
-	record: { slug: string; title: string; sceneCount: number; pitch?: string },
+	record: { slug: string; title: string; sceneCount: number; pitch?: string; prompt?: string },
 	opts: { planning?: boolean; withLibrary?: boolean } = {}
 ): Promise<Response> {
 	const planning = opts.planning ?? false;
@@ -253,7 +253,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				slug: spec.slug,
 				title: spec.title || 'Direct render',
 				sceneCount: spec.prompts?.length ?? 0,
-				pitch: spec.prompts?.[0]?.slice(0, 200)
+				pitch: spec.prompts?.[0]?.slice(0, 200),
+				prompt: spec.prompts?.[0]
 			},
 			{ withLibrary: true }
 		);

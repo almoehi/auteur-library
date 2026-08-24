@@ -33,8 +33,15 @@ export interface Production {
 	renderWs?: string;
 	startedAt: number;
 	updatedAt: number;
-	/** The pitch, for the list — a title alone rarely says which film this was. */
+	/** The pitch, for the list — a title alone rarely says which film this was.
+	 *  Truncated on the way in, because the list is all it is for. */
 	pitch?: string;
+	/** Simple mode only, and stored whole: there the prompt is not a description
+	 *  of the work, it is the work. Re-rendering one setting against another
+	 *  needs the previous text back character for character, and the truncated
+	 *  pitch cannot give it — the first comparison run had to be reconstructed by
+	 *  hand from the browser tab that launched it. */
+	prompt?: string;
 }
 
 function read(): Production[] {
@@ -71,6 +78,7 @@ export function recordProduction(p: Partial<Production> & { slug: string }): Pro
 		planningWs: p.planningWs ?? existing?.planningWs,
 		renderWs: p.renderWs ?? existing?.renderWs,
 		pitch: p.pitch ?? existing?.pitch,
+		prompt: p.prompt ?? existing?.prompt,
 		startedAt: existing?.startedAt ?? p.startedAt ?? Date.now(),
 		updatedAt: Date.now()
 	};
