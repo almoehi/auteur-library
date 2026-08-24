@@ -14,6 +14,15 @@
  *  `strength` is the author's own recommendation, read off each model's page
  *  rather than guessed. Where an author gave a range the midpoint is used,
  *  except where they named a figure they run themselves.
+ *
+ *  One hard constraint on `url`, learned the expensive way: **a civitai version
+ *  must be referenced by its first .safetensors and no other.** The harness
+ *  rewrites the fileId and fetches the version's first file regardless of what
+ *  the url asks for — twice observed, once as a 403 on a file we never wanted
+ *  and once as a sha mismatch after the wrong bytes arrived. Both failures cost
+ *  minutes of A100 time per retry, because model downloads run on the GPU
+ *  container. Before adding an entry, check the version's file list: if the file
+ *  you want is not first, you cannot have it from that version.
  */
 
 export interface Lora {
@@ -167,9 +176,15 @@ export const CATALOGUE: Lora[] = [
 	{
 		key: 'pussy',
 		label: 'HMPussy v0.5',
-		file: 'hmpussy_v6_epoch30.safetensors',
-		url: 'https://civitai.com/api/download/models/3215304?fileId=3097100',
-		sha256: '3080f4fbcbba4fc06bd09240c7eedb6a5128eb0e19feb001cdf97a7a0941a6ee',
+		// The version's FIRST .safetensors, which is not the one this entry used to
+		// name. The harness rewrites the fileId in a civitai url and fetches the
+		// first file regardless: asked for hmpussy_v6_epoch30 it delivered
+		// vagassist_e40's bytes, and the sha check caught it after two failed
+		// download jobs on an A100. Same version, same "stills + motion" training,
+		// half the size.
+		file: 'vagassist_e40.safetensors',
+		url: 'https://civitai.com/api/download/models/3215304?fileId=3097094',
+		sha256: '2c2fdb66bf558de1aabda504a81d4ada5f4cebc20e8f519dc6ed3bb6d4be8c9a',
 		strength: 0.8,
 		trigger: 'hmpussy',
 		use: 'her pussy is the subject — the frame is on it, not merely containing it',
@@ -190,9 +205,14 @@ export const CATALOGUE: Lora[] = [
 	{
 		key: 'moan',
 		label: 'moawxx moans + writhing',
-		file: 'moawxx_000002500.safetensors',
-		url: 'https://civitai.com/api/download/models/3228089?fileId=3110353',
-		sha256: '7891ae89ca83c391277692aef5218d3228e22f5bad0d92f55ed1676f36813918',
+		// Epoch 2000 rather than the 2500 that was chosen, for the same reason as
+		// the pussy entry: this version ships three epochs and the harness fetches
+		// the first whatever the fileId says. This one had never been downloaded,
+		// so the trap was sitting there waiting for the first clip that wanted
+		// moaning. The author gave no guidance beyond "test different epochs".
+		file: 'moawxx_000002000.safetensors',
+		url: 'https://civitai.com/api/download/models/3228089?fileId=3110357',
+		sha256: 'bc0841e216198174ff5937e3ba2f4c9234c163082276cd9f4e5f8889ae12e4e5',
 		strength: 0.75,
 		/** author: '0.6 - 0.85 (1.0 often degrades image quality)' */
 		band: [0.6, 0.85],
