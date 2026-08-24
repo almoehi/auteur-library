@@ -1107,7 +1107,13 @@
 		if (!Number.isFinite(dur) || dur <= 0) return [];
 		const wasAt = video.currentTime;
 		const scale = Math.min(1, 768 / (video.videoWidth || 768));
-		const canvas = document.createElement('canvas');
+		// globalThis, not the bare name. This component declares a snippet called
+		// `document`, and svelte compiles snippets to module-scoped consts — which
+		// shadows the global for the whole file. The failure it caused was not
+		// obvious from the outside: the button did nothing at all, because
+		// `document.querySelector is not a function` came back as an unhandled
+		// rejection with no visible effect on the page.
+		const canvas = globalThis.document.createElement('canvas');
 		canvas.width = Math.round((video.videoWidth || 768) * scale);
 		canvas.height = Math.round((video.videoHeight || 432) * scale);
 		const ctx = canvas.getContext('2d');
@@ -1198,7 +1204,9 @@
 	 *  ready to send. Nothing is spent until you send it. */
 	async function diagnose(workspace: string) {
 		if (!workspace || diagnosing[workspace]) return;
-		const video = document.querySelector<HTMLVideoElement>(
+		// globalThis for the same reason as in grabFrames: `document` is a snippet
+		// in this file and shadows the global.
+		const video = globalThis.document.querySelector<HTMLVideoElement>(
 			`video[data-clip="${CSS.escape(workspace)}"]`
 		);
 		if (!video) {
