@@ -27,6 +27,13 @@ export interface Lora {
 	sha256: string;
 	/** The author's recommendation. Overridable per clip. */
 	strength: number;
+	/** The range the author themselves gave, where they gave one. The writer may
+	 *  place the strength anywhere inside it and nowhere outside it.
+	 *
+	 *  Absent on most of these, and left absent on purpose. Inventing a band for
+	 *  an adapter whose author never published one just moves the guess up a
+	 *  level and dresses it as provenance — those keep the fixed number. */
+	band?: [number, number];
 	/** Words that aim the adapter. They do not switch it on — a loaded adapter
 	 *  is always acting — but the prompt lands closer with them present. */
 	trigger?: string;
@@ -59,6 +66,8 @@ export const BASE: Lora[] = [
 		url: 'https://civitai.com/api/download/models/3229050?fileId=3111384',
 		sha256: 'e5c8c275af58663a664ad2922cc10a248bff70b941043375d2c82d9cc55b7030',
 		strength: 1.6,
+		/** author: realistic band 1.0-2.0, breaks past 2.0 */
+		band: [1.0, 2.0],
 		use: 'skin texture — pores, freckles, uneven tone',
 		kind: 'base'
 	}
@@ -73,6 +82,8 @@ export const CATALOGUE: Lora[] = [
 		url: 'https://civitai.com/api/download/models/3235946?fileId=3118341',
 		sha256: 'aef6d0c6b758352fd4cfe302d3b9121fb0c18e470bde4bdb2025229e1febee6d',
 		strength: 1.2,
+		/** author: 'Strength: 1.0 - 1.5' */
+		band: [1.0, 1.5],
 		trigger: 'bl0w_j0b',
 		use: 'oral sex, mouth on cock',
 		kind: 'act'
@@ -104,6 +115,8 @@ export const CATALOGUE: Lora[] = [
 		url: 'https://civitai.com/api/download/models/3206518?fileId=3088013',
 		sha256: '608e4212f2788b6063330ff1196fc1f4b4228cfd9a413a63c198a09d7e4a61cb',
 		strength: 0.5,
+		/** author: 'use it at strength 0.5 or below' */
+		band: [0.3, 0.5],
 		trigger: 'hmmotion',
 		use: 'sex in general — the fallback when no other act fits',
 		kind: 'act'
@@ -138,6 +151,8 @@ export const CATALOGUE: Lora[] = [
 		url: 'https://civitai.com/api/download/models/3225638?fileId=3107724',
 		sha256: 'f9cbcaa596b6b281f154388e407e7b4c4ee97ba9917614ab36bc5e86edf374f5',
 		strength: 0.75,
+		/** author: '0.7-0.8 seems to be the sweet spot', 1.0 gives finger artifacts */
+		band: [0.7, 0.8],
 		use: 'breasts move, or are touched',
 		kind: 'detail'
 	},
@@ -148,6 +163,8 @@ export const CATALOGUE: Lora[] = [
 		url: 'https://civitai.com/api/download/models/3228089?fileId=3110353',
 		sha256: '7891ae89ca83c391277692aef5218d3228e22f5bad0d92f55ed1676f36813918',
 		strength: 0.75,
+		/** author: '0.6 - 0.85 (1.0 often degrades image quality)' */
+		band: [0.6, 0.85],
 		trigger: 'moawxx',
 		use: 'she moans, and her body responds to it',
 		kind: 'detail'
@@ -170,6 +187,8 @@ export const CATALOGUE: Lora[] = [
 		url: 'https://civitai.com/api/download/models/3260276?fileId=3143593',
 		sha256: '99307e313784cbea7d9ee2a56ecb8794272f1024737985b824eca8c5c619a0b6',
 		strength: 0.9,
+		/** author: '0.5 - 0.9', runs 0.9 themselves */
+		band: [0.5, 0.9],
 		use: 'general explicit-scene quality, no particular act',
 		kind: 'detail'
 	}
@@ -238,9 +257,11 @@ export function formatPicks(picks: Pick[]): string {
  *  it, and nothing anywhere would say so.
  */
 export function catalogueForWriter(): string {
-	const line = (l: Lora) =>
-		`  ${l.key.padEnd(8)}${String(l.strength).padEnd(6)}${l.use}` +
-		(l.trigger ? `  [trigger: ${l.trigger}]` : '');
+	const line = (l: Lora) => {
+		const w = l.band ? `${l.strength} (${l.band[0]}-${l.band[1]})` : `${l.strength} fixed`;
+		return `  ${l.key.padEnd(8)}${w.padEnd(16)}${l.use}` +
+			(l.trigger ? `  [trigger: ${l.trigger}]` : '');
+	};
 	const acts = CATALOGUE.filter((l) => l.kind === 'act').map(line).join('\n');
 	const details = CATALOGUE.filter((l) => l.kind === 'detail').map(line).join('\n');
 
@@ -264,9 +285,15 @@ frame, and a clip rendered with both came back with that region incoherent while
 everything around it was correct. If a shot shows both, choose the one the shot
 is actually about.
 
-Return them in the "loras" field as [{"key":"bj","strength":1.2}, …]. The number
-beside each is the adapter author's own recommendation; use it unless the
-request gives you a reason not to, and stay inside 0 to 2.
+Return them in the "loras" field as [{"key":"bj","strength":1.2}, …].
+
+The number beside each is the adapter author's own recommendation. Where a range
+follows it in brackets, that is the range the author published, and you may
+place the strength anywhere inside it: higher when the thing that adapter does is
+what the request is really about, lower when it is present but not the point.
+Never go outside the range. Where the number says "fixed" the author published no
+range, so send that number unchanged — a range nobody measured is not yours to
+invent either.
 
 Choose on what the shot actually contains, not on what sounds related. An
 adapter for something that is not in the frame does not sit idle — a loaded

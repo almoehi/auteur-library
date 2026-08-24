@@ -91,8 +91,15 @@ function readLoras(raw: unknown): Pick[] {
 			if (act) continue;
 			act = true;
 		}
+		// Clamped to the author's published range, or pinned to their number where
+		// they published none. The writer is allowed to place a strength; it is not
+		// allowed to leave the ground the author actually stood on.
 		const n = Number(strength);
-		out.push({ key, strength: Number.isFinite(n) && n > 0 ? Math.min(2, n) : lora.strength });
+		let value = lora.strength;
+		if (lora.band && Number.isFinite(n)) {
+			value = Math.min(lora.band[1], Math.max(lora.band[0], n));
+		}
+		out.push({ key, strength: Math.round(value * 100) / 100 });
 		if (out.length >= MAX_PICKS) break;
 	}
 	return out;
