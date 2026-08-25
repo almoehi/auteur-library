@@ -32,7 +32,9 @@
 	type Workflow = {
 		entry: { name: string; workflow_type?: string; model_family?: string };
 		state: string;
-		queue_depth?: number;
+		// The HITL release split queue_depth into the two numbers it was summing.
+		in_flight?: number;
+		pending?: number;
 	};
 	type PollState = {
 		workspace?: {

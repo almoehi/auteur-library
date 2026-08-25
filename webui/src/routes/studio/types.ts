@@ -226,7 +226,7 @@ export interface PollState {
 	workspace?: { name?: string; version?: string; is_open?: boolean; context_utilization?: number };
 	tasks?: Task[];
 	artifacts?: Artifact[];
-	workflows?: { entry: { name: string }; state: string; queue_depth?: number }[];
+	workflows?: { entry: { name: string }; state: string; in_flight?: number; pending?: number }[];
 	worker_statuses?: unknown[];
 	recent_messages?: unknown[];
 }
