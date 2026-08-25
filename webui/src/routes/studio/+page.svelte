@@ -1069,13 +1069,45 @@
 	 *  words — so a writer here would only have prose to paraphrase, and every
 	 *  paraphrase is a chance to lose the detail you actually cared about.
 	 */
-	async function sheetFromRequest(description: string, kind: 'character' | 'location') {
+	async function sheetFromRequest(request: string, kind: 'character' | 'location') {
+		try {
+			const res = await fetch('/studio/api/sheetprompt', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ request, kind })
+			});
+			const r = (await res.json()) as {
+				ok?: boolean;
+				sheet?: { kind: 'character' | 'location'; description: string; why?: string };
+				error?: string;
+			};
+			if (!r.ok || !r.sheet) {
+				pushError(r.error || 'The description could not be prepared.');
+				return;
+			}
+			pushItem({
+				who: 'studio',
+				kind: 'sheet',
+				sheet: { ...r.sheet, request, name: firstWords(r.sheet.description, kind) }
+			});
+		} catch (e) {
+			pushError(String(e));
+		}
+	}
+
+	/** Send an approved sheet description to the GPU. */
+	async function renderSheet(itemId: string) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.sheet || item.sheet.launched || sheetBusy[itemId]) return;
+		const { kind, description } = item.sheet;
+		if (!description.trim()) return;
 		// Guarded the same way a clip launch is, and no more strictly. There is one
 		// render slot and starting a second render retargets it — that is already
 		// true of every clip you launch, so a sheet must not be the one thing that
 		// refuses because a finished run is still on screen.
 		if (renderLaunching) return;
 		renderLaunching = true;
+		sheetBusy[itemId] = true;
 		try {
 			const spec = {
 				slug: `sheet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
@@ -1094,6 +1126,7 @@
 				return;
 			}
 			pendingSheet = { kind, description };
+			item.sheet.launched = true;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			shootsAnnounced = true;
@@ -1108,6 +1141,7 @@
 			pushError(String(e));
 		} finally {
 			renderLaunching = false;
+			sheetBusy[itemId] = false;
 		}
 	}
 
@@ -1122,6 +1156,9 @@
 	async function keepSheet(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.sheet || item.sheet.id || sheetBusy[itemId]) return;
+		const { workspace, artifact, file } = item.sheet;
+		// A draft card has no render behind it yet, so it has nothing to keep.
+		if (!workspace || !artifact || !file) return;
 		sheetBusy[itemId] = true;
 		try {
 			const res = await fetch('/studio/api/sheet', {
@@ -1131,9 +1168,9 @@
 					kind: item.sheet.kind,
 					name: item.sheet.name,
 					description: item.sheet.description,
-					workspace: item.sheet.workspace,
-					artifact: item.sheet.artifact,
-					file: item.sheet.file
+					workspace,
+					artifact,
+					file
 				})
 			});
 			const r = (await res.json()) as {
@@ -3375,18 +3412,51 @@
 									</span>
 								</div>
 
-								<img
-									src={item.sheet.url}
-									alt={item.sheet.name}
-									class="w-full rounded-xl bg-[var(--st-bg)]"
-								/>
-
-								{#if item.sheet.description}
-									<p class="doc mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
-										{item.sheet.description}
-									</p>
+								{#if item.sheet.url}
+									<img
+										src={item.sheet.url}
+										alt={item.sheet.name ?? ''}
+										class="w-full rounded-xl bg-[var(--st-bg)]"
+									/>
+									{#if item.sheet.description}
+										<p class="doc mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
+											{item.sheet.description}
+										</p>
+									{/if}
+								{:else}
+									<!-- The description before it costs anything, editable, for the
+										 same reason the shot prompt is: a sheet is rendered once and
+										 every clip afterwards is shot against it. -->
+									<textarea
+										bind:value={item.sheet.description}
+										readonly={item.sheet.launched}
+										rows="3"
+										spellcheck="false"
+										class="block w-full resize-y rounded-xl bg-[var(--st-bg)] p-3 font-mono text-[0.8rem] leading-relaxed outline-none focus:ring-0 read-only:text-[var(--st-muted)]"
+									></textarea>
+									{#if item.sheet.why}
+										<p class="mt-2 text-xs text-[var(--st-faint)]">{item.sheet.why}</p>
+									{/if}
+									<div class="mt-4 flex items-center justify-between gap-3 border-t border-[var(--st-line)] pt-4">
+										<p class="text-xs text-[var(--st-faint)]">
+											{item.sheet.launched
+												? 'Rendering — it appears here when it is done.'
+												: 'Six views, about as long as a clip takes.'}
+										</p>
+										<button
+											type="button"
+											disabled={item.sheet.launched ||
+												sheetBusy[item.id] ||
+												!item.sheet.description.trim()}
+											onclick={() => renderSheet(item.id)}
+											class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+										>
+											{item.sheet.launched ? 'Rendering…' : 'Render it'}
+										</button>
+									</div>
 								{/if}
 
+								{#if item.sheet.url}
 								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
 									{#if item.sheet.id}
 										<p class="text-sm text-[var(--st-muted)]">
@@ -3406,7 +3476,7 @@
 											/>
 											<button
 												type="button"
-												disabled={sheetBusy[item.id] || !item.sheet.name.trim()}
+												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
 												onclick={() => keepSheet(item.id)}
 												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
 											>
@@ -3419,6 +3489,7 @@
 										</p>
 									{/if}
 								</div>
+								{/if}
 							</article>
 						{:else if item.kind === 'shot' && item.shot}
 							{@const n = item.shot.prompt.trim() ? item.shot.prompt.trim().split(/\s+/).length : 0}

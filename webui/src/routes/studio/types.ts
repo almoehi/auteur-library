@@ -164,18 +164,29 @@ export interface ChatItem {
 	 *  stops the card offering to store it twice. */
 	sheet?: {
 		kind: 'character' | 'location';
-		/** The description that produced it, kept so the card can show what was
-		 *  asked for beside what came back. */
+		/** The English description the workflow will receive — editable on the
+		 *  card, for the same reason the shot prompt is: a description nobody can
+		 *  see is one nobody can correct, and this one is rendered once and lived
+		 *  with for a whole production. */
 		description: string;
-		/** Where the image can be fetched from right now: the harness while the
-		 *  run is fresh, our own store once it has been kept. */
-		url: string;
+		/** What you typed, kept so a rewrite asks for the same subject again
+		 *  rather than editing the writer's English. */
+		request?: string;
+		/** One line from the writer saying what it changed, or that it only
+		 *  translated. */
+		why?: string;
+		/** Set once this card has been sent to render, so it stops offering. */
+		launched?: boolean;
+		/** Set on the card the render comes back on. Its presence is what tells
+		 *  the two states apart: no url is a draft awaiting your yes, a url is a
+		 *  finished sheet awaiting a name. */
+		url?: string;
 		/** The three ids the store needs to fetch the bytes itself. */
-		workspace: string;
-		artifact: string;
-		file: string;
+		workspace?: string;
+		artifact?: string;
+		file?: string;
 		/** Your name for it. Seeded from the description, editable on the card. */
-		name: string;
+		name?: string;
 		/** Set by a successful keep. */
 		id?: string;
 	};
