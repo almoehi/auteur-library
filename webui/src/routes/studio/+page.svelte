@@ -817,12 +817,14 @@
 		// Simple mode has no plan to refine and no crew to message: every line is
 		// another shot, whether it is the first or the fifth.
 		if (mode === 'simple') {
+			// The banner above the field already says what this mode is for, so the
+			// placeholder only has to say what to type. The one case it still earns
+			// its words is a refinement, where what to type is not obvious.
 			if (wantTarget === 'character')
 				return currentCharacter
 					? 'Say what to change about them — everything else stays'
-					: 'Describe the person — one picture first, the full sheet when you like them';
-			if (wantTarget === 'location')
-				return 'Describe the place — you get six views to reuse in every clip';
+					: 'A woman in her thirties, short dark hair, athletic';
+			if (wantTarget === 'location') return 'A cheap motel room at night, one lamp on';
 			return 'Describe the shot — one clip per message';
 		}
 		if (!brief) return 'New film — describe the idea in one sentence';
@@ -4309,6 +4311,38 @@
 					<div
 						class="rounded-3xl bg-[var(--st-surface)] p-3"
 					>
+						<!-- Making a character or a location is a state you are IN, not a tab
+							 sitting beside the clip settings. It was a tab, and that put two
+							 different questions on one row — what this message makes, and who is
+							 in the clip — in identical chips. You enter this from the picker
+							 below, and this band is how you know you are here and how you leave. -->
+						{#if mode === 'simple' && wantTarget !== 'clip'}
+							<div
+								class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
+							>
+								<div class="min-w-0">
+									<p class="font-display text-sm font-semibold">
+										{wantTarget === 'character' ? 'New character' : 'New location'}
+									</p>
+									<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
+										{wantTarget === 'character'
+											? 'Describe the person. You get one picture in about a minute, then the full six-view sheet when you like them.'
+											: 'Describe the place. You get six views of it to shoot against.'}
+									</p>
+								</div>
+								<button
+									type="button"
+									class="shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+									onclick={() => {
+										wantTarget = 'clip';
+										currentCharacter = null;
+										saveSetup();
+									}}
+								>
+									back to clips
+								</button>
+							</div>
+						{/if}
 						<label class="sr-only" for="composer">Message</label>
 						<textarea
 							id="composer"
@@ -4337,43 +4371,16 @@
 										 another: the beats come from the duration and the camera
 										 language from the shape, so a change there is a rewrite. Set
 										 here they cost nothing, because the writer is told first. -->
-									{#if mode === 'simple'}
-										<!-- What the next message makes. A clip is the default; the other
-											 two describe something once and keep it, which is what the
-											 continuation workflow needs to hold a face across a scene. -->
-										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-											{#each [['clip', 'clip'], ['character', 'character'], ['location', 'location']] as [t, label] (t)}
-												<button
-													type="button"
-													title={t === 'clip'
-														? 'render a video clip'
-														: t === 'character'
-															? 'render a six-view character sheet to reuse'
-															: 'render a six-view location sheet to reuse'}
-													class="cursor-pointer rounded-full px-2.5 py-1 text-xs transition-colors {wantTarget ===
-													t
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-													onclick={() => {
-														wantTarget = t as 'clip' | 'character' | 'location';
-														// Coming back to characters starts a new one. Refining is
-														// about the picture in front of you, and you just left it.
-														if (t !== 'character') currentCharacter = null;
-														saveSetup();
-													}}>{label}</button
-												>
-											{/each}
-										</div>
-									{/if}
-									{#if mode === 'simple' && wantTarget === 'clip' && characters.length}
-										<!-- Who is in it. The sheet becomes the clip's first reference
-											 and the brief is written around it, which is why this is
-											 set here and not on the card: choosing a person after the
-											 brief is written would leave a brief about someone else. -->
+									{#if mode === 'simple' && wantTarget === 'clip'}
+										<!-- Who is in it. Everything on this row answers one question —
+											 which person this clip is shot with — and the two buttons at
+											 the end are how you get another one to choose from. The mode
+											 tab that used to sit here answered a different question in
+											 the same shape, which is what made it unreadable. -->
 										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
 											<button
 												type="button"
-												title="no character — the clip invents whoever the words describe"
+												title="nobody in particular — the clip invents whoever the words describe"
 												class="cursor-pointer rounded-full px-2.5 py-1 text-xs transition-colors {wantCharacter ===
 												''
 													? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
@@ -4383,7 +4390,7 @@
 													saveSetup();
 												}}>anyone</button
 											>
-											{#each characters.slice(0, 4) as c (c.id)}
+											{#each characters.slice(0, 3) as c (c.id)}
 												<button
 													type="button"
 													title="shoot this clip with {c.name}"
@@ -4405,6 +4412,33 @@
 												</button>
 											{/each}
 										</div>
+
+										<!-- The way in. Deliberately not chips like the ones above: these
+											 do not select anything, they take you somewhere. -->
+										<button
+											type="button"
+											title="describe a new person and keep them, so every clip can use the same face"
+											class="flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs text-[var(--st-faint)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+											onclick={() => {
+												wantTarget = 'character';
+												currentCharacter = null;
+												saveSetup();
+											}}
+										>
+											<span class="text-sm leading-none">+</span> character
+										</button>
+										<button
+											type="button"
+											title="describe a new place and keep it"
+											class="flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs text-[var(--st-faint)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+											onclick={() => {
+												wantTarget = 'location';
+												currentCharacter = null;
+												saveSetup();
+											}}
+										>
+											<span class="text-sm leading-none">+</span> location
+										</button>
 									{/if}
 									{#if mode === 'simple' && wantTarget === 'clip'}
 										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
