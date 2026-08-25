@@ -217,19 +217,20 @@ const CLOSE = '  # <</LORAS>>';
  *  the only thing that failed. Two adapter stacks now differ by URL alone, and
  *  since every run opens a fresh workspace there is nothing for a stale bundle
  *  to persist into. */
-/** The reference images, declared as bundle assets.
+/*  An earlier note here said input ports had already been tried and had died on
+ *  a 404 from the exchange bucket, and used that to argue for assets. It was
+ *  wrong about the cause, and the wrong lesson was expensive.
  *
- *  This replaces an earlier attempt that declared them as `ports.inputs` of
- *  kind image and left the worker agent to find the uploaded artifact and pass
- *  URLs. The agent did its half correctly — it located the files unprompted —
- *  and the render still died on a 404 fetching them from the exchange bucket.
+ *  The harness's own oplog settles it: across all 409 render dispatches on this
+ *  machine, `mediaInputs` was `{}` and `inputFiles` was `0`. No render has ever
+ *  staged an input file, so no 404 can have come from staging one. What that
+ *  attempt actually hit is a different trap — it passed the url minted by
+ *  `mint-upload-urls`, and `importUserArtifact` copies the upload into artifact
+ *  scope and then deletes the workspace-scope object while still storing its
+ *  now-dead url. Fetching it gets NoSuchKey, which is a 404.
  *
- *  Assets are the mechanism the guide actually describes for getting a static
- *  file into a graph: the harness fetches each basename from the directory the
- *  workflow JSON came from, which is this endpoint, and substitutes a URL for
- *  every string in the graph that matches. That removes both things that
- *  failed — no artifact URL, and no agent in the path.
- */
+ *  We mint our own url and never touch the artifact store, so that trap is not
+ *  on this path. */
 /** The reference images, declared as media input ports.
  *
  *  NOT as `assets:`, which is what this used to be and what cost three GPU
