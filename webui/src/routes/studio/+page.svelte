@@ -375,6 +375,40 @@
 
 	/** "today", "yesterday", then the date — the grouping people actually use
 	 *  when looking for something they made recently. */
+	/** What a history row actually is. Nothing stores this, so it is read back
+	 *  from what the launch route wrote:
+	 *
+	 *    a film  — the only stage that opens a planning workspace
+	 *    a sheet — the sheet stage passes a literal title and no plan
+	 *    a clip  — everything else, which is direct mode
+	 *
+	 *  A `kind` on the record would be sturdier than a title match, and it is a
+	 *  three-line change in api/launch. Until then this reads the same facts. */
+	const SHEET_TITLE = /^(Character|Location) sheet$/;
+	function runKind(p: Production): 'film' | 'sheet' | 'clip' {
+		if (p.planningWs) return 'film';
+		if (SHEET_TITLE.test(p.title)) return 'sheet';
+		return 'clip';
+	}
+
+	/** Runs, by the day they were last touched, with the sheets taken out.
+	 *
+	 *  Sheets were never productions: they are in Cast & sets, they carry a
+	 *  constant title so nine of them read identically, and reopening one lands
+	 *  in the legacy branch because runSlug never matches a sheet id. Listing
+	 *  them here also spent the 60-row budget on rows nobody can use. */
+	const historyDays = $derived.by(() => {
+		const days: { label: string; items: Production[] }[] = [];
+		for (const p of history) {
+			if (runKind(p) === 'sheet') continue;
+			const label = whenLabel(p.updatedAt);
+			const day = days.find((d) => d.label === label);
+			if (day) day.items.push(p);
+			else days.push({ label, items: [p] });
+		}
+		return days;
+	});
+
 	function whenLabel(ts: number): string {
 		const d = new Date(ts);
 		const today = new Date();
@@ -3370,34 +3404,47 @@
 		</div>
 
 		<nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
-			{#if history.length}
-				<p class="px-3 pt-3 pb-1.5 text-[10px] font-bold tracking-[0.2em] text-[var(--st-faint)] uppercase">
-					recent
-				</p>
-				{#each history as p (p.slug)}
-					{@const current = brief?.slug === p.slug}
-					<div class="group relative">
-						<button
-							type="button"
-							onclick={() => reopen(p)}
-							class="w-full cursor-pointer rounded-xl px-3 py-2 pr-8 text-left transition-colors {current
-								? 'bg-[var(--st-surface)]'
-								: 'hover:bg-[var(--st-surface)]'}"
-						>
-							<span class="block truncate text-[13px] text-[var(--st-text)]">{p.title}</span>
-							<span class="mt-0.5 block text-[11px] text-[var(--st-faint)]">
-								{whenLabel(p.updatedAt)} · {p.sceneCount} scenes{p.renderWs ? ' · shot' : ''}
-							</span>
-						</button>
-						<button
-							type="button"
-							aria-label="remove {p.title} from the list"
-							onclick={(e) => dropFromHistory(p, e)}
-							class="absolute top-2 right-1.5 cursor-pointer rounded-lg px-1.5 py-1 text-xs text-[var(--st-faint)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)] focus:opacity-100"
-						>
-							×
-						</button>
-					</div>
+			{#if historyDays.length}
+				<!-- The day is a heading, not a word repeated on every row. Twelve runs
+					 in one afternoon printed "today" twelve times and said nothing. -->
+				{#each historyDays as day (day.label)}
+					<p
+						class="px-3 pt-4 pb-1.5 font-mono text-[0.7rem] font-medium tracking-[0.13em] text-[var(--st-faint)] uppercase"
+					>
+						{day.label}
+					</p>
+					{#each day.items as p (p.slug)}
+						{@const current = brief?.slug === p.slug}
+						{@const kind = runKind(p)}
+						<div class="group relative">
+							<button
+								type="button"
+								onclick={() => reopen(p)}
+								class="w-full cursor-pointer rounded-xl py-2 pr-9 pl-3 text-left transition-colors {current
+									? 'bg-[var(--st-surface)]'
+									: 'hover:bg-[var(--st-surface)]'}"
+							>
+								<span class="block truncate text-sm text-[var(--st-text)]">{p.title}</span>
+								<!-- Only what is true and only where it adds something. A clip's
+									 title is the prompt, so a second line under it would be filler;
+									 a film has a scene count, which is the one number that says how
+									 big the thing is. -->
+								{#if kind === 'film'}
+									<span class="mt-0.5 block text-xs text-[var(--st-faint)]">
+										{p.sceneCount} scene{p.sceneCount === 1 ? '' : 's'}{p.renderWs ? ' · shot' : ' · planning'}
+									</span>
+								{/if}
+							</button>
+							<button
+								type="button"
+								aria-label="remove {p.title} from the list"
+								onclick={(e) => dropFromHistory(p, e)}
+								class="absolute top-1/2 right-1 flex size-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-[var(--st-faint)] opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] focus-visible:opacity-100"
+							>
+								×
+							</button>
+						</div>
+					{/each}
 				{/each}
 			{:else}
 				<p class="px-3 pt-4 text-xs leading-relaxed text-[var(--st-faint)]">
