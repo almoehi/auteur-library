@@ -26,6 +26,16 @@ bare filenames, which is what was actually on the volume all along. Flagging it
 only because anyone else carrying a Windows-exported graph will hit it, and the
 error names the symptom rather than the change.
 
+One more on model declarations, and this one costs disk rather than a failure:
+the same two files are declared three different ways across the registry. The
+MiniMax turbo and ref loras are flat in `krea2_character_sheet`, under
+`Minimax/` in `krea2_location_sheet`, and the H3 unet and VAEs are under
+`MinimaxH3/` and `h3/` in both while our own bundle has them flat. Each workflow
+is internally consistent, so nothing breaks — but the volume ends up holding
+three copies of a 19.5 GB unet and several of the loras, and each new convention
+costs a fresh download the first time a workflow that uses it runs. Worth a
+convention, or a normalisation step, if you have not already got one planned.
+
 Also: `dest:` in a models stanza appears to be inert. We had `dest: loras/MINIMAX/`
 declared for a year and the files were always written flat — the download payload
 only carries `dest_type` and `filename`. If that field is genuinely unsupported,
