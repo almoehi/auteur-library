@@ -30,22 +30,44 @@
 }
 
 @theme {
-	--font-display: 'Space Grotesk', system-ui, sans-serif;
-	--font-body: 'DM Sans', system-ui, sans-serif;
+	/* One typeface, two roles. Apple's own rule — "minimize the number of
+	 * typefaces you use" — and Space Grotesk's quirky terminals were pulling the
+	 * opposite way from the calm this surface wants. Weight carries the
+	 * hierarchy instead. DM Sans stays as the local fallback. */
+	--font-display: 'Instrument Sans', 'DM Sans', system-ui, sans-serif;
+	--font-body: 'Instrument Sans', 'DM Sans', system-ui, sans-serif;
+	/* 55 uses of font-mono and no family behind it, so it resolved to SF Mono,
+	 * Consolas or DejaVu depending on the machine — three metrics for one panel.
+	 * Its job is machine values: workspace ids, seeds, model names, task keys. */
+	--font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-	--color-bg: #0c0c0c;
-	--color-surface: #141414;
-	--color-surface-2: #1a1a1a;
-	--color-border: #262626;
+	/* Monochrome. The accent is white and is spent once per card, on the one
+	 * control that costs GPU time; colour survives only where it carries meaning
+	 * the shape cannot — the status set below. Coral was the rate module's
+	 * colour, and coral on black is also the tube-site signature. */
+	--color-bg: #000000;
+	--color-surface: #151517;
+	--color-surface-2: #1e1e21;
+	--color-border: #26262a;
 
-	--color-coral: #ff4d6d;
-	--color-coral-dark: #d93254;
+	/* Still named coral so every existing bg-coral / hover:bg-coral-dark keeps
+	 * working; only the value moved. --color-on-accent is what goes on top of a
+	 * filled accent surface, and it has to be dark now. */
+	--color-coral: #f5f5f7;
+	--color-coral-dark: #ffffff;
+	--color-on-accent: #000000;
 
-	--color-green: #22c55e;
+	/* The status layer. Not the accent, and only ever status. */
+	--color-green: #5b8f6e;
 	--color-blue: #3b82f6;
+	--color-warn: #b98a3e;
+	--color-danger: #c4614b;
 
-	--color-text: #f0f0f0;
-	--color-muted: #737373;
+	/* Both cleared 4.5:1 against every surface above; the values they replace
+	 * measured 3.89:1 and 2.51:1. */
+	--color-text: #f5f5f7;
+	--color-muted: #a1a1a6;
+	--color-faint: #86868b;
 }
 
 html {

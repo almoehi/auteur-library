@@ -5,6 +5,18 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="robots" content="noindex, nofollow" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+		<!-- The brand faces. Served from Google rather than self-hosted, because the
+		     two woff2 files in static/fonts are the old pair and adding two more
+		     binaries to the repo buys nothing here: this app only ever runs on a
+		     machine that already needs the internet for the model APIs. DM Sans
+		     stays installed and is the fallback in the stack, so an offline start
+		     still gets a real face rather than a system default. -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;450;500&family=Instrument+Sans:wght@400;500;600&display=swap"
+		/>
 		<link
 			rel="preload"
 			href="%sveltekit.assets%/fonts/dm-sans-latin.woff2"

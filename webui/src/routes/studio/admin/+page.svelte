@@ -173,7 +173,7 @@
 								<span class="font-display flex flex-wrap items-center gap-2 text-base font-semibold">
 									{g.title}
 									{#if changed}
-										<span class="rounded-md bg-[var(--st-accent)] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+										<span class="rounded-md bg-[var(--st-accent)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--st-on-accent)]">
 											{changed} changed
 										</span>
 									{/if}
@@ -204,7 +204,7 @@
 									{it.label}
 									{#if !isStock(it)}
 										<span
-											class="rounded-md bg-[var(--st-accent)] px-1.5 py-0.5 text-[10px] font-semibold text-white"
+											class="rounded-md bg-[var(--st-accent)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--st-on-accent)]"
 										>
 											changed
 										</span>
@@ -233,7 +233,7 @@
 												class="cursor-pointer rounded-full px-3 py-1.5 font-mono text-[11px] transition-colors {models[
 													it.agent
 												] === m.id
-													? 'bg-[var(--st-accent)] text-white'
+													? 'bg-[var(--st-accent)] text-[var(--st-on-accent)]'
 													: 'bg-[var(--st-surface-2)] text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 												onclick={() => (models[it.agent!] = m.id)}
 												title={m.note}
@@ -285,7 +285,7 @@
 					type="button"
 					disabled={!dirty || saving}
 					onclick={save}
-					class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+					class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
 				>
 					{saving ? 'saving…' : 'save'}
 				</button>

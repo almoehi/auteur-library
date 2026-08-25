@@ -44,7 +44,7 @@
 						href={t.href}
 						aria-current={active ? 'page' : undefined}
 						class="font-display rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors {active
-							? 'bg-[var(--st-accent)] text-white'
+							? 'bg-[var(--st-accent)] text-[var(--st-on-accent)]'
 							: 'bg-[var(--st-surface)] text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 					>
 						{t.label}
@@ -61,12 +61,19 @@
 	.studio {
 		--st-bg: var(--color-bg);
 		--st-surface: var(--color-surface);
-		--st-surface-2: #1e1e1e;
+		--st-surface-2: var(--color-surface-2);
+		--st-line: var(--color-border);
+		/* The one border that has to be seen rather than felt: where a 1px edge is
+		 * the only thing identifying a control. Decoration keeps --st-line. */
+		--st-line-control: #4c4c52;
 		--st-text: var(--color-text);
 		--st-muted: var(--color-muted);
-		--st-faint: #565656;
+		--st-faint: var(--color-faint);
 		--st-accent: var(--color-coral);
 		--st-accent-strong: var(--color-coral-dark);
+		/* What sits on top of a filled accent surface. The accent is white now, so
+		 * this is the one that had to move with it. */
+		--st-on-accent: var(--color-on-accent);
 		background: var(--st-bg);
 		color: var(--st-text);
 		font-family: var(--font-body);

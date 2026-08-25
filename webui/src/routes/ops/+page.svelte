@@ -228,7 +228,7 @@
 	function pill(status: string) {
 		if (DONE.includes(status)) return 'bg-green text-bg';
 		if (status === 'running') return 'bg-blue text-white';
-		if (DEAD.includes(status)) return 'bg-coral text-white';
+		if (DEAD.includes(status)) return 'bg-coral text-bg';
 		return 'bg-surface-2 text-muted';
 	}
 
@@ -320,7 +320,7 @@
 										{#if DEAD.includes(t.status)}
 											<button
 												type="button"
-												class="ml-auto cursor-pointer rounded-lg bg-coral px-3 py-1 font-display text-xs font-semibold text-white transition-colors hover:bg-coral-dark"
+												class="ml-auto cursor-pointer rounded-lg bg-coral px-3 py-1 font-display text-xs font-semibold text-bg transition-colors hover:bg-coral-dark"
 												onclick={() => (retryFor = retryFor === t.id ? null : t.id)}
 											>
 												retry
@@ -508,7 +508,7 @@
 					<button
 						type="submit"
 						disabled={chatBusy || !chatInput.trim()}
-						class="cursor-pointer rounded-lg bg-coral px-4 py-2 font-display text-xs font-semibold text-white transition-colors hover:bg-coral-dark disabled:cursor-default disabled:opacity-40"
+						class="cursor-pointer rounded-lg bg-coral px-4 py-2 font-display text-xs font-semibold text-bg transition-colors hover:bg-coral-dark disabled:cursor-default disabled:opacity-40"
 					>
 						send
 					</button>

@@ -893,8 +893,10 @@
 			// Nothing above the box for a character or a location: the banner inside
 			// it already says what this mode is for, and saying it twice in two
 			// different wordings is how a screen stops being read at all.
-			if (wantTarget !== 'clip') return '';
-			return 'Describe the shot — one clip per message';
+			// Nothing at all in the clip state: the placeholder says the same thing
+			// in the same words, five pixels lower, and one of them was always the
+			// one nobody read.
+			return '';
 		}
 		if (!brief) return 'New film — describe the idea in one sentence';
 		if (!planningWs) return 'Refining the plan — describe what to change';
@@ -962,23 +964,22 @@
 	const showExamples = $derived(!brief && !sending && !chat.some((c) => c.who === 'user'));
 
 	const composerPlaceholder = $derived.by(() => {
+		// An instruction, not an example. A worked example belongs on the empty
+		// page, where there is room to read three of them and pick one; in the box
+		// it has to be short enough to set on one line, and it was not — the old
+		// simple-mode line ran to 74 characters and clipped against a rows="1"
+		// field whose autosize only runs on input, so half of it was never seen.
+		// It also put explicit copy in the chrome, where it greets anyone walking
+		// past the machine before they have asked for anything.
 		if (mode === 'simple') {
-			// An example of the thing you are actually making. This said "a blonde
-			// woman on her knees…" in every mode, including the one where you are
-			// describing a room.
-			//
-			// The character example carries an age because the gate requires one,
-			// and an example that would itself be refused is a bad example.
 			if (wantTarget === 'character')
-				return currentCharacter
-					? 'give her shorter hair'
-					: 'a 32-year-old woman, short dark hair, athletic build';
-			if (wantTarget === 'location') return 'a cheap motel room at night, one lamp on';
-			return 'a blonde woman on her knees sucking a black man, filmed close on her mouth';
+				return currentCharacter ? 'Describe the change' : 'Describe the person, with an age';
+			if (wantTarget === 'location') return 'Describe the place';
+			return 'Describe one shot';
 		}
-		if (!brief) return 'a late-night confession from someone who knows exactly what they want';
-		if (!planningWs) return 'make it more suggestive, keep the same character';
-		return 'a question or request for the crew';
+		if (!brief) return 'Describe the film in one sentence';
+		if (!planningWs) return 'Describe what to change';
+		return 'Message the crew';
 	});
 
 	async function submit() {
@@ -1119,11 +1120,16 @@
 	/** Length, size and frame, folded for the same reason: all three have a
 	 *  saved default that works, so none of them blocks a first send. */
 	let fmtOpen = $state(false);
+	/** One clip or a full production. It used to sit in the header, where it read
+	 *  as a property of the page; it is a property of the message you are about
+	 *  to send, so it belongs beside the send button. */
+	let modeOpen = $state(false);
 
 	function shutMenus() {
 		addOpen = false;
 		pickKind = null;
 		fmtOpen = false;
+		modeOpen = false;
 	}
 
 	function saveSetup() {
@@ -3151,7 +3157,7 @@
 {#snippet statusPill(status: RailStatus)}
 	<span
 		class="shrink-0 rounded-md px-2 py-0.5 text-[10px] tracking-wide
-			{status === 'running' ? 'bg-[var(--st-accent)] font-semibold text-white' : ''}
+			{status === 'running' ? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]' : ''}
 			{status === 'done' ? 'bg-[var(--st-surface-2)] text-[var(--st-muted)]' : ''}
 			{status === 'failed' ? 'bg-[#5c2f24] text-[#f2d7cd]' : ''}
 			{status === 'regen' ? 'bg-[var(--st-surface-2)] text-[var(--st-text)]' : ''}
@@ -3536,27 +3542,6 @@
 				<p class="text-[10px] font-bold tracking-[0.3em] text-[var(--st-faint)] uppercase">
 					auteur studio
 				</p>
-				<!-- Two ways to reach the renderer, and they are different jobs rather
-					 than a beginner and an expert door: this one builds a film out of a
-					 sentence, the other sends a prompt you already have. -->
-				<nav class="ml-auto flex gap-1.5" aria-label="mode">
-					<!-- Named for what they produce rather than how hard they are. "simple"
-						 and "advanced" said which one was for beginners, which is not the
-						 question anyone actually has in front of this toggle — the question
-						 is whether they want one clip now or a planned production. -->
-					{#each [['simple', 'one clip', 'Describe a clip, read the prompt, render it'], ['advanced', 'full production', 'Screenplay, cast, scenes and art direction first, then a multi-scene shoot']] as [val, label, hint] (val)}
-						<button
-							type="button"
-							aria-pressed={mode === val}
-							class="font-display cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition-colors {mode ===
-							val
-								? 'bg-[var(--st-accent)] text-white'
-								: 'bg-[var(--st-surface)] text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
-							title={hint}
-							onclick={() => setMode(val as 'simple' | 'advanced')}>{label}</button
-						>
-					{/each}
-				</nav>
 			</header>
 
 		<div
@@ -3727,7 +3712,7 @@
 																<button
 																	type="submit"
 																	disabled={changeBusy[row.key] || !(changeText[row.key] ?? '').trim()}
-																	class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+																	class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2.5 text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
 																>
 																	send
 																</button>
@@ -3755,7 +3740,7 @@
 											type="button"
 											disabled={boardDone < board.length || renderLaunching || !!chain}
 											onclick={launchRender}
-											class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+											class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
 										>
 											{renderLaunching ? 'starting…' : 'start shooting'}
 										</button>
@@ -3929,7 +3914,7 @@
 												sheetBusy[item.id] ||
 												!item.sheet.description.trim()}
 											onclick={() => renderSheet(item.id)}
-											class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+											class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
 										>
 											{item.sheet.launched ? 'Rendering…' : 'Render it'}
 										</button>
@@ -3968,7 +3953,7 @@
 												type="button"
 												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
 												onclick={() => saveSubject(item.id)}
-												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
 											>
 												{sheetBusy[item.id]
 													? 'Saving…'
@@ -4006,7 +3991,7 @@
 												type="button"
 												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
 												onclick={() => keepSheet(item.id)}
-												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
 											>
 												{sheetBusy[item.id] ? 'Keeping…' : 'Keep it'}
 											</button>
@@ -4140,7 +4125,7 @@
 													type="button"
 													title="{l.use}{l.trigger ? ` · trigger: ${l.trigger}` : ''}"
 													class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {on
-														? 'bg-[var(--st-accent)] font-semibold text-white'
+														? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]'
 														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 													onclick={() => toggleLora(item.id, l.key)}
 												>
@@ -4204,7 +4189,7 @@
 													type="button"
 													class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {item
 														.shot.seconds === sec
-														? 'bg-[var(--st-accent)] font-semibold text-white'
+														? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]'
 														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 													onclick={() => setShotSeconds(item.id, sec)}>{sec}</button
 												>
@@ -4221,7 +4206,7 @@
 													title="{f.width}x{f.height}"
 													class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {(item
 														.shot.resolution ?? '576p') === r
-														? 'bg-[var(--st-accent)] font-semibold text-white'
+														? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]'
 														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 													onclick={() => {
 														if (item.shot) item.shot.resolution = r;
@@ -4236,7 +4221,7 @@
 													type="button"
 													class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {item
 														.shot.orientation === val
-														? 'bg-[var(--st-accent)] font-semibold text-white'
+														? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]'
 														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 													onclick={() =>
 														setShotOrientation(item.id, val as 'portrait' | 'landscape')}
@@ -4250,7 +4235,7 @@
 										<button
 											type="button"
 											disabled={shotBusy[item.id]}
-											class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:opacity-40"
+											class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:opacity-40"
 											onclick={() => renderShot(item.id)}
 										>
 											{shotBusy[item.id] ? 'starting…' : 'render this'}
@@ -4291,7 +4276,7 @@
 										<button
 											type="button"
 											onclick={saveEdit}
-											class="cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2.5 font-display text-xs font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)]"
+											class="cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2.5 font-display text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)]"
 										>
 											save
 										</button>
@@ -4355,7 +4340,7 @@
 												type="button"
 												disabled={launchingPlanning}
 												onclick={launchPlanning}
-												class="cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 font-display text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-50"
+												class="cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 font-display text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-50"
 											>
 												{launchingPlanning ? 'starting…' : 'start'}
 											</button>
@@ -4452,7 +4437,7 @@
 													<button
 														type="submit"
 														disabled={changeBusy[item.id] || !(changeText[item.id] ?? '').trim()}
-														class="cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2.5 font-display text-xs font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+														class="cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2.5 font-display text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
 													>
 														send
 													</button>
@@ -4565,7 +4550,7 @@
 												<button
 													type="button"
 													disabled={fixBusy[ws]}
-													class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:opacity-40"
+													class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:opacity-40"
 													onclick={() => renderFix(ws)}
 												>
 													{fixBusy[ws] ? 'starting…' : 'render the fix'}
@@ -4779,7 +4764,7 @@
 						<!-- The dismiss target for all three menus. A backdrop rather than a
 							 window listener, for the reason given at the <svelte:window> above,
 							 and it is the same shape the off-canvas sidebar already uses. -->
-						{#if addOpen || pickKind || fmtOpen}
+						{#if addOpen || pickKind || fmtOpen || modeOpen}
 							<button
 								type="button"
 								aria-label="close the menu"
@@ -4972,6 +4957,33 @@
 							</div>
 						{/if}
 
+						<!-- ── one clip or a full production ───────────────────────── -->
+						{#if modeOpen}
+							<div
+								role="menu"
+								class="enter absolute right-2 bottom-full z-30 mb-2 w-[17rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+							>
+								{#each [['simple', 'one clip', 'one shot, about eleven minutes'], ['advanced', 'full production', 'screenplay and cast first, then a multi-scene shoot']] as [val, label, hint] (val)}
+									<button
+										type="button"
+										role="menuitemradio"
+										aria-checked={mode === val}
+										onclick={() => {
+											setMode(val as 'simple' | 'advanced');
+											shutMenus();
+										}}
+										class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+									>
+										<span class="w-3.5 shrink-0 text-xs {mode === val ? '' : 'invisible'}">&#10003;</span>
+										<span class="min-w-0">
+											<span class="block">{label}</span>
+											<span class="mt-0.5 block text-xs text-[var(--st-faint)]">{hint}</span>
+										</span>
+									</button>
+								{/each}
+							</div>
+						{/if}
+
 						<!-- ── length, size, frame ─────────────────────────────────── -->
 						{#if fmtOpen}
 							<div
@@ -5143,12 +5155,32 @@
 								</div>
 							{/if}
 
+							{#if !planningWs && wantTarget === 'clip'}
+								<!-- Named for what it produces, and carrying how long that takes,
+									 because the two differ by half an hour. -->
+								<button
+									type="button"
+									aria-expanded={modeOpen}
+									onclick={() => {
+										const open = !modeOpen;
+										shutMenus();
+										modeOpen = open;
+									}}
+									class="flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 self-center rounded-full px-3 text-sm font-medium whitespace-nowrap text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+								>
+									{mode === 'simple' ? 'one clip' : 'full production'}
+									<svg viewBox="0 0 10 10" class="size-2.5" fill="none" aria-hidden="true">
+										<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+									</svg>
+								</button>
+							{/if}
+
 							<button
 								type="button"
 								aria-label="send"
 								disabled={sending || !input.trim()}
 								onclick={submit}
-								class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+								class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
 							>
 								{#if sending}
 									<span class="text-xs">…</span>
@@ -5208,7 +5240,7 @@
 											type="button"
 											disabled={stopping}
 											onclick={stopRun}
-											class="font-display cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-2 text-xs font-semibold text-[var(--st-text)] transition-colors hover:bg-[var(--st-accent)] hover:text-white disabled:cursor-default disabled:opacity-50"
+											class="font-display cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-2 text-xs font-semibold text-[var(--st-text)] transition-colors hover:bg-[var(--st-accent)] hover:text-[var(--st-on-accent)] disabled:cursor-default disabled:opacity-50"
 										>
 											{stopping ? 'stopping…' : 'stop it'}
 										</button>
@@ -5261,13 +5293,19 @@
 	.studio {
 		--st-bg: var(--color-bg);
 		--st-surface: var(--color-surface);
-		--st-surface-2: #1e1e1e;
+		--st-surface-2: var(--color-surface-2);
 		--st-line: var(--color-border);
+		/* The one border that has to be seen rather than felt: where a 1px edge is
+		 * the only thing identifying a control. Decoration keeps --st-line. */
+		--st-line-control: #4c4c52;
 		--st-text: var(--color-text);
 		--st-muted: var(--color-muted);
-		--st-faint: #565656;
+		--st-faint: var(--color-faint);
 		--st-accent: var(--color-coral);
 		--st-accent-strong: var(--color-coral-dark);
+		/* What sits on top of a filled accent surface. The accent is white now, so
+		 * this is the one that had to move with it. */
+		--st-on-accent: var(--color-on-accent);
 		background: var(--st-bg);
 		color: var(--st-text);
 		font-family: var(--font-body);
