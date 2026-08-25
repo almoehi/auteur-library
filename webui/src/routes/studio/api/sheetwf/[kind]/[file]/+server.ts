@@ -66,6 +66,35 @@ const SHEETS: Record<string, string> = {
  *  silent demotion. */
 const PIN = 'l40s';
 
+/** A measurement knob, and nothing else. Set to a number to force the H3 orbit
+ *  video's frame count; leave `null` to serve the workflow's own default of 124.
+ *
+ *  It exists to answer one question with a number instead of a theory: of the
+ *  ~170 seconds a sheet takes, how much is actually sampling? Everything else we
+ *  have measured says the GPU is not the bottleneck — two cards three percent
+ *  apart — but "most of it is model loading" is an inference until the sampling
+ *  half is varied on its own. Rendering the same sheet at 32 frames instead of
+ *  124 varies exactly that and nothing else.
+ *
+ *  The number is in, and it closes the question for good:
+ *
+ *    124 frames   11:03:46 -> ...        175s
+ *     32 frames   11:22:09 -> 11:24:55   166s
+ *
+ *  Nine seconds for a quarter of the frames. Fitted across the two points that
+ *  is about 0.1s per frame on top of roughly 163 seconds that do not move at
+ *  all — so of the render window, **twelve seconds is sampling** and the rest is
+ *  ComfyUI starting and ~45 GB of weights being read into VRAM. A separate
+ *  `prefetch-models` job pays another 120-150s before that even begins.
+ *
+ *  This is why the GPU made no difference and why the frame count makes none
+ *  either: there is almost no compute in this render to speed up. Leave it null.
+ *  A sheet rendered at 32 frames is also unusable — the six views are
+ *  choreographed across the full 124 (six shots of 0.75s at 24fps plus the
+ *  closing expression), so a quarter of the frames is a quarter of the poses.
+ */
+const FRAMES_OVERRIDE: number | null = null;
+
 /** Fetched per request, but not per fetch: the harness asks for the YAML once
  *  per workspace and there is no reason to hit GitHub every time somebody
  *  starts a render. Small enough to hold, short enough to stay current. */
@@ -112,6 +141,18 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 		throw error(500, `${name} no longer declares gpu_types on one line — check upstream before pinning`);
 	}
 	let out = src.replace(/^gpu_types:\s*\[[^\]]*\]\s*$/m, `gpu_types: [${PIN}]`);
+
+	// The frame count, when a measurement is asking for one. Rewritten in the port
+	// block rather than the graph, because the port's default is what the harness
+	// binds when the caller supplies no value — which is our case, since the task
+	// prompt names one argument and this is not it.
+	if (FRAMES_OVERRIDE !== null) {
+		const block = /(^    - name: frames\n(?:.*\n)*?      default: )\d+$/m;
+		if (!block.test(out)) {
+			throw error(500, `${name} no longer declares a frames port with a default — check upstream`);
+		}
+		out = out.replace(block, `$1${FRAMES_OVERRIDE}`);
+	}
 
 	// `url: workflow.json` is left exactly as upstream wrote it — the harness
 	// resolves it against this directory, which is where the graph is served.
