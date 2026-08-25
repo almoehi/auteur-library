@@ -1108,6 +1108,24 @@
 	 *  wherever the words describe, which stays the default. */
 	let wantLocation = $state('');
 
+	/** The composer used to carry both kept rows open at all times, each capped
+	 *  at three by `slice(0, 3)` — so a fourth character was unreachable from
+	 *  here and nothing on screen said so. Both rows fold into one menu: level
+	 *  one is what you can add, level two is a grid of everything you keep.
+	 *  What you picked does not go with them; it comes back as a chip. */
+	let addOpen = $state(false);
+	/** null while the grid is closed, otherwise which kind it is showing. */
+	let pickKind = $state<null | 'character' | 'location'>(null);
+	/** Length, size and frame, folded for the same reason: all three have a
+	 *  saved default that works, so none of them blocks a first send. */
+	let fmtOpen = $state(false);
+
+	function shutMenus() {
+		addOpen = false;
+		pickKind = null;
+		fmtOpen = false;
+	}
+
 	function saveSetup() {
 		try {
 			localStorage.setItem(
@@ -3296,6 +3314,16 @@
 	</figure>
 {/snippet}
 
+<!-- Escape closes the composer's menus. A click outside them is handled by the
+	 backdrop the menus render behind themselves, not from here: Svelte delegates
+	 element handlers to the root, so a window-level listener and a
+	 stopPropagation in a delegated handler do not reliably compose. -->
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape') shutMenus();
+	}}
+/>
+
 <!-- Chat-app shell: the page itself never scrolls. The window is split into a
 	 fixed header, a scrolling transcript and a pinned composer, so the input and
 	 the task rail stay put while only the conversation moves — the layout every
@@ -4646,8 +4674,10 @@
 						<p class="mb-2 px-2 text-xs text-[var(--st-muted)]">{refError}</p>
 					{/if}
 					<p class="mb-1.5 px-2 text-xs text-[var(--st-faint)]">{composerHint}</p>
+					<!-- `relative` is load-bearing: the add and format menus open upward
+						 from inside the composer and anchor to this box, not to the page. -->
 					<div
-						class="rounded-3xl bg-[var(--st-surface)] p-3"
+						class="relative rounded-3xl bg-[var(--st-surface)] p-3"
 					>
 						<!-- Making a character or a location is a state you are IN, not a tab
 							 sitting beside the clip settings. It was a tab, and that put two
@@ -4681,206 +4711,142 @@
 								</button>
 							</div>
 						{/if}
-						<label class="sr-only" for="composer">Message</label>
-						<textarea
-							id="composer"
-							bind:this={composer}
-							bind:value={input}
-							rows="1"
-							spellcheck="false"
-							placeholder={composerPlaceholder}
-							oninput={(e) => grow(e.currentTarget)}
-							onkeydown={(e) => {
-								// Enter sends, Shift+Enter breaks the line.
-								if (e.key === 'Enter' && !e.shiftKey) {
-									e.preventDefault();
-									submit();
-								}
-							}}
-							class="block max-h-56 w-full resize-none border-0 bg-transparent px-3 py-2 text-[1.05rem] leading-relaxed outline-none focus:ring-0 placeholder:text-[var(--st-faint)]"
-						></textarea>
-
-						<div class="flex items-center justify-between gap-3 px-2 pt-1 pb-1">
-							{#if !planningWs}
-								<div class="flex flex-wrap items-center gap-1.5">
-									<!-- Length, frame and size, set before the brief is written rather
-										 than after it. The first two used to live only on the card,
-										 where changing either threw the brief away and asked for
-										 another: the beats come from the duration and the camera
-										 language from the shape, so a change there is a rewrite. Set
-										 here they cost nothing, because the writer is told first. -->
-									{#if mode === 'simple' && wantTarget === 'clip'}
-										<!-- Who is in it. Everything on this row answers one question —
-											 which person this clip is shot with — and the two buttons at
-											 the end are how you get another one to choose from. The mode
-											 tab that used to sit here answered a different question in
-											 the same shape, which is what made it unreadable. -->
-										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-											<button
-												type="button"
-												title="nobody in particular — the clip invents whoever the words describe"
-												class="cursor-pointer rounded-full px-2.5 py-1 text-xs transition-colors {wantCharacter ===
-												''
-													? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-												onclick={() => {
-													wantCharacter = '';
-													saveSetup();
-												}}>anyone</button
-											>
-											{#each characters.slice(0, 3) as c (c.id)}
-												<button
-													type="button"
-													title="shoot this clip with {c.name}"
-													class="flex cursor-pointer items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-xs transition-colors {wantCharacter ===
-													c.id
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-													onclick={() => {
-														wantCharacter = c.id;
-														saveSetup();
-													}}
-												>
-													<img
-														src="/studio/api/sheet/img/{c.id}"
-														alt=""
-														class="size-4 shrink-0 rounded-full object-cover"
-													/>
-													<span class="max-w-24 truncate">{c.name}</span>
-												</button>
-											{/each}
-										</div>
-
-										{#if locations.length}
-											<!-- Where it happens. Same shape as the people row above because
-												 it answers the same kind of question — which kept thing this
-												 clip is made with. -->
-											<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-												<button
-													type="button"
-													title="nowhere in particular — the clip invents wherever the words describe"
-													class="cursor-pointer rounded-full px-2.5 py-1 text-xs transition-colors {wantLocation ===
-													''
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-													onclick={() => {
-														wantLocation = '';
-														saveSetup();
-													}}>anywhere</button
-												>
-												{#each locations.slice(0, 3) as l (l.id)}
-													<button
-														type="button"
-														title="shoot this clip in {l.name}"
-														class="flex cursor-pointer items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-xs transition-colors {wantLocation ===
-														l.id
-															? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-															: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-														onclick={() => {
-															wantLocation = l.id;
-															saveSetup();
-														}}
-													>
-														<img
-															src="/studio/api/sheet/img/{l.id}"
-															alt=""
-															class="size-4 shrink-0 rounded-[3px] object-cover"
-														/>
-														<span class="max-w-24 truncate">{l.name}</span>
-													</button>
-												{/each}
-											</div>
-										{/if}
-
-										<!-- The way in. Deliberately not chips like the ones above: these
-											 do not select anything, they take you somewhere. -->
+						{#if mode === 'simple' && wantTarget === 'clip'}
+							<!-- What this clip will be made with, and only that. The rows this
+								 replaces showed every kept sheet whether or not you had chosen
+								 it; a chip shows what you chose and nothing else, so the answer
+								 to "who and where" is still one glance. -->
+							<div class="mb-1 flex flex-wrap items-center gap-1.5 px-1">
+								{#if chosenCharacter}
+									<span class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs">
+										<img
+											src="/studio/api/sheet/img/{chosenCharacter.id}"
+											alt=""
+											class="size-5 shrink-0 rounded-full object-cover"
+										/>
+										<span class="max-w-[11rem] truncate">{chosenCharacter.name}</span>
 										<button
 											type="button"
-											title="describe a new person and keep them, so every clip can use the same face"
-											class="flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs text-[var(--st-faint)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+											aria-label="shoot with anyone instead"
 											onclick={() => {
-												wantTarget = 'character';
+												wantCharacter = '';
+												saveSetup();
+											}}
+											class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+											>×</button
+										>
+									</span>
+								{/if}
+								{#if chosenLocation}
+									<span class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs">
+										<img
+											src="/studio/api/sheet/img/{chosenLocation.id}"
+											alt=""
+											class="size-5 shrink-0 rounded-md object-cover"
+										/>
+										<span class="max-w-[11rem] truncate">{chosenLocation.name}</span>
+										<button
+											type="button"
+											aria-label="shoot anywhere instead"
+											onclick={() => {
+												wantLocation = '';
+												saveSetup();
+											}}
+											class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+											>×</button
+										>
+									</span>
+								{/if}
+
+								<!-- Length, size and frame in one chip. All three keep a saved
+									 default, so none of them is a question you have to answer
+									 before the first send. -->
+								<button
+									type="button"
+									aria-expanded={fmtOpen}
+									onclick={() => {
+										const open = !fmtOpen;
+										shutMenus();
+										fmtOpen = open;
+									}}
+									class="cursor-pointer rounded-full bg-[var(--st-bg)] px-3 py-1.5 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+								>
+									{wantSeconds}s · {wantRes} · {wantOrientation === 'portrait' ? '9:16' : '16:9'}
+								</button>
+							</div>
+						{/if}
+
+						<!-- The dismiss target for all three menus. A backdrop rather than a
+							 window listener, for the reason given at the <svelte:window> above,
+							 and it is the same shape the off-canvas sidebar already uses. -->
+						{#if addOpen || pickKind || fmtOpen}
+							<button
+								type="button"
+								aria-label="close the menu"
+								class="fixed inset-0 z-20 cursor-default"
+								onclick={shutMenus}
+							></button>
+						{/if}
+
+						<!-- ── the add menu, level one ─────────────────────────────── -->
+						{#if addOpen}
+							<div
+								role="menu"
+								class="enter absolute bottom-full left-2 z-30 mb-2 w-[20rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+							>
+								{#each [['character', characters.length, 'New character'], ['location', locations.length, 'New location']] as [kind, kept, label] (kind)}
+									<button
+										type="button"
+										role="menuitem"
+										onclick={() => {
+											// With nothing kept there is nothing to choose between, so
+											// the row does the only useful thing and starts making one.
+											if (kept === 0) {
+												wantTarget = kind as 'character' | 'location';
 												currentCharacter = null;
 												saveSetup();
-											}}
-										>
-											<span class="text-sm leading-none">+</span> character
-										</button>
-										<button
-											type="button"
-											title="describe a new place and keep it"
-											class="flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs text-[var(--st-faint)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
-											onclick={() => {
-												wantTarget = 'location';
-												currentCharacter = null;
-												saveSetup();
-											}}
-										>
-											<span class="text-sm leading-none">+</span> location
-										</button>
-									{/if}
-									{#if mode === 'simple' && wantTarget === 'clip'}
-										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-											{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
-												<button
-													type="button"
-													title="clip length in seconds"
-													class="cursor-pointer rounded-full px-2 py-1 text-xs tabular-nums transition-colors {wantSeconds ===
-													sec
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-													onclick={() => {
-														wantSeconds = sec;
-														saveSetup();
-													}}>{sec}s</button
-												>
-											{/each}
-										</div>
-
-										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-											{#each RES_KEYS as r (r)}
-												{@const f = frameFor(r, wantOrientation)}
-												<button
-													type="button"
-													title="{f.width}x{f.height} — bigger frames cost render time"
-													class="cursor-pointer rounded-full px-2 py-1 text-xs tabular-nums transition-colors {wantRes ===
-													r
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-													onclick={() => {
-														wantRes = r;
-														saveSetup();
-													}}>{r}</button
-												>
-											{/each}
-										</div>
-
-										<button
-											type="button"
-											title={wantOrientation === 'portrait' ? 'portrait — tap for landscape' : 'landscape — tap for portrait'}
-											class="flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-bg)] px-2.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-											onclick={() => {
-												wantOrientation = wantOrientation === 'portrait' ? 'landscape' : 'portrait';
-												saveSetup();
-											}}
-										>
-											<span
-												class="block rounded-[2px] border border-current {wantOrientation === 'portrait'
-													? 'h-3 w-2'
-													: 'h-2 w-3'}"
-											></span>
-											<span class="tabular-nums">{wantOrientation === 'portrait' ? '9:16' : '16:9'}</span>
-										</button>
-									{/if}
-									<label
-										title={wantTarget === 'clip'
-											? 'Attach a face, a room, a movement for the render to copy'
-											: wantTarget === 'character'
-												? 'Use a picture you already have as this character'
-												: 'Use a picture you already have as this location'}
-										class="mr-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+												shutMenus();
+											} else {
+												addOpen = false;
+												pickKind = kind as 'character' | 'location';
+											}
+										}}
+										class="flex min-h-[3.125rem] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
 									>
-										<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true">
+										<span
+											class="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--st-muted)] ring-1 ring-[var(--st-line)]"
+										>
+											{#if kind === 'character'}
+												<svg viewBox="0 0 16 16" class="size-[15px]" fill="none" aria-hidden="true">
+													<circle cx="8" cy="5.6" r="2.7" stroke="currentColor" stroke-width="1.4" />
+													<path d="M3 13.2c.7-2.3 2.6-3.4 5-3.4s4.3 1.1 5 3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+												</svg>
+											{:else}
+												<svg viewBox="0 0 16 16" class="size-[15px]" fill="none" aria-hidden="true">
+													<rect x="2.2" y="3.4" width="11.6" height="9.2" rx="1.6" stroke="currentColor" stroke-width="1.4" />
+													<path d="M2.4 10.2l3-2.6 2.6 2.2 2.4-1.8 3.2 2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+												</svg>
+											{/if}
+										</span>
+										<span class="min-w-0">
+											<span class="block">{label}</span>
+											<span class="mt-0.5 block text-xs text-[var(--st-faint)]">
+												{kept ? `${kept} kept — or make another` : 'nothing kept yet'}
+											</span>
+										</span>
+										{#if kept}
+											<svg viewBox="0 0 10 10" class="ml-auto size-2.5 shrink-0 text-[var(--st-faint)]" fill="none" aria-hidden="true">
+												<path d="M3.5 2l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+											</svg>
+										{/if}
+									</button>
+								{/each}
+
+								<label
+									class="flex min-h-[3.125rem] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+								>
+									<span class="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--st-muted)] ring-1 ring-[var(--st-line)]">
+										<svg viewBox="0 0 20 20" class="size-4" fill="none" aria-hidden="true">
 											<path
 												d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
 												stroke="currentColor"
@@ -4889,49 +4855,292 @@
 												stroke-linejoin="round"
 											/>
 										</svg>
-										<span class="sr-only">
-											{wantTarget === 'clip' ? 'attach reference files' : 'use a picture you already have'}
-										</span>
-										<input
-											type="file"
-											multiple={wantTarget === 'clip'}
-											accept={wantTarget === 'clip' ? 'image/*,video/*' : 'image/*'}
-											class="hidden"
-											disabled={refBusy}
-											onchange={(e) => {
-												const el = e.currentTarget as HTMLInputElement;
-												// The mode decides what attaching means. See uploadSubject.
-												if (wantTarget === 'clip') attachRefs(el.files);
-												else uploadSubject(el.files);
-												el.value = '';
+									</span>
+									<span class="min-w-0">
+										<span class="block">Attach reference image</span>
+										<span class="mt-0.5 block text-xs text-[var(--st-faint)]">a face or a place to shoot against</span>
+									</span>
+									<input
+										type="file"
+										multiple
+										accept="image/*,video/*"
+										class="hidden"
+										disabled={refBusy}
+										onchange={(e) => {
+											const el = e.currentTarget as HTMLInputElement;
+											attachRefs(el.files);
+											el.value = '';
+											shutMenus();
+										}}
+									/>
+								</label>
+							</div>
+						{/if}
+
+						<!-- ── the add menu, level two ─────────────────────────────── -->
+						{#if pickKind}
+							{@const kept = pickKind === 'character' ? characters : locations}
+							<div
+								role="menu"
+								class="enter absolute bottom-full left-2 z-30 mb-2 flex w-[23rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl bg-[var(--st-surface)] shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+							>
+								<div class="flex items-center gap-2 border-b border-[var(--st-line)] py-2 pr-2.5 pl-1.5">
+									<button
+										type="button"
+										aria-label="back"
+										onclick={() => {
+											pickKind = null;
+											addOpen = true;
+										}}
+										class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+									>
+										<svg viewBox="0 0 16 16" class="size-3.5" fill="none" aria-hidden="true">
+											<path d="M9.5 3l-4 5 4 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+										</svg>
+									</button>
+									<span class="text-sm font-medium">
+										{pickKind === 'character' ? 'Who is in it' : 'Where it happens'}
+									</span>
+									<button
+										type="button"
+										onclick={() => {
+											wantTarget = pickKind as 'character' | 'location';
+											currentCharacter = null;
+											saveSetup();
+											shutMenus();
+										}}
+										class="ml-auto flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface-2)] px-3 text-xs font-medium transition-colors hover:bg-[var(--st-line)]"
+									>
+										<span class="text-sm leading-none">+</span>
+										{pickKind === 'character' ? 'New character' : 'New location'}
+									</button>
+								</div>
+
+								<!-- A grid, not a list. The rows this replaces stopped at three
+									 with no way past them; five to a row means twenty faces read
+									 in four. -->
+								<div class="scroller max-h-[20rem] overflow-y-auto px-3 pt-3.5 pb-3">
+									<div class="grid grid-cols-5 gap-x-2 gap-y-3">
+										{#each [{ id: '', name: pickKind === 'character' ? 'anyone' : 'anywhere' }, ...kept] as s (s.id)}
+											{@const on = pickKind === 'character' ? wantCharacter === s.id : wantLocation === s.id}
+											<button
+												type="button"
+												role="menuitemradio"
+												aria-checked={on}
+												title={s.id
+													? pickKind === 'character'
+														? `shoot this clip with ${s.name}`
+														: `shoot this clip in ${s.name}`
+													: pickKind === 'character'
+														? 'nobody in particular — the clip invents whoever the words describe'
+														: 'nowhere in particular — the clip invents wherever the words describe'}
+												onclick={() => {
+													if (pickKind === 'character') wantCharacter = s.id;
+													else wantLocation = s.id;
+													saveSetup();
+													shutMenus();
+												}}
+												class="flex min-w-0 cursor-pointer flex-col items-center gap-1.5 rounded-xl pb-1"
+											>
+												{#if s.id}
+													<img
+														src="/studio/api/sheet/img/{s.id}"
+														alt=""
+														class="aspect-square w-full object-cover transition-opacity hover:opacity-80 {pickKind ===
+														'character'
+															? 'rounded-full'
+															: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
+													/>
+												{:else}
+													<span
+														class="aspect-square w-full ring-1 ring-[var(--st-line)] {pickKind === 'character'
+															? 'rounded-full'
+															: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
+													></span>
+												{/if}
+												<span
+													class="max-w-full truncate text-[0.7rem] leading-tight {on
+														? 'font-medium text-[var(--st-text)]'
+														: 'text-[var(--st-faint)]'}"
+												>
+													{s.name}
+												</span>
+											</button>
+										{/each}
+									</div>
+								</div>
+							</div>
+						{/if}
+
+						<!-- ── length, size, frame ─────────────────────────────────── -->
+						{#if fmtOpen}
+							<div
+								role="menu"
+								class="enter absolute bottom-full left-2 z-30 mb-2 w-[17rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-3 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+							>
+								<p class="px-1 pb-2 font-mono text-[0.7rem] tracking-[0.13em] text-[var(--st-faint)] uppercase">
+									seconds
+								</p>
+								<div class="mb-3 flex flex-wrap gap-1">
+									{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
+										<button
+											type="button"
+											aria-pressed={wantSeconds === sec}
+											onclick={() => {
+												wantSeconds = sec;
+												saveSetup();
 											}}
+											class="min-h-8 cursor-pointer rounded-full px-3 font-mono text-xs tabular-nums transition-colors {wantSeconds ===
+											sec
+												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+												: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{sec}s</button
+										>
+									{/each}
+								</div>
+
+								<p class="px-1 pb-2 font-mono text-[0.7rem] tracking-[0.13em] text-[var(--st-faint)] uppercase">
+									size
+								</p>
+								<div class="mb-3 flex flex-wrap gap-1">
+									{#each RES_KEYS as r (r)}
+										{@const f = frameFor(r, wantOrientation)}
+										<button
+											type="button"
+											aria-pressed={wantRes === r}
+											title="{f.width}x{f.height} — bigger frames cost render time"
+											onclick={() => {
+												wantRes = r;
+												saveSetup();
+											}}
+											class="min-h-8 cursor-pointer rounded-full px-3 font-mono text-xs tabular-nums transition-colors {wantRes ===
+											r
+												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+												: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{r}</button
+										>
+									{/each}
+								</div>
+
+								<p class="px-1 pb-2 font-mono text-[0.7rem] tracking-[0.13em] text-[var(--st-faint)] uppercase">
+									frame
+								</p>
+								<div class="flex flex-wrap gap-1">
+									{#each [['portrait', '9:16'], ['landscape', '16:9']] as [val, label] (val)}
+										<button
+											type="button"
+											aria-pressed={wantOrientation === val}
+											onclick={() => {
+												wantOrientation = val as 'portrait' | 'landscape';
+												saveSetup();
+											}}
+											class="flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 font-mono text-xs tabular-nums transition-colors {wantOrientation ===
+											val
+												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+												: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+										>
+											<span class="block rounded-[2px] border border-current {val === 'portrait' ? 'h-3 w-2' : 'h-2 w-3'}"></span>
+											{label}
+										</button>
+									{/each}
+								</div>
+							</div>
+						{/if}
+						<!-- One row: the way in, the sentence, the mode, the send. Everything
+							 that used to sit under this in three rows of chips either became a
+							 chip above (because you chose it) or moved into the menu on the left
+							 (because you had not). -->
+						<div class="flex items-end gap-1.5">
+							{#if mode === 'simple' && wantTarget === 'clip'}
+								<button
+									type="button"
+									aria-label="add a character, a location or a reference image"
+									aria-expanded={addOpen}
+									onclick={() => {
+										const open = !addOpen && pickKind === null;
+										shutMenus();
+										addOpen = open;
+									}}
+									class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+								>
+									<svg viewBox="0 0 16 16" class="size-[1.05rem]" fill="none" aria-hidden="true">
+										<path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+									</svg>
+								</button>
+							{:else}
+								<!-- In a creation state there is nothing to pick between, so the
+									 paperclip is the whole menu and stands on its own. -->
+								<label
+									title={wantTarget === 'character'
+										? 'Use a picture you already have as this character'
+										: wantTarget === 'location'
+											? 'Use a picture you already have as this location'
+											: 'Attach a face, a room, a movement for the render to copy'}
+									class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+								>
+									<svg viewBox="0 0 20 20" class="size-4" fill="none" aria-hidden="true">
+										<path
+											d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
+											stroke="currentColor"
+											stroke-width="1.6"
+											stroke-linecap="round"
+											stroke-linejoin="round"
 										/>
-									</label>
-									<!-- Scene count is the planning chain's knob: it decides how many
-										 documents get written and how many clips get scheduled. Simple
-										 mode renders the one shot on the card. -->
-									{#if mode === 'advanced'}
-									<span class="mr-1 text-xs text-[var(--st-faint)]">scenes</span>
+									</svg>
+									<span class="sr-only">use a picture you already have</span>
+									<input
+										type="file"
+										accept="image/*"
+										class="hidden"
+										disabled={refBusy}
+										onchange={(e) => {
+											const el = e.currentTarget as HTMLInputElement;
+											uploadSubject(el.files);
+											el.value = '';
+										}}
+									/>
+								</label>
+							{/if}
+
+							<label class="sr-only" for="composer">Message</label>
+							<textarea
+								id="composer"
+								bind:this={composer}
+								bind:value={input}
+								rows="1"
+								spellcheck="false"
+								placeholder={composerPlaceholder}
+								oninput={(e) => grow(e.currentTarget)}
+								onkeydown={(e) => {
+									// Enter sends, Shift+Enter breaks the line.
+									if (e.key === 'Enter' && !e.shiftKey) {
+										e.preventDefault();
+										submit();
+									}
+								}}
+								class="block max-h-56 min-h-9 w-full flex-1 resize-none border-0 bg-transparent px-2 py-2 text-[1.05rem] leading-relaxed outline-none focus:ring-0 placeholder:text-[var(--st-faint)]"
+							></textarea>
+
+							{#if mode === 'advanced' && !planningWs}
+								<!-- Scene count is the planning chain's knob: it decides how many
+									 documents get written and how many clips get scheduled. It has
+									 no simple-mode counterpart, so it sits here rather than in the
+									 menu, which is about what a clip is made with. -->
+								<div class="flex shrink-0 items-center gap-0.5 self-center rounded-full bg-[var(--st-bg)] p-0.5">
 									{#each SCENE_CHOICES as n (n)}
 										<button
 											type="button"
 											aria-pressed={sceneCount === n}
-											class="h-7 w-7 cursor-pointer rounded-full text-xs transition-colors {sceneCount ===
+											title="{n} scenes"
+											class="size-7 cursor-pointer rounded-full text-xs tabular-nums transition-colors {sceneCount ===
 											n
 												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-												: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}"
+												: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
 											onclick={() => {
 												sceneCount = n;
 												if (brief) brief.sceneCount = n;
-											}}
+											}}>{n}</button
 										>
-											{n}
-										</button>
 									{/each}
-									{/if}
 								</div>
-							{:else}
-								<span></span>
 							{/if}
 
 							<button
@@ -4939,7 +5148,7 @@
 								aria-label="send"
 								disabled={sending || !input.trim()}
 								onclick={submit}
-								class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+								class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
 							>
 								{#if sending}
 									<span class="text-xs">…</span>
