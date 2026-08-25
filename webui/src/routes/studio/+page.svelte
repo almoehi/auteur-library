@@ -1084,7 +1084,7 @@
 			orientation?: 'portrait' | 'landscape';
 			character?: string;
 			location?: string;
-			continues?: { priorPrompt?: string; priorLoras?: Pick[] };
+			continues?: { priorPrompt?: string; priorLoras?: Pick[]; pinned?: boolean };
 		}
 	): Promise<ChatItem['shot'] | null> {
 		const askedAt = Date.now();
