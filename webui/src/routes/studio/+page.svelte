@@ -1096,6 +1096,8 @@
 	const chosenCharacter = $derived(characters.find((c) => c.id === wantCharacter));
 	let sheetBusy = $state<Record<string, boolean>>({});
 	let sheetsOpen = $state(false);
+	/** Which sheet has been asked about but not yet confirmed for deletion. */
+	let confirmDrop = $state('');
 
 	async function loadSheets() {
 		try {
@@ -3238,14 +3240,38 @@
 									/>
 									<p class="text-[0.65rem] text-[var(--st-faint)]">{sh.kind}</p>
 								</div>
-								<button
-									type="button"
-									aria-label="remove {sh.name}"
-									class="cursor-pointer px-1 text-[var(--st-faint)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
-									onclick={() => dropSheet(sh.id)}
-								>
-									×
-								</button>
+								<!-- Two clicks, and the first one is visible. This was a bare × at
+									 opacity-0: invisible, still clickable, no confirmation, and it
+									 deleted a sheet that cost three minutes of GPU time. A stray
+									 click in a list is not consent. -->
+								{#if confirmDrop === sh.id}
+									<button
+										type="button"
+										class="shrink-0 cursor-pointer rounded-full bg-[#5c2f24] px-2.5 py-1 text-[0.65rem] font-semibold text-[#f2d7cd] transition-colors hover:bg-[#6d372a]"
+										onclick={() => {
+											confirmDrop = '';
+											void dropSheet(sh.id);
+										}}
+									>
+										delete
+									</button>
+									<button
+										type="button"
+										class="shrink-0 cursor-pointer px-1 text-[0.65rem] text-[var(--st-faint)] hover:text-[var(--st-text)]"
+										onclick={() => (confirmDrop = '')}
+									>
+										keep
+									</button>
+								{:else}
+									<button
+										type="button"
+										aria-label="remove {sh.name}"
+										class="shrink-0 cursor-pointer px-1 text-[var(--st-faint)] opacity-60 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
+										onclick={() => (confirmDrop = sh.id)}
+									>
+										×
+									</button>
+								{/if}
 							</div>
 						{/each}
 					</div>
