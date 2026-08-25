@@ -146,7 +146,7 @@ ${want}`
 	// And after the writer, because a rule in a prompt is guidance and this needs
 	// to be a control. The writer is told to state an adult age; this is what
 	// makes it true.
-	const out = checkDescription(description);
+	const out = checkDescription(description, kind === 'location' ? 'place' : 'person');
 	if (out.refuse) {
 		return json({
 			ok: false,

@@ -824,16 +824,10 @@
 		// Simple mode has no plan to refine and no crew to message: every line is
 		// another shot, whether it is the first or the fifth.
 		if (mode === 'simple') {
-			// The banner above the field already says what this mode is for, so the
-			// placeholder only has to say what to type. The one case it still earns
-			// its words is a refinement, where what to type is not obvious.
-			// The example carries an age because the gate requires one, and an
-			// example that would itself be refused is a bad example.
-			if (wantTarget === 'character')
-				return currentCharacter
-					? 'Describe them again, with the change'
-					: 'A 32-year-old woman, short dark hair, athletic build';
-			if (wantTarget === 'location') return 'A cheap motel room at night, one lamp on';
+			// Nothing above the box for a character or a location: the banner inside
+			// it already says what this mode is for, and saying it twice in two
+			// different wordings is how a screen stops being read at all.
+			if (wantTarget !== 'clip') return '';
 			return 'Describe the shot — one clip per message';
 		}
 		if (!brief) return 'New film — describe the idea in one sentence';
@@ -902,8 +896,20 @@
 	const showExamples = $derived(!brief && !sending && !chat.some((c) => c.who === 'user'));
 
 	const composerPlaceholder = $derived.by(() => {
-		if (mode === 'simple')
+		if (mode === 'simple') {
+			// An example of the thing you are actually making. This said "a blonde
+			// woman on her knees…" in every mode, including the one where you are
+			// describing a room.
+			//
+			// The character example carries an age because the gate requires one,
+			// and an example that would itself be refused is a bad example.
+			if (wantTarget === 'character')
+				return currentCharacter
+					? 'give her shorter hair'
+					: 'a 32-year-old woman, short dark hair, athletic build';
+			if (wantTarget === 'location') return 'a cheap motel room at night, one lamp on';
 			return 'a blonde woman on her knees sucking a black man, filmed close on her mouth';
+		}
 		if (!brief) return 'a late-night confession from someone who knows exactly what they want';
 		if (!planningWs) return 'make it more suggestive, keep the same character';
 		return 'a question or request for the crew';

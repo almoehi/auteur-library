@@ -151,10 +151,18 @@ export function checkRequest(text: string): MinorCheck {
 /** What the writer produced, on its way to the image model. Stricter than the
  *  request check on purpose: this string is about to become a picture, so it has
  *  to carry an adult age explicitly and must not lean on a word that reads young
- *  without one. */
-export function checkDescription(text: string): MinorCheck {
+ *  without one.
+ *
+ *  The age requirement is about PEOPLE and applies only to them. A location has
+ *  no age, and demanding one refused "an office in New York" with a message
+ *  about anchoring a subject as an adult — which is both wrong and confusing.
+ *  The child-word check still runs for a location: a place described around a
+ *  child is not a place this renders either.
+ */
+export function checkDescription(text: string, subject: 'person' | 'place' = 'person'): MinorCheck {
 	const first = checkRequest(text);
 	if (first.refuse) return first;
+	if (subject === 'place') return {};
 
 	const ages = statedAges(text);
 	if (!ages.length) {
