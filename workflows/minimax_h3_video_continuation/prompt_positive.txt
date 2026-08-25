@@ -1,0 +1,15 @@
+How the reference video and pictures align with the target video — <Video 1> supplies the frames immediately preceding the target video; the target video resumes from its final frame at the 0.00-second mark with no cut. Target duration 10.00 seconds.
+
+summary:
+[video continuation + reference generation] The target video continues <Video 1> without interruption, carrying the subject's motion through a seamless continuation of the scene.
+
+subject_definitions:
+<Video 1> establishes the inherited motion, camera position, framing, and warm interior lighting at the seam; the target video continues that trajectory and light without a cut.
+<Subject 1> is the person defined by <Picture 1>. Her identity follows <Picture 1>; her position and lighting follow <Video 1>.
+<Subject 2> is the environment from <Picture 2>: the interior space establishes the set and lighting. The room follows <Picture 2> in layout, materials, and light; camera position and framing follow the action and are not constrained to the plate's viewpoint.
+
+integrated_multimodal_description: [Shot 1] Live-action, cinematic, warm interior light. The shot resumes from the final frame of <Video 1> with no cut, continuing the subject's motion seamlessly through the scene. The camera holds a medium shot, tracking the subject as she moves naturally through the space. The framing stays consistent and the lighting remains warm and unchanged throughout the continuation.
+
+overall_soundscape: The low room tone from the preceding shot continues unbroken beneath natural ambient sounds from the interior space.
+
+non_diegetic_music: N/A

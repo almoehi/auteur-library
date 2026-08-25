@@ -14,14 +14,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 name: krea2_base_realism
-description: >
-  Use this to generate a single photorealistic image from a text prompt. Best for portraits,
-  characters, and cinematic scenes where lifelike detail and strong prompt following matter —
-  faces, expressions, lighting, and shot framing all render accurately. Write prompts in natural
-  English; describe the subject, shot type, lighting, and mood conversationally rather than using
-  keyword lists. Negative prompts only take effect when cfg is raised to ~2.0 (default is 1.0,
-  distilled/turbo mode). Do not use for video, image-to-image tasks, or illustration styles —
-  this workflow produces photorealism only.
+description: Simple workflow to create images from a prompt using the krea2 model. This got updated.
 url: workflow.json
 model_family: krea2
 workflow_type: t2i
@@ -143,28 +136,24 @@ models:
     files:
       - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_raw_bf16.safetensors
         filename: krea2_raw_bf16.safetensors
-        sha256: f99bb0ff8e362b77342bc4994e0c50906fe7ef7074864b181b7d48d2fa6d03d7
 
   - name: qwen3vl_4b_bf16
     type: clip
     files:
       - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors
         filename: qwen3vl_4b_bf16.safetensors
-        sha256: 36f3ff447ef59201722e8f9ce6020c9819fdcfba6aa2608c4e09b1c0ce114e34
 
   - name: wan21_vae_fp32
     type: vae
     files:
       - url: https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1_VAE_fp32.safetensors
         filename: wan21_vae_fp32.safetensors
-        sha256: fd1531e31cdd20af005a9fb66e69afe4ea481a6db9b07cd889ece2e1ca2e67b9
 
   - name: krea2_turbo_lora_rank_64_bf16
     type: lora
     files:
       - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_turbo_lora_rank_64_bf16.safetensors
         filename: krea2_turbo_lora_rank_64_bf16.safetensors
-        sha256: db8c5bae0a415d448da9d842111d6e51f7d32e47143a3118eb267e5c4773de87
 
   - name: krea2filterbypass
     type: lora

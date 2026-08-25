@@ -1,0 +1,318 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Original workflow and prompt system by bitsofintelligence101-lab
+# https://github.com/bitsofintelligence101-lab/workflows/blob/main/nsfw/h3/minimax_h3_v2v_exp.json
+# https://github.com/bitsofintelligence101-lab/workflows/tree/main/nsfw/h3
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# MiniMaxH3ReferenceToVideo, CreateVideo, SaveVideo, VAEDecodeAudio — built-in ComfyUI (comfy_extras)
+# VHS_LoadVideoFFmpeg — ComfyUI-VideoHelperSuite (already in nodes.lock)
+# ComfyMathExpression — ComfyMath (already in nodes.lock)
+# ResolutionSelector   — built-in ComfyUI
+#
+# ─── Append to nodes.lock ─────────────────────────────────────────────────────
+# (none — all custom nodes already in nodes.lock)
+#
+# ─── NOTE: RTXVideoSuperResolution (Comfy-Org/Nvidia_RTX_Nodes_ComfyUI) ──────
+# Present in source workflow but bypassed in API format — RTX VSR requires
+# specific NVIDIA RTX consumer hardware not available on A100/H100 cloud GPUs.
+# Output is native-resolution VAE decode without 2× upscale.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: minimax_h3_video_continuation
+description: >
+  Generates a seamless video continuation with synchronized audio from a prior rendered clip
+  plus two required and up to three optional reference images using the MiniMax H3 FL2VA model
+  and a REF2V structured prompt. Best for extending in-progress scenes where subject identity,
+  lighting, and motion must carry through from the preceding clip without a cut; supports
+  chaining — feed the last output back as prior_clip for the next segment to build a multi-shot
+  sequence. Requires a prior rendered clip as the motion seed; not suitable for standalone
+  generation without a prior clip.
+url: workflow.json
+workflow_type: ref2va
+model_family: minimaxh3
+gpu_types: [l40s, a100, h100]
+
+ports:
+  inputs:
+    - name: prior_clip
+      kind: video
+      description: "The rendered video clip immediately preceding this segment. The model reads from prior_clip_start_time onward and continues seamlessly from that frame. Must be 24 FPS MP4. For chaining: feed the previous output directly here."
+      binding: video@177
+      required: true
+    - name: character_sheet
+      kind: image
+      # Slot 2 per author's table. Single wide image — horizontally concatenated front, three-quarter
+      # profile, and full-body views of the subject. Re-supply on every generation to prevent identity
+      # drift across a chain. Referenced as <Picture 1> / <Subject 1> in the prompt.
+      description: "Character identity reference sheet: a single wide image with three views of the subject (front, three-quarter profile, and full-body) horizontally concatenated. Used to lock visual identity and appearance across the continuation. Re-supply on every generation to prevent drift across a chain. Referenced as <Subject 1> in the prompt."
+      binding: image@178
+      required: true
+    - name: environment_plate
+      kind: image
+      # Slot 3 per author's table. Empty set with no characters present: establishes architecture,
+      # palette, furniture, and light quality. Camera is freed from the plate's viewpoint in the prompt.
+      # Referenced as <Picture 2> / <Subject 2> in the prompt.
+      description: "Empty environment plate: establishes the set, lighting, materials, and spatial layout the continuation is shot in. Must not contain any characters. The model uses this for scene consistency but does not fix the camera to its viewpoint. Referenced as <Picture 2> in the prompt."
+      binding: image@170
+      required: true
+    - name: ref_picture_3
+      kind: image
+      # Per author's README: pictures are numbered by attachment order (ref_images.ref_image_0 = <Picture 1>,
+      # ref_image_1 = <Picture 2>, ref_image_2 = <Picture 3>). Port name matches prompt tag number.
+      # Author: "Slot 4 accepts up to three images. Label each with a note — 'pose she ends in,
+      # shot from slightly below', 'prop on the table', 'second character who enters' — since the
+      # note determines how it is incorporated." The note goes into prompt subject_definitions,
+      # not a separate port. When not supplied, placeholder.png is fed to the node (always present
+      # in /ComfyUI/input/); omit <Picture 3> from subject_definitions so the model ignores it.
+      description: "Optional extra reference: a specific pose the subject reaches, a prop present in the scene, an additional character view, or a secondary subject who enters. Omit when not needed. When supplied, add a one-line note describing its role in the subject_definitions section of the prompt (e.g. 'pose she ends in, shot from slightly below') and reference it as <Picture 3>."
+      binding: image@187
+      required: false
+    - name: ref_picture_4
+      kind: image
+      # Same rules as ref_picture_3. Maps to ref_images.ref_image_3 → <Picture 4> in the prompt.
+      # When not supplied, placeholder.png keeps ComfyUI validation happy; omit <Picture 4> from
+      # subject_definitions so the model ignores it.
+      description: "Optional extra reference, same types as ref_picture_3. Omit when not needed. When supplied, describe its role in subject_definitions and reference it as <Picture 4>."
+      binding: image@192
+      required: false
+    - name: ref_picture_5
+      kind: image
+      # Same rules as ref_picture_3. Maps to ref_images.ref_image_4 → <Picture 5> in the prompt.
+      # When not supplied, placeholder.png keeps ComfyUI validation happy; omit <Picture 5> from
+      # subject_definitions so the model ignores it.
+      description: "Optional extra reference, same types as ref_picture_3. Omit when not needed. When supplied, describe its role in subject_definitions and reference it as <Picture 5>."
+      binding: image@193
+      required: false
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "MiniMax H3 REF2V structured prompt in English. Six required sections in order: (1) context header describing how <Video 1> and <Picture 1–N> relate to the target clip; (2) summary: one-line bracketed description; (3) subject_definitions: <Video 1> for prior_clip, <Picture 1>/<Subject 1> for character_sheet, <Picture 2>/<Subject 2> for environment_plate, and <Picture 3/4/5> for each supplied ref_picture_3/4/5 — label each with a one-line note describing its role (pose, prop, extra character view, etc.); (4) integrated_multimodal_description: timestamped shots with camera direction, 300–450 words; (5) overall_soundscape; (6) non_diegetic_music. Omit <Picture N> definitions for optional ports that were not supplied. Use the prompt system at https://github.com/bitsofintelligence101-lab/workflows/tree/main/nsfw/h3 to generate prompts from a short brief plus the reference images."
+      binding: value@182
+      required: true
+    - name: steps
+      kind: int
+      description: "Denoising steps. Range 4–8 for fast drafts; 20–30 for higher quality. Default 20."
+      binding: steps@141
+      constraints: { min: 1, max: 50 }
+      required: false
+      default: 20
+    - name: fps
+      kind: int
+      description: "Output video frame rate in FPS. Default 24 matches the model's native rate. No RIFE interpolation — output is exactly this FPS."
+      binding: fps@150
+      constraints: { min: 1, max: 120 }
+      required: true
+      default: 24
+    - name: duration_seconds
+      kind: float
+      description: "Target clip duration in seconds. Converted to the nearest valid frame count for MiniMax H3 (must be a multiple of 17 frames at 24 FPS; minimum 5 frames). Default 10 seconds produces a ~10-second continuation."
+      binding: value@158
+      constraints: { min: 1.0 }
+      required: false
+      default: 10.0
+    - name: prior_clip_start_time
+      kind: float
+      description: "Seconds offset into the prior clip from which to begin reading frames. Default 0 reads from the start of the clip. Set to <clip_length - read_window> to capture only the final motion of a longer rendered clip (e.g. set to 9.2 for a 10-second clip to read only the last ~0.8s)."
+      binding: value@vf_start_time
+      constraints: { min: 0.0 }
+      required: false
+      default: 0.0
+  outputs:
+    - name: output_video
+      kind: video
+      description: "Generated continuation video with synchronized audio at native 24 FPS."
+      node_id: "176"
+      role: primary
+context: |
+  Prior clip: set prior_clip_start_time to the second offset from which you want the model to
+  read motion context — typically the final 1–2 seconds of the preceding clip. Default 0 reads
+  from the beginning of whatever clip is provided.
+
+  Duration: pass the target clip length in seconds; fractional values are fine (e.g. 6.5).
+  Use steps=4–8 for fast drafts and steps=20–30 for final quality.
+
+  Reference images: pass all reference images at the same resolution. The model derives output
+  resolution automatically from them.
+
+  Prompt format — six REF2V sections (English only, all required):
+  1. Context header: one-line description of how video and pictures align to the target, e.g.
+     "How the reference video and pictures align with the target video — <Video 1> supplies …;
+     the target video resumes from its final frame at the 0.00-second mark. Target duration X.XX seconds."
+  2. summary: one-line bracketed description, e.g. "[video continuation] The target video continues <Video 1> …"
+  3. subject_definitions: describe each reference.
+     - <Video 1> = prior_clip: motion, camera position, and light at the seam.
+     - <Subject 1> = character_sheet: identity block; re-state on every generation.
+     - <Picture 2> = environment_plate: scene materials, light, and layout.
+     - <Picture 3> / <Picture 4> / <Picture 5> = ref_picture_3 / ref_picture_4 / ref_picture_5
+       (when supplied): one entry per image with a one-line note describing its role
+       (e.g. "pose she ends in, shot from slightly below", "prop on the table", "second character
+       who enters"). Omit entries for optional ports that were not provided.
+  4. integrated_multimodal_description: 300–450 words. Use beat-by-beat durations (spoken
+     lines 1.5–2 s, body turns 1–1.5 s, walks 3–4 s) to sum to the target duration. Include
+     camera motion vocabulary and close with a consistency sentence.
+  5. overall_soundscape: floor and fabric materials from the reference images; dialogue cues.
+  6. non_diegetic_music: music cue or "N/A".
+
+  Chaining: feed the last output as prior_clip for the next generation. Re-run the prompt
+  system each time to restate the identity block — this is what prevents subject drift across
+  a long chain. One shot per generation; continuation is continuous by design.
+
+  Known failure modes:
+  - Quality drops when the prompt is missing one of the six required sections.
+  - Subject drift across a chain when character_sheet is changed or the identity block
+    (subject_definitions) is omitted or abbreviated.
+  - Unreferenced labels: any <Picture N> or <Subject N> cited in integrated_multimodal_description
+    must have a matching definition in subject_definitions, or the model ignores the reference.
+  - Identity confusion when ref_picture_3/4/5 is supplied without a descriptive one-line note
+    in subject_definitions that makes its role explicit.
+
+  ── Example 1: two required refs, no optional images ──────────────────────────────────────────
+
+  How the reference video and pictures align with the target video — <Video 1> supplies the
+  frames immediately preceding the target; the target video resumes from its final frame at
+  the 0.00-second mark with no cut. Target duration 6.00 seconds.
+
+  summary:
+  [video continuation] The target video continues <Video 1> without interruption, carrying a
+  slow walk through a doorway into a close-up conversation moment.
+
+  subject_definitions:
+  <Video 1> establishes the inherited motion, camera position, framing, and warm corridor
+  lighting at the seam; the target continues that trajectory without a cut.
+  <Subject 1> is the woman defined by <Picture 1>: shoulder-length auburn hair, a thin gold
+  chain necklace, a silk slip dress in pale ivory. Her identity follows <Picture 1>; her
+  position and lighting follow <Video 1>.
+  <Subject 2> is the interior from <Picture 2>: a narrow hallway with exposed brick, warm
+  tungsten sconces, and a dark hardwood floor opening into a softly lit sitting room. Layout,
+  materials, and light follow <Picture 2>; camera position follows the action.
+
+  integrated_multimodal_description:
+  [Shot 1] Live-action, cinematic. The shot resumes from <Video 1> mid-stride: <Subject 1>
+  steps through the doorway into the sitting room, her dress catching the warm sconce light
+  from the right. 1.50 s — she slows and turns to face someone just off-frame to the left,
+  expression shifting from neutral to a faint smile. 1.00 s — medium close-up: her face
+  fills the left third of the frame, cheekbone lit by the soft sitting-room light. 1.50 s —
+  she says <d>[English] I thought you'd already left.</d> 1.00 s — she tilts her head
+  slightly, eyes on the off-frame figure, waiting. Camera holds its position; shallow depth
+  of field keeps the brick wall softly blurred. Light, hair, jewelry, and dress unchanged.
+
+  overall_soundscape:
+  Low room tone from the corridor beneath soft footsteps on hardwood as she enters. Brief
+  rustle of fabric as she turns. Clear spoken words: <d>I thought you'd already left.</d>
+  Faint creak of the floorboard under her right foot.
+
+  non_diegetic_music:
+  N/A
+
+  ── Example 2: Slot 3 optional pose reference (ref_picture_3) ────────────────────────────────
+
+  How the reference video and pictures align with the target video — <Video 1> supplies the
+  frames immediately preceding the target; the target video resumes from its final frame at
+  the 0.00-second mark with no cut. Target duration 8.00 seconds.
+
+  summary:
+  [video continuation] The target video continues <Video 1> without interruption; the subject
+  crosses the room and reaches the pose defined by <Picture 3>.
+
+  subject_definitions:
+  <Video 1> establishes the inherited motion, camera position, framing, and late-afternoon
+  light at the seam.
+  <Subject 1> is the woman defined by <Picture 1>: long dark hair worn loose, a black fitted
+  tank top, high-waisted jeans, bare feet. Her identity follows <Picture 1>; her position and
+  lighting follow <Video 1>.
+  <Subject 2> is the apartment interior from <Picture 2>: an open-plan living room with
+  floor-to-ceiling windows, warm afternoon light, a pale concrete floor, and a cream sofa
+  along the left wall. Layout, materials, and light follow <Picture 2>; camera is not locked
+  to the plate's viewpoint.
+  <Picture 3> is the specific end-pose the subject reaches by the final frame: seated on the
+  sofa arm, right leg crossed over left, torso turned three-quarters toward camera, head
+  tilted slightly down with eyes up.
+
+  integrated_multimodal_description:
+  [Shot 1] Live-action, cinematic, warm afternoon light. The shot resumes from <Video 1>:
+  <Subject 1> is mid-stride crossing the concrete floor toward the sofa. 2.00 s — she reaches
+  the sofa and rests one hand on its back. 1.50 s — she pivots and perches on the sofa arm,
+  crossing her right leg over her left. 1.50 s — her torso turns three-quarters toward camera,
+  head tilting slightly down, eyes lifting to look directly into the lens — the pose from
+  <Picture 3>. 1.50 s — she holds the pose; camera slowly pulls back to a medium-full shot,
+  keeping her centered. 1.50 s — she remains still, expression composed. The pale afternoon
+  light stays consistent; hair, clothing, and bare feet match <Picture 1> throughout.
+
+  overall_soundscape:
+  Soft footsteps on concrete as she crosses the room. A light creak as she settles onto the
+  sofa arm. Low ambient room tone with distant street sound through the windows. No dialogue.
+
+  non_diegetic_music:
+  Slow, sparse piano — single-note motif, no percussion, fades under ambient room tone by 4 s.
+
+  ── Example 3: Slot 4 prop + end-pose references (ref_picture_4, ref_picture_5) ─────────────
+
+  How the reference video and pictures align with the target video — <Video 1> supplies the
+  frames immediately preceding the target; the target video resumes from its final frame at
+  the 0.00-second mark with no cut. Target duration 10.00 seconds.
+
+  summary:
+  [video continuation] The target video continues <Video 1> without interruption; the subject
+  moves to the table, picks up the object from <Picture 4>, and ends in the pose from <Picture 5>.
+
+  subject_definitions:
+  <Video 1> establishes the inherited motion, camera position, framing, and interior lighting
+  at the seam.
+  <Subject 1> is the woman defined by <Picture 1>: wavy platinum-blonde hair, a black satin
+  robe worn open, nude beneath. Her identity follows <Picture 1>; her position follows <Video 1>.
+  <Subject 2> is the interior from <Picture 2>: a bedroom with dark oak floors, warm lamp
+  light from a bedside table on the right, sheer curtains over a window in the background,
+  and a low wooden table in the foreground. Layout, materials, and light follow <Picture 2>.
+  <Picture 4> is the prop on the low table: a short crystal glass containing two fingers of
+  amber liquid. The subject picks this up during the shot.
+  <Picture 5> is the specific end-pose: the subject is seated on the floor, back against the
+  foot of the bed, knees drawn up, holding the glass in her right hand at chest height,
+  looking directly at camera.
+
+  integrated_multimodal_description:
+  [Shot 1] Live-action, cinematic, warm lamp light. The shot resumes mid-motion from <Video 1>:
+  <Subject 1> is approaching the low table, robe shifting as she moves. 2.00 s — she reaches
+  the table, pauses, and looks down at the glass from <Picture 4>. 1.50 s — she picks it up
+  with her right hand and tilts it to watch the liquid move. 1.50 s — she turns from the table
+  and takes two slow steps toward the foot of the bed. 1.50 s — she lowers herself to the
+  floor, back settling against the bed frame, knees drawing up. 1.50 s — her right hand brings
+  the glass to chest height as she finds the pose from <Picture 5>; gaze lifts and settles
+  directly on the lens. 1.50 s — she holds the pose, expression still. Camera tracks slightly
+  left as she descends, then settles into a medium-close composition. Lamp light, hair, and
+  robe match references throughout.
+
+  overall_soundscape:
+  Soft footsteps on dark oak flooring. Brief glass-on-wood lift as she picks up the drink.
+  Faint slosh of liquid as she raises it. Soft fabric movement as she lowers to the floor.
+  Low ambient room tone. No dialogue.
+
+  non_diegetic_music:
+  N/A
+models:
+  - name: minimax_h3_video_vae_fp16
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+        filename: h3/minimax_h3_video_vae_fp16.safetensors
+        sha256: 7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522
+
+  - name: minimax_h3_audio_vae_fp32
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+        filename: h3/minimax_h3_audio_vae_fp32.safetensors
+        sha256: 8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48
+
+  - name: qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot
+    type: clip
+    files:
+      - url: https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors
+        filename: h3/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors
+        sha256: d84547412144b7c50a6ec77437a889b869d3ace88da77ef1775d3d2a4901c192
+
+  - name: minimax_h3_fl2va_int8_convrot
+    type: unet
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors
+        filename: h3/minimax_h3_fl2va_int8_convrot.safetensors
+        sha256: 7ad4c73e6e378b822ffd1629f27f632d3787d95f5e468e3af958f98c58df96a5

@@ -1,0 +1,691 @@
+{
+  "10": {
+    "inputs": {
+      "value": "A photography of full body of a beautiful blonde american woman with blue eyes age 25 with beautiful body shape wearing a beautiful dress."
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Text String (User Prompt)"
+    }
+  },
+  "20": {
+    "inputs": {
+      "unet_name": "Krea2/Krea2_Turbo_convrot_int8mixed.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Krea2 model"
+    }
+  },
+  "21": {
+    "inputs": {
+      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Krea2 CLIP"
+    }
+  },
+  "22": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Krea2 VAE"
+    }
+  },
+  "27": {
+    "inputs": {
+      "width": 1920,
+      "height": 1080,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Krea2 latent"
+    }
+  },
+  "40": {
+    "inputs": {
+      "unet_name": "MinimaxH3/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "H3 fl2va model"
+    }
+  },
+  "41": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "H3 CLIP"
+    }
+  },
+  "42": {
+    "inputs": {
+      "vae_name": "h3/minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "H3 video VAE"
+    }
+  },
+  "45": {
+    "inputs": {
+      "noise_seed": 0
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "Move noise"
+    }
+  },
+  "46": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "51": {
+    "inputs": {
+      "vae_name": "h3/minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "H3 audio VAE"
+    }
+  },
+  "30": {
+    "inputs": {
+      "character_description": [
+        "10",
+        0
+      ],
+      "visual_style": "",
+      "backdrop": "plain seamless neutral grey studio backdrop",
+      "framing": "full body, generous margin",
+      "spoken_line": "Hello. My name is written in the story we are about to tell, and this is how my voice sounds when I speak plainly.",
+      "voice_description": "",
+      "language": "English",
+      "silent_during_closeup": true,
+      "shot_seconds": 0.75,
+      "scared_shot": true,
+      "ambient_sound": ""
+    },
+    "class_type": "OrbitSheetsCharacterPrompt",
+    "_meta": {
+      "title": "Turnaround prompt (H3 spec)"
+    }
+  },
+  "39": {
+    "inputs": {
+      "lora_name": "minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "40",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "H3 turbo LoRA (4-step)"
+    }
+  },
+  "73": {
+    "inputs": {
+      "lora_name": "minimax_h3_ref_lora_rank_256_bf16.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "39",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "H3 reference LoRA"
+    }
+  },
+  "25": {
+    "inputs": {
+      "text": [
+        "80",
+        0
+      ],
+      "clip": [
+        "21",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Krea2 positive"
+    }
+  },
+  "74": {
+    "inputs": {
+      "model": [
+        "73",
+        0
+      ],
+      "attention": "comfy kitchen (int8)"
+    },
+    "class_type": "OrbitSheetsAttentionBackend",
+    "_meta": {
+      "title": "Attention backend"
+    }
+  },
+  "26": {
+    "inputs": {
+      "conditioning": [
+        "25",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Krea2 negative"
+    }
+  },
+  "43": {
+    "inputs": {
+      "shift_video": 12.0,
+      "shift_audio": 3.0,
+      "model": [
+        "74",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "H3 sigma shift"
+    }
+  },
+  "28": {
+    "inputs": {
+      "seed": 0,
+      "steps": 8,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "20",
+        0
+      ],
+      "positive": [
+        "25",
+        0
+      ],
+      "negative": [
+        "26",
+        0
+      ],
+      "latent_image": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Krea2 sampler"
+    }
+  },
+  "47": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 8,
+      "denoise": 1.0,
+      "model": [
+        "43",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "29": {
+    "inputs": {
+      "samples": [
+        "28",
+        0
+      ],
+      "vae": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Krea2 anchor frame"
+    }
+  },
+  "44": {
+    "inputs": {
+      "width": 1216,
+      "height": 672,
+      "length": 124,
+      "clip": [
+        "41",
+        0
+      ],
+      "vae": [
+        "42",
+        0
+      ],
+      "prompt": [
+        "30",
+        0
+      ],
+      "first_frame": [
+        "29",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ImageToVideo",
+    "_meta": {
+      "title": "H3 I2VA move"
+    }
+  },
+  "48": {
+    "inputs": {
+      "model": [
+        "43",
+        0
+      ],
+      "conditioning": [
+        "44",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Basic Guider"
+    }
+  },
+  "49": {
+    "inputs": {
+      "noise": [
+        "45",
+        0
+      ],
+      "guider": [
+        "48",
+        0
+      ],
+      "sampler": [
+        "46",
+        0
+      ],
+      "sigmas": [
+        "47",
+        0
+      ],
+      "latent_image": [
+        "44",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "H3 sampler"
+    }
+  },
+  "50": {
+    "inputs": {
+      "samples": [
+        "49",
+        0
+      ],
+      "vae": [
+        "42",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Frames"
+    }
+  },
+  "52": {
+    "inputs": {
+      "samples": [
+        "49",
+        0
+      ],
+      "vae": [
+        "51",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "Voice track"
+    }
+  },
+  "60": {
+    "inputs": {
+      "images": [
+        "50",
+        0
+      ],
+      "subject_hint": [
+        "10",
+        0
+      ],
+      "clip": [
+        "21",
+        0
+      ],
+      "count": 6,
+      "mode": "vision_llm",
+      "candidates": 32,
+      "keep_first_frame": false,
+      "selection_brief": "Only used if count is raised above the shot count. Pick additional sharp, well-formed frames that add a genuinely different angle; the six main views (full-body front, face close-up, left profile, right profile, rear, frightened face) are already selected, one per shot.\n\nPrefer: sharp frames; anatomically correct figures with clear, natural eyes and well-formed features.\n\nReject: near-duplicates of a view already selected; motion-blurred frames; frames with bad, distorted, or asymmetrical eyes; frames with broken anatomy, warping, or bad hands/limbs; frames caught mid-cut between two shots; any frame where the mouth is caught open mid-speech.",
+      "sharpness_weight": 0.35,
+      "free_vram_first": true,
+      "llm_url": "",
+      "timeout_seconds": 300,
+      "sharpness_gate": true,
+      "max_length": 400,
+      "temperature": 0.2,
+      "shots": 6,
+      "boards": 1,
+      "shot_split": "views (by content)"
+    },
+    "class_type": "OrbitSheetsFrameSelect",
+    "_meta": {
+      "title": "Select frames"
+    }
+  },
+  "72": {
+    "inputs": {
+      "filename_prefix": "ControlCenter/voice",
+      "quality": "V0",
+      "audio": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "SaveAudioMP3",
+    "_meta": {
+      "title": "SaveAudioMP3"
+    }
+  },
+  "61": {
+    "inputs": {
+      "images": [
+        "60",
+        0
+      ],
+      "columns": 2,
+      "cell_width": 512,
+      "padding": 8,
+      "label_frames": false,
+      "label_prefix": ""
+    },
+    "class_type": "OrbitSheetsContactSheet",
+    "_meta": {
+      "title": "Sheet"
+    }
+  },
+  "71": {
+    "inputs": {
+      "source": [
+        "60",
+        1
+      ]
+    },
+    "class_type": "PreviewAny",
+    "_meta": {
+      "title": "Selection report"
+    }
+  },
+  "70": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "61",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage"
+    }
+  },
+  "75": {
+    "inputs": {
+      "filename_prefix": "anchor_image",
+      "images": [
+        "29",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Anchor preview"
+    }
+  },
+  "78": {
+    "inputs": {
+      "fps": 24,
+      "bit_depth": 8,
+      "images": [
+        "50",
+        0
+      ],
+      "audio": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create video"
+    }
+  },
+  "79": {
+    "inputs": {
+      "filename_prefix": "video/OrbitSheets",
+      "format": "auto",
+      "codec": "auto",
+      "video": [
+        "78",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save video"
+    }
+  },
+  "80": {
+    "inputs": {
+      "string_b": "plain seamless neutral grey studio backdrop, even soft lighting, no props, no text, no watermark",
+      "delimiter": ", ",
+      "string_a": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Krea2 backdrop"
+    }
+  },
+  "81": {
+    "class_type": "ImageFromBatch",
+    "_meta": {
+      "title": "Split: pose_front"
+    },
+    "inputs": {
+      "image": [
+        "60",
+        0
+      ],
+      "batch_index": 0,
+      "length": 1
+    }
+  },
+  "82": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage (pose_front)"
+    },
+    "inputs": {
+      "filename_prefix": "pose_front",
+      "images": [
+        "81",
+        0
+      ]
+    }
+  },
+  "83": {
+    "class_type": "ImageFromBatch",
+    "_meta": {
+      "title": "Split: pose_face_closeup"
+    },
+    "inputs": {
+      "image": [
+        "60",
+        0
+      ],
+      "batch_index": 1,
+      "length": 1
+    }
+  },
+  "84": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage (pose_face_closeup)"
+    },
+    "inputs": {
+      "filename_prefix": "pose_face_closeup",
+      "images": [
+        "83",
+        0
+      ]
+    }
+  },
+  "85": {
+    "class_type": "ImageFromBatch",
+    "_meta": {
+      "title": "Split: pose_left_profile"
+    },
+    "inputs": {
+      "image": [
+        "60",
+        0
+      ],
+      "batch_index": 2,
+      "length": 1
+    }
+  },
+  "86": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage (pose_left_profile)"
+    },
+    "inputs": {
+      "filename_prefix": "pose_left_profile",
+      "images": [
+        "85",
+        0
+      ]
+    }
+  },
+  "87": {
+    "class_type": "ImageFromBatch",
+    "_meta": {
+      "title": "Split: pose_right_profile"
+    },
+    "inputs": {
+      "image": [
+        "60",
+        0
+      ],
+      "batch_index": 3,
+      "length": 1
+    }
+  },
+  "88": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage (pose_right_profile)"
+    },
+    "inputs": {
+      "filename_prefix": "pose_right_profile",
+      "images": [
+        "87",
+        0
+      ]
+    }
+  },
+  "89": {
+    "class_type": "ImageFromBatch",
+    "_meta": {
+      "title": "Split: pose_rear"
+    },
+    "inputs": {
+      "image": [
+        "60",
+        0
+      ],
+      "batch_index": 4,
+      "length": 1
+    }
+  },
+  "90": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage (pose_rear)"
+    },
+    "inputs": {
+      "filename_prefix": "pose_rear",
+      "images": [
+        "89",
+        0
+      ]
+    }
+  },
+  "91": {
+    "class_type": "ImageFromBatch",
+    "_meta": {
+      "title": "Split: pose_frightened"
+    },
+    "inputs": {
+      "image": [
+        "60",
+        0
+      ],
+      "batch_index": 5,
+      "length": 1
+    }
+  },
+  "92": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage (pose_frightened)"
+    },
+    "inputs": {
+      "filename_prefix": "pose_frightened",
+      "images": [
+        "91",
+        0
+      ]
+    }
+  }
+}

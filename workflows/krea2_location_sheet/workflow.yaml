@@ -1,0 +1,227 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Original workflow by lumosai8 (OrbitSheets)
+# https://github.com/lumosai8/ComfyUI-OrbitSheets/blob/main/example_workflows/LocationOrbitSheetH3.json
+# https://github.com/lumosai8/ComfyUI-OrbitSheets/blob/main/README.md
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# OrbitSheetsLocationPrompt, OrbitSheetsFrameSelect, OrbitSheetsContactSheet,
+# OrbitSheetsAttentionBackend — lumosai8/ComfyUI-OrbitSheets (loaded via customNodes)
+# PrimitiveStringMultiline, ConditioningZeroOut, KSampler, BasicScheduler,
+# BasicGuider, SamplerCustomAdvanced, RandomNoise, KSamplerSelect — ComfyUI core
+# MiniMaxH3SigmaShift, MiniMaxH3ImageToVideo — comfy_extras/nodes_minimax_h3.py
+# CreateVideo, SaveVideo — comfy_extras/nodes_video.py
+# PreviewAny — comfy_extras/nodes_preview_any.py
+#
+# ─── Append to nodes.lock ─────────────────────────────────────────────────────
+# (none — OrbitSheets is loaded dynamically via customNodes at render time)
+#
+# ─── Patches applied to workflow.json ─────────────────────────────────────────
+# Node 74 (OrbitSheetsAttentionBackend): injected `attention: "comfy kitchen (int8)"` —
+# required widget present in the original UI JSON but dropped by the UI→API converter.
+# Nodes 30, 60, 61 (OrbitSheetsLocationPrompt, FrameSelect, ContactSheet):
+# injected all widget values from the original UI JSON — the converter preserved
+# only the linked inputs; all non-connected widget values were absent.
+# Node 39, 73 (LoraLoaderModelOnly): restored `Minimax/` folder prefix on LoRA
+# filenames — the converter stripped the subfolder prefix during UI→API conversion.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: krea2_location_sheet
+description: >
+  Generates a six-panel location contact sheet from a plain-English place description —
+  architecturally distinct locked-off views assembled into a 2×3 grid. Best for creating
+  location reference sheets when you have a text description and need multiple consistent
+  viewpoints of the same space. Not suitable for character or person generation, continuous
+  camera motion, or workflows requiring a caller-supplied reference image.
+url: workflow.json
+workflow_type: t2i
+model_family: krea2
+gpu_types: [l40s, a100, h100]
+
+customNodes:
+  - name: ComfyUI-OrbitSheets
+    repository: https://github.com/lumosai8/ComfyUI-OrbitSheets.git
+    commitHash: 8952eae1d3298f241c538c029a6e929509c4813f
+
+ports:
+  params:
+    - name: prompt_location
+      kind: string
+      description: "Plain-English description of the location — architecture, materials, lighting, atmosphere, and distinctive spatial details. Drives the KREA-2 anchor image generation."
+      binding: value@10
+      required: true
+      default: "A moonlit stone courtyard ringed by tall cypress trees, worn flagstones, a dry central fountain"
+    - name: width
+      kind: int
+      description: "Anchor image width in pixels for the KREA-2 generation stage. Does not affect the final contact sheet dimensions, which are determined by the OrbitSheets layout (512 px per panel, 2 columns)."
+      binding: width@27
+      constraints: { min: 64 }
+      required: true
+      default: 1920
+    - name: height
+      kind: int
+      description: "Anchor image height in pixels for the KREA-2 generation stage. Does not affect the final contact sheet dimensions, which are determined by the OrbitSheets layout (512 px per panel, 2 columns)."
+      binding: height@27
+      constraints: { min: 64 }
+      required: true
+      default: 1080
+    - name: seed
+      kind: int
+      description: "Random seed for the KREA-2 anchor image. Different seeds produce different location interpretations. The H3 orbit stage uses a separate fixed seed internally."
+      binding: seed@28
+      seed: true
+      required: false
+      default: 0
+    - name: steps
+      kind: int
+      description: "Denoising steps for the KREA-2 anchor image stage. 6–10 gives good results; higher values yield more detail. The H3 orbit stage runs 8 steps internally with the turbo LoRA."
+      binding: steps@28
+      constraints: { min: 1, max: 50 }
+      required: false
+      default: 8
+    - name: cfg
+      kind: float
+      description: "Classifier-free guidance scale for the KREA-2 anchor stage. Default 1.0 is recommended; increase to 2–3 for stronger prompt adherence at the cost of naturalness."
+      binding: cfg@28
+      required: false
+      default: 1.0
+    - name: frames
+      kind: int
+      description: "Number of frames in the H3 orbit sequence. Must satisfy (frames − 5) mod 17 = 0. Default 124 = 17×7 + 5, giving ~5.2 s at 24 FPS with enough candidates for 6 distinct locked-off views."
+      binding: length@44
+      constraints: { min: 5 }
+      required: false
+      default: 124
+    - name: fps
+      kind: int
+      description: "Frame rate of the intermediate orbit video in frames per second. Default 24 matches the H3 model's native rate."
+      binding: fps@76
+      constraints: { min: 1, max: 60 }
+      required: false
+      default: 24
+  outputs:
+    - name: location_sheet
+      kind: image
+      description: "Six-panel 2×3 contact sheet of photographically distinct locked-off views of the described location."
+      node_id: "70"
+      role: primary
+    - name: orbit_video
+      kind: video
+      description: "Intermediate H3 orbit sequence at 24 FPS from which the contact sheet panels are selected."
+      node_id: "77"
+      role: auxiliary
+    - name: anchor_preview
+      kind: image
+      description: "KREA-2 generated anchor image used as the first-frame seed for the H3 orbit stage."
+      node_id: "75"
+      role: auxiliary
+    - name: view_1
+      kind: image
+      description: "Individual selected view frame #1, in orbit-take order (not a specific named angle). Best-effort — may occasionally not be distinct from another panel."
+      node_id: "79"
+      role: auxiliary
+    - name: view_2
+      kind: image
+      description: "Individual selected view frame #2, in orbit-take order (not a specific named angle). Best-effort — may occasionally not be distinct from another panel."
+      node_id: "81"
+      role: auxiliary
+    - name: view_3
+      kind: image
+      description: "Individual selected view frame #3, in orbit-take order (not a specific named angle). Best-effort — may occasionally not be distinct from another panel."
+      node_id: "83"
+      role: auxiliary
+    - name: view_4
+      kind: image
+      description: "Individual selected view frame #4, in orbit-take order (not a specific named angle). Best-effort — may occasionally not be distinct from another panel."
+      node_id: "85"
+      role: auxiliary
+    - name: view_5
+      kind: image
+      description: "Individual selected view frame #5, in orbit-take order (not a specific named angle). Best-effort — may occasionally not be distinct from another panel."
+      node_id: "87"
+      role: auxiliary
+    - name: view_6
+      kind: image
+      description: "Individual selected view frame #6, in orbit-take order (not a specific named angle). Best-effort — may occasionally not be distinct from another panel."
+      node_id: "89"
+      role: auxiliary
+context: |
+  Best for location and environment reference sheets when you have a descriptive text prompt
+  and need multiple consistent viewpoints of the same space assembled into a compact grid.
+
+  Prompt guidance: describe the location in physical detail — architecture type (courtyard,
+  corridor, market, rooftop), materials (stone, glass, wood, neon), dominant light source
+  and quality (midday hard sun, soft overcast fill, warm tungsten, moonlight), atmosphere
+  (abandoned, intimate, bustling), and distinctive visual anchors (archways, fountains, trees,
+  market stalls). The same description drives the anchor image, the orbit prompt, and the
+  vision-LLM frame selector — more specific descriptions yield more consistent cross-panel results.
+
+  Frame count: 124 frames (default) gives the selector enough candidates for 6 distinct
+  locked-off cuts. If panels look too similar, increase `frames`. Valid values must satisfy
+  (frames − 5) mod 17 = 0: 5, 22, 39, 56, 73, 90, 107, 124, 141, 158, …
+
+  Seed: controls only the KREA-2 anchor image. Try a few seeds to find a pleasing base view
+  before committing to a longer orbit generation.
+
+  Steps: 6–8 is the practical range for the KREA-2 anchor; beyond 12 yields diminishing
+  returns. The H3 orbit stage is fixed at 8 steps with the turbo LoRA.
+
+  Known failure modes:
+  - Duplicate or low-contrast panels: very plain or monotone locations (bare white rooms,
+    featureless plains) give the vision selector too little variety. Add distinctive
+    architectural features and lighting contrasts to the prompt.
+  - Missing a view direction: increase `frames` to give the selector more candidates.
+  - Contact sheet panels feel disconnected: add a consistent lighting cue (e.g. "warm
+    afternoon side light from the left") to anchor each panel to the same light quality.
+models:
+  - name: Krea2_Turbo_convrot_int8mixed
+    type: unet
+    files:
+      - url: https://huggingface.co/Winnougan/Krea-2-Base-Turbo-NVFP4-FP8-INT8/resolve/main/Krea2_Turbo_convrot_int8mixed.safetensors
+        filename: Krea2/Krea2_Turbo_convrot_int8mixed.safetensors
+        sha256: "c5e6d712e41a20ed2120531893bab0d7036099af12fb8836e3fe1113a8f3751f"
+
+  - name: qwen3vl_4b_fp8_scaled
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors
+        sha256: "54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094"
+
+  - name: qwen_image_vae
+    type: vae
+    files:
+      - url: https://huggingface.co/zhenshipo/qwen_image_vae_models/resolve/main/qwen_image_vae.safetensors
+        sha256: "a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f"
+
+  - name: minimax_h3_fl2va_pruned_int8_convrot
+    type: unet
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+        filename: MinimaxH3/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+        sha256: "e889202c41dafb67b10d67b97f0d8541508036a6090af23425a5c2615d03c47a"
+
+  - name: qwen3vl_32b_minimax_h3_nvfp4_awq
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+        sha256: "35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6"
+
+  - name: minimax_h3_video_vae_fp16
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+        filename: h3/minimax_h3_video_vae_fp16.safetensors
+        sha256: "7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522"
+
+  - name: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy
+    type: lora
+    files:
+      - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        filename: Minimax/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        sha256: "fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1"
+
+  - name: minimax_h3_ref_lora_rank_256_bf16
+    type: lora
+    files:
+      - url: https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/loras/minimax_h3_ref_lora_rank_256_bf16.safetensors
+        filename: Minimax/minimax_h3_ref_lora_rank_256_bf16.safetensors
+        sha256: "7979fb9e5ac8f8c165cfe78b2c57d471cc5dbd0f62dac5ebd07f864b404a9c87"
