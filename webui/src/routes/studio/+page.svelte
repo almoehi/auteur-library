@@ -35,6 +35,7 @@
 	import { recordWait, typicalWait, typicalLabel } from './timings';
 	import { renderDocument, type Block } from './render-doc';
 	import {
+		RUN_CEILING_MS,
 		SCENE_COUNT_MAX,
 		SCENE_COUNT_MIN,
 		type Artifact,
@@ -259,6 +260,22 @@
 	let lastError = $state('');
 	let lastTick = $state<Date | null>(null);
 	let pollingActive = $state(false);
+
+	/** A restored run the harness cannot still be working on.
+	 *
+	 *  `startedAt` outlives the tab, so a run left behind by a closed laptop —
+	 *  or simply reopened from the sidebar a week later — comes back with a
+	 *  timestamp and a poller and no way of its own to tell that it is over. The
+	 *  clock then counts up from a moment that is days gone, and the composer
+	 *  says a production is in progress that nothing has touched since Tuesday.
+	 *  Of everything this surface can get wrong, claiming to be doing work it is
+	 *  not is the one that costs the reader their trust in the rest of it.
+	 *
+	 *  So an old run is restored as what it is: the record of a run, whole and
+	 *  readable, with nothing on it pretending to be live. See RUN_CEILING_MS for
+	 *  where the line sits and why it sits there.
+	 */
+	let staleRun = $state(false);
 
 	// --- planning documents ----------------------------------------------------
 
@@ -2539,6 +2556,9 @@
 
 	function startPolling() {
 		stopPolling();
+		// The one choke point where a run becomes live again: a resumed shoot, a
+		// new clip, a continuation. Whatever it was, it is not a leftover now.
+		staleRun = false;
 		refreshClipEstimate();
 		quiet = 0;
 		lastSig = '';
@@ -3053,11 +3073,14 @@
 			// both assemble_final_film and combine_clips_final_video). Show the
 			// real key once it exists, a placeholder while it is still a ghost.
 			label: asm?.key ?? 'assemble_final_film',
+			// `assemblySent` survives a reload, so on a stale run this pill drew
+			// `rendering` forever — the live line's claim, made a second time by
+			// the rail beside it.
 			status: finalPosted
 				? 'done'
 				: asm
 					? mapStatus(asm.status)
-					: assemblySent
+					: assemblySent && !staleRun
 						? 'running'
 						: 'pending'
 		});
@@ -3179,6 +3202,7 @@
 
 	function reset() {
 		stopPolling();
+		staleRun = false;
 		forget();
 		chat = [];
 		superseded = {};
@@ -3407,6 +3431,9 @@
 					else if (s.planningWs) mode = 'advanced';
 					assemblySent = s.assemblySent ?? false;
 					startedAt = s.startedAt || Date.now();
+					// Asked here rather than anywhere later, because everything below
+					// reads as live: the poller, the clock, the rail's pills.
+					staleRun = Date.now() - startedAt > RUN_CEILING_MS;
 					if (assemblySent) {
 						shootsAnnounced = true;
 						finalByNameOnly = true;
@@ -3440,7 +3467,17 @@
 						const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
 						latestPlanId = item.id;
 					}
-					startPolling();
+					// A run past the ceiling is not polled. The harness has already
+					// given up on every task it could have been running, so the loop
+					// would only ask a dead workspace the same question every thirty
+					// seconds while the page counted the hours since the tab closed.
+					//
+					// The cost, stated plainly: work that finished after this tab was
+					// closed is not collected. Nothing that was still running can be —
+					// it was abandoned hours before the ceiling — but a clip that
+					// landed and was never posted stays uncollected until the run is
+					// started again.
+					if (!staleRun) startPolling();
 				}
 			}
 		} catch {
@@ -4057,14 +4094,19 @@
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
 								<div class="mb-1 flex items-baseline justify-between gap-3">
 									<h3 class="font-display text-base font-semibold">Shooting</h3>
-									<span class="font-mono text-[11px] text-[var(--st-faint)] tabular-nums">
-										{mmss(shootElapsed)}
-									</span>
+									{#if !staleRun}
+										<!-- Dropped rather than frozen on a stale run: we know the
+											 shoot is over, but not when it ended, and a stopped clock
+											 showing a number we made up is worse than no clock. -->
+										<span class="font-mono text-[11px] text-[var(--st-faint)] tabular-nums">
+											{mmss(shootElapsed)}
+										</span>
+									{/if}
 								</div>
 								<p class="mb-4 text-xs leading-relaxed text-[var(--st-muted)]">
 									Each scene is written into a prompt, then rendered on a GPU. A clip usually
-									takes several minutes and there is no output until it is finished — the timer
-									is the only thing that moves.
+									takes several minutes and there is no output until it is finished{#if !staleRun} —
+										the timer is the only thing that moves{/if}.
 								</p>
 
 								{#if shootBoard.length}
@@ -4980,6 +5022,16 @@
 								<span class="min-w-0 truncate">{friendly(railRunning.label)}</span>
 							{/if}
 						</p>
+					{:else if staleRun && startedAt}
+						<!-- The same slot, saying the opposite. Counting up from a
+							 `startedAt` that is days old produced "2053m 43s" — a number no
+							 production has ever taken — sitting next to "usually about 4m".
+							 The honest reading of that timestamp is a date, not a stopwatch.
+							 Static dot, faint text: nothing here is happening. -->
+						<p class="mb-2 flex items-center gap-2.5 px-2 text-xs text-[var(--st-faint)]">
+							<span class="size-1.5 shrink-0 rounded-full bg-[var(--st-line)]"></span>
+							<span>not running · started {whenLabel(startedAt)}</span>
+						</p>
 					{/if}
 					{#if refFiles.length}
 						<div class="mb-2 space-y-1.5">
@@ -5031,23 +5083,34 @@
 										{continuing.locationName ?? 'the same place'}. The new piece renders on its own
 										and joins onto the end.
 									</p>
-									<!-- The whole prior clip goes to the model either way: the person,
+									<!-- Two options, not one switch.
+									     This was a single button showing its own state, and it was read
+									     as a choice: clicking "starts on the last frame" to ask for that
+									     turned it off. A pair where the chosen one is filled is how the
+									     length and the resolution already work on this card, and it
+									     cannot be misread the same way.
+
+									     The whole prior clip goes to the model either way — the person,
 									     the room, the light and the motion all come from it. This only
 									     decides whether the FIRST INSTANT is nailed to the frame the
 									     last clip ended on. -->
-									<button
-										type="button"
-										aria-pressed={pinSeam}
-										onclick={() => (pinSeam = !pinSeam)}
-										class="mt-2 cursor-pointer rounded-full px-3 py-1 text-xs transition-colors {pinSeam
-											? 'bg-[var(--st-surface-2)] text-[var(--st-text)]'
-											: 'bg-[var(--st-surface)] text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
-										>{pinSeam ? 'starts on the last frame' : 'free start'}</button
-									>
+									<div class="mt-2 flex flex-wrap items-center gap-1.5">
+										{#each [[true, 'from the last frame'], [false, 'free start']] as [on, label] (label)}
+											<button
+												type="button"
+												aria-pressed={pinSeam === on}
+												onclick={() => (pinSeam = on as boolean)}
+												class="cursor-pointer rounded-full px-3 py-1 text-xs transition-colors {pinSeam ===
+												on
+													? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+													: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}">{label}</button
+											>
+										{/each}
+									</div>
 									<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
 										{pinSeam
-											? 'The join is seamless — the first instant is the frame the clip ended on.'
-											: 'The scene carries over but the action can begin somewhere else. The join may step.'}
+											? 'Seamless — the first instant is the frame the clip ended on.'
+											: 'The scene carries over, but the action can begin somewhere else. The join may step.'}
 									</p>
 								</div>
 								<button
@@ -5642,6 +5705,8 @@
 						</p>
 						{#if pollingActive && startedAt}
 							<p class="mt-1 text-xs text-[var(--st-faint)]">{elapsedLabel(now - startedAt)}</p>
+						{:else if staleRun}
+							<p class="mt-1 text-xs text-[var(--st-faint)]">not running</p>
 						{/if}
 						<div class="mt-4">
 							{@render railList()}
