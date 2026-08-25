@@ -1159,13 +1159,7 @@
 			if (kind === 'character') {
 				const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
 				currentCharacter = { description: r.sheet.description, seed };
-				await launchSheetRender({
-					kind,
-					description: r.sheet.description,
-					stage: 'anchor',
-					seed,
-					why: r.sheet.why
-				});
+				await previewCharacter(r.sheet.description, seed, r.sheet.why);
 				return;
 			}
 
@@ -1176,6 +1170,77 @@
 			});
 		} catch (e) {
 			pushError(String(e));
+		}
+	}
+
+	/** A character preview, rendered without the harness.
+	 *
+	 *  The full sheet still goes through launchSheetRender and a workspace; only
+	 *  this one skips it, because only this one has nothing for the harness to
+	 *  decide. Measured, that is 112 seconds against 150.
+	 *
+	 *  The job is detached server-side and polled here, rather than the request
+	 *  being held open for two minutes: a reload during a render would otherwise
+	 *  abandon GPU time that is already being paid for.
+	 */
+	let previewBusy = $state(false);
+
+	async function previewCharacter(description: string, seed: number, why?: string) {
+		if (previewBusy) return;
+		previewBusy = true;
+		const card = pushItem({
+			who: 'studio',
+			kind: 'sheet',
+			sheet: { kind: 'character', stage: 'anchor', description, why, seed, launched: true }
+		});
+		try {
+			const res = await fetch('/studio/api/anchor', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ description, seed })
+			});
+			const r = (await res.json()) as { ok?: boolean; job?: string; error?: string };
+			if (!r.ok || !r.job) {
+				card.kind = 'error';
+				card.text = r.error || 'The preview did not start.';
+				return;
+			}
+			// Polled rather than awaited so the card can say something while it
+			// works, and so a failure has somewhere to land.
+			const started = Date.now();
+			for (;;) {
+				if (Date.now() - started > 10 * 60 * 1000) {
+					card.kind = 'error';
+					card.text = 'The preview did not finish within ten minutes.';
+					return;
+				}
+				await new Promise((r2) => setTimeout(r2, 2500));
+				let st: { ok?: boolean; phase?: string; url?: string; error?: string; elapsedSec?: number };
+				try {
+					const p = await fetch(`/studio/api/anchor?job=${encodeURIComponent(r.job)}`);
+					st = (await p.json()) as typeof st;
+				} catch {
+					continue;
+				}
+				if (st.phase === 'failed') {
+					card.kind = 'error';
+					card.text = st.error || 'The preview failed.';
+					return;
+				}
+				if (st.phase !== 'done' || !st.url) continue;
+				if (card.sheet) {
+					card.sheet.url = st.url;
+					card.sheet.job = r.job;
+					card.sheet.name = firstWords(description, 'character');
+				}
+				persist();
+				return;
+			}
+		} catch (e) {
+			card.kind = 'error';
+			card.text = String(e);
+		} finally {
+			previewBusy = false;
 		}
 	}
 
@@ -1294,9 +1359,9 @@
 	async function keepSheet(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.sheet || item.sheet.id || sheetBusy[itemId]) return;
-		const { workspace, artifact, file } = item.sheet;
+		const { workspace, artifact, file, job } = item.sheet;
 		// A draft card has no render behind it yet, so it has nothing to keep.
-		if (!workspace || !artifact || !file) return;
+		if (!job && (!workspace || !artifact || !file)) return;
 		sheetBusy[itemId] = true;
 		try {
 			const res = await fetch('/studio/api/sheet', {
@@ -1306,9 +1371,7 @@
 					kind: item.sheet.kind,
 					name: item.sheet.name,
 					description: item.sheet.description,
-					workspace,
-					artifact,
-					file
+					...(job ? { job } : { workspace, artifact, file })
 				})
 			});
 			const r = (await res.json()) as {

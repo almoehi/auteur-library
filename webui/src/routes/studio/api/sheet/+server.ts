@@ -12,6 +12,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { HARNESS } from '$lib/harness';
+import { readPreview } from '../../anchorjobs.server';
 import {
 	MAX_SHEET_BYTES,
 	addSheet,
@@ -41,6 +42,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		workspace?: unknown;
 		artifact?: unknown;
 		file?: unknown;
+		job?: unknown;
 	};
 	try {
 		body = await request.json();
@@ -50,13 +52,32 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 
 	const { kind, workspace, artifact, file } = body;
 	if (!isKind(kind)) throw error(400, "kind must be 'character' or 'location'");
+	const description = typeof body.description === 'string' ? body.description : '';
+	const name = typeof body.name === 'string' ? body.name : '';
+
+	// Two kinds of source, because there are now two kinds of render. A sheet
+	// comes back through the harness and is identified by a workspace triple; a
+	// character preview skips the harness entirely and is already a file on this
+	// machine. Keeping from a preview is therefore a copy, not a fetch.
+	const jobId = typeof body.job === 'string' ? body.job : '';
+	if (jobId) {
+		const local = readPreview(jobId);
+		if (!local) return json({ ok: false, error: 'that preview is gone — render it again' }, { status: 200 });
+		const sheet = addSheet({
+			kind,
+			name: name || nameFromDescription(description, kind),
+			description,
+			bytes: local,
+			ext: '.png'
+		});
+		return json({ ok: true, sheet, sheets: listSheets() });
+	}
+
 	if (typeof workspace !== 'string' || !WORKSPACE_RE.test(workspace)) {
 		throw error(400, 'Bad workspace id');
 	}
 	if (typeof artifact !== 'string' || !artifact) throw error(400, 'Missing artifact id');
 	if (typeof file !== 'string' || !file) throw error(400, 'Missing file key');
-	const description = typeof body.description === 'string' ? body.description : '';
-	const name = typeof body.name === 'string' ? body.name : '';
 
 	// Straight from the harness, while the workspace agent is still alive to
 	// serve it. A sheet is worth having a local copy of for the same reason a

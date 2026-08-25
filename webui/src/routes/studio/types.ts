@@ -192,10 +192,14 @@ export interface ChatItem {
 		 *  the two states apart: no url is a draft awaiting your yes, a url is a
 		 *  finished sheet awaiting a name. */
 		url?: string;
-		/** The three ids the store needs to fetch the bytes itself. */
+		/** The three ids the store needs to fetch the bytes itself, for anything
+		 *  that came back through the harness. */
 		workspace?: string;
 		artifact?: string;
 		file?: string;
+		/** A direct preview instead: the render skipped the harness, so the bytes
+		 *  are already a file on this machine and the job id is what names them. */
+		job?: string;
 		/** Your name for it. Seeded from the description, editable on the card. */
 		name?: string;
 		/** Set by a successful keep. */
