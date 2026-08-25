@@ -1028,7 +1028,8 @@
 			// answer is the prompt itself — offered for reading and editing before
 			// it costs anything.
 			if (mode === 'simple') {
-				if (wantTarget === 'clip') await shotFromRequest(text);
+				if (continuing) await continueFromRequest(text);
+				else if (wantTarget === 'clip') await shotFromRequest(text);
 				else await sheetFromRequest(text, wantTarget);
 			}
 			else if (!brief) await planFromIdea(text);
@@ -1052,6 +1053,7 @@
 			orientation?: 'portrait' | 'landscape';
 			character?: string;
 			location?: string;
+			continues?: { priorPrompt?: string; priorLoras?: Pick[] };
 		}
 	): Promise<ChatItem['shot'] | null> {
 		let res: Response;
@@ -1215,6 +1217,107 @@
 		pushItem({ who: 'studio', kind: 'shot', shot });
 	}
 
+	/** Put the composer into continuation mode for one clip.
+	 *
+	 *  Nothing is rendered here — this only changes what the next message means.
+	 *  The character and the location come from the render log rather than the
+	 *  pickers: a continuation is of a particular clip, and swapping either would
+	 *  make it a different scene wearing the same seam. */
+	function startContinue(item: ChatItem) {
+		const ws = item.artifact?.workspace ?? '';
+		const info = contInfo(ws);
+		if (!info.ok || !info.row || !item.artifact?.id || !item.artifact.files?.length) {
+			pushError(info.why || 'this clip cannot be continued');
+			return;
+		}
+		continuing = {
+			workspace: ws,
+			artifact: item.artifact.id,
+			file: item.artifact.files[0].name,
+			characterId: info.row.characterId!,
+			locationId: info.row.locationId!,
+			characterName: info.row.characterName,
+			locationName: info.row.locationName
+		};
+		wantTarget = 'clip';
+		composer?.focus();
+	}
+
+	/** Write the continuation brief and offer it, exactly as a clip is offered. */
+	async function continueFromRequest(request: string) {
+		const c = continuing;
+		if (!c) return;
+		const prior = logRow[c.workspace];
+		const shot = await callShotPrompt(request, {
+			seconds: wantSeconds,
+			orientation: wantOrientation,
+			character: c.characterName,
+			location: c.locationName,
+			continues: { priorPrompt: prior?.prompt, priorLoras: prior?.launched }
+		});
+		if (!shot) return;
+		lastRequest = request;
+		// The frame follows the clip being continued, not the composer: two pieces
+		// at different sizes cannot be joined, and joining is the whole point.
+		shot.resolution = wantRes;
+		if (prior?.width && prior?.height) {
+			shot.orientation = prior.width >= prior.height ? 'landscape' : 'portrait';
+		}
+		shot.continues = c;
+		shot.characterId = c.characterId;
+		shot.characterName = c.characterName;
+		shot.locationId = c.locationId;
+		shot.locationName = c.locationName;
+		continuing = null;
+		pushItem({ who: 'studio', kind: 'shot', shot });
+	}
+
+	/** Glue every clip in this one's chain into a single scene. */
+	async function joinScene(ws: string) {
+		if (joining[ws]) return;
+		const parts = chainOf(ws);
+		if (parts.length < 2) {
+			pushError('there is only one clip here — nothing to join yet');
+			return;
+		}
+		joining[ws] = true;
+		try {
+			const res = await fetch('/studio/api/join', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ parts })
+			});
+			const r = (await res.json()) as {
+				ok?: boolean;
+				error?: string;
+				url?: string;
+				parts?: number;
+				seconds?: number;
+			};
+			if (!r.ok || !r.url) {
+				pushError(r.error || 'the scene could not be assembled');
+				return;
+			}
+			pushItem({
+				who: 'studio',
+				kind: 'clips',
+				text: `The whole scene — ${r.parts} clips, ${r.seconds}s.`,
+				artifact: {
+					key: 'scene',
+					title: 'The whole scene',
+					taskId: '',
+					files: [{ name: 'scene.mp4', url: r.url }],
+					workspace: ws
+				}
+			});
+			persist();
+		} catch (e) {
+			pushError(`the scene could not be assembled: ${e}`);
+		} finally {
+			joining[ws] = false;
+		}
+	}
+
 	/** The same first-name rule the store uses, applied here so the card shows the
 	 *  name it is about to be saved under rather than an empty box. */
 	function firstWords(description: string, kind: 'character' | 'location'): string {
@@ -1241,9 +1344,6 @@
 	const chosenCharacter = $derived(characters.find((c) => c.id === wantCharacter));
 	const chosenLocation = $derived(locations.find((l) => l.id === wantLocation));
 	let sheetBusy = $state<Record<string, boolean>>({});
-	let sheetsOpen = $state(false);
-	/** Which sheet has been asked about but not yet confirmed for deletion. */
-	let confirmDrop = $state('');
 
 	async function loadSheets() {
 		try {
@@ -1592,61 +1692,9 @@
 		}
 	}
 
-	/** Put a finished turnaround in the transcript, which is where everything else
-	 *  in this app is looked at. */
-	function showSheet(sh: StoredSheet) {
-		pushItem({
-			who: 'studio',
-			kind: 'sheet',
-			sheet: {
-				kind: sh.kind,
-				stage: 'sheet',
-				description: sh.description,
-				name: sh.name,
-				id: sh.id,
-				url: `/studio/api/sheet/full/${sh.id}`
-			}
-		});
-	}
+	
 
-	async function retrySheet(id: string) {
-		try {
-			await fetch('/studio/api/sheetfull', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ id })
-			});
-			watchSheets();
-		} catch (e) {
-			pushError(String(e));
-		}
-	}
 
-	async function dropSheet(id: string) {
-		try {
-			const res = await fetch(`/studio/api/sheet?id=${encodeURIComponent(id)}`, {
-				method: 'DELETE'
-			});
-			const r = (await res.json()) as { sheets?: StoredSheet[] };
-			if (r.sheets) sheets = r.sheets;
-		} catch {
-			/* nothing to do — the list will be right again on the next load */
-		}
-	}
-
-	async function renameStoredSheet(id: string, name: string) {
-		try {
-			const res = await fetch('/studio/api/sheet', {
-				method: 'PATCH',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ id, name })
-			});
-			const r = (await res.json()) as { sheets?: StoredSheet[] };
-			if (r.sheets) sheets = r.sheets;
-		} catch {
-			/* as above */
-		}
-	}
 
 	/** Rewrite the card in place. The old one collapses rather than disappearing:
 	 *  a prompt that was nearly right is worth being able to look back at. */
@@ -1679,6 +1727,51 @@
 		shot: NonNullable<ChatItem['shot']>,
 		announce = true
 	): Promise<boolean> {
+		// A continuation is a different workspace with different inputs, so it takes
+		// its own stage rather than a flag on this one: the only thing the two share
+		// is that a prompt goes to a GPU.
+		if (shot.continues) {
+			const c = shot.continues;
+			const spec = {
+				slug: `cont-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+				title: (lastRequest || 'Continuation').slice(0, 60),
+				prompt: shot.prompt,
+				seconds: shot.seconds,
+				...frameFor((shot.resolution as ResKey) ?? wantRes, shot.orientation),
+				seed: Math.floor(Math.random() * 1_000_000_000),
+				loras: shot.loras ?? [],
+				baseLoras: shot.baseLoras ?? {},
+				request: lastRequest,
+				priorWorkspace: c.workspace,
+				priorArtifact: c.artifact,
+				priorFile: c.file,
+				characterId: c.characterId,
+				locationId: c.locationId
+			};
+			try {
+				const res = await fetch('/studio/api/launch', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ stage: 'continue', continuation: spec })
+				});
+				const r = (await res.json()) as { ok?: boolean; error?: string; workspaceId?: string };
+				if (!r.ok || !r.workspaceId) {
+					pushError(r.error || 'The continuation could not start.');
+					return false;
+				}
+				renderWs = r.workspaceId;
+				startedAt = Date.now();
+				shootsAnnounced = true;
+				if (announce) pushStudio(`Continuing — ${shot.seconds}s more.`);
+				persist();
+				startPolling();
+				return true;
+			} catch (e) {
+				pushError(`The continuation could not start: ${e}`);
+				return false;
+			}
+		}
+
 		const spec = {
 			slug: `direct-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
 			title: lastRequest.slice(0, 60) || 'Direct render',
@@ -1888,8 +1981,87 @@
 		seed?: number;
 		wallSeconds?: number;
 		outcome?: string;
+		/** What the clip was shot with, and what it continues. Both arrived with the
+		 *  render log rather than the chat, so an old clip has neither. */
+		prompt?: string;
+		characterId?: string;
+		characterName?: string;
+		locationId?: string;
+		locationName?: string;
+		continuesWorkspace?: string;
 	}
 	let logRow = $state<Record<string, LogRow>>({});
+
+	/** The clip the composer is currently continuing, or null.
+	 *
+	 *  A separate axis from `wantTarget`: that one chooses what a NEW message
+	 *  makes, and this one says the next message extends something that already
+	 *  exists. Setting it puts the composer into continuation mode; sending or
+	 *  cancelling clears it. */
+	let continuing = $state<NonNullable<ChatItem['shot']>['continues'] | null>(null);
+	let joining = $state<Record<string, boolean>>({});
+
+	/** Whether a clip can be continued, and if not, what to do about it.
+	 *
+	 *  The button is shown either way — a control that silently disappears teaches
+	 *  nobody why. The workflow requires a character and a location, so a clip
+	 *  shot without them cannot be extended and the answer has to say so in terms
+	 *  of the next action rather than the missing field. */
+	function contInfo(ws: string): { ok: boolean; why: string; row?: LogRow } {
+		const row = logRow[ws];
+		if (!row) {
+			return {
+				ok: false,
+				why: 'this clip was made before the studio started recording who was in it — shoot a new one with a character and a location to continue it'
+			};
+		}
+		const c = row.characterId && sheets.some((x) => x.id === row.characterId);
+		const l = row.locationId && sheets.some((x) => x.id === row.locationId);
+		if (!row.characterId || !row.locationId) {
+			// Two different histories arrive here and the row cannot tell them apart:
+			// a clip genuinely shot without a character, and a clip shot with one
+			// before the log recorded it. So the wording blames neither — saying
+			// "you should have picked one" to someone who did is worse than vague.
+			return {
+				ok: false,
+				why: 'a continuation needs the character and the location the clip was shot with, and this one does not have them on record — any clip shot with both from now on can be extended'
+			};
+		}
+		if (!c || !l) {
+			return {
+				ok: false,
+				why: 'the character or the location this was shot with has been deleted — a continuation needs both'
+			};
+		}
+		return { ok: true, why: '', row };
+	}
+
+	/** The chain this clip belongs to, oldest first.
+	 *
+	 *  Walked backwards along continuesWorkspace and then matched against the
+	 *  transcript, because the render log knows the order and the transcript knows
+	 *  the artifact ids. A gap in either returns nothing: a scene assembled from
+	 *  a chain with a hole in it would skip, and skipping quietly is worse than
+	 *  offering nothing. */
+	function chainOf(ws: string): { workspace: string; artifact: string; file: string }[] {
+		const order: string[] = [];
+		const seen = new Set<string>();
+		let cur: string | undefined = ws;
+		while (cur && !seen.has(cur)) {
+			seen.add(cur);
+			order.unshift(cur);
+			cur = logRow[cur]?.continuesWorkspace;
+		}
+		const out: { workspace: string; artifact: string; file: string }[] = [];
+		for (const w of order) {
+			const it = chat.find(
+				(c) => c.kind === 'clips' && c.artifact?.workspace === w && c.artifact?.id && c.artifact.files?.length
+			);
+			if (!it?.artifact?.id) return [];
+			out.push({ workspace: w, artifact: it.artifact.id, file: it.artifact.files[0].name });
+		}
+		return out;
+	}
 
 	async function loadVerdicts() {
 		try {
@@ -2685,6 +2857,7 @@
 				kind: 'clips',
 				text: isFinal ? 'The film is ready.' : a.name || name,
 				artifact: {
+					id: a.id,
 					key: a.key,
 					title: isFinal ? 'A film' : a.name || name,
 					taskId: '',
@@ -3410,7 +3583,31 @@
 			? 'translate-x-0 lg:translate-x-0'
 			: '-translate-x-full lg:hidden'}"
 	>
-		<div class="px-3 pt-4 pb-2">
+		<!-- The control that closes the rail sits in the rail, at the same point on
+			 the screen it occupies when the rail is shut. It never appears to move;
+			 the panel slides out from under it. Putting it in the main header only
+			 meant the button and the thing it opened were in two different places. -->
+		<div class="flex items-center gap-2 px-3 pt-3 pb-1">
+			<button
+				type="button"
+				aria-label="hide past productions"
+				aria-expanded="true"
+				onclick={() => setNavOpen(false)}
+				class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+			>
+						<!-- A panel with its left column filled, not three equal bars. Three
+							 bars is the sign for a menu; this opens a rail, and the glyph should
+							 draw the thing it opens. -->
+						<svg viewBox="0 0 18 18" class="size-[18px]" fill="none" aria-hidden="true">
+							<rect x="2" y="3.5" width="14" height="11" rx="2.4" stroke="currentColor" stroke-width="1.5" />
+							<path d="M7 3.5v11" stroke="currentColor" stroke-width="1.5" />
+							<path d="M4.4 3.5h.2a2.4 2.4 0 00-2.4 2.4v6.2a2.4 2.4 0 002.4 2.4H7V3.5H4.4z" fill="currentColor" opacity=".45" stroke="none" />
+						</svg>
+			</button>
+			<span class="font-display truncate text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</span>
+		</div>
+
+		<div class="px-3 pt-1 pb-2">
 			<button
 				type="button"
 				onclick={() => {
@@ -3476,115 +3673,14 @@
 			{/if}
 		</nav>
 
-		<!-- Cast and sets: the sheets this machine has made. They sit above tuning
-		     and below the run list because that is what they are — not a setting
-		     and not a run, but the material every run is shot with. -->
-		{#if sheets.length}
-			<div class="border-t border-[var(--st-line)] px-3 pt-2">
-				<button
-					type="button"
-					aria-expanded={sheetsOpen}
-					class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
-					onclick={() => (sheetsOpen = !sheetsOpen)}
-				>
-					<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" aria-hidden="true">
-						<circle cx="6" cy="6.2" r="2.3" stroke="currentColor" stroke-width="1.4" />
-						<path d="M2.2 12.6c.5-1.8 2-2.7 3.8-2.7s3.3.9 3.8 2.7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-						<rect x="9.4" y="3.4" width="4.4" height="3.6" rx="1" stroke="currentColor" stroke-width="1.4" />
-					</svg>
-					<span>Cast &amp; sets</span>
-					<span class="ml-auto text-xs tabular-nums text-[var(--st-faint)]">{sheets.length}</span>
-				</button>
-				{#if sheetsOpen}
-					<div class="mt-1 max-h-64 space-y-1 overflow-y-auto pb-1">
-						{#each sheets as sh (sh.id)}
-							<div class="group flex items-center gap-2 rounded-xl px-3 py-1.5 hover:bg-[var(--st-surface)]">
-								<img
-									src="/studio/api/sheet/img/{sh.id}"
-									alt=""
-									class="h-8 w-12 shrink-0 rounded-md bg-[var(--st-bg)] object-cover"
-								/>
-								<div class="min-w-0 flex-1">
-									<input
-										value={sh.name}
-										spellcheck="false"
-										onblur={(e) => renameStoredSheet(sh.id, e.currentTarget.value)}
-										class="w-full truncate border-0 bg-transparent p-0 text-xs text-[var(--st-text)] outline-none focus:ring-0"
-									/>
-									<!-- What state their turnaround is in. A character is usable without
-										 one, so this is progress rather than a warning — except when it
-										 failed, which is worth saying out loud. -->
-									{#if sh.sheet?.state === 'rendering'}
-										<p class="flex items-center gap-1.5 text-[0.65rem] text-[var(--st-faint)]">
-											<span
-												class="spin block size-2 rounded-full border border-[var(--st-surface-2)] border-t-[var(--st-accent)]"
-											></span>
-											drawing the six views
-										</p>
-									{:else if sh.sheet?.state === 'ready'}
-										<button
-											type="button"
-											class="cursor-pointer text-[0.65rem] text-[var(--st-muted)] underline-offset-2 hover:text-[var(--st-text)] hover:underline"
-											onclick={() => showSheet(sh)}
-										>
-											six views — open
-										</button>
-									{:else if sh.sheet?.state === 'failed'}
-										<button
-											type="button"
-											title={sh.sheet.error ?? ''}
-											class="cursor-pointer text-[0.65rem] text-[#e0a03a] hover:underline"
-											onclick={() => retrySheet(sh.id)}
-										>
-											{(sh.sheet.attempt ?? 1) > 1
-												? 'sheet failed twice — try again'
-												: 'sheet failed — retry'}
-										</button>
-									{:else}
-										<p class="text-[0.65rem] text-[var(--st-faint)]">{sh.kind}</p>
-									{/if}
-								</div>
-								<!-- Two clicks, and the first one is visible. This was a bare × at
-									 opacity-0: invisible, still clickable, no confirmation, and it
-									 deleted a sheet that cost three minutes of GPU time. A stray
-									 click in a list is not consent. -->
-								{#if confirmDrop === sh.id}
-									<button
-										type="button"
-										class="shrink-0 cursor-pointer rounded-full bg-[#5c2f24] px-2.5 py-1 text-[0.65rem] font-semibold text-[#f2d7cd] transition-colors hover:bg-[#6d372a]"
-										onclick={() => {
-											confirmDrop = '';
-											void dropSheet(sh.id);
-										}}
-									>
-										delete
-									</button>
-									<button
-										type="button"
-										class="shrink-0 cursor-pointer px-1 text-[0.65rem] text-[var(--st-faint)] hover:text-[var(--st-text)]"
-										onclick={() => (confirmDrop = '')}
-									>
-										keep
-									</button>
-								{:else}
-									<button
-										type="button"
-										aria-label="remove {sh.name}"
-										class="shrink-0 cursor-pointer px-1 text-[var(--st-faint)] opacity-60 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
-										onclick={() => (confirmDrop = sh.id)}
-									>
-										×
-									</button>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
+		<!-- Cast & sets used to sit here, which put a management panel — rename,
+		     retry, delete — inside a list whose job is navigation. It moved to
+		     /studio/admin/cast, beside the workflows and the skills, which is
+		     where the local library already lives. Picking a face for the next
+		     clip never happened here anyway; that is the composer's own picker.
 
-		<!-- Tuning lives at the bottom because it is a settings surface, not a
-		     destination — the same place every app of this shape puts one. -->
+		     Tuning stays at the bottom because it is a settings surface rather
+		     than a destination — the same place every app of this shape puts one. -->
 		<div class="px-3 pt-1 pb-3 {sheets.length ? '' : 'border-t border-[var(--st-line)]'}">
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a
@@ -3603,21 +3699,31 @@
 
 	<main class="flex min-w-0 flex-1 flex-col overflow-hidden pt-4 lg:pt-8">
 		<div class="mx-auto flex min-h-0 w-full max-w-[66rem] flex-1 flex-col px-5">
-			<header class="mb-4 flex shrink-0 items-center gap-3">
-				<button
-					type="button"
-					aria-label={sidebarOpen ? 'hide past productions' : 'show past productions'}
-					aria-expanded={sidebarOpen}
-					class="-ml-1.5 flex size-9 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
-					onclick={() => setNavOpen(!sidebarOpen)}
-				>
-					<svg viewBox="0 0 16 16" class="size-5" fill="none" aria-hidden="true">
-						<path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-					</svg>
-				</button>
-				<p class="text-[10px] font-bold tracking-[0.3em] text-[var(--st-faint)] uppercase">
-					auteur studio
-				</p>
+			<header class="mb-4 flex shrink-0 items-center gap-2.5">
+				{#if !sidebarOpen}
+					<!-- Only when the rail is shut. Open, the same control is the rail's
+						 own first row, at the same point on the screen. -->
+					<button
+						type="button"
+						aria-label="show past productions"
+						aria-expanded="false"
+						class="-ml-1.5 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+						onclick={() => setNavOpen(true)}
+					>
+							<!-- A panel with its left column filled, not three equal bars. Three
+								 bars is the sign for a menu; this opens a rail, and the glyph should
+								 draw the thing it opens. -->
+							<svg viewBox="0 0 18 18" class="size-[18px]" fill="none" aria-hidden="true">
+								<rect x="2" y="3.5" width="14" height="11" rx="2.4" stroke="currentColor" stroke-width="1.5" />
+								<path d="M7 3.5v11" stroke="currentColor" stroke-width="1.5" />
+								<path d="M4.4 3.5h.2a2.4 2.4 0 00-2.4 2.4v6.2a2.4 2.4 0 002.4 2.4H7V3.5H4.4z" fill="currentColor" opacity=".45" stroke="none" />
+							</svg>
+					</button>
+					<!-- The product's name, at a size a name is set at. It was ten pixels
+						 of letterspaced caps in the faintest colour on the page — the least
+						 legible text in the app was the thing it is called. -->
+					<h1 class="font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
+				{/if}
 			</header>
 
 		<div
@@ -4621,6 +4727,36 @@
 										{/if}
 									</div>
 
+									<!-- Continue, and — once there is a chain — the whole scene.
+									     The continue button is shown even where it cannot work: a
+									     control that quietly disappears teaches nobody why, and the
+									     reason is a thing you can act on next time. -->
+									{@const ci = contInfo(ws)}
+									{@const chain = chainOf(ws)}
+									<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+										<button
+											type="button"
+											disabled={!ci.ok}
+											onclick={() => startContinue(item)}
+											class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-surface)] disabled:hover:text-[var(--st-muted)]"
+											>continue this</button
+										>
+										{#if chain.length > 1}
+											<button
+												type="button"
+												disabled={joining[ws]}
+												onclick={() => joinScene(ws)}
+												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40"
+												>{joining[ws]
+													? 'joining…'
+													: `the whole scene · ${chain.length} clips`}</button
+											>
+										{/if}
+										{#if !ci.ok}
+											<span class="text-xs leading-relaxed text-[var(--st-faint)]">{ci.why}</span>
+										{/if}
+									</div>
+
 									{#if fix[ws]}
 										{@const f = fix[ws]}
 										<div class="mt-2.5 rounded-2xl bg-[var(--st-surface)] p-4">
@@ -4763,7 +4899,27 @@
 							 different questions on one row — what this message makes, and who is
 							 in the clip — in identical chips. You enter this from the picker
 							 below, and this band is how you know you are here and how you leave. -->
-						{#if mode === 'simple' && wantTarget !== 'clip'}
+						{#if mode === 'simple' && continuing}
+							<div
+								class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
+							>
+								<div class="min-w-0">
+									<p class="font-display text-sm font-semibold">Continuing that clip</p>
+									<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
+										Say what happens next — it picks up from the last frame, with
+										{continuing.characterName ?? 'the same person'} in
+										{continuing.locationName ?? 'the same place'}. The new piece renders on its
+										own and joins onto the end.
+									</p>
+								</div>
+								<button
+									type="button"
+									class="shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+									onclick={() => (continuing = null)}>never mind</button
+								>
+							</div>
+						{/if}
+						{#if mode === 'simple' && !continuing && wantTarget !== 'clip'}
 							<div
 								class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
 							>

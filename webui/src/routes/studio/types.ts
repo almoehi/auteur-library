@@ -145,6 +145,20 @@ export interface ChatItem {
 		wroteLoras?: Pick[];
 		/** Set once this card has been sent to render, so it stops offering. */
 		launched?: boolean;
+		/** Set when this shot continues an existing clip rather than starting one.
+		 *
+		 *  Carries the three ids the server reads the prior clip's bytes by, and the
+		 *  character and location it was shot with — a continuation requires both,
+		 *  and they are not a fresh choice: they are whatever the first clip used. */
+		continues?: {
+			workspace: string;
+			artifact: string;
+			file: string;
+			characterId: string;
+			locationId: string;
+			characterName?: string;
+			locationName?: string;
+		};
 		/** The kept character sheet this clip is shot with. Chosen before the
 		 *  writer runs, because it decides which brief template gets written. */
 		characterId?: string;
@@ -157,6 +171,10 @@ export interface ChatItem {
 	 *  (kind=artifact, clips). `taskId` is what reset-task needs for a revision;
 	 *  `body` is the fetched text of a planning document, absent for videos. */
 	artifact?: {
+		/** The harness's artifact id. Carried because a scene is assembled from the
+		 *  chat, and the server reads each clip's bytes by (workspace, artifact,
+		 *  file) — the id was previously buried inside the file url alone. */
+		id?: string;
 		key: string;
 		title: string;
 		taskId: string;
