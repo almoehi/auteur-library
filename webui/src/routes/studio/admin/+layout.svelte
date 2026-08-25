@@ -1,10 +1,11 @@
 <script lang="ts">
 	/** The shell every admin surface shares.
 	 *
-	 *  Three things are tuned here and they are genuinely different in kind —
-	 *  what the crew is told, what tools it has, and what material it is given —
-	 *  so they get three pages rather than three accordions on one. The nav is
-	 *  the only thing that has to stay identical between them.
+	 *  Four things are tuned here and they are genuinely different in kind —
+	 *  what the crew is told, what tools it has, what skills it has, and what
+	 *  material it is given — so they get a page each rather than four
+	 *  accordions on one. The nav is the only thing that has to stay identical
+	 *  between them.
 	 */
 	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
@@ -14,7 +15,8 @@
 	const TABS = [
 		{ href: '/studio/admin', label: 'prompts & models', exact: true },
 		{ href: '/studio/admin/workflows', label: 'workflows', exact: false },
-		{ href: '/studio/admin/skills', label: 'skills', exact: false }
+		{ href: '/studio/admin/skills', label: 'skills', exact: false },
+		{ href: '/studio/admin/cast', label: 'cast & sets', exact: false }
 	];
 
 	const path = $derived(page.url.pathname.replace(/\/$/, '') || '/studio/admin');

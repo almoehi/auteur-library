@@ -46,7 +46,7 @@
 		type StoredSheet,
 		type Task
 	} from './types';
-	import { BASE, CATALOGUE, MAX_PICKS, loraFor } from './loras';
+	import { BASE, CATALOGUE, MAX_PICKS, loraFor, type Pick } from './loras';
 
 	/** Polling cadence, unchanged from the previous surface: the harness author
 	 *  asked not to hammer the status endpoints. 15s while things move, 30s once
@@ -995,7 +995,18 @@
 		}).filter((d) => d.body)
 	);
 
-	const showExamples = $derived(!brief && !sending && !chat.some((c) => c.who === 'user'));
+	/** Only while the transcript holds nothing but the greeting.
+	 *
+	 *  It used to ask whether the user had said anything, which is not the same
+	 *  question: keeping a picture, a sheet card, an error or a run's activity
+	 *  all leave the transcript full while `who === 'user'` never appears, so the
+	 *  seed cards sat under the reply. And because this same flag puts
+	 *  `justify-center` on the scroll container, a transcript taller than the box
+	 *  was then centred inside it — which puts its top above scrollTop 0, where
+	 *  nothing can reach it. One wrong predicate, two bugs. */
+	const showExamples = $derived(
+		!brief && !sending && chat.every((c) => c.id === welcomeId)
+	);
 
 	const composerPlaceholder = $derived.by(() => {
 		// An instruction, not an example. A worked example belongs on the empty
@@ -3386,7 +3397,7 @@
 {#snippet statusPill(status: RailStatus)}
 	<span
 		class="shrink-0 rounded-md px-2 py-0.5 text-[10px] tracking-wide
-			{status === 'running' ? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]' : ''}
+			{status === 'running' ? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]' : ''}
 			{status === 'done' ? 'bg-[var(--st-surface-2)] text-[var(--st-muted)]' : ''}
 			{status === 'failed' ? 'bg-[#5c2f24] text-[#f2d7cd]' : ''}
 			{status === 'regen' ? 'bg-[var(--st-surface-2)] text-[var(--st-text)]' : ''}
@@ -3587,7 +3598,7 @@
 			 the screen it occupies when the rail is shut. It never appears to move;
 			 the panel slides out from under it. Putting it in the main header only
 			 meant the button and the thing it opened were in two different places. -->
-		<div class="flex items-center gap-2 px-3 pt-3 pb-1">
+		<div class="flex h-12 shrink-0 items-center gap-2.5 px-3">
 			<button
 				type="button"
 				aria-label="hide past productions"
@@ -3595,19 +3606,17 @@
 				onclick={() => setNavOpen(false)}
 				class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
 			>
-						<!-- A panel with its left column filled, not three equal bars. Three
-							 bars is the sign for a menu; this opens a rail, and the glyph should
-							 draw the thing it opens. -->
-						<svg viewBox="0 0 18 18" class="size-[18px]" fill="none" aria-hidden="true">
-							<rect x="2" y="3.5" width="14" height="11" rx="2.4" stroke="currentColor" stroke-width="1.5" />
-							<path d="M7 3.5v11" stroke="currentColor" stroke-width="1.5" />
-							<path d="M4.4 3.5h.2a2.4 2.4 0 00-2.4 2.4v6.2a2.4 2.4 0 002.4 2.4H7V3.5H4.4z" fill="currentColor" opacity=".45" stroke="none" />
-						</svg>
+<!-- Three rules, the last one short. It reads as a list that can be
+	 pulled open rather than as a menu, and the ragged end keeps it from
+	 sitting like a block of three identical bars. -->
+<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
+	<path d="M2.5 4h11M2.5 8h11M2.5 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+</svg>
 			</button>
 			<span class="font-display truncate text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</span>
 		</div>
 
-		<div class="px-3 pt-1 pb-2">
+		<div class="px-3 pt-2 pb-2">
 			<button
 				type="button"
 				onclick={() => {
@@ -3697,34 +3706,42 @@
 		</div>
 	</aside>
 
-	<main class="flex min-w-0 flex-1 flex-col overflow-hidden pt-4 lg:pt-8">
-		<div class="mx-auto flex min-h-0 w-full max-w-[66rem] flex-1 flex-col px-5">
-			<header class="mb-4 flex shrink-0 items-center gap-2.5">
+	<!-- The rail takes 256px off the left when it opens. Matching that with an
+		 equal phantom margin on the right keeps the reading column's centre on the
+		 screen's centre in both states, so opening the rail moves nothing — on a
+		 desktop the two never meet anyway, and a page that jumps sideways when you
+		 reveal a list is a page that punishes you for looking. Below lg the rail is
+		 an overlay and takes no width, so no compensation is owed. -->
+	<main class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+		<!-- Pinned to the page's left edge, not to the centre column: this is the
+			 same point the rail's own toggle occupies, so the control stays put and
+			 the panel slides out from under it. Inside the centred wrapper it sat a
+			 hundred and twenty pixels in, and the rail then opened from somewhere
+			 else entirely — the button and the thing it opened in two places. -->
+		<header class="flex h-12 shrink-0 items-center gap-2.5 px-3">
 				{#if !sidebarOpen}
-					<!-- Only when the rail is shut. Open, the same control is the rail's
-						 own first row, at the same point on the screen. -->
 					<button
 						type="button"
 						aria-label="show past productions"
 						aria-expanded="false"
-						class="-ml-1.5 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+						class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
 						onclick={() => setNavOpen(true)}
 					>
-							<!-- A panel with its left column filled, not three equal bars. Three
-								 bars is the sign for a menu; this opens a rail, and the glyph should
-								 draw the thing it opens. -->
-							<svg viewBox="0 0 18 18" class="size-[18px]" fill="none" aria-hidden="true">
-								<rect x="2" y="3.5" width="14" height="11" rx="2.4" stroke="currentColor" stroke-width="1.5" />
-								<path d="M7 3.5v11" stroke="currentColor" stroke-width="1.5" />
-								<path d="M4.4 3.5h.2a2.4 2.4 0 00-2.4 2.4v6.2a2.4 2.4 0 002.4 2.4H7V3.5H4.4z" fill="currentColor" opacity=".45" stroke="none" />
-							</svg>
+<!-- Three rules, the last one short. It reads as a list that can be
+	 pulled open rather than as a menu, and the ragged end keeps it from
+	 sitting like a block of three identical bars. -->
+<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
+	<path d="M2.5 4h11M2.5 8h11M2.5 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+</svg>
 					</button>
 					<!-- The product's name, at a size a name is set at. It was ten pixels
 						 of letterspaced caps in the faintest colour on the page — the least
 						 legible text in the app was the thing it is called. -->
 					<h1 class="font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
 				{/if}
-			</header>
+		</header>
+
+		<div class="mx-auto flex min-h-0 w-full max-w-[66rem] flex-1 flex-col px-5 pt-1">
 
 		<div
 			class="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-10"
@@ -3904,7 +3921,7 @@
 																<button
 																	type="submit"
 																	disabled={changeBusy[row.key] || !(changeText[row.key] ?? '').trim()}
-																	class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2.5 text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+																	class="btn btn-primary"
 																>
 																	send
 																</button>
@@ -3932,7 +3949,7 @@
 											type="button"
 											disabled={boardDone < board.length || renderLaunching || !!chain}
 											onclick={launchRender}
-											class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+											class="btn btn-primary"
 										>
 											{renderLaunching ? 'starting…' : 'start shooting'}
 										</button>
@@ -4106,7 +4123,7 @@
 												sheetBusy[item.id] ||
 												!item.sheet.description.trim()}
 											onclick={() => renderSheet(item.id)}
-											class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+											class="btn btn-primary"
 										>
 											{item.sheet.launched ? 'Rendering…' : 'Render it'}
 										</button>
@@ -4116,18 +4133,20 @@
 								{#if item.sheet.url && item.sheet.stage === 'anchor'}
 								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
 									{#if item.sheet.id && item.sheet.uploaded}
+										<!-- Two facts: it is kept, and where it is. The caveat about the
+											 six-view sheet was true and nobody needed it here — it belongs
+											 on the sheet card, next to the thing that is missing. -->
 										<p class="text-sm text-[var(--st-muted)]">
-											Kept as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>,
-											ready to shoot with. This one picture is all
-											{item.sheet.kind === 'character' ? 'this character' : 'this location'} has — the
-											six-view sheet is drawn from a description, so there is none for a picture you
-											brought yourself.
+											Kept as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
+											Pick {item.sheet.kind === 'character' ? 'them' : 'it'} from
+											<span class="text-[var(--st-text)]">+</span> in the box below.
 										</p>
 									{:else if item.sheet.id}
 										<p class="text-sm text-[var(--st-muted)]">
 											Saved as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
-											The six views are rendering in the background and will appear beside
-											{item.sheet.kind === 'character' ? 'them' : 'it'} when they are done.
+											Pick {item.sheet.kind === 'character' ? 'them' : 'it'} from
+											<span class="text-[var(--st-text)]">+</span> in the box below — the six views are
+											still drawing.
 										</p>
 									{:else}
 										<label class="block text-xs text-[var(--st-faint)]" for="char-name-{item.id}">
@@ -4145,7 +4164,7 @@
 												type="button"
 												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
 												onclick={() => saveSubject(item.id)}
-												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+												class="btn btn-primary"
 											>
 												{sheetBusy[item.id]
 													? 'Saving…'
@@ -4183,7 +4202,7 @@
 												type="button"
 												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
 												onclick={() => keepSheet(item.id)}
-												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+												class="btn btn-primary"
 											>
 												{sheetBusy[item.id] ? 'Keeping…' : 'Keep it'}
 											</button>
@@ -4317,7 +4336,7 @@
 													type="button"
 													title="{l.use}{l.trigger ? ` · trigger: ${l.trigger}` : ''}"
 													class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {on
-														? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]'
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
 														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 													onclick={() => toggleLora(item.id, l.key)}
 												>
@@ -4381,7 +4400,7 @@
 													type="button"
 													class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {item
 														.shot.seconds === sec
-														? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]'
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
 														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 													onclick={() => setShotSeconds(item.id, sec)}>{sec}</button
 												>
@@ -4398,7 +4417,7 @@
 													title="{f.width}x{f.height}"
 													class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {(item
 														.shot.resolution ?? '576p') === r
-														? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]'
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
 														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 													onclick={() => {
 														if (item.shot) item.shot.resolution = r;
@@ -4413,7 +4432,7 @@
 													type="button"
 													class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {item
 														.shot.orientation === val
-														? 'bg-[var(--st-accent)] font-semibold text-[var(--st-on-accent)]'
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
 														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
 													onclick={() =>
 														setShotOrientation(item.id, val as 'portrait' | 'landscape')}
@@ -4427,7 +4446,7 @@
 										<button
 											type="button"
 											disabled={shotBusy[item.id]}
-											class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:opacity-40"
+											class="btn btn-primary"
 											onclick={() => renderShot(item.id)}
 										>
 											{shotBusy[item.id] ? 'starting…' : 'render this'}
@@ -4468,7 +4487,7 @@
 										<button
 											type="button"
 											onclick={saveEdit}
-											class="cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2.5 font-display text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)]"
+											class="btn btn-primary"
 										>
 											save
 										</button>
@@ -4532,7 +4551,7 @@
 												type="button"
 												disabled={launchingPlanning}
 												onclick={launchPlanning}
-												class="cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 font-display text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-50"
+												class="btn btn-primary"
 											>
 												{launchingPlanning ? 'starting…' : 'start'}
 											</button>
@@ -4629,7 +4648,7 @@
 													<button
 														type="submit"
 														disabled={changeBusy[item.id] || !(changeText[item.id] ?? '').trim()}
-														class="cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2.5 font-display text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+														class="btn btn-primary"
 													>
 														send
 													</button>
@@ -4772,7 +4791,7 @@
 												<button
 													type="button"
 													disabled={fixBusy[ws]}
-													class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:opacity-40"
+													class="btn btn-primary"
 													onclick={() => renderFix(ws)}
 												>
 													{fixBusy[ws] ? 'starting…' : 'render the fix'}
@@ -4914,7 +4933,7 @@
 								</div>
 								<button
 									type="button"
-									class="shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+									class="btn btn-secondary btn-sm shrink-0"
 									onclick={() => (continuing = null)}>never mind</button
 								>
 							</div>
@@ -4935,7 +4954,7 @@
 								</div>
 								<button
 									type="button"
-									class="shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+									class="btn btn-secondary btn-sm shrink-0"
 									onclick={() => {
 										wantTarget = 'clip';
 										currentCharacter = null;
@@ -5524,7 +5543,7 @@
 											type="button"
 											disabled={stopping}
 											onclick={stopRun}
-											class="font-display cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-2 text-xs font-semibold text-[var(--st-text)] transition-colors hover:bg-[var(--st-accent)] hover:text-[var(--st-on-accent)] disabled:cursor-default disabled:opacity-50"
+											class="btn btn-secondary btn-sm"
 										>
 											{stopping ? 'stopping…' : 'stop it'}
 										</button>
@@ -5545,6 +5564,21 @@
 		</div>
 	</div>
 	</main>
+
+	<!-- The rail takes 16rem off the left when it opens; this gives the same back
+		 on the right, so the reading column's centre stays on the screen's centre
+		 and opening the rail moves nothing. On a desktop the rail never reaches
+		 the column anyway, and a page that jumps sideways when you reveal a list
+		 punishes you for looking.
+
+		 A spacer rather than a padding rule on main: the rule has to be
+		 conditional, and a conditional Tailwind variant is not reliably found by
+		 the scanner while a scoped attribute selector is dropped by Svelte's
+		 pruner. Both failed silently. This is static classes inside an if, which
+		 cannot. Below lg the rail is an overlay and owes nothing. -->
+	{#if sidebarOpen}
+		<div class="hidden w-64 shrink-0 lg:block" aria-hidden="true"></div>
+	{/if}
 </div>
 
 <style>

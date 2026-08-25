@@ -285,7 +285,7 @@
 					type="button"
 					disabled={!dirty || saving}
 					onclick={save}
-					class="font-display cursor-pointer rounded-full bg-[var(--st-accent)] px-6 py-2.5 text-sm font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+					class="btn btn-primary"
 				>
 					{saving ? 'saving…' : 'save'}
 				</button>

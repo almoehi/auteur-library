@@ -100,3 +100,85 @@ video:not(.video-with-controls)::-webkit-media-controls-enclosure {
 		scroll-behavior: auto !important;
 	}
 }
+
+/* ── buttons ────────────────────────────────────────────────────────────────
+ * Four kinds and no fifth. There were fifty-four buttons wearing forty
+ * different class strings, which is not a style problem — it is that the same
+ * shape meant something different in each place, so none of them taught you
+ * anything about the next one.
+ *
+ *   .btn-primary    the one thing on a view that spends GPU time or cannot be
+ *                   undone. Filled with the accent. ONE per view — if a second
+ *                   one appears, one of them is not primary.
+ *   .btn-secondary  the ordinary action. Filled with a surface, so it is
+ *                   obviously a control without competing with the primary.
+ *   .btn-quiet      dismiss, cancel, "not now". No fill until you reach it.
+ *   .btn-danger     destroys something that cost money. The only red.
+ *
+ * One height, one radius, one weight per kind. .btn-sm is the only size
+ * modifier, for controls sitting inside a card's own furniture. */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	min-height: 2.25rem;
+	padding-inline: 1.125rem;
+	border-radius: 9999px;
+	font-family: var(--font-body);
+	font-size: 0.875rem;
+	font-weight: 500;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background-color 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.btn:disabled {
+	cursor: default;
+	opacity: 0.4;
+}
+.btn-sm {
+	min-height: 2rem;
+	padding-inline: 0.875rem;
+	font-size: 0.8125rem;
+}
+
+.btn-primary {
+	background: var(--color-coral);
+	color: var(--color-on-accent);
+	font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) {
+	background: var(--color-coral-dark);
+}
+.btn-primary:disabled {
+	background: var(--color-surface-2);
+	color: var(--color-faint);
+	opacity: 1;
+}
+
+.btn-secondary {
+	background: var(--color-surface-2);
+	color: var(--color-text);
+}
+.btn-secondary:hover:not(:disabled) {
+	background: var(--color-border);
+}
+
+.btn-quiet {
+	background: none;
+	color: var(--color-muted);
+}
+.btn-quiet:hover:not(:disabled) {
+	background: var(--color-surface-2);
+	color: var(--color-text);
+}
+
+.btn-danger {
+	background: #5c2f24;
+	color: #f2d7cd;
+	font-weight: 600;
+}
+.btn-danger:hover:not(:disabled) {
+	background: #6d372a;
+}
+
