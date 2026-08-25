@@ -1079,12 +1079,29 @@
 	 *  words — so a writer here would only have prose to paraphrase, and every
 	 *  paraphrase is a chance to lose the detail you actually cared about.
 	 */
+	/** The character currently being worked on: the description that produced the
+	 *  last preview and the seed it was rendered with.
+	 *
+	 *  Both travel forward. The description so the next message can refine it
+	 *  rather than start over, and the seed so refining changes the person because
+	 *  of the words rather than because the noise moved — and so the full sheet,
+	 *  when you ask for it, is a turnaround of the face you approved. */
+	let currentCharacter = $state<{ description: string; seed: number } | null>(null);
+
 	async function sheetFromRequest(request: string, kind: 'character' | 'location') {
 		try {
 			const res = await fetch('/studio/api/sheetprompt', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ request, kind })
+				body: JSON.stringify({
+					request,
+					kind,
+					// Only characters refine — a location has no preview to look at
+					// while you decide what to change.
+					...(kind === 'character' && currentCharacter
+						? { previous: currentCharacter.description }
+						: {})
+				})
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -1095,6 +1112,24 @@
 				pushError(r.error || 'The description could not be prepared.');
 				return;
 			}
+
+			// A character does not stop to be approved. Its preview costs a third of
+			// a sheet and is the same face the sheet would give, so the picture is a
+			// better thing to react to than a paragraph — you look at it and say what
+			// to change. A location has no cheap preview, so it keeps the card.
+			if (kind === 'character') {
+				const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
+				currentCharacter = { description: r.sheet.description, seed };
+				await launchSheetRender({
+					kind,
+					description: r.sheet.description,
+					stage: 'anchor',
+					seed,
+					why: r.sheet.why
+				});
+				return;
+			}
+
 			pushItem({
 				who: 'studio',
 				kind: 'sheet',
@@ -1105,25 +1140,28 @@
 		}
 	}
 
-	/** Send an approved sheet description to the GPU. */
-	async function renderSheet(itemId: string) {
-		const item = chat.find((c) => c.id === itemId);
-		if (!item?.sheet || item.sheet.launched || sheetBusy[itemId]) return;
-		const { kind, description } = item.sheet;
-		if (!description.trim()) return;
+	/** The one road to the GPU for anything sheet-shaped. Returns true when the
+	 *  render actually started. */
+	async function launchSheetRender(opts: {
+		kind: 'character' | 'location';
+		description: string;
+		stage: 'anchor' | 'sheet';
+		seed: number;
+		why?: string;
+	}): Promise<boolean> {
 		// Guarded the same way a clip launch is, and no more strictly. There is one
 		// render slot and starting a second render retargets it — that is already
 		// true of every clip you launch, so a sheet must not be the one thing that
 		// refuses because a finished run is still on screen.
-		if (renderLaunching) return;
+		if (renderLaunching) return false;
 		renderLaunching = true;
-		sheetBusy[itemId] = true;
 		try {
 			const spec = {
 				slug: `sheet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-				kind,
-				description,
-				seed: Math.floor(Math.random() * 1_000_000_000)
+				kind: opts.kind,
+				stage: opts.stage,
+				description: opts.description,
+				seed: opts.seed
 			};
 			const res = await fetch('/studio/api/launch', {
 				method: 'POST',
@@ -1133,24 +1171,69 @@
 			const r = (await res.json()) as { ok?: boolean; workspaceId?: string; error?: string };
 			if (!r.ok || !r.workspaceId) {
 				pushError(r.error || 'The sheet render did not start.');
-				return;
+				return false;
 			}
-			pendingSheet = { kind, description };
-			item.sheet.launched = true;
+			pendingSheet = { ...opts };
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			shootsAnnounced = true;
 			pushStudio(
-				kind === 'character'
-					? 'Rendering a character sheet — six views of the same person.'
-					: 'Rendering a location sheet — six views of the same place.'
+				opts.stage === 'anchor'
+					? 'Rendering one picture of them — about a minute.'
+					: opts.kind === 'character'
+						? 'Rendering the full character sheet — six views of the same person.'
+						: 'Rendering a location sheet — six views of the same place.'
 			);
 			persist();
 			startPolling();
+			return true;
 		} catch (e) {
 			pushError(String(e));
+			return false;
 		} finally {
 			renderLaunching = false;
+		}
+	}
+
+	/** The location card's button: an approved description goes to the GPU. */
+	async function renderSheet(itemId: string) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.sheet || item.sheet.launched || sheetBusy[itemId]) return;
+		const { kind, description } = item.sheet;
+		if (!description.trim()) return;
+		sheetBusy[itemId] = true;
+		try {
+			const ok = await launchSheetRender({
+				kind,
+				description,
+				stage: 'sheet',
+				seed: item.sheet.seed ?? Math.floor(Math.random() * 1_000_000_000)
+			});
+			if (ok) item.sheet.launched = true;
+		} finally {
+			sheetBusy[itemId] = false;
+		}
+	}
+
+	/** From a preview to the real thing: the same words and the same seed, so the
+	 *  turnaround is of the person on screen rather than a new one. */
+	async function promoteToSheet(itemId: string) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.sheet || item.sheet.stage !== 'anchor' || sheetBusy[itemId]) return;
+		sheetBusy[itemId] = true;
+		try {
+			const ok = await launchSheetRender({
+				kind: 'character',
+				description: item.sheet.description,
+				stage: 'sheet',
+				seed: item.sheet.seed ?? currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000)
+			});
+			// Asking for the turnaround closes this person off. Without it the next
+			// message would be read as one more change to them, and someone who has
+			// just finished a character and started describing the next one would
+			// get the first one wearing the second one's clothes.
+			if (ok) currentCharacter = null;
+		} finally {
 			sheetBusy[itemId] = false;
 		}
 	}
@@ -1159,7 +1242,13 @@
 	 *  no memory of the description that produced it, and that description is the
 	 *  most useful thing to keep beside a sheet — it is what you would edit to
 	 *  make a variant. */
-	let pendingSheet: { kind: 'character' | 'location'; description: string } | null = null;
+	let pendingSheet: {
+		kind: 'character' | 'location';
+		description: string;
+		stage: 'anchor' | 'sheet';
+		seed: number;
+		why?: string;
+	} | null = null;
 
 	/** Keep a rendered sheet. The bytes are fetched server-side, from the harness,
 	 *  while this workspace is still answering. */
@@ -2221,17 +2310,24 @@
 				clipPosted.add(a.id);
 				const kind = pendingSheet?.kind ?? 'character';
 				const description = pendingSheet?.description ?? '';
+				const stage = pendingSheet?.stage ?? 'sheet';
 				pushItem({
 					who: 'studio',
 					kind: 'sheet',
 					sheet: {
 						kind,
+						stage,
 						description,
+						why: pendingSheet?.why,
+						seed: pendingSheet?.seed,
 						url: fileUrl(renderWs, a.id, name),
 						workspace: renderWs,
 						artifact: a.id,
 						file: name,
-						name: firstWords(description, kind)
+						name: firstWords(description, kind),
+						// A preview is already spent — it exists to be looked at, not
+						// launched again — so it arrives latched.
+						launched: true
 					}
 				});
 			}
@@ -3413,12 +3509,18 @@
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
 								<div class="mb-3 flex items-baseline justify-between gap-4">
 									<h3 class="font-display text-base font-semibold">
-										{item.sheet.kind === 'character' ? 'Character sheet' : 'Location sheet'}
+										{item.sheet.stage === 'anchor'
+											? 'The character'
+											: item.sheet.kind === 'character'
+												? 'Character sheet'
+												: 'Location sheet'}
 									</h3>
 									<span class="text-xs text-[var(--st-faint)]">
-										{item.sheet.kind === 'character'
-											? 'front · face · profiles · rear · expression'
-											: 'six views of the same place'}
+										{item.sheet.stage === 'anchor'
+											? 'one picture — say what to change, or ask for the full sheet'
+											: item.sheet.kind === 'character'
+												? 'front · face · profiles · rear · expression'
+												: 'six views of the same place'}
 									</span>
 								</div>
 
@@ -3466,7 +3568,25 @@
 									</div>
 								{/if}
 
-								{#if item.sheet.url}
+								{#if item.sheet.url && item.sheet.stage === 'anchor'}
+								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
+									<div class="flex flex-wrap items-center justify-between gap-3">
+										<p class="max-w-sm text-xs leading-relaxed text-[var(--st-faint)]">
+											Not right? Say what to change in the chat — the same person is kept and
+											only what you name moves. The full sheet gives six views of this face
+											and takes about three times as long.
+										</p>
+										<button
+											type="button"
+											disabled={sheetBusy[item.id] || renderLaunching}
+											onclick={() => promoteToSheet(item.id)}
+											class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+										>
+											{sheetBusy[item.id] ? 'Starting…' : 'More pictures of them'}
+										</button>
+									</div>
+								</div>
+								{:else if item.sheet.url}
 								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
 									{#if item.sheet.id}
 										<p class="text-sm text-[var(--st-muted)]">
@@ -4196,6 +4316,9 @@
 														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
 													onclick={() => {
 														wantTarget = t as 'clip' | 'character' | 'location';
+														// Coming back to characters starts a new one. Refining is
+														// about the picture in front of you, and you just left it.
+														if (t !== 'character') currentCharacter = null;
 														saveSetup();
 													}}>{label}</button
 												>

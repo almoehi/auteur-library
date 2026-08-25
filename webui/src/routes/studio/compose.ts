@@ -1383,6 +1383,16 @@ ${tasks}
 export interface SheetSpec {
 	slug: string;
 	kind: 'character' | 'location';
+	/** Which half of the work to do.
+	 *
+	 *  `anchor` renders only the KREA-2 still a character sheet is built from —
+	 *  one picture, 17 GB of weights, about a third of the wait. `sheet` renders
+	 *  the full six-view turnaround. They share the model, the sampler and the
+	 *  seed, so an anchor is a faithful preview of the sheet rather than a
+	 *  different picture of the same idea: find the face cheaply, then pay once.
+	 *
+	 *  Absent means `sheet`, so every existing caller keeps its behaviour. */
+	stage?: 'anchor' | 'sheet';
 	/** Where the harness should fetch the sheet bundle from — this app, at the
 	 *  name Docker knows it by. Set on the server, never accepted from the
 	 *  browser, for the same reason the clip bundle's origin is. */
@@ -1404,6 +1414,15 @@ const SHEET_WORKFLOW = {
 		file: 'character_sheet.png',
 		label: 'Character sheet'
 	},
+	// The anchor is a workflow of ours rather than one of the registry's, cut
+	// from the sheet's own graph — see api/anchorwf. Its port name is the same,
+	// which is not a coincidence: it is the same node.
+	anchor: {
+		name: 'krea2_character_anchor',
+		param: 'prompt_character',
+		file: 'anchor_image.png',
+		label: 'Character preview'
+	},
 	location: {
 		name: 'krea2_location_sheet',
 		param: 'prompt_location',
@@ -1420,6 +1439,10 @@ export function sheetFileName(kind: 'character' | 'location'): string {
 	return SHEET_WORKFLOW[kind].file;
 }
 
+export function anchorFileName(): string {
+	return SHEET_WORKFLOW.anchor.file;
+}
+
 /** Registry ref or our own copy of it.
  *
  *  The registry ref is one line and stays in step with upstream, which is why it
@@ -1433,9 +1456,11 @@ export function sheetFileName(kind: 'character' | 'location'): string {
  *  Falls back to the plain registry ref when no origin is known, so nothing here
  *  can turn a missing configuration into a workspace that will not open. */
 function sheetUrl(spec: SheetSpec, name: string): string {
-	return spec.studioOrigin
-		? `${spec.studioOrigin}/studio/api/sheetwf/${spec.kind}/workflow.yaml`
-		: `${name}@main`;
+	if (!spec.studioOrigin) return `${name}@main`;
+	// The anchor has no registry equivalent — it only exists as something we
+	// serve — so it gets its own route rather than a kind-shaped one.
+	if (spec.stage === 'anchor') return `${spec.studioOrigin}/studio/api/anchorwf/workflow.yaml`;
+	return `${spec.studioOrigin}/studio/api/sheetwf/${spec.kind}/workflow.yaml`;
 }
 
 export function sheetWorkspaceId(spec: SheetSpec): string {
@@ -1488,7 +1513,10 @@ export function composeSheetWorkspace(spec: SheetSpec, grokKey = ''): string {
 	if (description.length > DIRECT_PROMPT_MAX)
 		throw new Error(`the description is longer than ${DIRECT_PROMPT_MAX} characters`);
 
-	const wf = SHEET_WORKFLOW[spec.kind];
+	if (spec.stage === 'anchor' && spec.kind !== 'character') {
+		throw new Error('only a character has an anchor preview');
+	}
+	const wf = spec.stage === 'anchor' ? SHEET_WORKFLOW.anchor : SHEET_WORKFLOW[spec.kind];
 
 	return `version: "1.0"
 kind: Workspace

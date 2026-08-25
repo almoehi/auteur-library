@@ -35,7 +35,7 @@ const REQUEST_MAX = 4_000;
 const DESCRIPTION_MAX = 900;
 
 export const POST: RequestHandler = async ({ request }) => {
-	let payload: { request?: unknown; kind?: unknown };
+	let payload: { request?: unknown; kind?: unknown; previous?: unknown };
 	try {
 		payload = (await request.json()) as typeof payload;
 	} catch {
@@ -46,6 +46,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!want) throw error(400, 'Missing request');
 	if (want.length > REQUEST_MAX) throw error(400, `Request is longer than ${REQUEST_MAX} characters`);
 	const kind = payload.kind === 'location' ? 'location' : 'character';
+	// A refinement rather than a fresh subject: the operator is looking at a
+	// picture and asking for one thing about it to change. Without the previous
+	// description the writer would start over from three words and lose every
+	// attribute that was already right.
+	const previous = typeof payload.previous === 'string' ? payload.previous.trim() : '';
 
 	const key = env.GROK_API_KEY;
 	if (!key) {
@@ -60,10 +65,24 @@ export const POST: RequestHandler = async ({ request }) => {
 	const writer = textFor('sheet_writer', overrides);
 	const model = MODEL_API_NAME[modelFor('sheet_writer', overrides)] ?? MODEL_FALLBACK;
 
-	const user =
+	const subject =
 		kind === 'character'
-			? `This is a CHARACTER sheet. Describe the person only.\n\n---\n\n${want}`
-			: `This is a LOCATION sheet. Describe the place only, with no people in it.\n\n---\n\n${want}`;
+			? 'This is a CHARACTER sheet. Describe the person only.'
+			: 'This is a LOCATION sheet. Describe the place only, with no people in it.';
+	const user = previous
+		? `${subject}
+
+This is a REFINEMENT. Below is the description currently in use, followed by what
+the operator wants changed about it. Return the same description with that change
+applied and nothing else touched — every attribute they did not mention stays
+exactly as it is, in the same words.
+
+--- CURRENT DESCRIPTION ---
+${previous}
+
+--- WHAT TO CHANGE ---
+${want}`
+		: `${subject}\n\n---\n\n${want}`;
 
 	let res: Response;
 	try {

@@ -164,6 +164,13 @@ export interface ChatItem {
 	 *  stops the card offering to store it twice. */
 	sheet?: {
 		kind: 'character' | 'location';
+		/** `anchor` is the cheap single-picture preview of a character; `sheet` is
+		 *  the six-view turnaround. They share the model and the seed, so an
+		 *  anchor is the same face the sheet will produce. Absent means sheet. */
+		stage?: 'anchor' | 'sheet';
+		/** Carried from the preview into the full sheet, so the turnaround is of
+		 *  the person you approved rather than a new one. */
+		seed?: number;
 		/** The English description the workflow will receive — editable on the
 		 *  card, for the same reason the shot prompt is: a description nobody can
 		 *  see is one nobody can correct, and this one is rendered once and lived
