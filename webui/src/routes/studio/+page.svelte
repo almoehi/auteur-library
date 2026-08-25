@@ -29,7 +29,8 @@
 	 *    /api/file           — raw artifact bytes, same-origin (the harness
 	 *                          itself sends no CORS headers)
 	 */
-	import { onMount } from 'svelte';
+	// Aliased: this file already has a tick(id) of its own for the poll loop.
+	import { onMount, tick as flush } from 'svelte';
 	import { parseEventLog, type ActivityRow } from './activity';
 	import { renderDocument, type Block } from './render-doc';
 	import {
@@ -105,21 +106,17 @@
 	let mode = $state<'simple' | 'advanced'>('simple');
 	const MODE_KEY = 'auteur-studio-mode';
 
-	const WELCOME_TEXT =
-		'Describe the film in one sentence. We start with a plan — screenplay, cast, ' +
-		'art direction — and you approve every document here. ' +
-		'No GPU time is used until you approve.';
-
-	/** Simple mode's opening. It says what the mode actually does, because the
-	 *  difference that matters is not "fewer steps" — it is that you see the exact
-	 *  text the model receives, and can change it, before anything is spent. */
-	const WELCOME_SIMPLE =
-		'Describe the shot you want. I write the render prompt, you read it and ' +
-		'change anything you like, then it goes straight to the model. ' +
-		'No GPU time is used until you press render.';
-
-	const welcomeFor = (m: 'simple' | 'advanced') =>
-		m === 'simple' ? WELCOME_SIMPLE : WELCOME_TEXT;
+	/** The empty page says what the product is, in two beats, and stops. It used
+	 *  to run to three sentences of mechanics — how the prompt gets written, who
+	 *  approves what, when the GPU starts — which is a subhead's job on a page
+	 *  that has no subhead, and it changed wording with the mode, so the first
+	 *  thing you read moved when you touched a toggle.
+	 *
+	 *  "Adult film" fixes the medium beyond argument; "directed by you" is the
+	 *  one credit this tool can print, and it is what the name already means.
+	 *  Two lines, one per beat, at every width. */
+	const WELCOME_LINES = ['Adult film.', 'Directed by you.'];
+	const WELCOME_TEXT = WELCOME_LINES.join(' ');
 
 	/** The greeting is a property of the empty page, not a message in the
 	 *  conversation — so switching modes rewrites it where it stands. Pushing a
@@ -128,9 +125,11 @@
 	let welcomeId = $state('');
 
 	function showWelcome() {
-		const existing = welcomeId && chat.find((c) => c.id === welcomeId);
-		if (existing) existing.text = welcomeFor(mode);
-		else welcomeId = pushStudio(welcomeFor(mode)).id;
+		// Still a chat item so reset() and the transcript machinery keep working,
+		// but the template gives it the page's own treatment rather than a
+		// paragraph's — see the welcomeId branch in the transcript.
+		if (welcomeId && chat.find((c) => c.id === welcomeId)) return;
+		welcomeId = pushStudio(WELCOME_TEXT).id;
 	}
 
 	/** Seed pitches for the audience this plugs into: adult creators making promo
@@ -144,15 +143,11 @@
 		'a teasing introduction to a character who is used to being adored'
 	];
 
-	/** Simple mode is given one shot, not a film, so its seeds name the act and
-	 *  the camera rather than a premise. */
-	const EXAMPLES_SIMPLE = [
-		'a blonde woman on her knees sucking a black man, filmed close on her mouth',
-		'two women on a bed, one going down on the other, handheld from the side',
-		'she rides him facing the camera, phone propped on the nightstand'
-	];
-
-	const examples = $derived(mode === 'simple' ? EXAMPLES_SIMPLE : EXAMPLES);
+	// One set for both modes. The simple-mode trio named the act outright, which
+	// put hardcore copy in the chrome — the first thing on screen for anyone who
+	// walks past the machine. These steer the register just as well and the
+	// prompt box accepts exactly the same input.
+	const examples = EXAMPLES;
 
 	/** Survives an accidental reload mid-run. Chat items are rebuilt from poll
 	 *  state on resume; only the run identity is persisted. */
@@ -2972,9 +2967,13 @@
 		el.style.height = '';
 	}
 
-	function useExample(text: string) {
+	async function useExample(text: string) {
 		input = text;
 		composer?.focus();
+		// After the flush, not before it: grow() measures scrollHeight, and until
+		// Svelte has written the new value into the element that is the height of
+		// the old one. Measuring early left a three-line seed clipped to one.
+		await flush();
 		grow(composer);
 	}
 
@@ -3602,6 +3601,16 @@
 									{item.text}
 								</p>
 							</div>
+						{:else if item.kind === 'text' && item.id === welcomeId && showExamples}
+							<!-- The greeting is the page, not a message in it. Short enough to
+								 set at display size, so it gets one. -->
+							<h1
+								class="font-display enter mx-auto max-w-[26rem] text-center text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
+							>
+								{#each WELCOME_LINES as line, i (line)}
+									{line}{#if i === 0}<br />{/if}
+								{/each}
+							</h1>
 						{:else if item.kind === 'text'}
 							<div class="enter">
 								<p class="doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">{item.text}</p>
@@ -4587,14 +4596,22 @@
 					{/if}
 
 					{#if showExamples}
-						<div class="flex flex-wrap gap-2 pt-1">
+						<!-- Three of them, one row, equal width — a set the eye reads as a
+							 set. Stacked full-width pills made three sentences of different
+							 lengths look like three unrelated things, and the longest one
+							 decided the shape of the block. -->
+						<div class="grid gap-2.5 pt-2 sm:grid-cols-3">
 							{#each examples as ex (ex)}
 								<button
 									type="button"
-									class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-2 text-left text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+									class="flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
 									onclick={() => useExample(ex)}
 								>
-									{ex}
+									<!-- Says what the click does: it fills the box, it does not send. -->
+									<svg viewBox="0 0 16 16" class="mt-0.5 size-3.5 shrink-0 opacity-45" fill="none" aria-hidden="true">
+										<path d="M4 12L12 4M6 4h6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+									</svg>
+									<span class="min-w-0">{ex}</span>
 								</button>
 							{/each}
 						</div>
@@ -5136,7 +5153,7 @@
 									 documents get written and how many clips get scheduled. It has
 									 no simple-mode counterpart, so it sits here rather than in the
 									 menu, which is about what a clip is made with. -->
-								<div class="flex shrink-0 items-center gap-0.5 self-center rounded-full bg-[var(--st-bg)] p-0.5">
+								<div class="flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
 									{#each SCENE_CHOICES as n (n)}
 										<button
 											type="button"
@@ -5166,7 +5183,7 @@
 										shutMenus();
 										modeOpen = open;
 									}}
-									class="flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 self-center rounded-full px-3 text-sm font-medium whitespace-nowrap text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+									class="flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
 								>
 									{mode === 'simple' ? 'one clip' : 'full production'}
 									<svg viewBox="0 0 10 10" class="size-2.5" fill="none" aria-hidden="true">
