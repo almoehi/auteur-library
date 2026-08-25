@@ -21,18 +21,11 @@
  */
 import { error, text } from '@sveltejs/kit';
 import { contentTypeFor, readStashed, stashedNames } from '../../../../refstash.server';
+import { modelBlock, stack, writeLoraStack } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-	BASE,
-	loraFor,
-	parseBaseOverrides,
-	parsePicks,
-	parseRunSlug,
-	type Lora,
-	type Pick
-} from '../../../../loras';
+import { parseBaseOverrides, parsePicks, parseRunSlug, type Lora } from '../../../../loras';
 
 const BUNDLE = 'minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit';
 
@@ -54,21 +47,6 @@ function basePath(name: string): string {
  *  cannot be switched through a port and have to be written into the graph. */
 const LOADER_NODE = '674';
 
-/** The pair, then the picks. Order matters to the loader only in that later
- *  adapters are applied over earlier ones; the base pair goes first so a shot
- *  adapter is layered on top of the realism pass rather than under it. */
-function stack(picks: Pick[], baseAt: Record<string, number> = {}): { lora: Lora; strength: number }[] {
-	// The base pair always loads. Its strengths can be moved for one clip — the
-	// realism slider and the anatomy corrector are both worth tuning by hand —
-	// but the adapters themselves are not a choice, so an override only ever
-	// changes a number and never whether one is present.
-	const out = BASE.map((l) => ({ lora: l, strength: baseAt[l.key] ?? l.strength }));
-	for (const p of picks) {
-		const l = loraFor(p.key);
-		if (l && !BASE.some((b) => b.key === l.key)) out.push({ lora: l, strength: p.strength });
-	}
-	return out;
-}
 
 /** Reference-to-video, grafted in only when a clip actually has references.
  *
@@ -148,58 +126,12 @@ function buildJson(entries: { lora: Lora; strength: number }[], refs: string[] =
 	const node = graph[LOADER_NODE];
 	if (!node?.inputs) throw error(500, `node ${LOADER_NODE} is missing from the base graph`);
 
-	// Drop whatever the base carries and write the stack fresh, so the served
-	// graph never inherits an adapter nobody asked for.
-	for (const k of Object.keys(node.inputs)) {
-		if (/^lora_\d+$/.test(k)) delete node.inputs[k];
-	}
-	entries.forEach((e, i) => {
-		node.inputs![`lora_${i + 1}`] = {
-			on: true,
-			// A bare filename, no folder. The rgthree loader exported these as
-			// `MINIMAX\name.safetensors` and we kept that, but the harness was
-			// quietly flattening it: the old release ran the graph through
-			// flattenModelPaths() before storing it, so the renderer only ever
-			// saw the basename. The HITL release stores the graph as written and
-			// checks each loader path against the declared filenames, which is
-			// what turned an invisible mismatch into a hard prefetch failure.
-			// Writing the basename ourselves reproduces the graph that has been
-			// rendering all along, rather than inventing a layout to test.
-			lora: e.lora.file,
-			strength: e.strength
-		};
-	});
+	writeLoraStack(node, entries);
+
 	addReferencePath(graph, refs);
 	return JSON.stringify(graph, null, 2);
 }
 
-/** The model entries for the stack, in the base file's own layout.
- *
- *  No `dest:` here, though the base file carried one for a while. The harness
- *  never reads that key: the download payload it sends the worker is
- *  `{url, dest_type: <folder type>, filename, sha256}`, so a model gets a
- *  folder *type* and a bare name and nothing else. The `loras/MINIMAX/` we
- *  used to declare was inert — the volume has no MINIMAX directory and never
- *  had one; every adapter sits flat in `ComfyUI/models/loras/`. */
-function modelBlock(entries: { lora: Lora; strength: number }[]): string {
-	const rows: string[] = [];
-	for (const { lora } of entries) {
-		const civitai = lora.url.includes('civitai.com');
-		rows.push(
-			`  - name: ${lora.file.replace(/\.safetensors$/, '')}`,
-			`    type: lora`,
-			`    files:`,
-			`      - url: ${lora.url}`,
-			// Civitai serves the file behind a redirect that does not carry the
-			// name, so it has to be stated. Hugging Face URLs end in the filename
-			// and need no help.
-			...(civitai ? [`        filename: ${lora.file}`] : []),
-			`        sha256: ${lora.sha256}`,
-			``
-		);
-	}
-	return rows.join('\n');
-}
 
 const OPEN = '  # <<LORAS>>';
 const CLOSE = '  # <</LORAS>>';
