@@ -180,7 +180,14 @@
 	function pushItem(partial: Omit<ChatItem, 'id' | 'at'>): ChatItem {
 		const item: ChatItem = { ...partial, id: mkId(), at: Date.now() };
 		chat.push(item);
-		return item;
+		// The pushed element, not the object that was pushed. `chat` is $state, so
+		// writing into it stores a proxy — and the local `item` is the unproxied
+		// original. Returning that made every mutation through the returned
+		// reference invisible: the character preview updated its own card's url
+		// when the picture arrived, nothing re-rendered, and the card sat empty
+		// while the file was on disk. Callers that re-find by id were unaffected,
+		// which is why only one path ever showed it.
+		return chat[chat.length - 1];
 	}
 	function pushStudio(text: string): ChatItem {
 		return pushItem({ who: 'studio', kind: 'text', text });
