@@ -37,7 +37,7 @@ export interface ActivityRow {
 /** Task keys are machine names; nobody should have to read `write_visual_bible`
  *  in a transcript. Scene keys are numbered rather than listed, because there
  *  can be any number of them. */
-function friendly(key: string | undefined): string {
+export function friendly(key: string | undefined): string {
 	if (!key) return 'a task';
 	const scene = /^shoot_scene_(\d+)$/.exec(key);
 	if (scene) return `Scene ${scene[1]}`;
