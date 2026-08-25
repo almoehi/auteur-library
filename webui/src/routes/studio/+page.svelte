@@ -1070,10 +1070,11 @@
 	 *  paraphrase is a chance to lose the detail you actually cared about.
 	 */
 	async function sheetFromRequest(description: string, kind: 'character' | 'location') {
-		if (renderLaunching || renderWs) {
-			pushError('A render is already running — wait for it to finish, then ask again.');
-			return;
-		}
+		// Guarded the same way a clip launch is, and no more strictly. There is one
+		// render slot and starting a second render retargets it — that is already
+		// true of every clip you launch, so a sheet must not be the one thing that
+		// refuses because a finished run is still on screen.
+		if (renderLaunching) return;
 		renderLaunching = true;
 		try {
 			const spec = {
