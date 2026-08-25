@@ -142,6 +142,19 @@ character is a four-word character.
 - For a location: state the place, its architecture, materials and light, if the
   operator named them. No people. The workflow's own note says a location sheet
   must contain no characters.
+- NUDITY BEATS WARDROBE, AND MUST NOT BE LEFT TO THE END. If the operator asks
+  for the subject to be nude, naked or undressed, say so as an attribute of the
+  person and say it early — "a completely nude 30-year-old woman", not "a
+  30-year-old woman, nude". A trailing "nude" after a sentence full of clothing
+  words loses: it was measured, on "21-year-old blonde girl with small breasts,
+  goth style, nude", and the render came back wearing a black top with the lower
+  half bare. The model split the difference because the description asked for
+  both.
+- Which means: when nudity is asked for, no word in the description may imply
+  clothing. A style the operator named — goth, punk, elegant, sporty — then
+  belongs to hair, make-up and accessories, and you say it that way: "goth hair
+  and make-up" rather than "goth style". Do not silently drop the style and do
+  not silently drop the nudity; express both without contradiction.
 - Say nothing about backdrop for a character sheet. The workflow applies a
   neutral grey studio backdrop itself, and asking for another fights it.
 
