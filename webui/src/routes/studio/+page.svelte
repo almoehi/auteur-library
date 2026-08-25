@@ -3817,6 +3817,11 @@
 									{item.text}
 								</p>
 							</div>
+						{:else if item.kind === 'text' && item.id === welcomeId && !showExamples}
+							<!-- Nothing. The greeting is the empty page's, and once you have said
+								 something the page is not empty — leaving it there turns a headline
+								 into the first line of the transcript, which it never was. It stays
+								 in `chat` so reset() and the restore path are untouched. -->
 						{:else if item.kind === 'text' && item.id === welcomeId && showExamples}
 							<!-- The greeting is the page, not a message in it. Short enough to
 								 set at display size, so it gets one. -->

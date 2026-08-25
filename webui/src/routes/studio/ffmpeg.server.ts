@@ -71,3 +71,56 @@ export async function lastFrame(clipPath: string): Promise<Uint8Array> {
 		rmSync(dir, { recursive: true, force: true });
 	}
 }
+
+/** Six views of the same person, cut out of a turnaround clip and tiled.
+ *
+ *  This is how an uploaded photograph gets a character sheet. The sheet
+ *  workflows cannot help — both are text-to-image with no image input, so they
+ *  can draw a person from a description and cannot redraw one from a photo. The
+ *  video model can: give it the photograph as a reference and ask for a slow
+ *  full turn, and the clip that comes back IS the turnaround. The frames are
+ *  simply taken out of it.
+ *
+ *  Measured on the first one: identity held across all six — same face, hair,
+ *  clothing and build, on the plain backdrop the prompt asks for.
+ *
+ *  Three across and two down because the frames are portrait; six in a row would
+ *  be a strip nothing can display and two across would be a tower.
+ */
+export async function sheetGrid(clipPath: string, seconds: number): Promise<Uint8Array> {
+	const dir = mkdtempSync(join(tmpdir(), 'auteur-sheet-'));
+	try {
+		// Inset at both ends: the first frames can carry the model settling into the
+		// pose and the last can catch the turn overshooting past the front.
+		const first = 0.25;
+		const last = Math.max(first + 0.5, seconds - 0.35);
+		const frames: string[] = [];
+		for (let i = 0; i < 6; i++) {
+			const t = first + (i * (last - first)) / 5;
+			const f = join(dir, `f${i}.png`);
+			await ffmpeg(['-y', '-v', 'error', '-ss', t.toFixed(3), '-i', clipPath, '-frames:v', '1', f]);
+			if (!existsSync(f)) throw error(422, `the turnaround has no frame at ${t.toFixed(2)}s`);
+			frames.push(f);
+		}
+		const out = join(dir, 'sheet.png');
+		await ffmpeg([
+			'-y',
+			'-v',
+			'error',
+			...frames.flatMap((f) => ['-i', f]),
+			'-filter_complex',
+			'[0][1][2]hstack=3[t];[3][4][5]hstack=3[b];[t][b]vstack=2,scale=1440:-2',
+			'-frames:v',
+			'1',
+			out
+		]);
+		if (!existsSync(out)) throw error(422, 'the six views could not be tiled');
+		const bytes = new Uint8Array(readFileSync(out));
+		if (!(bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50)) {
+			throw error(422, 'the tiled sheet is not a readable image');
+		}
+		return bytes;
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}

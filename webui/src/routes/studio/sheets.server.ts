@@ -71,6 +71,13 @@ export interface Sheet {
 	/** The seed the profile picture was rendered with. Carried so the six-view
 	 *  sheet is a turnaround of the face you approved rather than a new one. */
 	seed?: number;
+	/** This subject is a picture you supplied rather than one we drew.
+	 *
+	 *  It changes where its turnaround comes from — a drawn character gets one
+	 *  from the sheet workflow, an uploaded one from a rendered turn of the
+	 *  photograph — and it changes what the library says while that is happening,
+	 *  which is nothing. You attached a picture; you did not ask for a render. */
+	uploaded?: boolean;
 	/** The turnaround, absent until one has been asked for. */
 	sheet?: SheetRender;
 }
@@ -136,6 +143,7 @@ export function addSheet(row: {
 	ext?: string;
 	workspace?: string;
 	seed?: number;
+	uploaded?: boolean;
 }): Sheet {
 	ensure();
 	const id = mkId();
@@ -153,7 +161,8 @@ export function addSheet(row: {
 		size: row.bytes.byteLength,
 		addedAt: new Date().toISOString(),
 		...(row.workspace ? { workspace: row.workspace } : {}),
-		...(row.seed !== undefined ? { seed: row.seed } : {})
+		...(row.seed !== undefined ? { seed: row.seed } : {}),
+		...(row.uploaded ? { uploaded: true } : {})
 	};
 	writeManifest([sheet, ...listSheets()]);
 	return sheet;

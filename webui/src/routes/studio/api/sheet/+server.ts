@@ -42,13 +42,13 @@ export const GET: RequestHandler = async () => {
  *  S3 and hands the url to the workflow, and nothing downstream asks where it
  *  came from.
  *
- *  What it cannot have is the six-view turnaround. Both sheet workflows are
- *  `t2i` — text to image, no image input ports at all — so they can draw a
- *  person from a description and cannot redraw one from a photograph. An
- *  uploaded character is one picture, and the card says so rather than promising
- *  views that will never arrive.
+ *  It gets a six-view turnaround too, though not from the sheet workflows —
+ *  both are text-to-image with no image input at all, so they can draw a person
+ *  from a description and have no way to redraw one from a photograph. The video
+ *  model can: see api/turnaround. That runs in the background and is never
+ *  mentioned, because you attached a picture, you did not ask for a render.
  */
-async function fromUpload(request: Request): Promise<Response> {
+async function fromUpload(request: Request, fetchFn: typeof globalThis.fetch): Promise<Response> {
 	const form = await request.formData();
 	const file = form.get('file');
 	if (!(file instanceof File)) throw error(400, 'Missing file');
@@ -87,8 +87,26 @@ async function fromUpload(request: Request): Promise<Response> {
 		name,
 		description,
 		bytes,
-		ext: looksJpeg ? '.jpg' : looksWebp ? '.webp' : '.png'
+		ext: looksJpeg ? '.jpg' : looksWebp ? '.webp' : '.png',
+		uploaded: true
 	});
+
+	// Characters get a turnaround built from the picture, in the background and
+	// without a word about it. Locations do not: a room does not have a front and
+	// a back the way a person does, and a camera orbiting a photograph of one is
+	// a different problem that has not been tried.
+	if (kind === 'character') {
+		void fetchFn('/studio/api/turnaround', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ id: sheet.id })
+		}).catch(() => {
+			// A character that exists is the product here. The sheet is an
+			// improvement to it, and one that fails to start is not worth telling
+			// anyone about — nobody asked for it.
+		});
+	}
+
 	return json({ ok: true, sheet, sheets: listSheets(), uploaded: true });
 }
 
@@ -96,7 +114,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	// An upload arrives as a form because it arrives as bytes. Everything else on
 	// this route is JSON, so the content type is the fork.
 	if ((request.headers.get('content-type') ?? '').includes('multipart/form-data')) {
-		return await fromUpload(request);
+		return await fromUpload(request, fetch);
 	}
 
 	let body: {
