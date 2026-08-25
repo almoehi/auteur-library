@@ -96,12 +96,12 @@ const REF_NODE = '136';
 
 function addReferencePath(
 	graph: Record<string, { class_type?: string; inputs?: Record<string, unknown> }>,
-	assets: string[]
+	refNames: string[]
 ): void {
-	if (!assets.length) return;
+	if (!refNames.length) return;
 
 	const refs: Record<string, unknown> = {};
-	assets.forEach((base, i) => {
+	refNames.forEach((base, i) => {
 		const id = `ref_${i}`;
 		// A plain LoadImage: the reference node downscales for itself, so the
 		// crop-and-resize loader the original export used buys nothing here, and
@@ -140,7 +140,7 @@ function addReferencePath(
 	if (latent) latent.any_01 = [REF_NODE, 1];
 }
 
-function buildJson(entries: { lora: Lora; strength: number }[], assets: string[] = []): string {
+function buildJson(entries: { lora: Lora; strength: number }[], refs: string[] = []): string {
 	const graph = JSON.parse(readFileSync(basePath('workflow.json'), 'utf8')) as Record<
 		string,
 		{ class_type?: string; inputs?: Record<string, unknown> }
@@ -169,7 +169,7 @@ function buildJson(entries: { lora: Lora; strength: number }[], assets: string[]
 			strength: e.strength
 		};
 	});
-	addReferencePath(graph, assets);
+	addReferencePath(graph, refs);
 	return JSON.stringify(graph, null, 2);
 }
 
@@ -230,12 +230,55 @@ const CLOSE = '  # <</LORAS>>';
  *  every string in the graph that matches. That removes both things that
  *  failed — no artifact URL, and no agent in the path.
  */
-function assetsBlock(assets: string[]): string {
-	if (!assets.length) return '';
-	return ['assets:', ...assets.map((a) => `  - ${a}`)].join('\n') + '\n';
+/** The reference images, declared as media input ports.
+ *
+ *  NOT as `assets:`, which is what this used to be and what cost three GPU
+ *  renders to disprove. The harness's asset mechanism is documented in
+ *  WORKSPACE_GUIDE.md §3.9 as working for both kinds of workflow entry. It does
+ *  not. In the wasm, a workspace entry whose `url` ends in `.yaml` — which is
+ *  every entry this app writes — goes through buildEntryFromContent, which
+ *  rebuilds the spec as `{ name, description, url }` and drops `assets`; the
+ *  bundle's own `assets:` key is never read at all (`yamlSpec.assets` occurs
+ *  zero times in the binary). The download loop and the string-substitution pass
+ *  are both guarded on a non-empty list, so nothing is fetched, nothing is
+ *  rewritten, and nothing is logged — which is exactly what we saw. No bundle in
+ *  the library's entire history has ever declared `assets:`, so the path was
+ *  dead code rather than a regression.
+ *
+ *  Input ports are the mechanism that does work, and it is the one every
+ *  image-to-video bundle already uses — see iamcs_wan22_svi, `binding: image@745`
+ *  against a LoadImage node. At render time the harness writes
+ *  `<port>.<ext-from-url>` into the bound node's input and puts `{name, url}` on
+ *  the worker payload's `images` list; the worker downloads each URL and uploads
+ *  it to ComfyUI, where it lands in /ComfyUI/input/ under that name.
+ *
+ *  Which is why the ports are named for the files: port `ref_0` plus a URL
+ *  ending `.png` produces `ref_0.png`, the string the graph already carries.
+ *
+ *  `required: true` on purpose. An optional port that goes unsupplied has its
+ *  consumer edges stripped and the clip renders from text alone — a plausible
+ *  video of the wrong person, which is worse than a loud failure.
+ */
+function inputsBlock(refs: string[]): string {
+	if (!refs.length) return '';
+	const rows = refs.map((a, i) => {
+		const port = a.replace(/\.[^.]+$/, '');
+		const role =
+			i === 0
+				? 'Primary reference — the subject the clip is conditioned on, addressed as <Picture 1> in the prompt.'
+				: `Reference ${i + 1}, addressed as <Picture ${i + 1}> in the prompt.`;
+		return [
+			`    - name: ${port}`,
+			`      kind: image`,
+			`      description: ${JSON.stringify(role)}`,
+			`      binding: image@${port}`,
+			`      required: true`
+		].join('\n');
+	});
+	return `  inputs:\n${rows.join('\n')}\n`;
 }
 
-function buildYaml(entries: { lora: Lora; strength: number }[], assets: string[] = []): string {
+function buildYaml(entries: { lora: Lora; strength: number }[], refs: string[] = []): string {
 	const src = readFileSync(basePath('workflow.yaml'), 'utf8');
 	const a = src.indexOf(OPEN);
 	const b = src.indexOf(CLOSE);
@@ -248,34 +291,40 @@ function buildYaml(entries: { lora: Lora; strength: number }[], assets: string[]
 		`  # Generated for one clip. Edit webui/src/routes/studio/loras.ts, not this.\n` +
 		modelBlock(entries);
 	const out = head + body + tail;
-	// Ahead of `ports:`, at the top level — assets are a sibling of ports and
-	// models, not a member of either.
-	const block = assetsBlock(assets);
-	return block ? out.replace(/^ports:/m, `${block}\nports:`) : out;
+	// Inside `ports:`, ahead of `params:` — inputs are a member of ports, which
+	// is where the base bundle would carry them if it had any. It has none: this
+	// graph was a text-to-video export, and the reference path is grafted in by
+	// addReferencePath above.
+	const block = inputsBlock(refs);
+	return block ? out.replace(/^ports:\n/m, `ports:\n${block}`) : out;
 }
 
 export const GET: RequestHandler = async ({ params }) => {
 	const sel = params.sel ?? '';
 	const slug = parseRunSlug(sel);
-	const assets = slug ? stashedNames(slug) : [];
+	const refs = slug ? stashedNames(slug) : [];
+	const file = params.file ?? '';
 
-	// The images sit beside the bundle because that is where the harness looks
-	// for an asset: the directory the workflow JSON came from.
-	if (slug && /^ref_\d+\./.test(params.file ?? '')) {
-		const bytes = readStashed(slug, params.file);
+	// Kept, though the harness no longer fetches from here — the reference images
+	// now reach the worker as presigned S3 URLs, because a Modal GPU cannot reach
+	// this server and the harness refuses to pretend otherwise. This stays as the
+	// way to see what a run actually staged, which is the first question whenever
+	// a clip comes back with the wrong face in it.
+	if (slug && /^ref_\d+\./.test(file)) {
+		const bytes = readStashed(slug, file);
 		if (!bytes) throw error(404, 'no such reference image for this run');
 		return new Response(new Uint8Array(bytes), {
-			headers: { 'content-type': contentTypeFor(params.file), 'content-length': String(bytes.length) }
+			headers: { 'content-type': contentTypeFor(file), 'content-length': String(bytes.length) }
 		});
 	}
 
 	const entries = stack(parsePicks(sel), parseBaseOverrides(sel));
 
-	if (params.file === 'workflow.json') {
-		return text(buildJson(entries, assets), { headers: { 'content-type': 'application/json' } });
+	if (file === 'workflow.json') {
+		return text(buildJson(entries, refs), { headers: { 'content-type': 'application/json' } });
 	}
-	if (params.file === 'workflow.yaml' || params.file === 'workflow.yml') {
-		return text(buildYaml(entries, assets), { headers: { 'content-type': 'text/yaml' } });
+	if (file === 'workflow.yaml' || file === 'workflow.yml') {
+		return text(buildYaml(entries, refs), { headers: { 'content-type': 'text/yaml' } });
 	}
 	throw error(404, 'a bundle is workflow.yaml, workflow.json and its reference images');
 };

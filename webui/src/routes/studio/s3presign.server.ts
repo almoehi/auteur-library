@@ -16,6 +16,9 @@
  *  throws rather than guessing.
  */
 import { createHash, createHmac } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 const ALGO = 'AWS4-HMAC-SHA256';
 const SERVICE = 's3';
@@ -122,4 +125,76 @@ export function slotUrls(
 		put_url: presign(cfg, 'PUT', key, expiresSec, now),
 		get_url: presign(cfg, 'GET', key, expiresSec, now)
 	};
+}
+
+/** The harness's env file, which is where the AWS credentials already live.
+ *
+ *  Read per call so a rotation takes effect without restarting this app, and
+ *  kept here rather than copied into each caller because a second reader of a
+ *  secret is a second thing to leak and a second thing to forget to update.
+ */
+export function harnessEnv(): Record<string, string> {
+	const out: Record<string, string> = {};
+	const p = join(homedir(), 'auteur', '.env');
+	if (!existsSync(p)) return out;
+	for (const line of readFileSync(p, 'utf8').split('\n')) {
+		const m = /^([A-Za-z0-9_]+)=(.*)$/.exec(line.trim());
+		if (m) out[m[1]] = m[2];
+	}
+	return out;
+}
+
+/** The bucket config, or null when it is not configured. */
+export function s3FromEnv(e: Record<string, string> = harnessEnv()): S3Config | null {
+	const cfg = {
+		accessKey: e.AWS_ACCESS_KEY ?? '',
+		secretKey: e.AWS_SECRET_KEY ?? '',
+		region: e.AWS_REGION ?? '',
+		bucket: e.S3_BUCKET ?? ''
+	};
+	return cfg.accessKey && cfg.secretKey && cfg.region && cfg.bucket ? cfg : null;
+}
+
+/** How long a reference image stays readable.
+ *
+ *  Long enough to outlive the render that uses it and the harness's retries —
+ *  an expired link fails on the GPU, minutes in, which is the expensive place to
+ *  find out. Short enough that a leaked URL is not a permanent one. */
+export const REF_URL_TTL_SEC = 6 * 60 * 60;
+
+/** Put bytes in the bucket and hand back a URL a cloud GPU can read.
+ *
+ *  This exists because the render worker runs on Modal and our own server does
+ *  not have an address it can reach. The harness is explicit about it — it
+ *  refuses `localhost`, `host.docker.internal` and every RFC-1918 range at
+ *  submission time — so a reference image has to be somewhere public before it
+ *  can be a reference at all.
+ *
+ *  No content-type header: the signature covers `host` only, the worker saves
+ *  the body to a path and re-uploads it to ComfyUI, and the filename it ends up
+ *  with comes from the URL's extension rather than from any metadata. One less
+ *  thing to get wrong.
+ */
+export async function putObject(
+	cfg: S3Config,
+	key: string,
+	bytes: Uint8Array,
+	fetchFn: typeof globalThis.fetch = fetch,
+	expiresSec: number = REF_URL_TTL_SEC
+): Promise<string> {
+	const { put_url, get_url } = slotUrls(cfg, key, expiresSec);
+	// Copied out to its own ArrayBuffer rather than sent as the view we were
+	// given. Node's Buffer is a view onto a shared pooled allocation, so handing
+	// the underlying buffer straight to fetch can send neighbouring bytes as well
+	// as ours — and a reference image with someone else's memory stapled to it is
+	// not a decodable PNG. Slicing by offset and length takes exactly this file.
+	const body = bytes.buffer.slice(
+		bytes.byteOffset,
+		bytes.byteOffset + bytes.byteLength
+	) as ArrayBuffer;
+	const res = await fetchFn(put_url, { method: 'PUT', body });
+	if (!res.ok) {
+		throw new Error(`S3 PUT of ${key} answered ${res.status} ${(await res.text()).slice(0, 200)}`);
+	}
+	return get_url;
 }

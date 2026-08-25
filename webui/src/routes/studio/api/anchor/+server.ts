@@ -19,10 +19,8 @@
 import { env } from '$env/dynamic/private';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { renderDirect } from '../../modal.server';
+import { harnessEnv, s3FromEnv } from '../../s3presign.server';
 import { checkDescription } from '../../minors.server';
 import { failJob, finishJob, getJob, startJob } from '../../anchorjobs.server';
 
@@ -41,19 +39,10 @@ const NODE_SAVE = '75';
  *  a render that is almost entirely file reading, so this is the cheap one. */
 const GPU = 'l40s' as const;
 
-/** Credentials live in the harness's env file rather than this app's, because
- *  that is where they already were and a second copy of a secret is a second
- *  thing to leak. Read per call so a rotation takes effect without a restart. */
-function harnessEnv(): Record<string, string> {
-	const out: Record<string, string> = {};
-	const p = join(homedir(), 'auteur', '.env');
-	if (!existsSync(p)) return out;
-	for (const line of readFileSync(p, 'utf8').split('\n')) {
-		const m = /^([A-Za-z0-9_]+)=(.*)$/.exec(line.trim());
-		if (m) out[m[1]] = m[2];
-	}
-	return out;
-}
+// Credentials live in the harness's env file rather than this app's, because
+// that is where they already were. The reader itself now lives in
+// s3presign.server.ts — the clip path needs the same file, and two copies of a
+// secret reader is one more than anyone will remember to update.
 
 export const GET: RequestHandler = async ({ url }) => {
 	const id = url.searchParams.get('job') ?? '';
@@ -93,13 +82,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		: Math.floor(Math.random() * 1_000_000_000);
 
 	const e = harnessEnv();
-	const s3 = {
-		accessKey: e.AWS_ACCESS_KEY ?? '',
-		secretKey: e.AWS_SECRET_KEY ?? '',
-		region: e.AWS_REGION ?? '',
-		bucket: e.S3_BUCKET ?? ''
-	};
-	if (!s3.accessKey || !s3.secretKey || !s3.region || !s3.bucket) {
+	const s3 = s3FromEnv(e);
+	if (!s3) {
 		return json({
 			ok: false,
 			error: 'S3 is not configured in ~/auteur/.env — a direct render has nowhere to put the picture'

@@ -29,7 +29,8 @@ import { loadLibraryInto, type LoadReport } from '../../harness.server';
 import { importStagedRefs, type RefImportResult } from '../../refs-import.server';
 import { listRefs, readRef } from '../../refs.server';
 import { getSheet, readSheet } from '../../sheets.server';
-import { pruneStashes, stashRefs } from '../../refstash.server';
+import { pruneStashes, readStashed, stashRefs } from '../../refstash.server';
+import { putObject, s3FromEnv } from '../../s3presign.server';
 import { recordRender } from '../../renders.server';
 import { recordProduction } from '../../history.server';
 import {
@@ -335,7 +336,46 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			set(row.name);
 		}
 		bytes.unshift(...chosen);
-		spec.refImages = stashRefs(spec.slug, bytes).length;
+		const stashedNames = stashRefs(spec.slug, bytes);
+		spec.refImages = stashedNames.length;
+		spec.refNames = stashedNames;
+
+		// Up to the bucket, because that is the only address the render can read
+		// from. The GPU runs on Modal; this server answers on host.docker.internal,
+		// which the harness refuses by name along with every private range. The
+		// staged copies stay on disk regardless — they are how we see afterwards
+		// what a clip was actually given.
+		if (stashedNames.length) {
+			const s3 = s3FromEnv();
+			if (!s3) {
+				return json(
+					{
+						ok: false,
+						error:
+							'S3 is not configured in ~/auteur/.env — reference images have nowhere to go that the GPU can read'
+					},
+					{ status: 200 }
+				);
+			}
+			try {
+				spec.refUrls = [];
+				for (const name of stashedNames) {
+					const local = readStashed(spec.slug, name);
+					if (!local) throw new Error(`${name} vanished from the staging area`);
+					spec.refUrls.push(
+						await putObject(s3, `studio-refs/${spec.slug}/${name}`, new Uint8Array(local), fetch)
+					);
+				}
+			} catch (e) {
+				// Refusing to start is the point. A clip that renders without its
+				// references produces a convincing video of the wrong person, and
+				// that is the failure that wastes an afternoon rather than a minute.
+				return json(
+					{ ok: false, error: `the reference images could not be uploaded — ${e}` },
+					{ status: 200 }
+				);
+			}
+		}
 		pruneStashes();
 		let directYaml: string;
 		try {

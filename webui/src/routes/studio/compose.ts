@@ -1116,6 +1116,17 @@ export interface DirectSpec {
 	/** How many reference images were staged for this clip. Zero builds exactly
 	 *  the graph that existed before references were possible. */
 	refImages?: number;
+	/** The staged basenames, in order — `ref_0.png`, `ref_1.png` … Only their
+	 *  presence matters to the workspace now; the bundle derives the port names
+	 *  from the same list server-side. */
+	refNames?: string[];
+	/** A presigned S3 GET url per reference, same order.
+	 *
+	 *  These are what the render actually loads. The staged copies on this disk
+	 *  are for us to look at; a Modal GPU cannot reach this machine, and the
+	 *  harness rejects localhost and RFC-1918 addresses outright rather than
+	 *  letting the failure surface an hour later on the worker. */
+	refUrls?: string[];
 	/** The kept character sheet this clip is shot with, if you picked one. The id
 	 *  is resolved server-side into bytes and staged as the first reference, so
 	 *  the face is the same one every other clip with this character has. */
@@ -1150,11 +1161,23 @@ export interface DirectSpec {
  *
  *  Empty for a clip with no references, which keeps the task text exactly as it
  *  has always been. */
-function refClause(count: number, characterName?: string, locationName?: string): string {
+function refClause(
+	count: number,
+	characterName?: string,
+	locationName?: string,
+	refUrls: string[] = []
+): string {
 	if (count < 1) return '';
-	// Informational only. The images are wired into the graph as bundle assets,
-	// so the agent has nothing to do about them — but a task that renders with
-	// three faces and never mentions them reads as a mistake to anyone looking.
+	// NOT informational any more. This used to say "already wired into the
+	// workflow, you do not need to pass them" — which was true of the asset
+	// mechanism we believed in and false of the one that works. The images are
+	// declared as required media input ports now, and the tool handler reads each
+	// one straight from the agent's own arguments: a port that is missing comes
+	// back as `missing required input: "ref_0"` and the render never starts.
+	//
+	// So the agent carries the URLs. That is not ideal — they are long presigned
+	// links and an LLM is copying them — but there is no default value mechanism
+	// for media ports, and the failure mode is loud rather than silent.
 	//
 	// The character is named when there is one, because it is the first reference
 	// and the prompt addresses it as <Picture 1>: a reader comparing the prompt
@@ -1179,10 +1202,20 @@ function refClause(count: number, characterName?: string, locationName?: string)
 				)
 				.join('')
 		: '';
+	// One line per port, each a single unbroken line: the value is a presigned URL
+	// whose query string must survive verbatim, and a wrapped line is a corrupted
+	// link. They are listed after the explanation rather than inside it so the
+	// agent reads them as values to copy, not as prose.
+	const ports = refUrls
+		.map((url, i) => `        ref_${i} = ${url}\n`)
+		.join('');
+
 	return `
-        This clip renders with ${count} reference image${count > 1 ? 's' : ''}, already wired into
-        the workflow. You do not need to pass them; call the tool as usual.
-${who}`;
+        This clip renders with ${count} reference image${count > 1 ? 's' : ''}. The workflow declares
+        ${count > 1 ? 'them' : 'it'} as required input${count > 1 ? 's' : ''}, so you MUST pass ${count > 1 ? 'both' : 'it'} to the tool,
+        each value copied exactly as written below — they are signed links and a
+        single altered character makes them unusable.
+${ports}${who}`;
 }
 
 export const DIRECT_MAX_CLIPS = 4;
@@ -1230,7 +1263,7 @@ function directWorkflows(
 	origin: string,
 	picks: Pick[],
 	baseAt: Record<string, number>,
-	refs: number,
+	refNames: string[],
 	slug: string
 ): string {
 	// Only the picks. The pair every clip loads is added by the endpoint that
@@ -1251,8 +1284,17 @@ function directWorkflows(
 	// reference images from the same directory it serves the bundle from, so it
 	// needs to know whose they are, not merely how many.
 	const sel =
-		[formatPicks([...base, ...picks]), refs > 0 ? `run-${slug}` : ''].filter(Boolean).join(',') ||
-		'base';
+		[formatPicks([...base, ...picks]), refNames.length ? `run-${slug}` : '']
+			.filter(Boolean)
+			.join(',') || 'base';
+	// No `assets:` here, and none in the bundle either.
+	//
+	// Both were tried, together and separately, and all three renders died on the
+	// GPU looking for /ComfyUI/input/ref_1.png. The harness only honours `assets`
+	// when the entry url ends in `.json`: the `.yaml` path rebuilds the spec as
+	// { name, description, url } and drops the list, and the bundle's own key is
+	// never read at any point. The reference images travel as media input ports
+	// instead — declared by the bundle, supplied as presigned URLs at render time.
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml
@@ -1316,6 +1358,12 @@ const DIRECT_AGENT = (model: string) => `    generic:
         character, and video_length set to the seconds the task names. Resolution,
         fps and steps come from the render profile — do not pass your own.
 
+        If the task lists reference inputs (ref_0, ref_1 …), pass each one as an
+        argument of that name, with the URL copied exactly as the task wrote it —
+        every character, including the whole query string. They are signed links
+        and expire; do not shorten, re-encode, split or tidy them, and never
+        invent one that was not given to you.
+
         Then save the returned mp4 to the exact filename the task declares and
         call task_complete. If the tool saved to a different path, call it again
         targeting the declared one.
@@ -1357,7 +1405,7 @@ export function composeDirectWorkspace(spec: DirectSpec, grokKey = ''): string {
 
         video_length: ${spec.seconds}
         Save the result as clip${i + 1}.mp4
-${refClause(spec.refImages ?? 0, spec.characterName, spec.locationName)}
+${refClause(spec.refImages ?? 0, spec.characterName, spec.locationName, spec.refUrls ?? [])}
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
         shorten, expand, reorder or comment on it. It is already in the format
         the workflow expects.
@@ -1397,7 +1445,7 @@ spec:
   skills:
     - workflow-render-loop@mvp-lkg
 
-${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refImages ?? 0, spec.slug)}
+${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refNames ?? [], spec.slug)}
 
 ${directProfiles(spec)}
 
