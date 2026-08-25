@@ -202,8 +202,14 @@ function fitOurOutputShape(graph: Graph): void {
 	if (!ref?.inputs) throw error(500, `the continuation graph has no node ${N.refToVideo}`);
 	if (!graph[N.resolution]) throw error(500, `the continuation graph has no node ${N.resolution}`);
 
-	graph[OUR.width] = { class_type: 'PrimitiveFloat', inputs: { value: 1024 } };
-	graph[OUR.height] = { class_type: 'PrimitiveFloat', inputs: { value: 576 } };
+	// PrimitiveInt, not PrimitiveFloat. Their reference node declares width and
+	// height as INT and ComfyUI rejects the graph outright — "received_type(FLOAT)
+	// mismatch input_type(INT)" — before a single step is sampled. Our own graph
+	// wires a PrimitiveFloat into the same class and renders happily, which is not
+	// a licence to copy it: whatever lets ours through, this one is checked, and
+	// an INT source is right in both.
+	graph[OUR.width] = { class_type: 'PrimitiveInt', inputs: { value: 1024 } };
+	graph[OUR.height] = { class_type: 'PrimitiveInt', inputs: { value: 576 } };
 	ref.inputs.width = [OUR.width, 0];
 	ref.inputs.height = [OUR.height, 0];
 
