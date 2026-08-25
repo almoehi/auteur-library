@@ -818,7 +818,9 @@
 		// another shot, whether it is the first or the fifth.
 		if (mode === 'simple') {
 			if (wantTarget === 'character')
-				return 'Describe the person — you get six views to reuse in every clip';
+				return currentCharacter
+					? 'Say what to change about them — everything else stays'
+					: 'Describe the person — one picture first, the full sheet when you like them';
 			if (wantTarget === 'location')
 				return 'Describe the place — you get six views to reuse in every clip';
 			return 'Describe the shot — one clip per message';
