@@ -257,6 +257,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		const spec = payload.sheet as SheetSpec | undefined;
 		if (!spec || typeof spec !== 'object') throw error(400, 'Missing sheet spec');
 		if (!spec.slug || !SLUG_RE.test(spec.slug)) throw error(400, 'Bad slug');
+		// Set here rather than taken from the payload, exactly as for a clip: the
+		// harness fetches a workflow bundle from this address, so the browser does
+		// not get a say in where that address points.
+		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
 		let sheetYaml: string;
 		try {
 			sheetYaml = composeSheetWorkspace(spec, grokKey);

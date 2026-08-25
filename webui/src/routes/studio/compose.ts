@@ -1383,6 +1383,10 @@ ${tasks}
 export interface SheetSpec {
 	slug: string;
 	kind: 'character' | 'location';
+	/** Where the harness should fetch the sheet bundle from — this app, at the
+	 *  name Docker knows it by. Set on the server, never accepted from the
+	 *  browser, for the same reason the clip bundle's origin is. */
+	studioOrigin?: string;
 	/** Plain English, passed to the workflow untouched. These two workflows take
 	 *  a description rather than a structured prompt — their own port notes say
 	 *  so — which is why no writer stands between you and them. */
@@ -1414,6 +1418,24 @@ export function sheetWorkflowName(kind: 'character' | 'location'): string {
 
 export function sheetFileName(kind: 'character' | 'location'): string {
 	return SHEET_WORKFLOW[kind].file;
+}
+
+/** Registry ref or our own copy of it.
+ *
+ *  The registry ref is one line and stays in step with upstream, which is why it
+ *  was the first choice. It also lets the harness pick the cheapest card the
+ *  workflow allows, and for these two that is an l40s — measured, not guessed:
+ *  the first character sheet ran 09:54:22 to 09:57:17 inside `comfy-compute-l40s`
+ *  while the render profile asked for a100 and was overruled. A workflow's own
+ *  gpu_types is the only thing that decides this, so we serve the same YAML with
+ *  that one line narrowed.
+ *
+ *  Falls back to the plain registry ref when no origin is known, so nothing here
+ *  can turn a missing configuration into a workspace that will not open. */
+function sheetUrl(spec: SheetSpec, name: string): string {
+	return spec.studioOrigin
+		? `${spec.studioOrigin}/studio/api/sheetwf/${spec.kind}/workflow.yaml`
+		: `${name}@main`;
 }
 
 export function sheetWorkspaceId(spec: SheetSpec): string {
@@ -1490,7 +1512,7 @@ spec:
 
   workflows:
     - name: ${wf.name}
-      url: ${wf.name}@main
+      url: ${sheetUrl(spec, wf.name)}
       lazy: false
 
   profiles:
