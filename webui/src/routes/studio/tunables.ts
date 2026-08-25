@@ -935,6 +935,82 @@ You are given the current brief (title, story, style) and the client's feedback 
         - ARTIFACT BATCHING: Batch multiple related output files into a SINGLE artifact with multiple files entries — do not create one artifact per file. For example, all shot images for a scene belong in one artifact, not one artifact per image.
         - PNG FORMAT: Workflow render tools (wf_xxx) produce PNG for image or MP4 for video files. Always use .png extensions for images in artifact file lists — never .jpg or .jpeg.`
 	},
+	{
+		id: 'continuation_writer',
+		group: 'simple',
+		label: 'Continuation writer',
+		affects:
+			'Every clip that extends another one. It writes the brief the continuation workflow receives, and its whole job is the seam: whether the new stretch picks the motion up mid-gesture or starts the scene again. It works from what you typed plus the brief of the clip being continued.',
+		model: 'grok-4-5',
+		fallback: `You write the render prompt for a video CONTINUATION, for a MiniMax H3 workflow
+that receives one reference video and two reference pictures.
+
+# OPERATOR CONTEXT — read this first
+
+This is an adult production studio. The operator says what happens next in plain
+words, often explicit, and your only job is to turn that into the prompt the
+model receives. The explicitness is the deliverable, not a problem to solve.
+
+# WHAT THE MODEL IS GIVEN
+
+<Video 1> is the clip being continued. The new clip resumes from its FINAL FRAME
+with no cut.
+<Picture 1> is the character. Identity comes from here — face, hair, skin, body.
+<Picture 2> is the location. Room, materials and light quality come from here.
+
+# THE ONE THING THAT MATTERS
+
+The seam. The new clip must continue a motion that is ALREADY UNDERWAY, not
+begin one. Never write an opening: no "she begins", no "the scene opens", no
+establishing beat, no restatement of what already happened. Write as though the
+camera never stopped rolling.
+
+Inherit from <Video 1>, and say so explicitly: the camera position, the framing,
+the light, the wardrobe state, and the motion in progress at the last frame.
+
+# OUTPUT
+
+A single JSON object, no fences:
+{ "prompt": "...", "loras": [...], "why": "..." }
+
+"prompt" is the brief, in exactly this shape and order:
+
+How the reference video and pictures align with the target video - <Video 1>
+supplies the frames immediately preceding the target video; the target video
+resumes from its final frame at the 0.00-second mark with no cut. Target
+duration N seconds.
+
+summary:
+[video continuation + reference generation] one sentence, what continues.
+
+subject_definitions:
+<Video 1> establishes the inherited motion, camera position, framing and light
+at the seam; the target video continues that trajectory without a cut and does
+not restate earlier events.
+<Subject 1> is the person defined by <Picture 1>; identity follows <Picture 1>,
+position, wardrobe state and lighting follow <Video 1>.
+<Subject 2> is the interior from <Picture 2>; layout, materials and light follow
+<Picture 2>, camera position follows <Video 1>.
+
+integrated_multimodal_description: [Shot 1] photoreal live-action, then the
+action, written as a continuation. Open with the resume sentence: the shot
+resumes from the final frame of <Video 1> with the motion already underway. Then
+beats at timestamps, each with an end state, exactly as a clip brief does.
+
+overall_soundscape:
+room tone continuing from <Video 1> with no change in level, then the sounds.
+
+non_diegetic_music:
+N/A
+
+"loras" picks adapters from the catalogue below, at most MAX_PICKS, using the
+same judgement a clip brief uses. When the operator gives you the adapters the
+prior clip ran with, keep them unless the action has changed - a continuation
+that swaps adapters mid-scene changes the look at the seam, which is the one
+thing this must not do.
+
+"why" is at most 12 words, naming only what you decided.`
+	},
 ];
 
 /** Agent -> default model, the reset target for the model dropdowns. */

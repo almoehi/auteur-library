@@ -134,6 +134,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		orientation?: unknown;
 		character?: unknown;
 		location?: unknown;
+		/** Set when this clip continues another one. Carries what the prior clip
+		 *  was rendered from, so the seam inherits rather than restarts. */
+		continues?: unknown;
 	};
 	try {
 		payload = (await request.json()) as typeof payload;
@@ -194,11 +197,47 @@ export const POST: RequestHandler = async ({ request }) => {
 		);
 	}
 
+	// A continuation is a different brief with a different shape, so it gets a
+	// different writer — but the same gate, the same catalogue and the same
+	// plumbing, because everything except the instructions is identical.
+	const cont = (payload.continues ?? null) as
+		| { priorPrompt?: string; priorLoras?: Pick[] }
+		| null;
+	const writerId = cont ? 'continuation_writer' : 'shot_writer';
+	if (cont) {
+		// The two pictures are fixed by the workflow's own wiring here, unlike a
+		// clip where the numbering depends on what was attached: the continuation
+		// graph binds the character to ref_image_0 and the location to ref_image_1
+		// whatever else is passed.
+		pinned.length = 0;
+		if (Number.isFinite(askedSeconds) && askedSeconds >= 4 && askedSeconds <= 15) {
+			pinned.push(`The target duration is ${askedSeconds} seconds.`);
+		}
+		pinned.push(
+			`<Video 1> is the clip being continued.` +
+				(character ? ` <Picture 1> is the character ${character}.` : '') +
+				(location ? ` <Picture 2> is the location ${location}.` : '')
+		);
+		if (typeof cont.priorPrompt === 'string' && cont.priorPrompt.trim()) {
+			pinned.push(
+				`The brief the prior clip was rendered from follows. Continue from where it ` +
+					`ends; do not restate it.\n\n${cont.priorPrompt.trim().slice(0, 6000)}`
+			);
+		}
+		if (Array.isArray(cont.priorLoras) && cont.priorLoras.length) {
+			pinned.push(
+				`The prior clip ran with these adapters: ` +
+					cont.priorLoras.map((p) => `${p.key} ${p.strength}`).join(', ') +
+					`. Keep them unless the action has changed.`
+			);
+		}
+	}
+
 	// Read per call, so an edit in the admin panel takes effect on the next
 	// message rather than on the next dev-server restart.
 	const overrides = readOverrides();
-	const writer = textFor('shot_writer', overrides);
-	const model = MODEL_API_NAME[modelFor('shot_writer', overrides)] ?? MODEL_FALLBACK;
+	const writer = textFor(writerId, overrides);
+	const model = MODEL_API_NAME[modelFor(writerId, overrides)] ?? MODEL_FALLBACK;
 
 	const skill = skillText();
 	// The catalogue goes in last, after the syntax guide, because it is the part
