@@ -1119,41 +1119,30 @@
 
 	async function sheetFromRequest(request: string, kind: 'character' | 'location') {
 		try {
-			// No writer in front of a character any more. It cost five seconds of a
-			// path where every second is felt, and it earned them by translating
-			// Hungarian — which stops being the job the moment the audience is
-			// English. What it also did was enforce an adult age, and that does NOT
-			// go away: checkDescription() below is the same rule made deterministic,
-			// and it refuses rather than repairing. An LLM that usually complies was
-			// never the right shape for that guard anyway.
+			// The writer is back in front of a character, and it is worth being clear
+			// about what it buys, because it was taken out and put back in one
+			// afternoon. It no longer exists to translate — the audience is English
+			// — it exists because a four-word description leaves the model to invent
+			// the rest at random, and a random face is not something anyone can
+			// refine. It fills identity gaps only, in a few words, and says which
+			// ones it filled.
 			//
-			// A location still goes through the writer: it produces a card you read
-			// before spending three minutes, so five seconds is not the constraint,
-			// and it has no cheap preview to correct from.
-			if (kind === 'character') {
-				const gate = await fetch('/studio/api/sheetgate', {
-					method: 'POST',
-					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ description: request })
-				});
-				const g = (await gate.json()) as { ok?: boolean; error?: string };
-				if (!g.ok) {
-					pushError(g.error || 'That description cannot be rendered.');
-					return;
-				}
-				// Refining replaces the description outright: with no writer to merge
-				// an edit into the old text, what you type IS the description. The
-				// seed still carries, so the person only moves for the words.
-				const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
-				currentCharacter = { description: request, seed };
-				await launchSheetRender({ kind, description: request, stage: 'anchor', seed });
-				return;
-			}
-
+			// It costs about ten seconds, measured. That is more than the five it
+			// cost when it only translated, and the difference is output length
+			// rather than the model: grok-4.5 and grok-fast came in at the same
+			// number, so this sits on grok-fast.
 			const res = await fetch('/studio/api/sheetprompt', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ request, kind })
+				body: JSON.stringify({
+					request,
+					kind,
+					// A refinement merges into the description already on screen
+					// rather than starting over from the few words you just typed.
+					...(kind === 'character' && currentCharacter
+						? { previous: currentCharacter.description }
+						: {})
+				})
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -1164,6 +1153,22 @@
 				pushError(r.error || 'The description could not be prepared.');
 				return;
 			}
+			// A character does not stop to be approved. Its preview costs a third of
+			// a sheet and is the same face the sheet would give, so the picture is a
+			// better thing to react to than a paragraph.
+			if (kind === 'character') {
+				const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
+				currentCharacter = { description: r.sheet.description, seed };
+				await launchSheetRender({
+					kind,
+					description: r.sheet.description,
+					stage: 'anchor',
+					seed,
+					why: r.sheet.why
+				});
+				return;
+			}
+
 			pushItem({
 				who: 'studio',
 				kind: 'sheet',

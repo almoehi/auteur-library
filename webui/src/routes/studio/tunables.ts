@@ -77,7 +77,12 @@ export const GROUPS: { id: GroupId; title: string; affects: string; when: string
  *  needs the name the API answers to. */
 export const MODEL_API_NAME: Record<string, string> = {
 	'grok-4-5': 'grok-4.5',
-	'grok-4-3': 'grok-4.3'
+	'grok-4-3': 'grok-4.3',
+	// Absent until the sheet writer was moved onto it, which would have been a
+	// silent no-op: every caller does `MODEL_API_NAME[id] ?? MODEL_FALLBACK`, so
+	// an id missing from this map does not fail, it quietly runs grok-4.5. Any
+	// id offered in MODEL_CHOICES has to appear here too.
+	'grok-fast': 'grok-4.20-0309-non-reasoning'
 };
 
 /** Models the registry offers. Ids match spec.models in the workspace YAML. */
@@ -94,7 +99,7 @@ export const TUNABLES: Tunable[] = [
 		label: 'Sheet writer',
 		affects:
 			'The character and location sheets. It turns what you typed into the English description the sheet workflow receives — and translating is most of its job, because you write in Hungarian and KREA-2 reads English. It is deliberately not a creative writer: it must not invent a face, a wardrobe or a mood you did not ask for, because a sheet you did not describe is one every later clip then has to live with.',
-		model: 'grok-4-5',
+		model: 'grok-fast',
 		fallback: `You prepare the description for a reference-sheet render — either a character
 turnaround (front full-body, face close-up, both profiles, rear, one expression)
 or a location contact sheet (six locked-off views of one place).
@@ -105,24 +110,40 @@ A translator and a tidier, not a writer. The operator has described a person or
 a place, usually in Hungarian, sometimes tersely, sometimes with a typo. You
 render that same description in plain English, at the level of detail they gave.
 
-# THE IRON RULE — ADD NOTHING
+# WHAT YOU MAY ADD, AND WHAT YOU MAY NOT
 
-Every attribute in your output must come from the operator's text. If they did
-not say hair colour, you do not choose one. If they did not say what she is
-wearing, you do not dress her. If they did not name a mood, a light, a lens or a
-backdrop, you do not supply one.
+A character sheet defines a person. Where the operator left an identity attribute
+out, the model picks one at random — and a random face is not something anyone
+can iterate on. So you may complete, narrowly:
 
-This matters more here than anywhere else in this app. A sheet is made once and
-every clip afterwards is shot against it, so an invented detail is not a bad
-sentence — it is a face the operator never asked for, propagated through an
-entire production before anyone notices.
+  ALLOWED — hair colour and length, build, skin tone, eye colour, distinguishing
+  features. Choose plain, unremarkable values. Keep them to a few words. Say in
+  the "why" field which ones you supplied, so the operator can see what was not
+  theirs and change it.
 
-When the description is thin, the output is thin. That is correct. A four-word
-character is a four-word character.
+  NOT ALLOWED — anything that is not the person. No scene, no location, no
+  backdrop, no mood, no lighting, no camera, no lens, no pose, no action, no
+  story. The workflow renders six views of one subject on a neutral grey
+  backdrop; anything narrative confuses it, and anything about a place is simply
+  ignored or fought over.
+
+  NOT ALLOWED — clothing, ever, unless the operator named it. Not when they asked
+  for nudity, and not when they said nothing about it either. This studio's
+  subjects are more often undressed than dressed, so a helpfully supplied t-shirt
+  is a wrong guess most of the time — and unlike hair colour it is a guess the
+  operator then has to argue the model out of. Say nothing and let the render
+  decide; if they wanted clothes they will say so on the next pass.
+
+Keep the completion small. Two or three added attributes is help; a paragraph is
+you writing a different person than the one asked for, and the operator will not
+notice until the sheet is made and every later clip is shot against it.
 
 # WHAT YOU DO DO
 
-- Translate to English, using the plain word rather than the clinical one.
+- Translate to English if the operator wrote in another language. If they wrote
+  in English, leave their words alone — do not paraphrase English into different
+  English.
+- Use the plain word rather than the clinical one.
 - Fix obvious typos and mangled grammar, preserving the meaning
   ("végkony" -> "slim", "vékony").
 - Keep every number: an age, a height, a count.
