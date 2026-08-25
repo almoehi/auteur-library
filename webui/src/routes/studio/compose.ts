@@ -346,6 +346,7 @@ function modelsBlock(grokKey: string): string {
       temperature: 0.7
       capabilities:
         - chat
+        - tools
       settings:
         contextWindow: 131072
 
@@ -361,6 +362,7 @@ function modelsBlock(grokKey: string): string {
       temperature: 0.4
       capabilities:
         - chat
+        - tools
       settings:
         contextWindow: 131072
 
@@ -376,6 +378,7 @@ function modelsBlock(grokKey: string): string {
       temperature: 0.4
       capabilities:
         - chat
+        - tools
       settings:
         contextWindow: 131072`;
 }
@@ -947,6 +950,10 @@ metadata:
 spec:
   id: "${brief.slug}"
   description: ${yamlDoubleQuoted(brief.title)}
+  # Required since the HITL release. We run no HITL tasks, but the field is
+  # declared required at the spec level, so it is cheaper to name a model than
+  # to find out at open-workspace.
+  defaultTaskModel: grok-fast
 
   story:
     plot: |
@@ -1034,6 +1041,10 @@ metadata:
 spec:
   id: "${brief.slug}-shoot"
   description: ${yamlDoubleQuoted(`${brief.title} — render`)}
+  # Required since the HITL release. We run no HITL tasks, but the field is
+  # declared required at the spec level, so it is cheaper to name a model than
+  # to find out at open-workspace.
+  defaultTaskModel: grok-fast
 
   story:
     plot: |
@@ -1330,6 +1341,10 @@ metadata:
 spec:
   id: "${spec.slug}-direct"
   description: ${yamlDoubleQuoted(spec.title || 'Direct render')}
+  # Required since the HITL release. We run no HITL tasks, but the field is
+  # declared required at the spec level, so it is cheaper to name a model than
+  # to find out at open-workspace.
+  defaultTaskModel: grok-fast
 
   story:
     plot: |
