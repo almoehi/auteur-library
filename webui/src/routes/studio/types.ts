@@ -158,6 +158,10 @@ export interface ChatItem {
 			locationId: string;
 			characterName?: string;
 			locationName?: string;
+			/** Whether the seam is pinned to the prior clip's final frame. Default
+			 *  true. Chosen before the brief is written, so the writer and the
+			 *  render always agree about whether <Picture 3> exists. */
+			pinned?: boolean;
 		};
 		/** The kept character sheet this clip is shot with. Chosen before the
 		 *  writer runs, because it decides which brief template gets written. */

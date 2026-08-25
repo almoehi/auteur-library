@@ -201,7 +201,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// different writer — but the same gate, the same catalogue and the same
 	// plumbing, because everything except the instructions is identical.
 	const cont = (payload.continues ?? null) as
-		| { priorPrompt?: string; priorLoras?: Pick[] }
+		| { priorPrompt?: string; priorLoras?: Pick[]; pinned?: boolean }
 		| null;
 	const writerId = cont ? 'continuation_writer' : 'shot_writer';
 	if (cont) {
@@ -217,7 +217,11 @@ export const POST: RequestHandler = async ({ request }) => {
 			`<Video 1> is the clip being continued.` +
 				(character ? ` <Picture 1> is the character ${character}.` : '') +
 				(location ? ` <Picture 2> is the location ${location}.` : '') +
-				` <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`
+				(cont.pinned === false
+					? ` There is NO <Picture 3> — do not mention one. The seam is carried by <Video 1> alone,` +
+						` so inherit the camera, the light and the person from it, but the action may start` +
+						` somewhere other than exactly where the last frame left it.`
+					: ` <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`)
 		);
 		if (typeof cont.priorPrompt === 'string' && cont.priorPrompt.trim()) {
 			pinned.push(

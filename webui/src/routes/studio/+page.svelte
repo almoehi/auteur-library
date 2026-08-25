@@ -31,7 +31,8 @@
 	 */
 	// Aliased: this file already has a tick(id) of its own for the poll loop.
 	import { onMount, tick as flush } from 'svelte';
-	import { parseEventLog, type ActivityRow } from './activity';
+	import { friendly, parseEventLog, type ActivityRow } from './activity';
+	import { recordWait, typicalWait, typicalLabel } from './timings';
 	import { renderDocument, type Block } from './render-doc';
 	import {
 		SCENE_COUNT_MAX,
@@ -947,17 +948,36 @@
 	 *  not the session. */
 	let sendingSince = $state(0);
 	let sendingFor = $state(0);
+	/** What this wait has cost before, from this machine's own finished runs.
+	 *  Read when the wait starts rather than derived: the source is localStorage,
+	 *  which nothing can subscribe to, and the answer cannot change while a
+	 *  single request is in flight. Null until there are enough runs to mean
+	 *  something — see typicalWait. */
+	let typicalPrompt = $state<number | null>(null);
+	let typicalClip = $state<number | null>(null);
 	$effect(() => {
 		if (!sending) {
 			sendingFor = 0;
 			return;
 		}
+		typicalPrompt = typicalWait('prompt');
 		sendingSince = Date.now();
 		const id = setInterval(() => {
 			sendingFor = Math.round((Date.now() - sendingSince) / 1000);
 		}, 1000);
 		return () => clearInterval(id);
 	});
+
+	/** Half again as long as usual. Not an error — a cold model load does this
+	 *  legitimately — but it is the moment the reader starts wondering, and
+	 *  saying it first is the difference between a slow page and a broken one. */
+	const OVERDUE = 1.5;
+	const promptOverdue = $derived(
+		!!typicalPrompt && sendingFor * 1000 > typicalPrompt * OVERDUE
+	);
+	const clipOverdue = $derived(
+		!!typicalClip && startedAt > 0 && now - startedAt > typicalClip * OVERDUE
+	);
 
 	/** Which document cards the GPU gate opens. Not persisted: the gate is a
 	 *  single decision made once, and a reopened production is past it. */
@@ -1067,6 +1087,7 @@
 			continues?: { priorPrompt?: string; priorLoras?: Pick[] };
 		}
 	): Promise<ChatItem['shot'] | null> {
+		const askedAt = Date.now();
 		let res: Response;
 		try {
 			res = await fetch('/studio/api/shotprompt', {
@@ -1092,6 +1113,9 @@
 			pushError(r.error || 'The prompt could not be written.');
 			return null;
 		}
+		// Only the path that produced a shot. A failure tells you how long the
+		// failure took, which is not what the waiting line is promising.
+		recordWait('prompt', Date.now() - askedAt);
 		return r.shot;
 	}
 
@@ -1148,6 +1172,24 @@
 	 *  than on a separate screen because they are the same act — you describe
 	 *  something and the machine renders it. */
 	let wantTarget = $state<'clip' | 'character' | 'location'>('clip');
+
+	/** The wait named by what is being made, not by the machinery making it.
+	 *  "writing the prompt" was true of all three simple-mode waits, which is
+	 *  what made it useless: it never told you which one you were in. The chosen
+	 *  face is deliberately not repeated here — the chip saying so is two lines
+	 *  below, and a line this small should not spend half its width on it. */
+	const sendingWhat = $derived(
+		mode !== 'simple'
+			? brief && planningWs
+				? 'the crew is replying'
+				: 'planning'
+			: wantTarget === 'character'
+				? 'writing the character'
+				: wantTarget === 'location'
+					? 'writing the location'
+					: 'writing the shot'
+	);
+
 	/** The kept character the next clip is shot with, by id. Empty means the clip
 	 *  invents whoever the words describe, which is the old behaviour and stays
 	 *  the default. */
@@ -1250,6 +1292,7 @@
 			characterName: info.row.characterName,
 			locationName: info.row.locationName
 		};
+		pinSeam = true;
 		wantTarget = 'clip';
 		composer?.focus();
 	}
@@ -1264,7 +1307,7 @@
 			orientation: wantOrientation,
 			character: c.characterName,
 			location: c.locationName,
-			continues: { priorPrompt: prior?.prompt, priorLoras: prior?.launched }
+			continues: { priorPrompt: prior?.prompt, priorLoras: prior?.launched, pinned: pinSeam }
 		});
 		if (!shot) return;
 		lastRequest = request;
@@ -1274,7 +1317,7 @@
 		if (prior?.width && prior?.height) {
 			shot.orientation = prior.width >= prior.height ? 'landscape' : 'portrait';
 		}
-		shot.continues = c;
+		shot.continues = { ...c, pinned: pinSeam };
 		shot.characterId = c.characterId;
 		shot.characterName = c.characterName;
 		shot.locationId = c.locationId;
@@ -1757,7 +1800,8 @@
 				priorArtifact: c.artifact,
 				priorFile: c.file,
 				characterId: c.characterId,
-				locationId: c.locationId
+				locationId: c.locationId,
+				pinned: c.pinned !== false
 			};
 			try {
 				const res = await fetch('/studio/api/launch', {
@@ -1813,7 +1857,11 @@
 			// The render poll narrates a shoot it announces first; there is no
 			// shoot here, only this clip, so the announcement is already spent.
 			shootsAnnounced = true;
-			if (announce) pushStudio(`Rendering ${shot.seconds}s, ${shot.orientation}.`);
+			// Nothing is announced here any more. The card above already carries
+			// the length and the frame size, the event feed says "Started clip 1"
+			// a moment later, and the live line below counts. Three statements of
+			// the same fact, and the only one of the three that could not tell you
+			// it was still going was this one.
 			persist();
 			startPolling();
 			return true;
@@ -2010,6 +2058,10 @@
 	 *  exists. Setting it puts the composer into continuation mode; sending or
 	 *  cancelling clears it. */
 	let continuing = $state<NonNullable<ChatItem['shot']>['continues'] | null>(null);
+	/** Pinned to the prior clip's last frame, or a free start. On by default: the
+	 *  join is the reason the feature exists, and the looser setting is the one
+	 *  you reach for deliberately. */
+	let pinSeam = $state(true);
 	let joining = $state<Record<string, boolean>>({});
 
 	/** Whether a clip can be continued, and if not, what to do about it.
@@ -2471,6 +2523,13 @@
 		return `${t}|${a}`;
 	}
 
+	/** Called wherever a render begins. The estimate is read once per run for the
+	 *  same reason as the prompt one, and re-read after a run finishes so the
+	 *  next wait already knows about the one that just ended. */
+	function refreshClipEstimate() {
+		typicalClip = typicalWait('clip');
+	}
+
 	function stopPolling() {
 		if (timer) clearTimeout(timer);
 		timer = null;
@@ -2480,6 +2539,7 @@
 
 	function startPolling() {
 		stopPolling();
+		refreshClipEstimate();
 		quiet = 0;
 		lastSig = '';
 		sawAllDone = false;
@@ -2595,6 +2655,13 @@
 			}
 			if (finished) {
 				if (sawAllDone) {
+					// One clip only, and only one that worked. A full production is an
+					// order of magnitude longer, and a couple of them in the sample
+					// would make the clip estimate useless.
+					if (simpleRun && startedAt && !ts.some((t) => DEAD.includes(t.status))) {
+						recordWait('clip', Date.now() - startedAt);
+						refreshClipEstimate();
+					}
 					// Close the render log's row for this run. Fire and forget: the
 					// row is evidence, and a clip that rendered must not look failed
 					// because the bookkeeping call did.
@@ -4841,9 +4908,13 @@
 							 happening, and it makes a stall visible as a stall. -->
 						<p class="flex items-center gap-2.5 text-xs text-[var(--st-faint)]">
 							<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
-							<span>{mode === 'simple' ? 'writing the prompt' : brief && planningWs ? 'the crew is replying' : 'planning'}</span>
+							<span>{sendingWhat}</span>
 							{#if sendingFor > 1}
 								<span class="tabular-nums">{sendingFor}s</span>
+							{/if}
+							{#if typicalPrompt && sendingFor > 2}
+								<span aria-hidden="true">·</span>
+								<span>{promptOverdue ? 'longer than usual' : typicalLabel(typicalPrompt)}</span>
 							{/if}
 						</p>
 					{/if}
@@ -4894,9 +4965,19 @@
 						<p class="mb-2 flex items-center gap-2.5 px-2 text-xs text-[var(--st-muted)]">
 							<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
 							<span class="tabular-nums">{elapsedLabel(now - startedAt)}</span>
+							{#if simpleRun && typicalClip}
+								<!-- The other half of the sentence. `4m 59s` alone cannot tell
+									 you whether the answer is due at five minutes or at twenty,
+									 and that is the whole difference between waiting and
+									 wondering whether the page has hung. -->
+								<span class="text-[var(--st-faint)]">·</span>
+								<span class="text-[var(--st-faint)]">
+									{clipOverdue ? 'longer than usual' : typicalLabel(typicalClip)}
+								</span>
+							{/if}
 							{#if railRunning}
 								<span class="text-[var(--st-faint)]">·</span>
-								<span class="min-w-0 truncate">{railRunning.label}</span>
+								<span class="min-w-0 truncate">{friendly(railRunning.label)}</span>
 							{/if}
 						</p>
 					{/if}
@@ -4946,10 +5027,27 @@
 								<div class="min-w-0">
 									<p class="font-display text-sm font-semibold">Continuing that clip</p>
 									<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
-										Say what happens next — it picks up from the last frame, with
-										{continuing.characterName ?? 'the same person'} in
-										{continuing.locationName ?? 'the same place'}. The new piece renders on its
-										own and joins onto the end.
+										Say what happens next — with {continuing.characterName ?? 'the same person'} in
+										{continuing.locationName ?? 'the same place'}. The new piece renders on its own
+										and joins onto the end.
+									</p>
+									<!-- The whole prior clip goes to the model either way: the person,
+									     the room, the light and the motion all come from it. This only
+									     decides whether the FIRST INSTANT is nailed to the frame the
+									     last clip ended on. -->
+									<button
+										type="button"
+										aria-pressed={pinSeam}
+										onclick={() => (pinSeam = !pinSeam)}
+										class="mt-2 cursor-pointer rounded-full px-3 py-1 text-xs transition-colors {pinSeam
+											? 'bg-[var(--st-surface-2)] text-[var(--st-text)]'
+											: 'bg-[var(--st-surface)] text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+										>{pinSeam ? 'starts on the last frame' : 'free start'}</button
+									>
+									<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
+										{pinSeam
+											? 'The join is seamless — the first instant is the frame the clip ended on.'
+											: 'The scene carries over but the action can begin somewhere else. The join may step.'}
 									</p>
 								</div>
 								<button
@@ -4999,7 +5097,14 @@
 											alt=""
 											class="size-5 shrink-0 rounded-full object-cover"
 										/>
-										<span class="max-w-[11rem] truncate">{chosenCharacter.name}</span>
+										<!-- 4rem, because a sheet made from a photograph is named after the
+											 file, and "Screenshot 2026 08 25 at 23.24.11" made a 244px chip
+											 next to an 85px one. The chip's own furniture — avatar, ×,
+											 padding — is 68px, so matching `one clip` exactly would leave
+											 the name 17px. This is the smallest cap that still fits every
+											 name anyone actually types: the longest measured, "Neon alley",
+											 needs 57px. -->
+										<span class="max-w-[4rem] truncate">{chosenCharacter.name}</span>
 										<button
 											type="button"
 											aria-label="shoot with anyone instead"
@@ -5019,7 +5124,7 @@
 											alt=""
 											class="size-5 shrink-0 rounded-md object-cover"
 										/>
-										<span class="max-w-[11rem] truncate">{chosenLocation.name}</span>
+										<span class="max-w-[4rem] truncate">{chosenLocation.name}</span>
 										<button
 											type="button"
 											aria-label="shoot anywhere instead"

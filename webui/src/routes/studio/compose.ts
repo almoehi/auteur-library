@@ -1741,8 +1741,23 @@ export interface ContinuationSpec {
 	 *  The reference video carries the motion but leaves the exact picture at the
 	 *  seam to the model; this pins the picture as well. The workflow has three
 	 *  spare optional reference slots, so it costs a slot and an upload rather
-	 *  than a change to the graph. */
+	 *  than a change to the graph.
+	 *
+	 *  Absent when the operator asked for a free start — see `pinned`. */
 	lastFrameUrl?: string;
+	/** Whether the seam is pinned to that frame. Default true.
+	 *
+	 *  Turning it off is a real choice, not a fallback: the video reference still
+	 *  carries the person, the room, the light and the motion, so the scene cannot
+	 *  wander far — what it buys is room for the action to start somewhere other
+	 *  than exactly where the last frame left it, at the cost of a seam that may
+	 *  visibly step.
+	 *
+	 *  Chosen before the brief is written, which is what makes it safe: the writer
+	 *  is told whether <Picture 3> exists, so the prompt and the inputs always
+	 *  agree. An earlier version decided this at launch instead and could produce
+	 *  a brief naming a picture nobody was given. */
+	pinned?: boolean;
 
 	studioOrigin?: string;
 }
@@ -1768,10 +1783,9 @@ export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = '
 		['the prior clip', spec.priorClipUrl],
 		['the character', spec.characterUrl],
 		['the location', spec.locationUrl],
-		// Required for the same reason as the rest: the brief names <Picture 3> as
-		// the final frame before this runs, so a missing one is a brief describing
-		// a reference nobody was given.
-		['the final frame', spec.lastFrameUrl]
+		// Required only when the brief was written expecting it. The writer is told
+		// the same flag, so the two cannot disagree.
+		...(spec.pinned === false ? [] : ([['the final frame', spec.lastFrameUrl]] as const))
 	] as const) {
 		// All three are required inputs of the workflow. A missing one comes back
 		// as `missing required input` from the tool handler rather than a render,
@@ -1865,13 +1879,13 @@ ${modelsBlock(grokKey)}
         References, each copied exactly as written:
         prior_clip = ${spec.priorClipUrl}
         character_sheet = ${spec.characterUrl}
-        environment_plate = ${spec.locationUrl}
-        ref_picture_3 = ${spec.lastFrameUrl}
+        environment_plate = ${spec.locationUrl}${spec.pinned === false ? '' : `
+        ref_picture_3 = ${spec.lastFrameUrl}`}
 
         <Video 1> is the clip being continued.
         <Picture 1> is the character${spec.characterName ? ` ${indentBlock(spec.characterName, 0)}` : ''}.
-        <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ''}.
-        <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.
+        <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ''}.${spec.pinned === false ? '' : `
+        <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`}
 
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
         shorten, expand, reorder or comment on it.

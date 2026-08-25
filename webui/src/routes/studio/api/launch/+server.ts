@@ -385,19 +385,18 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				new Uint8Array(locationBytes),
 				fetch
 			);
-			// The seam-pinning frame, and required rather than best-effort.
-			//
-			// The brief is written before the launch and always names <Picture 3> as
-			// the final frame, so a run without it would describe a reference the
-			// model was never given. Making it optional would trade a loud failure
-			// here for a quiet mismatch on the GPU — and a clip whose last frame
-			// will not decode is not one the workflow could read as a video either.
-			spec.lastFrameUrl = await putObject(
-				s3,
-				`studio-cont/${spec.slug}/ref_picture_3.png`,
-				await lastFrame(clipPath),
-				fetch
-			);
+			// The seam-pinning frame, unless a free start was asked for. Required
+			// when it is used rather than best-effort: the brief was written naming
+			// <Picture 3>, so a run without it would describe a reference the model
+			// never got — a quiet mismatch on the GPU instead of a loud failure here.
+			if (spec.pinned !== false) {
+				spec.lastFrameUrl = await putObject(
+					s3,
+					`studio-cont/${spec.slug}/ref_picture_3.png`,
+					await lastFrame(clipPath),
+					fetch
+				);
+			}
 		} catch (e) {
 			return json({ ok: false, error: `the references could not be uploaded — ${e}` }, { status: 200 });
 		}
