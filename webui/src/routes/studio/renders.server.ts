@@ -56,6 +56,22 @@ export interface RenderRow {
 	fps: number;
 	seed: number;
 
+	/** The character and location this clip was shot with, if any.
+	 *
+	 *  Recorded because a clip is not only a file — it is a shot of someone,
+	 *  somewhere, and the next thing you want from it is usually more of the same
+	 *  scene. Continuing a clip needs both by id, and until now the render log
+	 *  kept every other detail of a run and not these two, so the answer lived
+	 *  only in the chat transcript of the tab that launched it.
+	 *
+	 *  The names are kept beside the ids on purpose. An id resolves to nothing
+	 *  once a character is deleted, and "shot with someone you have since removed"
+	 *  is a more useful thing to be able to say than a dangling identifier. */
+	characterId?: string;
+	characterName?: string;
+	locationId?: string;
+	locationName?: string;
+
 	/** Launch to terminal, as this app saw it — so it includes the workspace
 	 *  opening, any model downloads, and up to one poll interval of lag. It is a
 	 *  wall clock, not the GPU's number, and is named for what it is: the GPU's

@@ -407,7 +407,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			height: spec.height,
 			seconds: spec.seconds,
 			fps: DIRECT_FPS,
-			seed: spec.seed
+			seed: spec.seed,
+			// Who and where. Set above from the picks, after the sheets were read —
+			// so a name here means the render really got that picture, not merely
+			// that the browser asked for it.
+			...(spec.characterId ? { characterId: spec.characterId } : {}),
+			...(spec.characterName ? { characterName: spec.characterName } : {}),
+			...(spec.locationId ? { locationId: spec.locationId } : {}),
+			...(spec.locationName ? { locationName: spec.locationName } : {})
 		});
 
 		return await openWorkspace(
