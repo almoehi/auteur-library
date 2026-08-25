@@ -35,23 +35,36 @@ const SHEETS: Record<string, string> = {
 	location: 'krea2_location_sheet'
 };
 
-/** The one card we pin to.
+/** The one card we pin to — and it is the cheapest one, which took two
+ *  measurements to earn.
  *
- *  h100, deployed 2026-08-25 as `comfy-compute-h100-cu13-0-32-0` alongside the
- *  l40s and a100 apps that were already there. Nothing about this workflow
- *  argues against it: the attention backend it selects is
- *  `comfy kitchen (int8)`, not SageAttention, so the sm_90 kernel gap that pins
- *  our clip workflow to a100 does not apply here.
+ *  The same sheet was rendered on both tiers, same description, same everything:
  *
- *  Naming a tier is not free of consequence, and the earlier note in this spot
- *  had the consequence backwards. Modal endpoints are not probed — the harness
- *  constructs a URL for every supported tier from the workspace slug and the
- *  version, so an undeployed card is "discovered" like any other and fails at
- *  submit with a retryable error that starts a GPU downgrade ladder. It does not
- *  quietly resolve to something cheaper. That makes an undeployed pin a slow,
- *  confusing failure rather than a silent demotion — worth knowing before
- *  changing this line. */
-const PIN = 'h100';
+ *    l40s   09:54:22 -> 09:57:17   175s
+ *    h100   11:03:46 -> 11:06:36   170s
+ *
+ *  Three percent. The GPU is not what this workflow spends its time on. Nearly
+ *  all of those seconds are ComfyUI starting and ~45 GB of weights being read
+ *  off the Modal volume, because `scaledown_window=2` destroys the container two
+ *  seconds after each job, `@modal.enter()` is an empty `pass`, and ComfyUI is
+ *  started lazily inside `run()`. None of that is faster on a better card, and
+ *  all three settings live in the harness's deploy.py rather than here.
+ *
+ *  So this pin is not "use the fast card". It is "do not let the choice drift":
+ *  the workflow's own spec allows [l40s, a100, h100], the harness picks the
+ *  cheapest of whatever it is allowed, and that is a decision worth making on
+ *  purpose rather than inheriting. Measured, the cheapest is also the right one.
+ *  An h100 endpoint stays deployed for the clip workflow, where a render is
+ *  three to fifteen times longer and the sampling share is worth re-testing.
+ *
+ *  One correction to an earlier note in this spot, since it would mislead the
+ *  next person to change this line: Modal endpoints are never probed. The
+ *  harness constructs a URL for every supported tier from the workspace slug and
+ *  the version, so naming an undeployed card does NOT quietly resolve to
+ *  something cheaper — it fails at submit with a retryable error and starts a
+ *  GPU downgrade ladder. A wrong value here is a slow confusing failure, not a
+ *  silent demotion. */
+const PIN = 'l40s';
 
 /** Fetched per request, but not per fetch: the harness asks for the YAML once
  *  per workspace and there is no reason to hit GitHub every time somebody
