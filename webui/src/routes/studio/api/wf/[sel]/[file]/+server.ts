@@ -173,7 +173,14 @@ function buildJson(entries: { lora: Lora; strength: number }[], assets: string[]
 	return JSON.stringify(graph, null, 2);
 }
 
-/** The model entries for the stack, in the base file's own layout. */
+/** The model entries for the stack, in the base file's own layout.
+ *
+ *  No `dest:` here, though the base file carried one for a while. The harness
+ *  never reads that key: the download payload it sends the worker is
+ *  `{url, dest_type: <folder type>, filename, sha256}`, so a model gets a
+ *  folder *type* and a bare name and nothing else. The `loras/MINIMAX/` we
+ *  used to declare was inert — the volume has no MINIMAX directory and never
+ *  had one; every adapter sits flat in `ComfyUI/models/loras/`. */
 function modelBlock(entries: { lora: Lora; strength: number }[]): string {
 	const rows: string[] = [];
 	for (const { lora } of entries) {
@@ -181,7 +188,6 @@ function modelBlock(entries: { lora: Lora; strength: number }[]): string {
 		rows.push(
 			`  - name: ${lora.file.replace(/\.safetensors$/, '')}`,
 			`    type: lora`,
-			`    dest: loras/MINIMAX/`,
 			`    files:`,
 			`      - url: ${lora.url}`,
 			// Civitai serves the file behind a redirect that does not carry the

@@ -173,7 +173,6 @@ models:
 
   - name: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy
     type: lora
-    dest: loras/MINIMAX/
     files:
       - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
         sha256: fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1
@@ -193,7 +192,6 @@ models:
   # with an 8-step turbo LoRA, and this workflow runs 4.
   - name: PlagueKind-tiddies-realismslider
     type: lora
-    dest: loras/MINIMAX/
     files:
       - url: https://civitai.com/api/download/models/3229050?fileId=3111384
         filename: PlagueKind-tiddies-realismslider.safetensors
