@@ -160,13 +160,13 @@ export function checkDescription(text: string): MinorCheck {
 	if (!ages.length) {
 		return {
 			refuse:
-				'the description reached the renderer without an age, which is how a subject ends up looking like a child — rejected rather than rendered'
+				'Say how old they are — an age of 18 or over, in words like "a 28-year-old woman". Without one the model has nothing anchoring the subject as an adult, and that is exactly how a render comes back looking like a child.'
 		};
 	}
 	const a = AMBIGUOUS_RE.exec(text);
 	if (a && !ages.some((n) => n >= ADULT_MIN)) {
 		return {
-			refuse: `the description says "${a[1]}" without an adult age beside it — rejected rather than rendered`
+			refuse: `"${a[1]}" needs an adult age beside it — write "a 24-year-old woman" rather than leaving it open.`
 		};
 	}
 	return {};

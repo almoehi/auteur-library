@@ -820,10 +820,12 @@
 			// The banner above the field already says what this mode is for, so the
 			// placeholder only has to say what to type. The one case it still earns
 			// its words is a refinement, where what to type is not obvious.
+			// The example carries an age because the gate requires one, and an
+			// example that would itself be refused is a bad example.
 			if (wantTarget === 'character')
 				return currentCharacter
-					? 'Say what to change about them — everything else stays'
-					: 'A woman in her thirties, short dark hair, athletic';
+					? 'Describe them again, with the change'
+					: 'A 32-year-old woman, short dark hair, athletic build';
 			if (wantTarget === 'location') return 'A cheap motel room at night, one lamp on';
 			return 'Describe the shot — one clip per message';
 		}
@@ -1117,18 +1119,41 @@
 
 	async function sheetFromRequest(request: string, kind: 'character' | 'location') {
 		try {
+			// No writer in front of a character any more. It cost five seconds of a
+			// path where every second is felt, and it earned them by translating
+			// Hungarian — which stops being the job the moment the audience is
+			// English. What it also did was enforce an adult age, and that does NOT
+			// go away: checkDescription() below is the same rule made deterministic,
+			// and it refuses rather than repairing. An LLM that usually complies was
+			// never the right shape for that guard anyway.
+			//
+			// A location still goes through the writer: it produces a card you read
+			// before spending three minutes, so five seconds is not the constraint,
+			// and it has no cheap preview to correct from.
+			if (kind === 'character') {
+				const gate = await fetch('/studio/api/sheetgate', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ description: request })
+				});
+				const g = (await gate.json()) as { ok?: boolean; error?: string };
+				if (!g.ok) {
+					pushError(g.error || 'That description cannot be rendered.');
+					return;
+				}
+				// Refining replaces the description outright: with no writer to merge
+				// an edit into the old text, what you type IS the description. The
+				// seed still carries, so the person only moves for the words.
+				const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
+				currentCharacter = { description: request, seed };
+				await launchSheetRender({ kind, description: request, stage: 'anchor', seed });
+				return;
+			}
+
 			const res = await fetch('/studio/api/sheetprompt', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({
-					request,
-					kind,
-					// Only characters refine — a location has no preview to look at
-					// while you decide what to change.
-					...(kind === 'character' && currentCharacter
-						? { previous: currentCharacter.description }
-						: {})
-				})
+				body: JSON.stringify({ request, kind })
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -1139,24 +1164,6 @@
 				pushError(r.error || 'The description could not be prepared.');
 				return;
 			}
-
-			// A character does not stop to be approved. Its preview costs a third of
-			// a sheet and is the same face the sheet would give, so the picture is a
-			// better thing to react to than a paragraph — you look at it and say what
-			// to change. A location has no cheap preview, so it keeps the card.
-			if (kind === 'character') {
-				const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
-				currentCharacter = { description: r.sheet.description, seed };
-				await launchSheetRender({
-					kind,
-					description: r.sheet.description,
-					stage: 'anchor',
-					seed,
-					why: r.sheet.why
-				});
-				return;
-			}
-
 			pushItem({
 				who: 'studio',
 				kind: 'sheet',
