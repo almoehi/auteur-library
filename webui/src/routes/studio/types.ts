@@ -252,6 +252,10 @@ export interface StoredSheet {
 	size: number;
 	addedAt: string;
 	workspace?: string;
+	seed?: number;
+	/** The six-view turnaround, which arrives minutes after the character does —
+	 *  absent until one has been asked for. */
+	sheet?: { state: 'rendering' | 'ready' | 'failed'; file?: string; error?: string };
 }
 
 /** status is `pending | running | success | permanently-failed`, with

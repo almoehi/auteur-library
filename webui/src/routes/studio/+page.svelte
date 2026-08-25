@@ -1328,27 +1328,72 @@
 		}
 	}
 
-	/** From a preview to the real thing: the same words and the same seed, so the
-	 *  turnaround is of the person on screen rather than a new one. */
-	async function promoteToSheet(itemId: string) {
+	/** Keep the person, then let the turnaround catch up.
+	 *
+	 *  The save is the whole transaction as far as you are concerned: the
+	 *  character exists, has a face, and is pickable for a clip the moment this
+	 *  returns. The six-view sheet is started behind it and lands minutes later —
+	 *  which is why nothing here waits for it, and why the rail shows which
+	 *  characters are still being drawn. */
+	async function saveCharacter(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
-		if (!item?.sheet || item.sheet.stage !== 'anchor' || sheetBusy[itemId]) return;
+		if (!item?.sheet || item.sheet.id || sheetBusy[itemId]) return;
+		const { job, description, name, seed } = item.sheet;
+		if (!job) return;
 		sheetBusy[itemId] = true;
 		try {
-			const ok = await launchSheetRender({
-				kind: 'character',
-				description: item.sheet.description,
-				stage: 'sheet',
-				seed: item.sheet.seed ?? currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000)
+			const res = await fetch('/studio/api/sheet', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ kind: 'character', name, description, job, seed })
 			});
-			// Asking for the turnaround closes this person off. Without it the next
-			// message would be read as one more change to them, and someone who has
-			// just finished a character and started describing the next one would
-			// get the first one wearing the second one's clothes.
-			if (ok) currentCharacter = null;
+			const r = (await res.json()) as {
+				ok?: boolean;
+				sheet?: StoredSheet;
+				sheets?: StoredSheet[];
+				error?: string;
+			};
+			if (!r.ok || !r.sheet) {
+				pushError(r.error || 'The character could not be saved.');
+				return;
+			}
+			item.sheet.id = r.sheet.id;
+			if (r.sheets) sheets = r.sheets;
+			// This person is finished; the next message describes someone new.
+			currentCharacter = null;
+			persist();
+
+			// Fire and forget. It is server-side and outlives this tab, so a failure
+			// here costs the turnaround, never the character.
+			void fetch('/studio/api/sheetfull', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id: r.sheet.id })
+			})
+				.then(() => watchSheets())
+				.catch(() => {});
+		} catch (e) {
+			pushError(String(e));
 		} finally {
 			sheetBusy[itemId] = false;
 		}
+	}
+
+	/** Poll the library while any turnaround is still being drawn, and stop when
+	 *  none is. A spinner that never resolves is worse than no spinner. */
+	let sheetWatch: ReturnType<typeof setTimeout> | null = null;
+
+	function watchSheets() {
+		if (sheetWatch) clearTimeout(sheetWatch);
+		const tick = async () => {
+			await loadSheets();
+			if (sheets.some((s) => s.sheet?.state === 'rendering')) {
+				sheetWatch = setTimeout(tick, 8000);
+			} else {
+				sheetWatch = null;
+			}
+		};
+		sheetWatch = setTimeout(tick, 4000);
 	}
 
 	/** What the running sheet render was asked for. The finished artifact carries
@@ -1403,6 +1448,36 @@
 			pushError(String(e));
 		} finally {
 			sheetBusy[itemId] = false;
+		}
+	}
+
+	/** Put a finished turnaround in the transcript, which is where everything else
+	 *  in this app is looked at. */
+	function showSheet(sh: StoredSheet) {
+		pushItem({
+			who: 'studio',
+			kind: 'sheet',
+			sheet: {
+				kind: 'character',
+				stage: 'sheet',
+				description: sh.description,
+				name: sh.name,
+				id: sh.id,
+				url: `/studio/api/sheet/full/${sh.id}`
+			}
+		});
+	}
+
+	async function retrySheet(id: string) {
+		try {
+			await fetch('/studio/api/sheetfull', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id })
+			});
+			watchSheets();
+		} catch (e) {
+			pushError(String(e));
 		}
 	}
 
@@ -2852,7 +2927,10 @@
 		void loadVerdicts();
 		// Sheets live on the server too, and outlast every run — the picker has to
 		// ask rather than assume this tab has seen them before.
-		void loadSheets();
+		void loadSheets().then(() => {
+			// A turnaround started before this reload is still going server-side.
+			if (sheets.some((s) => s.sheet?.state === 'rendering')) watchSheets();
+		});
 		try {
 			const raw = localStorage.getItem(SETUP_KEY);
 			if (raw) {
@@ -3238,7 +3316,36 @@
 										onblur={(e) => renameStoredSheet(sh.id, e.currentTarget.value)}
 										class="w-full truncate border-0 bg-transparent p-0 text-xs text-[var(--st-text)] outline-none focus:ring-0"
 									/>
-									<p class="text-[0.65rem] text-[var(--st-faint)]">{sh.kind}</p>
+									<!-- What state their turnaround is in. A character is usable without
+										 one, so this is progress rather than a warning — except when it
+										 failed, which is worth saying out loud. -->
+									{#if sh.sheet?.state === 'rendering'}
+										<p class="flex items-center gap-1.5 text-[0.65rem] text-[var(--st-faint)]">
+											<span
+												class="spin block size-2 rounded-full border border-[var(--st-surface-2)] border-t-[var(--st-accent)]"
+											></span>
+											drawing the six views
+										</p>
+									{:else if sh.sheet?.state === 'ready'}
+										<button
+											type="button"
+											class="cursor-pointer text-[0.65rem] text-[var(--st-muted)] underline-offset-2 hover:text-[var(--st-text)] hover:underline"
+											onclick={() => showSheet(sh)}
+										>
+											six views — open
+										</button>
+									{:else if sh.sheet?.state === 'failed'}
+										<button
+											type="button"
+											title={sh.sheet.error ?? ''}
+											class="cursor-pointer text-[0.65rem] text-[#e0a03a] hover:underline"
+											onclick={() => retrySheet(sh.id)}
+										>
+											sheet failed — retry
+										</button>
+									{:else}
+										<p class="text-[0.65rem] text-[var(--st-faint)]">{sh.kind}</p>
+									{/if}
 								</div>
 								<!-- Two clicks, and the first one is visible. This was a bare × at
 									 opacity-0: invisible, still clickable, no confirmation, and it
@@ -3713,21 +3820,37 @@
 
 								{#if item.sheet.url && item.sheet.stage === 'anchor'}
 								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
-									<div class="flex flex-wrap items-center justify-between gap-3">
-										<p class="max-w-sm text-xs leading-relaxed text-[var(--st-faint)]">
-											Not right? Say what to change in the chat — the same person is kept and
-											only what you name moves. The full sheet gives six views of this face
-											and takes about three times as long.
+									{#if item.sheet.id}
+										<p class="text-sm text-[var(--st-muted)]">
+											Saved as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
+											Every clip can use them from here on — the six-view sheet is rendering
+											in the background and will appear beside them when it is done.
 										</p>
-										<button
-											type="button"
-											disabled={sheetBusy[item.id] || renderLaunching}
-											onclick={() => promoteToSheet(item.id)}
-											class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
-										>
-											{sheetBusy[item.id] ? 'Starting…' : 'More pictures of them'}
-										</button>
-									</div>
+									{:else}
+										<label class="block text-xs text-[var(--st-faint)]" for="char-name-{item.id}">
+											Name them — this is what the picker will show
+										</label>
+										<div class="mt-2 flex flex-wrap items-center gap-2">
+											<input
+												id="char-name-{item.id}"
+												bind:value={item.sheet.name}
+												spellcheck="false"
+												class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+											/>
+											<button
+												type="button"
+												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
+												onclick={() => saveCharacter(item.id)}
+												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+											>
+												{sheetBusy[item.id] ? 'Saving…' : 'Save character'}
+											</button>
+										</div>
+										<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
+											Not right? Say what to change in the chat — the same person is kept and
+											only what you name moves.
+										</p>
+									{/if}
 								</div>
 								{:else if item.sheet.url}
 								<div class="mt-4 border-t border-[var(--st-line)] pt-4">

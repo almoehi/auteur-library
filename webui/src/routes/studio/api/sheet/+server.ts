@@ -43,6 +43,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		artifact?: unknown;
 		file?: unknown;
 		job?: unknown;
+		seed?: unknown;
 	};
 	try {
 		body = await request.json();
@@ -63,12 +64,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	if (jobId) {
 		const local = readPreview(jobId);
 		if (!local) return json({ ok: false, error: 'that preview is gone — render it again' }, { status: 200 });
+		const seed = Number.isFinite(Number(body.seed)) ? Math.floor(Number(body.seed)) : undefined;
 		const sheet = addSheet({
 			kind,
 			name: name || nameFromDescription(description, kind),
 			description,
 			bytes: local,
-			ext: '.png'
+			ext: '.png',
+			...(seed !== undefined ? { seed } : {})
 		});
 		return json({ ok: true, sheet, sheets: listSheets() });
 	}

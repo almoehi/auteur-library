@@ -31,6 +31,22 @@ export const MAX_SHEET_BYTES = 40 * 1024 * 1024;
 
 export type SheetKind = 'character' | 'location';
 
+/** The six-view turnaround, which arrives after the character does.
+ *
+ *  Saving a character is instant — it keeps the preview you just approved — and
+ *  the sheet renders behind you. That order is deliberate: the turnaround costs
+ *  three minutes and the character is usable without it, so making the save wait
+ *  for it would be charging you for something you have not asked to look at yet. */
+export interface SheetRender {
+	state: 'rendering' | 'ready' | 'failed';
+	/** Stored filename of the six-view image, once there is one. */
+	file?: string;
+	error?: string;
+	startedAt?: string;
+	/** The workspace it rendered in, for tracing a sheet back to its run. */
+	workspace?: string;
+}
+
 export interface Sheet {
 	/** Our own handle. Also the stored basename, so the file is findable by
 	 *  hand in the folder without consulting the manifest. */
@@ -49,6 +65,11 @@ export interface Sheet {
 	addedAt: string;
 	/** The workspace that rendered it, for tracing a sheet back to its run. */
 	workspace?: string;
+	/** The seed the profile picture was rendered with. Carried so the six-view
+	 *  sheet is a turnaround of the face you approved rather than a new one. */
+	seed?: number;
+	/** The turnaround, absent until one has been asked for. */
+	sheet?: SheetRender;
 }
 
 function ensure(): void {
@@ -64,6 +85,9 @@ export function listSheets(): Sheet[] {
 		// A row whose file has gone is worse than a missing row: every picker
 		// would offer it and every render using it would fail late, on the GPU.
 		return (parsed as Sheet[])
+			// Only the profile picture decides whether a character exists. A missing
+			// turnaround is a turnaround that failed or has not arrived, not a
+			// reason to forget the person.
 			.filter((s) => s?.id && s?.file && existsSync(join(DIR, s.file)))
 			.sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1));
 	} catch {
@@ -108,6 +132,7 @@ export function addSheet(row: {
 	bytes: Uint8Array;
 	ext?: string;
 	workspace?: string;
+	seed?: number;
 }): Sheet {
 	ensure();
 	const id = mkId();
@@ -124,7 +149,8 @@ export function addSheet(row: {
 		file,
 		size: row.bytes.byteLength,
 		addedAt: new Date().toISOString(),
-		...(row.workspace ? { workspace: row.workspace } : {})
+		...(row.workspace ? { workspace: row.workspace } : {}),
+		...(row.seed !== undefined ? { seed: row.seed } : {})
 	};
 	writeManifest([sheet, ...listSheets()]);
 	return sheet;
@@ -145,6 +171,50 @@ export function readSheet(id: string): Buffer | null {
 	}
 }
 
+/** Mark a character's turnaround as being worked on, or finished, or lost.
+ *
+ *  Writes the whole manifest each time, which is fine for a list this size and
+ *  saves inventing a partial-update path for one field. */
+export function setSheetRender(id: string, patch: Partial<SheetRender>): Sheet | null {
+	const rows = listSheets();
+	const row = rows.find((s) => s.id === id);
+	if (!row) return null;
+	row.sheet = { state: 'rendering', ...row.sheet, ...patch } as SheetRender;
+	writeManifest(rows);
+	return row;
+}
+
+/** Store the finished turnaround beside the profile picture. */
+export function attachSheetImage(id: string, bytes: Uint8Array, workspace?: string): Sheet | null {
+	ensure();
+	const rows = listSheets();
+	const row = rows.find((s) => s.id === id);
+	if (!row) return null;
+	const file = `${id}-sheet.png`;
+	try {
+		writeFileSync(join(DIR, file), bytes);
+	} catch (e) {
+		row.sheet = { state: 'failed', error: `could not be saved — ${e}` };
+		writeManifest(rows);
+		return row;
+	}
+	row.sheet = { state: 'ready', file, ...(workspace ? { workspace } : {}) };
+	writeManifest(rows);
+	return row;
+}
+
+/** The turnaround's bytes, if it has arrived. */
+export function readSheetImage(id: string): Buffer | null {
+	const s = getSheet(id);
+	if (!s?.sheet?.file) return null;
+	try {
+		const p = join(DIR, s.sheet.file);
+		return existsSync(p) ? readFileSync(p) : null;
+	} catch {
+		return null;
+	}
+}
+
 export function renameSheet(id: string, name: string): Sheet | null {
 	const rows = listSheets();
 	const row = rows.find((s) => s.id === id);
@@ -160,6 +230,7 @@ export function removeSheet(id: string): boolean {
 	if (!row) return false;
 	try {
 		rmSync(join(DIR, row.file), { force: true });
+		if (row.sheet?.file) rmSync(join(DIR, row.sheet.file), { force: true });
 	} catch {
 		// The manifest row goes either way. A file that will not delete is a
 		// smaller problem than a list that keeps offering it.
@@ -181,7 +252,7 @@ export function contentTypeFor(file: string): string {
 export function orphanCount(): number {
 	ensure();
 	try {
-		const claimed = new Set(listSheets().map((s) => s.file));
+		const claimed = new Set(listSheets().flatMap((s) => [s.file, s.sheet?.file].filter(Boolean) as string[]));
 		return readdirSync(DIR).filter((n) => n !== 'manifest.json' && !claimed.has(n)).length;
 	} catch {
 		return 0;
