@@ -639,6 +639,72 @@
 		if (d.files) refFiles = d.files;
 	}
 
+	/** Keep a picture you already have as a character or a location.
+	 *
+	 *  Same paperclip, different meaning, decided by the mode the composer is
+	 *  already in: attaching in clip mode stages a reference for that one render,
+	 *  attaching in character mode makes the picture a character you keep. No
+	 *  second control for a second meaning — the band above the box already says
+	 *  which question is being answered.
+	 *
+	 *  One file, not the list: a character is one person. Clip mode still takes as
+	 *  many as you like.
+	 *
+	 *  There is no render here and no GPU. The picture is the character, and a
+	 *  clip that uses it stages it exactly as it stages a drawn one.
+	 */
+	async function uploadSubject(list: FileList | null) {
+		const file = list?.[0];
+		if (!file || refBusy) return;
+		const kind: 'character' | 'location' = wantTarget === 'location' ? 'location' : 'character';
+		refBusy = true;
+		refError = '';
+		try {
+			const fd = new FormData();
+			fd.append('file', file);
+			fd.append('kind', kind);
+			// Whatever is in the box, if anything. It becomes the description, which
+			// is the only record of who this is once the picture is in the picker.
+			fd.append('description', input.trim());
+			const res = await fetch('/studio/api/sheet', { method: 'POST', body: fd });
+			const r = (await res.json()) as {
+				ok?: boolean;
+				sheet?: StoredSheet;
+				sheets?: StoredSheet[];
+				error?: string;
+			};
+			if (!r.ok || !r.sheet) {
+				pushError(r.error || 'That picture could not be kept.');
+				return;
+			}
+			if (r.sheets) sheets = r.sheets;
+			pushItem({
+				who: 'studio',
+				kind: 'sheet',
+				sheet: {
+					kind,
+					stage: 'anchor',
+					uploaded: true,
+					id: r.sheet.id,
+					name: r.sheet.name,
+					description: r.sheet.description,
+					url: `/studio/api/sheet/img/${r.sheet.id}`,
+					// Saved the moment it arrived — there is nothing to approve about a
+					// picture you chose yourself, and nothing to launch.
+					launched: true
+				}
+			});
+			input = '';
+			wantTarget = 'clip';
+			currentCharacter = null;
+			persist();
+		} catch (e) {
+			pushError(String(e));
+		} finally {
+			refBusy = false;
+		}
+	}
+
 	async function describeRefFile(id: string, description: string) {
 		await fetch('/studio/api/refs', {
 			method: 'PATCH',
@@ -3788,11 +3854,13 @@
 												: 'Location sheet'}
 									</h3>
 									<span class="text-xs text-[var(--st-faint)]">
-										{item.sheet.stage === 'anchor'
-											? 'one picture — say what to change, or save it'
-											: item.sheet.kind === 'character'
-												? 'front · face · profiles · rear · expression'
-												: 'six views of the same place'}
+										{item.sheet.uploaded
+											? 'your own picture — kept as it is'
+											: item.sheet.stage === 'anchor'
+												? 'one picture — say what to change, or save it'
+												: item.sheet.kind === 'character'
+													? 'front · face · profiles · rear · expression'
+													: 'six views of the same place'}
 									</span>
 								</div>
 
@@ -3842,7 +3910,15 @@
 
 								{#if item.sheet.url && item.sheet.stage === 'anchor'}
 								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
-									{#if item.sheet.id}
+									{#if item.sheet.id && item.sheet.uploaded}
+										<p class="text-sm text-[var(--st-muted)]">
+											Kept as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>,
+											ready to shoot with. This one picture is all
+											{item.sheet.kind === 'character' ? 'this character' : 'this location'} has — the
+											six-view sheet is drawn from a description, so there is none for a picture you
+											brought yourself.
+										</p>
+									{:else if item.sheet.id}
 										<p class="text-sm text-[var(--st-muted)]">
 											Saved as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
 											The six views are rendering in the background and will appear beside
@@ -4588,8 +4664,8 @@
 									</p>
 									<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
 										{wantTarget === 'character'
-											? 'Describe the person. You get one picture in about a minute, then the full six-view sheet when you like them.'
-											: 'Describe the place. You get six views of it to shoot against.'}
+											? 'Describe the person — one picture in about a minute, then the six-view sheet when you like them. Or attach a photograph and keep that instead.'
+											: 'Describe the place — six views of it to shoot against. Or attach a photograph and keep that instead.'}
 									</p>
 								</div>
 								<button
@@ -4797,7 +4873,11 @@
 										</button>
 									{/if}
 									<label
-										title="Attach a face, a room, a movement for the render to copy"
+										title={wantTarget === 'clip'
+											? 'Attach a face, a room, a movement for the render to copy'
+											: wantTarget === 'character'
+												? 'Use a picture you already have as this character'
+												: 'Use a picture you already have as this location'}
 										class="mr-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
 									>
 										<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true">
@@ -4809,16 +4889,21 @@
 												stroke-linejoin="round"
 											/>
 										</svg>
-										<span class="sr-only">attach reference files</span>
+										<span class="sr-only">
+											{wantTarget === 'clip' ? 'attach reference files' : 'use a picture you already have'}
+										</span>
 										<input
 											type="file"
-											multiple
-											accept="image/*,video/*"
+											multiple={wantTarget === 'clip'}
+											accept={wantTarget === 'clip' ? 'image/*,video/*' : 'image/*'}
 											class="hidden"
 											disabled={refBusy}
 											onchange={(e) => {
-												attachRefs((e.currentTarget as HTMLInputElement).files);
-												(e.currentTarget as HTMLInputElement).value = '';
+												const el = e.currentTarget as HTMLInputElement;
+												// The mode decides what attaching means. See uploadSubject.
+												if (wantTarget === 'clip') attachRefs(el.files);
+												else uploadSubject(el.files);
+												el.value = '';
 											}}
 										/>
 									</label>

@@ -191,6 +191,14 @@ export interface ChatItem {
 		why?: string;
 		/** Set once this card has been sent to render, so it stops offering. */
 		launched?: boolean;
+		/** This subject is a picture you supplied rather than one we drew.
+		 *
+		 *  It changes what the card may promise. A drawn character gets its
+		 *  six-view turnaround rendered behind you; an uploaded one never will,
+		 *  because both sheet workflows are text-to-image and have no image input
+		 *  to redraw a photograph from. One picture is the whole of it, and saying
+		 *  otherwise would leave someone waiting for views that are not coming. */
+		uploaded?: boolean;
 		/** Set on the card the render comes back on. Its presence is what tells
 		 *  the two states apart: no url is a draft awaiting your yes, a url is a
 		 *  finished sheet awaiting a name. */

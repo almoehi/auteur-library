@@ -34,7 +34,71 @@ export const GET: RequestHandler = async () => {
 	return json({ ok: true, sheets: listSheets(), orphans: orphanCount() });
 };
 
+/** A character made from a picture you already have.
+ *
+ *  The third source, and the only one that never touches a GPU. It exists
+ *  because a face you own is a better character than a face you describe — and
+ *  because the machinery a clip needs is just an image: the render stages it to
+ *  S3 and hands the url to the workflow, and nothing downstream asks where it
+ *  came from.
+ *
+ *  What it cannot have is the six-view turnaround. Both sheet workflows are
+ *  `t2i` — text to image, no image input ports at all — so they can draw a
+ *  person from a description and cannot redraw one from a photograph. An
+ *  uploaded character is one picture, and the card says so rather than promising
+ *  views that will never arrive.
+ */
+async function fromUpload(request: Request): Promise<Response> {
+	const form = await request.formData();
+	const file = form.get('file');
+	if (!(file instanceof File)) throw error(400, 'Missing file');
+	const kind = form.get('kind');
+	if (!isKind(kind)) throw error(400, "kind must be 'character' or 'location'");
+
+	if (file.size > MAX_SHEET_BYTES) {
+		return json({ ok: false, error: 'that picture is too large' }, { status: 200 });
+	}
+	const bytes = new Uint8Array(await file.arrayBuffer());
+
+	// The same signature check the harness path runs. A browser's content-type is
+	// whatever the file extension suggested, which is not evidence — and a stored
+	// non-image fails later, on a GPU, minutes into a render.
+	const looksPng =
+		bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+	const looksJpeg = bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+	const looksWebp =
+		bytes.length > 12 &&
+		String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' &&
+		String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
+	if (!looksPng && !looksJpeg && !looksWebp) {
+		return json({ ok: false, error: 'that file is not a PNG, JPEG or WebP image' }, { status: 200 });
+	}
+
+	// What you typed in the composer, if anything, otherwise the filename. The
+	// description is not decoration here: it is the only record of who this is,
+	// and the writer names the character from it when a clip uses them.
+	const typed = String(form.get('description') ?? '').trim();
+	const stem = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+	const description = typed || stem;
+	const name = String(form.get('name') ?? '').trim() || nameFromDescription(description, kind);
+
+	const sheet = addSheet({
+		kind,
+		name,
+		description,
+		bytes,
+		ext: looksJpeg ? '.jpg' : looksWebp ? '.webp' : '.png'
+	});
+	return json({ ok: true, sheet, sheets: listSheets(), uploaded: true });
+}
+
 export const POST: RequestHandler = async ({ request, fetch }) => {
+	// An upload arrives as a form because it arrives as bytes. Everything else on
+	// this route is JSON, so the content type is the fork.
+	if ((request.headers.get('content-type') ?? '').includes('multipart/form-data')) {
+		return await fromUpload(request);
+	}
+
 	let body: {
 		kind?: unknown;
 		name?: unknown;
