@@ -216,7 +216,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		pinned.push(
 			`<Video 1> is the clip being continued.` +
 				(character ? ` <Picture 1> is the character ${character}.` : '') +
-				(location ? ` <Picture 2> is the location ${location}.` : '')
+				(location ? ` <Picture 2> is the location ${location}.` : '') +
+				` <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`
 		);
 		if (typeof cont.priorPrompt === 'string' && cont.priorPrompt.trim()) {
 			pinned.push(

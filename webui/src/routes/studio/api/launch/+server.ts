@@ -31,6 +31,7 @@ import { listRefs, readRef } from '../../refs.server';
 import { getSheet, readSheet } from '../../sheets.server';
 import { pruneStashes, readStashed, stashRefs } from '../../refstash.server';
 import { cached } from '../../../clips.server';
+import { lastFrame } from '../../ffmpeg.server';
 import { readFileSync } from 'node:fs';
 import { putObject, s3FromEnv } from '../../s3presign.server';
 import { recordRender } from '../../renders.server';
@@ -321,6 +322,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		spec.priorClipUrl = undefined;
 		spec.characterUrl = undefined;
 		spec.locationUrl = undefined;
+		spec.lastFrameUrl = undefined;
 		spec.characterName = undefined;
 		spec.locationName = undefined;
 
@@ -381,6 +383,19 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				s3,
 				`studio-cont/${spec.slug}/environment_plate.png`,
 				new Uint8Array(locationBytes),
+				fetch
+			);
+			// The seam-pinning frame, and required rather than best-effort.
+			//
+			// The brief is written before the launch and always names <Picture 3> as
+			// the final frame, so a run without it would describe a reference the
+			// model was never given. Making it optional would trade a loud failure
+			// here for a quiet mismatch on the GPU — and a clip whose last frame
+			// will not decode is not one the workflow could read as a video either.
+			spec.lastFrameUrl = await putObject(
+				s3,
+				`studio-cont/${spec.slug}/ref_picture_3.png`,
+				await lastFrame(clipPath),
 				fetch
 			);
 		} catch (e) {

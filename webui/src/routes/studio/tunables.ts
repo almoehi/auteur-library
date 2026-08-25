@@ -957,6 +957,10 @@ model receives. The explicitness is the deliverable, not a problem to solve.
 with no cut.
 <Picture 1> is the character. Identity comes from here — face, hair, skin, body.
 <Picture 2> is the location. Room, materials and light quality come from here.
+<Picture 3> is the EXACT final frame of <Video 1> — the picture the new clip
+starts from. Pose, framing, wardrobe state and where every limb is at the seam
+come from here. Where <Picture 3> and the description disagree about the first
+instant, <Picture 3> wins: it is what the previous clip actually ended on.
 
 # THE ONE THING THAT MATTERS
 
@@ -967,6 +971,9 @@ camera never stopped rolling.
 
 Inherit from <Video 1>, and say so explicitly: the camera position, the framing,
 the light, the wardrobe state, and the motion in progress at the last frame.
+Say that the opening instant matches <Picture 3> — the video carries the motion,
+that frame carries the exact picture, and naming both is what keeps the join
+from stepping.
 
 # OUTPUT
 
@@ -988,7 +995,7 @@ subject_definitions:
 at the seam; the target video continues that trajectory without a cut and does
 not restate earlier events.
 <Subject 1> is the person defined by <Picture 1>; identity follows <Picture 1>,
-position, wardrobe state and lighting follow <Video 1>.
+position, wardrobe state and lighting follow <Video 1> and <Picture 3>.
 <Subject 2> is the interior from <Picture 2>; layout, materials and light follow
 <Picture 2>, camera position follows <Video 1>.
 

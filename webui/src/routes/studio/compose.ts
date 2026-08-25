@@ -1736,6 +1736,13 @@ export interface ContinuationSpec {
 	priorClipUrl?: string;
 	characterUrl?: string;
 	locationUrl?: string;
+	/** The prior clip's final frame, as a fourth reference.
+	 *
+	 *  The reference video carries the motion but leaves the exact picture at the
+	 *  seam to the model; this pins the picture as well. The workflow has three
+	 *  spare optional reference slots, so it costs a slot and an upload rather
+	 *  than a change to the graph. */
+	lastFrameUrl?: string;
 
 	studioOrigin?: string;
 }
@@ -1760,7 +1767,11 @@ export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = '
 	for (const [name, u] of [
 		['the prior clip', spec.priorClipUrl],
 		['the character', spec.characterUrl],
-		['the location', spec.locationUrl]
+		['the location', spec.locationUrl],
+		// Required for the same reason as the rest: the brief names <Picture 3> as
+		// the final frame before this runs, so a missing one is a brief describing
+		// a reference nobody was given.
+		['the final frame', spec.lastFrameUrl]
 	] as const) {
 		// All three are required inputs of the workflow. A missing one comes back
 		// as `missing required input` from the tool handler rather than a render,
@@ -1851,14 +1862,16 @@ ${modelsBlock(grokKey)}
         duration_seconds: ${spec.seconds}
         Save the result as cont1.mp4
 
-        Three references, each copied exactly as written:
+        References, each copied exactly as written:
         prior_clip = ${spec.priorClipUrl}
         character_sheet = ${spec.characterUrl}
         environment_plate = ${spec.locationUrl}
+        ref_picture_3 = ${spec.lastFrameUrl}
 
         <Video 1> is the clip being continued.
         <Picture 1> is the character${spec.characterName ? ` ${indentBlock(spec.characterName, 0)}` : ''}.
         <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ''}.
+        <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.
 
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
         shorten, expand, reorder or comment on it.
