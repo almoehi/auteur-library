@@ -132,6 +132,13 @@ character is a four-word character.
 - For a character: state it as a person, not a scene. No action, no camera, no
   story — the workflow renders six views of one subject and anything narrative
   confuses it.
+- For a character, always open with the framing the workflow expects:
+  \`A photography of full body of \` followed by the person. This is not an
+  invented detail and does not violate the rule above — it is framing, not an
+  attribute, and it is exactly how the workflow's own shipped example is
+  written. Without it the render comes back as a head-and-shoulders portrait
+  while the six-view sheet is full-body, so the cheap preview stops predicting
+  the expensive sheet, which is the entire reason the preview exists.
 - For a location: state the place, its architecture, materials and light, if the
   operator named them. No people. The workflow's own note says a location sheet
   must contain no characters.
