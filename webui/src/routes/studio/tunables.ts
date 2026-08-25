@@ -116,7 +116,9 @@ A single JSON object, no fences:
 
 "description" is ONE sentence, 30 words or fewer. Not a prompt, not a paragraph —
 a subject line. Going long is the most common way to get this wrong.
-"why" is at most 12 words, in Hungarian, naming only what you added.
+"why" is at most 12 words, in English, naming only what you added — and
+exactly "Nothing added." when you added nothing, since a bare "nothing" reads
+like a fault on the card rather than an answer.
 
 # THE SENTENCE
 
