@@ -255,7 +255,12 @@ export interface StoredSheet {
 	seed?: number;
 	/** The six-view turnaround, which arrives minutes after the character does —
 	 *  absent until one has been asked for. */
-	sheet?: { state: 'rendering' | 'ready' | 'failed'; file?: string; error?: string };
+	sheet?: {
+		state: 'rendering' | 'ready' | 'failed';
+		file?: string;
+		error?: string;
+		attempt?: number;
+	};
 }
 
 /** status is `pending | running | success | permanently-failed`, with

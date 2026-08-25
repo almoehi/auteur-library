@@ -45,6 +45,9 @@ export interface SheetRender {
 	startedAt?: string;
 	/** The workspace it rendered in, for tracing a sheet back to its run. */
 	workspace?: string;
+	/** Which attempt this is. One automatic retry, then it stops and waits for a
+	 *  person — see the note in api/sheetfull. */
+	attempt?: number;
 }
 
 export interface Sheet {

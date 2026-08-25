@@ -53,12 +53,13 @@ async function harnessCall(
 async function follow(
 	id: string,
 	workspace: string,
+	attempt: number,
 	fetchFn: typeof globalThis.fetch
 ): Promise<void> {
 	const deadline = Date.now() + DEADLINE_MS;
 	for (;;) {
 		if (Date.now() > deadline) {
-			setSheetRender(id, { state: 'failed', error: 'the sheet did not finish in twenty minutes' });
+			giveUpOrRetry(id, attempt, 'the sheet did not finish in twenty minutes', fetchFn);
 			return;
 		}
 		await new Promise((r) => setTimeout(r, POLL_MS));
@@ -78,44 +79,54 @@ async function follow(
 					`${HARNESS}/workspaces/${workspace}/artifacts/${encodeURIComponent(art.id)}/${encodeURIComponent(name)}`
 				);
 				if (!res.ok) {
-					setSheetRender(id, { state: 'failed', error: `the sheet could not be fetched — ${res.status}` });
+					giveUpOrRetry(id, attempt, `the sheet could not be fetched — ${res.status}`, fetchFn);
 					return;
 				}
 				attachSheetImage(id, new Uint8Array(await res.arrayBuffer()), workspace);
 			} catch (e) {
-				setSheetRender(id, { state: 'failed', error: `the sheet could not be fetched — ${e}` });
+				giveUpOrRetry(id, attempt, `the sheet could not be fetched — ${e}`, fetchFn);
 			}
 			return;
 		}
 		const dead = (state.tasks ?? []).some((t) => t.status === 'permanently-failed');
 		if (dead) {
-			setSheetRender(id, { state: 'failed', error: 'the sheet render failed on the GPU' });
+			giveUpOrRetry(id, attempt, 'the sheet render failed on the GPU', fetchFn);
 			return;
 		}
 	}
 }
 
-export const POST: RequestHandler = async ({ request, fetch }) => {
-	let body: { id?: unknown };
-	try {
-		body = await request.json();
-	} catch {
-		throw error(400, 'Body must be JSON');
-	}
-	const id = typeof body.id === 'string' ? body.id : '';
-	const character = getSheet(id);
-	if (!character) return json({ ok: false, error: 'no such character' });
-	if (character.kind !== 'character') return json({ ok: false, error: 'only a character has a turnaround' });
-	if (character.sheet?.state === 'rendering') return json({ ok: true, already: true });
+/** One automatic retry, and no more.
+ *
+ *  Most failures here are transient — a workspace agent that stopped answering, a
+ *  cold endpoint, a launch that lost a race — and a second attempt costs three
+ *  minutes and usually works. Two failures in a row mean something real is wrong,
+ *  and an unbounded loop would burn GPU time on it without anyone looking. So
+ *  after the second the character keeps its "retry" button and waits.
+ *
+ *  Deliberately not an agent. "It failed, start it again" is a rule, not a
+ *  judgement — an LLM in this loop would be slower, cost money, and occasionally
+ *  decide something surprising. */
+const MAX_ATTEMPTS = 2;
 
-	// Marked before the launch, so a page that reloads in the next second still
-	// sees work in progress rather than a character that looks untouched.
-	setSheetRender(id, { state: 'rendering', startedAt: new Date().toISOString(), error: undefined });
+async function runSheet(
+	id: string,
+	attempt: number,
+	fetchFn: typeof globalThis.fetch
+): Promise<{ ok: boolean; workspace?: string; error?: string }> {
+	const character = getSheet(id);
+	if (!character) return { ok: false, error: 'no such character' };
+
+	setSheetRender(id, {
+		state: 'rendering',
+		startedAt: new Date().toISOString(),
+		attempt,
+		error: undefined
+	});
 
 	const slug = `sheet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-	let workspaceId = '';
 	try {
-		const res = await fetch('/studio/api/launch', {
+		const res = await fetchFn('/studio/api/launch', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({
@@ -132,18 +143,43 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		});
 		const r = (await res.json()) as { ok?: boolean; workspaceId?: string; error?: string };
 		if (!r.ok || !r.workspaceId) {
-			setSheetRender(id, { state: 'failed', error: r.error || 'the sheet render did not start' });
-			return json({ ok: false, error: r.error || 'the sheet render did not start' });
+			return { ok: false, error: r.error || 'the sheet render did not start' };
 		}
-		workspaceId = r.workspaceId;
+		void follow(id, r.workspaceId, attempt, fetchFn);
+		return { ok: true, workspace: r.workspaceId };
 	} catch (e) {
-		setSheetRender(id, { state: 'failed', error: String(e) });
-		return json({ ok: false, error: String(e) });
+		return { ok: false, error: String(e) };
 	}
+}
 
-	void follow(id, workspaceId, fetch).catch((e) =>
-		setSheetRender(id, { state: 'failed', error: String(e) })
-	);
+/** Record a failure, or spend the one retry. */
+function giveUpOrRetry(id: string, attempt: number, error: string, fetchFn: typeof globalThis.fetch): void {
+	if (attempt < MAX_ATTEMPTS) {
+		void runSheet(id, attempt + 1, fetchFn).then((r) => {
+			if (!r.ok) setSheetRender(id, { state: 'failed', error: r.error, attempt: attempt + 1 });
+		});
+		return;
+	}
+	setSheetRender(id, { state: 'failed', error, attempt });
+}
 
-	return json({ ok: true, workspace: workspaceId });
+export const POST: RequestHandler = async ({ request, fetch }) => {
+	let body: { id?: unknown };
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Body must be JSON');
+	}
+	const id = typeof body.id === 'string' ? body.id : '';
+	const character = getSheet(id);
+	if (!character) return json({ ok: false, error: 'no such character' });
+	if (character.kind !== 'character') return json({ ok: false, error: 'only a character has a turnaround' });
+	if (character.sheet?.state === 'rendering') return json({ ok: true, already: true });
+
+	const started = await runSheet(id, 1, fetch);
+	if (!started.ok) {
+		setSheetRender(id, { state: 'failed', error: started.error, attempt: 1 });
+		return json({ ok: false, error: started.error });
+	}
+	return json({ ok: true, workspace: started.workspace });
 };

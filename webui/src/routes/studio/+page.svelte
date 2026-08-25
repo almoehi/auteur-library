@@ -3341,7 +3341,9 @@
 											class="cursor-pointer text-[0.65rem] text-[#e0a03a] hover:underline"
 											onclick={() => retrySheet(sh.id)}
 										>
-											sheet failed — retry
+											{(sh.sheet.attempt ?? 1) > 1
+												? 'sheet failed twice — try again'
+												: 'sheet failed — retry'}
 										</button>
 									{:else}
 										<p class="text-[0.65rem] text-[var(--st-faint)]">{sh.kind}</p>
