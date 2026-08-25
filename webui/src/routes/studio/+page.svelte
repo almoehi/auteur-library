@@ -42,6 +42,7 @@
 		type LaunchResult,
 		type PollState,
 		type ProxyResult,
+		type StoredSheet,
 		type Task
 	} from './types';
 	import { BASE, CATALOGUE, MAX_PICKS, loraFor } from './loras';
@@ -205,6 +206,13 @@
 	 *  The id cannot be missed. composeDirectWorkspace names every direct
 	 *  workspace `<slug>-direct`, so this is true however we arrived. */
 	const simpleRun = $derived(/-direct@/.test(renderWs));
+
+	/** Whether the live render is a sheet rather than a clip. Read off the id for
+	 *  exactly the reason simpleRun is: composeSheetWorkspace names every one of
+	 *  them `<slug>-sheet`, so no road in can forget to set it. It decides what a
+	 *  finished artifact becomes — a clip card or a sheet card — and it keeps a
+	 *  sheet run out of the shoot bookkeeping, which counts clips. */
+	const sheetRun = $derived(/-sheet@/.test(renderWs));
 
 	/** The slug this run is filed under, the same one the history sidebar shows.
 	 *  Derived rather than stored: the planning workspace is `<slug>@v` and the
@@ -707,7 +715,7 @@
 		return m ? Number(m[0]) : 999;
 	}
 
-	function firstFileOfKind(a: Artifact, kind: 'text' | 'video'): string {
+	function firstFileOfKind(a: Artifact, kind: 'text' | 'video' | 'image'): string {
 		for (const f of a.files ?? []) {
 			const name = fileKeyOf(f);
 			if (name && kindOf(name) === kind) return name;
@@ -798,7 +806,13 @@
 	const composerHint = $derived.by(() => {
 		// Simple mode has no plan to refine and no crew to message: every line is
 		// another shot, whether it is the first or the fifth.
-		if (mode === 'simple') return 'Describe the shot — one clip per message';
+		if (mode === 'simple') {
+			if (wantTarget === 'character')
+				return 'Describe the person — you get six views to reuse in every clip';
+			if (wantTarget === 'location')
+				return 'Describe the place — you get six views to reuse in every clip';
+			return 'Describe the shot — one clip per message';
+		}
 		if (!brief) return 'New film — describe the idea in one sentence';
 		if (!planningWs) return 'Refining the plan — describe what to change';
 		if (!renderWs) return 'Message to the planning crew lead';
@@ -883,7 +897,10 @@
 			// Simple mode never plans. Every message is a scene to render, and the
 			// answer is the prompt itself — offered for reading and editing before
 			// it costs anything.
-			if (mode === 'simple') await shotFromRequest(text);
+			if (mode === 'simple') {
+				if (wantTarget === 'clip') await shotFromRequest(text);
+				else await sheetFromRequest(text, wantTarget);
+			}
 			else if (!brief) await planFromIdea(text);
 			else if (!planningWs) await refinePlan(text);
 			else await managerChat(text);
@@ -978,12 +995,17 @@
 	let wantSeconds = $state(8);
 	let wantOrientation = $state<'portrait' | 'landscape'>('portrait');
 	let wantRes = $state<ResKey>('576p');
+	/** What the next message makes. A clip is the default and the common case;
+	 *  the other two make a reference sheet instead, and they are here rather
+	 *  than on a separate screen because they are the same act — you describe
+	 *  something and the machine renders it. */
+	let wantTarget = $state<'clip' | 'character' | 'location'>('clip');
 
 	function saveSetup() {
 		try {
 			localStorage.setItem(
 				SETUP_KEY,
-				JSON.stringify({ s: wantSeconds, o: wantOrientation, r: wantRes })
+				JSON.stringify({ s: wantSeconds, o: wantOrientation, r: wantRes, t: wantTarget })
 			);
 		} catch {
 			/* a preference that will not persist is not worth an error */
@@ -1005,6 +1027,161 @@
 		lastRequest = request;
 		shot.resolution = wantRes;
 		pushItem({ who: 'studio', kind: 'shot', shot });
+	}
+
+	/** The same first-name rule the store uses, applied here so the card shows the
+	 *  name it is about to be saved under rather than an empty box. */
+	function firstWords(description: string, kind: 'character' | 'location'): string {
+		const words = description
+			.replace(/[\n\r]+/g, ' ')
+			.split(/\s+/)
+			.filter(Boolean)
+			.slice(0, 6)
+			.join(' ')
+			.slice(0, 60)
+			.trim();
+		return words || (kind === 'character' ? 'Character' : 'Location');
+	}
+
+	// --- sheets: a character or a location, kept and reused ------------------------
+
+	/** Every sheet this machine has made, newest first. Loaded once on mount and
+	 *  refreshed by every write, so a picker never has to ask. */
+	let sheets = $state<StoredSheet[]>([]);
+	let sheetBusy = $state<Record<string, boolean>>({});
+	let sheetsOpen = $state(false);
+
+	async function loadSheets() {
+		try {
+			const res = await fetch('/studio/api/sheet');
+			if (!res.ok) return;
+			const r = (await res.json()) as { ok?: boolean; sheets?: StoredSheet[] };
+			if (r.sheets) sheets = r.sheets;
+		} catch {
+			/* the list is a convenience; failing to load it must not break the page */
+		}
+	}
+
+	/** Render a sheet from a plain-English description.
+	 *
+	 *  No writer stands between the two. Both sheet workflows take a description
+	 *  rather than a structured prompt — their own port notes say so in as many
+	 *  words — so a writer here would only have prose to paraphrase, and every
+	 *  paraphrase is a chance to lose the detail you actually cared about.
+	 */
+	async function sheetFromRequest(description: string, kind: 'character' | 'location') {
+		if (renderLaunching || renderWs) {
+			pushError('A render is already running — wait for it to finish, then ask again.');
+			return;
+		}
+		renderLaunching = true;
+		try {
+			const spec = {
+				slug: `sheet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+				kind,
+				description,
+				seed: Math.floor(Math.random() * 1_000_000_000)
+			};
+			const res = await fetch('/studio/api/launch', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ stage: 'sheet', sheet: spec })
+			});
+			const r = (await res.json()) as { ok?: boolean; workspaceId?: string; error?: string };
+			if (!r.ok || !r.workspaceId) {
+				pushError(r.error || 'The sheet render did not start.');
+				return;
+			}
+			pendingSheet = { kind, description };
+			renderWs = r.workspaceId;
+			startedAt = Date.now();
+			shootsAnnounced = true;
+			pushStudio(
+				kind === 'character'
+					? 'Rendering a character sheet — six views of the same person.'
+					: 'Rendering a location sheet — six views of the same place.'
+			);
+			persist();
+			startPolling();
+		} catch (e) {
+			pushError(String(e));
+		} finally {
+			renderLaunching = false;
+		}
+	}
+
+	/** What the running sheet render was asked for. The finished artifact carries
+	 *  no memory of the description that produced it, and that description is the
+	 *  most useful thing to keep beside a sheet — it is what you would edit to
+	 *  make a variant. */
+	let pendingSheet: { kind: 'character' | 'location'; description: string } | null = null;
+
+	/** Keep a rendered sheet. The bytes are fetched server-side, from the harness,
+	 *  while this workspace is still answering. */
+	async function keepSheet(itemId: string) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.sheet || item.sheet.id || sheetBusy[itemId]) return;
+		sheetBusy[itemId] = true;
+		try {
+			const res = await fetch('/studio/api/sheet', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					kind: item.sheet.kind,
+					name: item.sheet.name,
+					description: item.sheet.description,
+					workspace: item.sheet.workspace,
+					artifact: item.sheet.artifact,
+					file: item.sheet.file
+				})
+			});
+			const r = (await res.json()) as {
+				ok?: boolean;
+				sheet?: StoredSheet;
+				sheets?: StoredSheet[];
+				error?: string;
+			};
+			if (!r.ok || !r.sheet) {
+				pushError(r.error || 'The sheet could not be kept.');
+				return;
+			}
+			item.sheet.id = r.sheet.id;
+			// Point the card at our own copy now that there is one — the harness
+			// stops serving an artifact the moment its workspace agent dies.
+			item.sheet.url = `/studio/api/sheet/img/${r.sheet.id}`;
+			if (r.sheets) sheets = r.sheets;
+			persist();
+		} catch (e) {
+			pushError(String(e));
+		} finally {
+			sheetBusy[itemId] = false;
+		}
+	}
+
+	async function dropSheet(id: string) {
+		try {
+			const res = await fetch(`/studio/api/sheet?id=${encodeURIComponent(id)}`, {
+				method: 'DELETE'
+			});
+			const r = (await res.json()) as { sheets?: StoredSheet[] };
+			if (r.sheets) sheets = r.sheets;
+		} catch {
+			/* nothing to do — the list will be right again on the next load */
+		}
+	}
+
+	async function renameStoredSheet(id: string, name: string) {
+		try {
+			const res = await fetch('/studio/api/sheet', {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id, name })
+			});
+			const r = (await res.json()) as { sheets?: StoredSheet[] };
+			if (r.sheets) sheets = r.sheets;
+		} catch {
+			/* as above */
+		}
 	}
 
 	/** Rewrite the card in place. The old one collapses rather than disappearing:
@@ -1985,6 +2162,34 @@
 			}
 		}
 
+		// A sheet run produces one image and nothing else, so it is handled first
+		// and returns — the clip bookkeeping below counts scenes and assembles
+		// films, neither of which a sheet has any business in.
+		if (sheetRun) {
+			for (const a of arts) {
+				if (a.status !== 'approved') continue;
+				const name = firstFileOfKind(a, 'image');
+				if (!name || clipPosted.has(a.id)) continue;
+				clipPosted.add(a.id);
+				const kind = pendingSheet?.kind ?? 'character';
+				const description = pendingSheet?.description ?? '';
+				pushItem({
+					who: 'studio',
+					kind: 'sheet',
+					sheet: {
+						kind,
+						description,
+						url: fileUrl(renderWs, a.id, name),
+						workspace: renderWs,
+						artifact: a.id,
+						file: name,
+						name: firstWords(description, kind)
+					}
+				});
+			}
+			return;
+		}
+
 		// Every approved artifact with a video file becomes a clip in the chat.
 		// After the assembly request, a new artifact (or one named like a final
 		// cut) is the film itself and closes the transcript.
@@ -2389,13 +2594,17 @@
 		void loadRefFiles();
 		void loadHistory();
 		void loadVerdicts();
+		// Sheets live on the server too, and outlast every run — the picker has to
+		// ask rather than assume this tab has seen them before.
+		void loadSheets();
 		try {
 			const raw = localStorage.getItem(SETUP_KEY);
 			if (raw) {
-				const v = JSON.parse(raw) as { s?: number; o?: string; r?: string };
+				const v = JSON.parse(raw) as { s?: number; o?: string; r?: string; t?: string };
 				if (typeof v.s === 'number' && v.s >= 4 && v.s <= 15) wantSeconds = v.s;
 				if (v.o === 'portrait' || v.o === 'landscape') wantOrientation = v.o;
 				if (v.r && v.r in RESOLUTIONS) wantRes = v.r as ResKey;
+				if (v.t === 'clip' || v.t === 'character' || v.t === 'location') wantTarget = v.t;
 			}
 		} catch {
 			/* a preference that will not load is not worth an error */
@@ -2736,6 +2945,52 @@
 				</p>
 			{/if}
 		</nav>
+
+		<!-- Cast and sets: the sheets this machine has made. They sit above tuning
+		     and below the run list because that is what they are — not a setting
+		     and not a run, but the material every run is shot with. -->
+		{#if sheets.length}
+			<div class="border-t border-[var(--st-surface-2)] px-3 py-2">
+				<button
+					type="button"
+					class="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+					onclick={() => (sheetsOpen = !sheetsOpen)}
+				>
+					<span>Cast &amp; sets</span>
+					<span class="text-xs tabular-nums text-[var(--st-faint)]">{sheets.length}</span>
+				</button>
+				{#if sheetsOpen}
+					<div class="mt-1 max-h-64 space-y-1 overflow-y-auto pb-1">
+						{#each sheets as sh (sh.id)}
+							<div class="group flex items-center gap-2 rounded-xl px-3 py-1.5 hover:bg-[var(--st-surface)]">
+								<img
+									src="/studio/api/sheet/img/{sh.id}"
+									alt=""
+									class="h-8 w-12 shrink-0 rounded-md bg-[var(--st-bg)] object-cover"
+								/>
+								<div class="min-w-0 flex-1">
+									<input
+										value={sh.name}
+										spellcheck="false"
+										onblur={(e) => renameStoredSheet(sh.id, e.currentTarget.value)}
+										class="w-full truncate border-0 bg-transparent p-0 text-xs text-[var(--st-text)] outline-none focus:ring-0"
+									/>
+									<p class="text-[0.65rem] text-[var(--st-faint)]">{sh.kind}</p>
+								</div>
+								<button
+									type="button"
+									aria-label="remove {sh.name}"
+									class="cursor-pointer px-1 text-[var(--st-faint)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
+									onclick={() => dropSheet(sh.id)}
+								>
+									×
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
 
 		<!-- Tuning lives at the bottom because it is a settings surface, not a
 		     destination — the same place every app of this shape puts one. -->
@@ -3106,6 +3361,64 @@
 								</p>
 								<p class="doc mt-2 text-sm leading-relaxed text-[var(--st-muted)]">{item.text}</p>
 							</div>
+						{:else if item.kind === 'sheet' && item.sheet}
+							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+								<div class="mb-3 flex items-baseline justify-between gap-4">
+									<h3 class="font-display text-base font-semibold">
+										{item.sheet.kind === 'character' ? 'Character sheet' : 'Location sheet'}
+									</h3>
+									<span class="text-xs text-[var(--st-faint)]">
+										{item.sheet.kind === 'character'
+											? 'front · face · profiles · rear · expression'
+											: 'six views of the same place'}
+									</span>
+								</div>
+
+								<img
+									src={item.sheet.url}
+									alt={item.sheet.name}
+									class="w-full rounded-xl bg-[var(--st-bg)]"
+								/>
+
+								{#if item.sheet.description}
+									<p class="doc mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
+										{item.sheet.description}
+									</p>
+								{/if}
+
+								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
+									{#if item.sheet.id}
+										<p class="text-sm text-[var(--st-muted)]">
+											Kept as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
+											Every clip can use it from here on.
+										</p>
+									{:else}
+										<label class="block text-xs text-[var(--st-faint)]" for="sheet-name-{item.id}">
+											Name it — this is what the picker will show
+										</label>
+										<div class="mt-2 flex flex-wrap items-center gap-2">
+											<input
+												id="sheet-name-{item.id}"
+												bind:value={item.sheet.name}
+												spellcheck="false"
+												class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+											/>
+											<button
+												type="button"
+												disabled={sheetBusy[item.id] || !item.sheet.name.trim()}
+												onclick={() => keepSheet(item.id)}
+												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
+											>
+												{sheetBusy[item.id] ? 'Keeping…' : 'Keep it'}
+											</button>
+										</div>
+										<p class="mt-2 text-xs text-[var(--st-faint)]">
+											Keep it now — the harness stops serving this image once the run's
+											workspace shuts down.
+										</p>
+									{/if}
+								</div>
+							</article>
 						{:else if item.kind === 'shot' && item.shot}
 							{@const n = item.shot.prompt.trim() ? item.shot.prompt.trim().split(/\s+/).length : 0}
 							{@const picked = item.shot.loras ?? []}
@@ -3783,6 +4096,31 @@
 										 language from the shape, so a change there is a rewrite. Set
 										 here they cost nothing, because the writer is told first. -->
 									{#if mode === 'simple'}
+										<!-- What the next message makes. A clip is the default; the other
+											 two describe something once and keep it, which is what the
+											 continuation workflow needs to hold a face across a scene. -->
+										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+											{#each [['clip', 'clip'], ['character', 'character'], ['location', 'location']] as [t, label] (t)}
+												<button
+													type="button"
+													title={t === 'clip'
+														? 'render a video clip'
+														: t === 'character'
+															? 'render a six-view character sheet to reuse'
+															: 'render a six-view location sheet to reuse'}
+													class="cursor-pointer rounded-full px-2.5 py-1 text-xs transition-colors {wantTarget ===
+													t
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+													onclick={() => {
+														wantTarget = t as 'clip' | 'character' | 'location';
+														saveSetup();
+													}}>{label}</button
+												>
+											{/each}
+										</div>
+									{/if}
+									{#if mode === 'simple' && wantTarget === 'clip'}
 										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
 											{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
 												<button

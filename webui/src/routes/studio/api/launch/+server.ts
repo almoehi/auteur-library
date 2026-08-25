@@ -38,6 +38,9 @@ import {
 	composeRenderWorkspace,
 	composeDirectWorkspace,
 	directWorkspaceId,
+	composeSheetWorkspace,
+	sheetWorkspaceId,
+	type SheetSpec,
 	type ApprovedDocs,
 	type DirectSpec,
 	DIRECT_STEPS,
@@ -232,7 +235,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		});
 	}
 
-	let payload: { brief?: Brief; stage?: unknown; approved?: unknown; direct?: unknown };
+	let payload: { brief?: Brief; stage?: unknown; approved?: unknown; direct?: unknown; sheet?: unknown };
 	try {
 		payload = await request.json();
 	} catch {
@@ -240,8 +243,41 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	}
 
 	const stage = payload.stage;
-	if (stage !== 'planning' && stage !== 'render' && stage !== 'direct') {
-		throw error(400, "stage must be 'planning', 'render' or 'direct'");
+	if (stage !== 'planning' && stage !== 'render' && stage !== 'direct' && stage !== 'sheet') {
+		throw error(400, "stage must be 'planning', 'render', 'direct' or 'sheet'");
+	}
+
+	// A sheet is its own workspace and its own shape: one description, one
+	// registry workflow, one image out. It shares nothing with a clip run but the
+	// opening machinery, so it leaves here before any of the clip handling — no
+	// staged references (a sheet is what you make references FROM), no adapter
+	// stack, and no render row, since renders.jsonl is a log of clips and a sheet
+	// in it would skew every reading of it.
+	if (stage === 'sheet') {
+		const spec = payload.sheet as SheetSpec | undefined;
+		if (!spec || typeof spec !== 'object') throw error(400, 'Missing sheet spec');
+		if (!spec.slug || !SLUG_RE.test(spec.slug)) throw error(400, 'Bad slug');
+		let sheetYaml: string;
+		try {
+			sheetYaml = composeSheetWorkspace(spec, grokKey);
+		} catch (e) {
+			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
+		}
+		return await openWorkspace(
+			sheetWorkspaceId(spec),
+			sheetYaml,
+			grokKey,
+			fetch,
+			{
+				slug: spec.slug,
+				title: `${spec.kind === 'character' ? 'Character' : 'Location'} sheet`,
+				sceneCount: 0,
+				pitch: spec.description.slice(0, 200)
+			},
+			// No library push: the sheet workflows come from the registry, and the
+			// three serial round-trips loadLibraryInto costs are pure latency here.
+			{ withLibrary: false }
+		);
 	}
 
 	// Direct mode carries a spec instead of a brief: there is no plan to open,

@@ -113,7 +113,8 @@ export interface ChatItem {
 		| 'approval'
 		| 'activity'
 		| 'board'
-		| 'shootboard';
+		| 'shootboard'
+		| 'sheet';
 	/** plain text content (kind=text, error, approval) */
 	text?: string;
 	/** the expanded brief awaiting the user's yes (kind=plan) */
@@ -158,6 +159,26 @@ export interface ChatItem {
 		 *  to lands on that run's row and not on whichever one is current. */
 		workspace?: string;
 	};
+	/** a rendered character or location sheet, awaiting a name and a keep
+	 *  (kind=sheet). `id` is set once it has been stored, which is also what
+	 *  stops the card offering to store it twice. */
+	sheet?: {
+		kind: 'character' | 'location';
+		/** The description that produced it, kept so the card can show what was
+		 *  asked for beside what came back. */
+		description: string;
+		/** Where the image can be fetched from right now: the harness while the
+		 *  run is fresh, our own store once it has been kept. */
+		url: string;
+		/** The three ids the store needs to fetch the bytes itself. */
+		workspace: string;
+		artifact: string;
+		file: string;
+		/** Your name for it. Seeded from the description, editable on the card. */
+		name: string;
+		/** Set by a successful keep. */
+		id?: string;
+	};
 	/** one line of the harness's own progress log (kind=activity) */
 	activity?: {
 		id: string;
@@ -191,6 +212,21 @@ export type StudioPhase =
  *  What poll-state actually sends back. Kept here rather than in each consumer
  *  so the studio page and any future panel read the same fields; the older
  *  dashboard at /ops declares its own copies and is left alone. */
+
+/** One sheet as the store keeps it. The server module owns the writing; this is
+ *  the shape the page reads back, and it is declared here rather than imported
+ *  from sheets.server.ts because that module touches the filesystem and must
+ *  never be pulled into a client bundle. */
+export interface StoredSheet {
+	id: string;
+	kind: 'character' | 'location';
+	name: string;
+	description: string;
+	file: string;
+	size: number;
+	addedAt: string;
+	workspace?: string;
+}
 
 /** status is `pending | running | success | permanently-failed`, with
  *  `completed` and `failed` also observed — hence the widened type. */

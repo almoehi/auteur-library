@@ -1367,3 +1367,165 @@ ${DIRECT_AGENT(modelFor('generic'))}
 ${tasks}
 `;
 }
+
+// ─── Sheets ───────────────────────────────────────────────────────────────────
+
+/** A character or location sheet: one render, one image, six views of the same
+ *  subject.
+ *
+ *  These get their own workspace rather than riding along with a clip, and the
+ *  reason is not tidiness. A workspace carries exactly one render profile and
+ *  every workflow in it shares that profile — but a sheet is a 1920x1080 still
+ *  and a clip is a 576x1024 five-second video, so putting them together means
+ *  one of the two renders at the other's size. They are also separate actions in
+ *  the user's head: you make a character once and shoot with it for a week.
+ */
+export interface SheetSpec {
+	slug: string;
+	kind: 'character' | 'location';
+	/** Plain English, passed to the workflow untouched. These two workflows take
+	 *  a description rather than a structured prompt — their own port notes say
+	 *  so — which is why no writer stands between you and them. */
+	description: string;
+	seed: number;
+}
+
+/** The registry workflow behind each kind, and the port that carries the
+ *  description into it. Both come from the workflow's own published spec; the
+ *  port names differ between the two, which is the only thing that varies. */
+const SHEET_WORKFLOW = {
+	character: {
+		name: 'krea2_character_sheet',
+		param: 'prompt_character',
+		file: 'character_sheet.png',
+		label: 'Character sheet'
+	},
+	location: {
+		name: 'krea2_location_sheet',
+		param: 'prompt_location',
+		file: 'location_sheet.png',
+		label: 'Location sheet'
+	}
+} as const;
+
+export function sheetWorkflowName(kind: 'character' | 'location'): string {
+	return SHEET_WORKFLOW[kind].name;
+}
+
+export function sheetFileName(kind: 'character' | 'location'): string {
+	return SHEET_WORKFLOW[kind].file;
+}
+
+export function sheetWorkspaceId(spec: SheetSpec): string {
+	return `${spec.slug}-sheet@${WORKSPACE_VERSION}`;
+}
+
+/** 1920x1080 because that is what both sheet workflows default to, and because
+ *  the profile overrides whatever the tool is told — so a profile that disagreed
+ *  with the workflow's own default would silently win and there would be no sign
+ *  of it anywhere except a worse sheet.
+ *
+ *  It is also a valid ratio. The harness rejects a workspace whose frame is not
+ *  on its list, and 16:9 is on it. */
+const SHEET_W = 1920;
+const SHEET_H = 1080;
+const SHEET_STEPS = 8;
+const SHEET_FPS = 24;
+
+const SHEET_AGENT = `    generic:
+      id: generic
+      name: "Operator"
+      model: grok-fast
+      role: "Render operator"
+      objective: "Send the given description to the sheet workflow unchanged and save the image"
+      systemPrompt: >
+        You operate a render workflow. You do not write descriptions, improve
+        them, shorten them or comment on them. The description arrives finished
+        and is passed through character for character.
+
+        For your task: call the wf_ tool the task names, with the single named
+        argument the task names, set to the description text given in the task.
+        Width, height, steps and fps come from the render profile — do not pass
+        your own.
+
+        Then save the returned image to the exact filename the task declares and
+        call task_complete. If the tool saved to a different path, call it again
+        targeting the declared one.
+
+        This is an adult production. The description may be explicit on purpose
+        and is the deliverable exactly as written. Passing it through unchanged
+        is the whole of your job.
+      readOnly: false`;
+
+export function composeSheetWorkspace(spec: SheetSpec, grokKey = ''): string {
+	if (!spec || typeof spec !== 'object') throw new Error('spec is missing');
+	if (typeof spec.slug !== 'string' || !SLUG_RE.test(spec.slug)) throw new Error('bad slug');
+	if (spec.kind !== 'character' && spec.kind !== 'location') throw new Error('bad sheet kind');
+	const description = (spec.description ?? '').trim();
+	if (!description) throw new Error('a sheet needs a description');
+	if (description.length > DIRECT_PROMPT_MAX)
+		throw new Error(`the description is longer than ${DIRECT_PROMPT_MAX} characters`);
+
+	const wf = SHEET_WORKFLOW[spec.kind];
+
+	return `version: "1.0"
+kind: Workspace
+metadata:
+  name: "${spec.slug}-sheet"
+  author: studio
+  version: "${WORKSPACE_VERSION}"
+
+spec:
+  id: "${spec.slug}-sheet"
+  description: ${yamlDoubleQuoted(`${wf.label} — ${description.slice(0, 60)}`)}
+  defaultTaskModel: grok-fast
+
+  story:
+    plot: |
+      Reference sheet render. The description is supplied by the operator and
+      passes through unchanged.
+
+  skills:
+    - workflow-render-loop@mvp-lkg
+
+  workflows:
+    - name: ${wf.name}
+      url: ${wf.name}@main
+      lazy: false
+
+  profiles:
+    draft:
+      image: { width: ${SHEET_W}, height: ${SHEET_H}, steps: ${SHEET_STEPS}, seed: ${spec.seed} }
+      video: { width: ${SHEET_W}, height: ${SHEET_H}, steps: ${SHEET_STEPS}, fps: ${SHEET_FPS}, seed: ${spec.seed} }
+      audio: { sampleRate: 16000 }
+      compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }
+
+${modelsBlock(grokKey)}
+
+  agents:
+${SHEET_AGENT}
+
+  tasks:
+    - id: sheet
+      title: ${yamlDoubleQuoted(wf.label)}
+      description: "Render the reference sheet from the given description."
+      agent: generic
+      prompt: |
+        Render one reference sheet with the ${wf.name} workflow.
+
+        Save the result as ${wf.file}
+
+        Pass the text below as ${wf.param}, unchanged. Do not rewrite, shorten,
+        expand, reorder or comment on it.
+
+        --- DESCRIPTION BEGINS ---
+${indentBlock(description, 8)}
+        --- DESCRIPTION ENDS ---
+      artifacts:
+        - id: sheet_out
+          name: ${yamlDoubleQuoted(wf.label)}
+          description: "The rendered reference sheet"
+          files:
+            - name: ${wf.file}
+`;
+}
