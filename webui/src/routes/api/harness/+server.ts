@@ -41,6 +41,30 @@ const OPS = new Set([
  *  forward. */
 const WORKSPACE_RE = /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/;
 
+/** How long a workspace call may take before it is treated as wedged. Generous:
+ *  poll-state normally answers in well under a second, and the only thing this
+ *  guards against is a request that will never return. */
+const WORKSPACE_TIMEOUT_MS = 20_000;
+
+/** Which of the two silences this is. Returns the flag the dashboard branches
+ *  on, so the wrong instruction is never shown. */
+async function diagnose(
+	fetch: typeof globalThis.fetch,
+	cause: unknown
+): Promise<{ offline?: true; wedged?: true; error: string }> {
+	try {
+		const probe = await fetch(`${HARNESS}/openapi.yaml`, {
+			signal: AbortSignal.timeout(5_000)
+		});
+		// The harness answered, so it is up and it is this one workspace that has
+		// stopped talking. Its render may still be running on the GPU.
+		if (probe.ok) return { wedged: true, error: String(cause) };
+	} catch {
+		/* the probe failed too — genuinely offline, fall through */
+	}
+	return { offline: true, error: String(cause) };
+}
+
 export const POST: RequestHandler = async ({ request, fetch }) => {
 
 	let payload: { workspace?: string; op?: string; body?: unknown };
@@ -59,12 +83,29 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		res = await fetch(`${HARNESS}/workspaces/${workspace}/api/${op}`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body ?? {})
+			body: JSON.stringify(body ?? {}),
+			// A workspace call that has not answered in this long is not slow, it is
+			// stuck. Without a deadline the request hangs until the platform's own
+			// timeout, and the poll loop stops moving with it.
+			signal: AbortSignal.timeout(WORKSPACE_TIMEOUT_MS)
 		});
 	} catch (e) {
-		// The harness being down is the normal case when nobody started it, so it
-		// gets a status the dashboard can render as a banner rather than a crash.
-		return json({ ok: false, offline: true, error: String(e) }, { status: 200 });
+		// Two very different failures used to arrive here as one.
+		//
+		// The harness being down is the normal case when nobody started it. But a
+		// single workspace agent can also wedge — stop answering every call for its
+		// own id while the harness itself is perfectly healthy and every other
+		// workspace answers in milliseconds. That happened during the first
+		// character-sheet render, and the banner told the operator to restart the
+		// container: advice that would have killed a render that was still running
+		// on the GPU.
+		//
+		// So the harness is asked directly before either is claimed. It is one
+		// cheap request against a route with no workspace behind it.
+		return json(
+			{ ok: false, ...(await diagnose(fetch, e)) },
+			{ status: 200 }
+		);
 	}
 
 	const text = await res.text();

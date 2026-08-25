@@ -88,6 +88,16 @@
 	const OFFLINE_TEXT =
 		'The harness is not responding. Start the container: cd ~/auteur && ./run.sh';
 
+	/** The other silence, and it needs the opposite advice. The harness answers
+	 *  fine and every other workspace answers in milliseconds; this run's agent
+	 *  has stopped talking on its own. The render behind it is very likely still
+	 *  going on the GPU, so restarting the container is the one thing that would
+	 *  actually lose work. */
+	const WEDGED_TEXT =
+		'This run has stopped reporting — but the harness is up and the render may ' +
+		'still be running on the GPU. Do not restart the container; it would lose ' +
+		'the render. The clip appears here if it finishes.';
+
 	/** Which door this session is using. Simple by default: it is the one that
 	 *  produced usable clips today, and the planning chain is a twenty-minute
 	 *  round trip to find out whether it did. Remembered across visits — a mode
@@ -1701,8 +1711,8 @@
 		try {
 			const r = await call('chat', { msg }, activeWs);
 			const d = r.data;
-			if (r.offline) {
-				pushError(OFFLINE_TEXT);
+			if (r.offline || r.wedged) {
+				pushError(r.wedged ? WEDGED_TEXT : OFFLINE_TEXT);
 			} else if (!r.ok) {
 				const e = d as { code?: string; error?: string } | string | undefined;
 				const detail =
@@ -1903,12 +1913,12 @@
 			// Fetched alongside, never instead: a failing event log must not stop
 			// the state poll that drives everything else on screen.
 			void pollActivity(target).catch(() => {});
-			if (r.offline) {
+			if (r.offline || r.wedged) {
 				offline = true;
 				quiet += 1;
 				if (!offlineNoted) {
 					offlineNoted = true;
-					pushError(OFFLINE_TEXT);
+					pushError(r.wedged ? WEDGED_TEXT : OFFLINE_TEXT);
 				}
 			} else if (!r.ok) {
 				// A crashed workspace agent answers 500 INTERNAL_AGENT_EXECUTION_FAILED

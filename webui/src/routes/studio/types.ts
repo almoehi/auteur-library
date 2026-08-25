@@ -297,7 +297,13 @@ export interface EventLine {
 export interface ProxyResult<T = unknown> {
 	ok: boolean;
 	status?: number;
+	/** The harness itself did not answer. */
 	offline?: boolean;
+	/** The harness answered, but this one workspace did not. Its agent has
+	 *  wedged; the render behind it may still be running on the GPU. Told apart
+	 *  from `offline` because the two need opposite advice — one says restart the
+	 *  container, the other says on no account restart the container. */
+	wedged?: boolean;
 	error?: string;
 	data?: T;
 }
