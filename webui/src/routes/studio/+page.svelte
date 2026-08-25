@@ -1154,9 +1154,7 @@
 					kind,
 					// A refinement merges into the description already on screen
 					// rather than starting over from the few words you just typed.
-					...(kind === 'character' && currentCharacter
-						? { previous: currentCharacter.description }
-						: {})
+					...(currentCharacter ? { previous: currentCharacter.description } : {})
 				})
 			});
 			const r = (await res.json()) as {
@@ -1168,21 +1166,13 @@
 				pushError(r.error || 'The description could not be prepared.');
 				return;
 			}
-			// A character does not stop to be approved. Its preview costs a third of
-			// a sheet and is the same face the sheet would give, so the picture is a
-			// better thing to react to than a paragraph.
-			if (kind === 'character') {
-				const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
-				currentCharacter = { description: r.sheet.description, seed };
-				await previewCharacter(r.sheet.description, seed, r.sheet.why);
-				return;
-			}
-
-			pushItem({
-				who: 'studio',
-				kind: 'sheet',
-				sheet: { ...r.sheet, request, name: firstWords(r.sheet.description, kind) }
-			});
+			// Neither stops to be approved any more. A preview costs a third of a
+			// sheet and is the same picture the sheet would build on, so it is a
+			// better thing to react to than a paragraph — you look at it and say
+			// what to change.
+			const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
+			currentCharacter = { description: r.sheet.description, seed };
+			await previewSubject(kind, r.sheet.description, seed, r.sheet.why);
 		} catch (e) {
 			pushError(String(e));
 		}
@@ -1200,19 +1190,24 @@
 	 */
 	let previewBusy = $state(false);
 
-	async function previewCharacter(description: string, seed: number, why?: string) {
+	async function previewSubject(
+		kind: 'character' | 'location',
+		description: string,
+		seed: number,
+		why?: string
+	) {
 		if (previewBusy) return;
 		previewBusy = true;
 		const card = pushItem({
 			who: 'studio',
 			kind: 'sheet',
-			sheet: { kind: 'character', stage: 'anchor', description, why, seed, launched: true }
+			sheet: { kind, stage: 'anchor', description, why, seed, launched: true }
 		});
 		try {
 			const res = await fetch('/studio/api/anchor', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ description, seed })
+				body: JSON.stringify({ description, seed, kind })
 			});
 			const r = (await res.json()) as { ok?: boolean; job?: string; error?: string };
 			if (!r.ok || !r.job) {
@@ -1246,7 +1241,7 @@
 				if (card.sheet) {
 					card.sheet.url = st.url;
 					card.sheet.job = r.job;
-					card.sheet.name = firstWords(description, 'character');
+					card.sheet.name = firstWords(description, kind);
 				}
 				persist();
 				return;
@@ -1341,17 +1336,17 @@
 	 *  returns. The six-view sheet is started behind it and lands minutes later —
 	 *  which is why nothing here waits for it, and why the rail shows which
 	 *  characters are still being drawn. */
-	async function saveCharacter(itemId: string) {
+	async function saveSubject(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.sheet || item.sheet.id || sheetBusy[itemId]) return;
-		const { job, description, name, seed } = item.sheet;
+		const { job, description, name, seed, kind } = item.sheet;
 		if (!job) return;
 		sheetBusy[itemId] = true;
 		try {
 			const res = await fetch('/studio/api/sheet', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ kind: 'character', name, description, job, seed })
+				body: JSON.stringify({ kind, name, description, job, seed })
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -1365,7 +1360,7 @@
 			}
 			item.sheet.id = r.sheet.id;
 			if (r.sheets) sheets = r.sheets;
-			// This person is finished; the next message describes someone new.
+			// This subject is finished; the next message describes a new one.
 			currentCharacter = null;
 			persist();
 
@@ -1464,7 +1459,7 @@
 			who: 'studio',
 			kind: 'sheet',
 			sheet: {
-				kind: 'character',
+				kind: sh.kind,
 				stage: 'sheet',
 				description: sh.description,
 				name: sh.name,
@@ -3775,7 +3770,7 @@
 									</h3>
 									<span class="text-xs text-[var(--st-faint)]">
 										{item.sheet.stage === 'anchor'
-											? 'one picture — say what to change, or ask for the full sheet'
+											? 'one picture — say what to change, or save it'
 											: item.sheet.kind === 'character'
 												? 'front · face · profiles · rear · expression'
 												: 'six views of the same place'}
@@ -3831,12 +3826,13 @@
 									{#if item.sheet.id}
 										<p class="text-sm text-[var(--st-muted)]">
 											Saved as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
-											Every clip can use them from here on — the six-view sheet is rendering
-											in the background and will appear beside them when it is done.
+											The six views are rendering in the background and will appear beside
+											{item.sheet.kind === 'character' ? 'them' : 'it'} when they are done.
 										</p>
 									{:else}
 										<label class="block text-xs text-[var(--st-faint)]" for="char-name-{item.id}">
-											Name them — this is what the picker will show
+											{item.sheet.kind === 'character' ? 'Name them' : 'Name it'} — this is what the
+											picker will show
 										</label>
 										<div class="mt-2 flex flex-wrap items-center gap-2">
 											<input
@@ -3848,15 +3844,20 @@
 											<button
 												type="button"
 												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
-												onclick={() => saveCharacter(item.id)}
+												onclick={() => saveSubject(item.id)}
 												class="font-display cursor-pointer rounded-xl bg-[var(--st-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-40"
 											>
-												{sheetBusy[item.id] ? 'Saving…' : 'Save character'}
+												{sheetBusy[item.id]
+													? 'Saving…'
+													: item.sheet.kind === 'character'
+														? 'Save character'
+														: 'Save location'}
 											</button>
 										</div>
 										<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
-											Not right? Say what to change in the chat — the same person is kept and
-											only what you name moves.
+											Not right? Say what to change in the chat — {item.sheet.kind === 'character'
+												? 'the same person is'
+												: 'the same place is'} kept and only what you name moves.
 										</p>
 									{/if}
 								</div>

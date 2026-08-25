@@ -34,12 +34,42 @@ import { error, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 const REPO = 'https://raw.githubusercontent.com/almoehi/auteur-library/refs/heads/main/workflows';
-const SOURCE = 'krea2_character_sheet';
 
-/** Our own name, because the harness refuses a bundle whose `name` disagrees
- *  with the workspace entry that asked for it — and because this is genuinely a
- *  different workflow from the one it is cut out of. */
-const NAME = 'krea2_character_anchor';
+/** Both sheet workflows are built the same way — a KREA-2 still, then an H3
+ *  orbit over it — so the same cut works on both. They even use the same node
+ *  ids. The one structural difference is node 80: the character sheet appends a
+ *  neutral grey studio backdrop to the description, and a location does not,
+ *  because a location IS the backdrop.
+ *
+ *  Our own names, because the harness refuses a bundle whose `name` disagrees
+ *  with the workspace entry that asked for it — and because these are genuinely
+ *  different workflows from the ones they are cut out of. */
+const KINDS = {
+	character: {
+		source: 'krea2_character_sheet',
+		name: 'krea2_character_anchor',
+		port: 'prompt_character',
+		keep: ['10', '20', '21', '22', '25', '26', '27', '28', '29', '75', '80'],
+		subject: 'the described person on a neutral grey studio backdrop',
+		portNote:
+			'Character description — physical appearance, clothing and expression in plain English. Do not describe a backdrop; the workflow applies a neutral grey studio backdrop itself.',
+		example:
+			'A photography of full body of a beautiful blonde american woman with blue eyes age 25 with beautiful body shape wearing a beautiful dress.'
+	},
+	location: {
+		source: 'krea2_location_sheet',
+		name: 'krea2_location_anchor',
+		port: 'prompt_location',
+		keep: ['10', '20', '21', '22', '25', '26', '27', '28', '29', '75'],
+		subject: 'the described place, with no people in it',
+		portNote:
+			'Plain-English description of the location — architecture, materials, lighting, atmosphere and distinctive spatial details. No people.',
+		example:
+			'A moonlit stone courtyard ringed by tall cypress trees, worn flagstones, a dry central fountain'
+	}
+} as const;
+
+type Kind = keyof typeof KINDS;
 
 /** The nodes the anchor image depends on, resolved by walking back from the
  *  VAEDecode that produces it, plus the SaveImage that writes it out.
@@ -64,13 +94,15 @@ const PIN = 'l40s';
 const CACHE = new Map<string, { at: number; body: string }>();
 const CACHE_MS = 10 * 60 * 1000;
 
-async function upstream(file: string, fetch: typeof globalThis.fetch): Promise<string> {
-	const hit = CACHE.get(file);
+async function upstream(kind: Kind, file: string, fetch: typeof globalThis.fetch): Promise<string> {
+	const src = KINDS[kind].source;
+	const key = `${src}/${file}`;
+	const hit = CACHE.get(key);
 	if (hit && Date.now() - hit.at < CACHE_MS) return hit.body;
-	const res = await fetch(`${REPO}/${SOURCE}/${file}`);
-	if (!res.ok) throw error(502, `could not fetch ${SOURCE}/${file} — upstream said ${res.status}`);
+	const res = await fetch(`${REPO}/${src}/${file}`);
+	if (!res.ok) throw error(502, `could not fetch ${key} — upstream said ${res.status}`);
 	const body = await res.text();
-	CACHE.set(file, { at: Date.now(), body });
+	CACHE.set(key, { at: Date.now(), body });
 	return body;
 }
 
@@ -79,31 +111,32 @@ async function upstream(file: string, fetch: typeof globalThis.fetch): Promise<s
  *  Copied rather than written out here so the URLs and checksums stay upstream's
  *  business. A model declared with the wrong sha256 fails at download, minutes
  *  in, on the GPU. */
-function modelBlock(src: string, name: string): string {
+function modelBlock(kind: Kind, src: string, name: string): string {
 	const from = src.indexOf('\nmodels:');
-	if (from < 0) throw error(500, `${SOURCE} has no models stanza`);
+	if (from < 0) throw error(500, `${KINDS[kind].source} has no models stanza`);
 	const re = new RegExp(
 		`^  - name: ${name.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\n(?:.*\\n)*?(?=^  - name: |^\\\\w|\\\\Z)`,
 		'm'
 	);
 	const m = re.exec(src.slice(from));
-	if (!m) throw error(500, `${SOURCE} no longer declares the model "${name}" — the preview cannot match the sheet`);
+	if (!m) throw error(500, `${KINDS[kind].source} no longer declares the model "${name}" — the preview cannot match the sheet`);
 	return m[0].trimEnd();
 }
 
-function buildYaml(src: string): string {
-	return `# Generated. The front half of ${SOURCE}: the KREA-2 anchor still, without
+function buildYaml(kind: Kind, src: string): string {
+	const k = KINDS[kind];
+	return `# Generated. The front half of ${k.source}: the KREA-2 anchor still, without
 # the MiniMax H3 orbit that turns it into six views. Edit
 # webui/src/routes/studio/api/anchorwf/[file]/+server.ts, not this.
 
-name: ${NAME}
+name: ${k.name}
 description: >
-  Renders the single KREA-2 anchor image that a character sheet is built from —
-  one full-body front view of the described person on a neutral grey studio
-  backdrop. Identical model, sampler and seed handling to krea2_character_sheet,
-  so the same description and seed produce the same face the full sheet would.
-  Best for finding a character before paying for the six-view turnaround. Not
-  suitable as a character reference for video workflows, which require the sheet.
+  Renders the single KREA-2 anchor image that ${k.source} is built from — one
+  view of ${k.subject}. Identical model, sampler and seed handling to that
+  workflow, so the same description and seed produce the same picture the full
+  sheet would. Best for finding what you want before paying for the six-view
+  version. Not suitable as a reference for video workflows, which require the
+  sheet.
 url: workflow.json
 workflow_type: t2i
 model_family: krea2
@@ -111,12 +144,12 @@ gpu_types: [${PIN}]
 
 ports:
   params:
-    - name: prompt_character
+    - name: ${k.port}
       kind: string
-      description: "Character description — physical appearance, clothing and expression in plain English. Do not describe a backdrop; the workflow applies a neutral grey studio backdrop itself."
+      description: ${JSON.stringify(k.portNote)}
       binding: value@10
       required: true
-      default: "A photography of full body of a beautiful blonde american woman with blue eyes age 25 with beautiful body shape wearing a beautiful dress."
+      default: ${JSON.stringify(k.example)}
     - name: width
       kind: int
       description: "Image width in pixels. Must be divisible by 16."
@@ -140,7 +173,7 @@ ports:
       default: 8
     - name: seed
       kind: int
-      description: "Random seed. Pass the same seed to krea2_character_sheet to get the same face in the full turnaround."
+      description: "Random seed. Pass the same seed to ${k.source} to get the same picture in the full sheet."
       binding: seed@28
       seed: true
       required: false
@@ -149,27 +182,27 @@ ports:
   outputs:
     - name: anchor_image
       kind: image
-      description: "The rendered character on a neutral grey studio backdrop."
+      description: "The rendered anchor image."
       node_id: "75"
       role: primary
 
 models:
-${modelBlock(src, 'Krea2_Turbo_convrot_int8mixed')}
+${modelBlock(kind, src, 'Krea2_Turbo_convrot_int8mixed')}
 
-${modelBlock(src, 'qwen3vl_4b_fp8_scaled')}
+${modelBlock(kind, src, 'qwen3vl_4b_fp8_scaled')}
 
-${modelBlock(src, 'qwen_image_vae')}
+${modelBlock(kind, src, 'qwen_image_vae')}
 `;
 }
 
-function buildJson(src: string): string {
+function buildJson(kind: Kind, src: string): string {
 	const full = JSON.parse(src) as Record<string, unknown>;
 	const out: Record<string, unknown> = {};
-	for (const id of KEEP) {
+	for (const id of KINDS[kind].keep) {
 		if (!full[id]) {
 			throw error(
 				500,
-				`node ${id} has gone from ${SOURCE} — the anchor branch has been restructured upstream and this needs re-cutting by hand`
+				`node ${id} has gone from ${KINDS[kind].source} — the anchor branch has been restructured upstream and this needs re-cutting by hand`
 			);
 		}
 		out[id] = full[id];
@@ -181,13 +214,15 @@ function buildJson(src: string): string {
 }
 
 export const GET: RequestHandler = async ({ params, fetch }) => {
+	const kind = params.kind as Kind;
+	if (!KINDS[kind]) throw error(404, 'an anchor is either a character or a location');
 	if (params.file === 'workflow.json') {
-		return text(buildJson(await upstream('workflow.json', fetch)), {
+		return text(buildJson(kind, await upstream(kind, 'workflow.json', fetch)), {
 			headers: { 'content-type': 'application/json' }
 		});
 	}
 	if (params.file === 'workflow.yaml' || params.file === 'workflow.yml') {
-		return text(buildYaml(await upstream('workflow.yaml', fetch)), {
+		return text(buildYaml(kind, await upstream(kind, 'workflow.yaml', fetch)), {
 			headers: { 'content-type': 'text/yaml' }
 		});
 	}

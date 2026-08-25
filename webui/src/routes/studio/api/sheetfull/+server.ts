@@ -1,4 +1,4 @@
-/** The six-view turnaround for a character you have already saved.
+/** The six-view sheet for a character or a location you have already saved.
  *
  *  Saving a character keeps the picture you approved and returns immediately.
  *  This is what happens next, behind you: the same description and the same seed
@@ -133,7 +133,7 @@ async function runSheet(
 				stage: 'sheet',
 				sheet: {
 					slug,
-					kind: 'character',
+					kind: character.kind,
 					stage: 'sheet',
 					description: character.description,
 					// The face you approved, not a new one.
@@ -173,7 +173,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	const id = typeof body.id === 'string' ? body.id : '';
 	const character = getSheet(id);
 	if (!character) return json({ ok: false, error: 'no such character' });
-	if (character.kind !== 'character') return json({ ok: false, error: 'only a character has a turnaround' });
+
 	if (character.sheet?.state === 'rendering') return json({ ok: true, already: true });
 
 	const started = await runSheet(id, 1, fetch);

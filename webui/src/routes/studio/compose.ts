@@ -1452,6 +1452,12 @@ const SHEET_WORKFLOW = {
 		file: 'anchor_image.png',
 		label: 'Character preview'
 	},
+	anchorLocation: {
+		name: 'krea2_location_anchor',
+		param: 'prompt_location',
+		file: 'anchor_image.png',
+		label: 'Location preview'
+	},
 	location: {
 		name: 'krea2_location_sheet',
 		param: 'prompt_location',
@@ -1488,7 +1494,13 @@ function sheetUrl(spec: SheetSpec, name: string): string {
 	if (!spec.studioOrigin) return `${name}@main`;
 	// The anchor has no registry equivalent — it only exists as something we
 	// serve — so it gets its own route rather than a kind-shaped one.
-	if (spec.stage === 'anchor') return `${spec.studioOrigin}/studio/api/anchorwf/workflow.yaml`;
+	// Kept correct rather than deleted, though nothing calls it today: previews go
+	// straight to Modal via api/anchor and never build a workspace. If that path
+	// ever breaks, this is the fallback, and a fallback pointing at a 404 is not
+	// one. The kind segment was added when locations got an anchor of their own.
+	if (spec.stage === 'anchor') {
+		return `${spec.studioOrigin}/studio/api/anchorwf/${spec.kind}/workflow.yaml`;
+	}
 	return `${spec.studioOrigin}/studio/api/sheetwf/${spec.kind}/workflow.yaml`;
 }
 
@@ -1542,10 +1554,12 @@ export function composeSheetWorkspace(spec: SheetSpec, grokKey = ''): string {
 	if (description.length > DIRECT_PROMPT_MAX)
 		throw new Error(`the description is longer than ${DIRECT_PROMPT_MAX} characters`);
 
-	if (spec.stage === 'anchor' && spec.kind !== 'character') {
-		throw new Error('only a character has an anchor preview');
-	}
-	const wf = spec.stage === 'anchor' ? SHEET_WORKFLOW.anchor : SHEET_WORKFLOW[spec.kind];
+	const wf =
+		spec.stage === 'anchor'
+			? spec.kind === 'location'
+				? SHEET_WORKFLOW.anchorLocation
+				: SHEET_WORKFLOW.anchor
+			: SHEET_WORKFLOW[spec.kind];
 
 	return `version: "1.0"
 kind: Workspace

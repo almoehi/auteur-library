@@ -30,6 +30,9 @@ export interface AnchorJob {
 	 *  page having to remember across a reload. */
 	description: string;
 	seed: number;
+	/** Which sheet this is the front half of. Carried so the card and the save
+	 *  know what they are looking at without the page having to remember. */
+	kind: 'character' | 'location';
 	startedAt: number;
 	finishedAt?: number;
 	error?: string;
@@ -50,8 +53,13 @@ function pathFor(id: string): string | null {
 	return ID_OK.test(id) ? join(DIR, `${id}.png`) : null;
 }
 
-export function startJob(id: string, description: string, seed: number): AnchorJob {
-	const job: AnchorJob = { id, phase: 'running', description, seed, startedAt: Date.now() };
+export function startJob(
+	id: string,
+	description: string,
+	seed: number,
+	kind: 'character' | 'location' = 'character'
+): AnchorJob {
+	const job: AnchorJob = { id, phase: 'running', description, seed, kind, startedAt: Date.now() };
 	JOBS.set(id, job);
 	return job;
 }
