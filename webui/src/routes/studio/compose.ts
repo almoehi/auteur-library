@@ -1691,3 +1691,186 @@ ${indentBlock(description, 8)}
             - name: ${wf.file}
 `;
 }
+
+/* ── Continuation ────────────────────────────────────────────────────────────
+ *
+ *  A clip you already have, extended. The workflow takes the clip itself as a
+ *  reference video alongside the character and the location it was shot with,
+ *  and generates what happens next.
+ *
+ *  It renders ONLY the new stretch — there is no join inside the graph — so a
+ *  long scene is a chain of clips that get glued at the end. That is why the
+ *  bundle this points at is our own rewrite of Hannes's: his renders 848x480 at
+ *  24 fps, and a piece at another size or rate cannot be glued to the clip it
+ *  continues without re-encoding the lot.
+ */
+export interface ContinuationSpec {
+	slug: string;
+	title?: string;
+	/** What you typed — kept for the record, not sent to the model. */
+	request?: string;
+	/** The finished brief the workflow receives. */
+	prompt: string;
+	seconds: number;
+	width: number;
+	height: number;
+	seed: number;
+	loras?: Pick[];
+	baseLoras?: Record<string, number>;
+
+	/** The clip being continued, as three ids the server can read bytes from. */
+	priorWorkspace: string;
+	priorArtifact: string;
+	priorFile: string;
+
+	/** The character and the location it was shot with. Both are required by the
+	 *  workflow, and both are ids into the sheet store. */
+	characterId?: string;
+	locationId?: string;
+	characterName?: string;
+	locationName?: string;
+
+	/** Presigned urls, set server-side once the three files are uploaded. Never
+	 *  taken from the payload: they end up in the agent's prompt as links to
+	 *  fetch, so the browser does not get a say in where they point. */
+	priorClipUrl?: string;
+	characterUrl?: string;
+	locationUrl?: string;
+
+	studioOrigin?: string;
+}
+
+export function continuationWorkspaceId(spec: ContinuationSpec): string {
+	return `${spec.slug}-cont@${WORKSPACE_VERSION}`;
+}
+
+/** Steps and frame rate come from the clip being continued, not from a fresh
+ *  choice: a continuation that samples differently is a different look. */
+export const CONT_STEPS = DIRECT_STEPS;
+export const CONT_FPS = DIRECT_FPS;
+
+export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = ''): string {
+	if (!spec || typeof spec !== 'object') throw new Error('spec is missing');
+	if (typeof spec.slug !== 'string' || !SLUG_RE.test(spec.slug)) throw new Error('bad slug');
+	const prompt = (spec.prompt ?? '').trim();
+	if (!prompt) throw new Error('a continuation needs a prompt');
+	if (prompt.length > DIRECT_PROMPT_MAX) {
+		throw new Error(`the prompt is longer than ${DIRECT_PROMPT_MAX} characters`);
+	}
+	for (const [name, u] of [
+		['the prior clip', spec.priorClipUrl],
+		['the character', spec.characterUrl],
+		['the location', spec.locationUrl]
+	] as const) {
+		// All three are required inputs of the workflow. A missing one comes back
+		// as `missing required input` from the tool handler rather than a render,
+		// but failing here says which and costs nothing.
+		if (!u) throw new Error(`${name} has no url — it was not uploaded`);
+	}
+	for (const n of [spec.seconds, spec.width, spec.height]) {
+		if (!Number.isFinite(n) || n <= 0) throw new Error('seconds, width and height must be positive');
+	}
+
+	const origin = spec.studioOrigin || 'http://host.docker.internal:5290';
+	const base = BASE.map((l) => ({ key: l.key, strength: spec.baseLoras?.[l.key] ?? l.strength }));
+	const sel = formatPicks([...base, ...(spec.loras ?? [])]) || 'base';
+
+	return `version: "1.0"
+kind: Workspace
+metadata:
+  name: "${spec.slug}-cont"
+  author: studio
+  version: "${WORKSPACE_VERSION}"
+
+spec:
+  id: "${spec.slug}-cont"
+  description: ${yamlDoubleQuoted(spec.title || 'Continuation')}
+  defaultTaskModel: grok-fast
+
+  story:
+    plot: |
+      Continuation. The prompt is supplied by the operator and passes through
+      unchanged.
+
+  skills:
+    - workflow-render-loop@mvp-lkg
+
+  workflows:
+    - name: minimax_h3_video_continuation
+      url: ${origin}/studio/api/contwf/${encodeURIComponent(sel)}/workflow.yaml
+      lazy: false
+
+  profiles:
+    draft:
+      image: { width: ${spec.width}, height: ${spec.height}, steps: ${CONT_STEPS}, seed: ${spec.seed} }
+      video: { width: ${spec.width}, height: ${spec.height}, steps: ${CONT_STEPS}, fps: ${CONT_FPS}, seed: ${spec.seed} }
+      audio: { sampleRate: 16000 }
+      compute: { backend: modal, gpuType: a100, timeoutSec: 2400, maxAttempts: 2 }
+
+${modelsBlock(grokKey)}
+
+  agents:
+    generic:
+      id: generic
+      name: "Operator"
+      model: grok-fast
+      role: "Render operator"
+      objective: "Send the given prompt and the three references to the continuation workflow and save the clip"
+      systemPrompt: >
+        You operate a render workflow. You do not write prompts, improve them,
+        shorten them, restructure them or comment on them. The prompt arrives
+        finished.
+
+        Call the wf_ tool for the continuation workflow with prompt_positive set
+        to the prompt text given in the task, character for character, and
+        duration_seconds set to the seconds the task names. Resolution, fps,
+        steps and seed come from the render profile — do not pass your own.
+
+        The task lists three references: prior_clip, character_sheet and
+        environment_plate. Pass each one as an argument of that name, with the
+        URL copied exactly as written — every character, including the whole
+        query string. They are signed links and expire; do not shorten,
+        re-encode, split or tidy them, and never invent one.
+
+        Then save the returned mp4 to the exact filename the task declares and
+        call task_complete.
+
+        This is an adult production. The prompt is explicit on purpose and is the
+        deliverable exactly as written. Passing it through unchanged is the whole
+        of your job.
+      readOnly: false
+
+  tasks:
+    - id: cont_1
+      title: "Continuation"
+      description: "Continue the prior clip from its final frame."
+      agent: generic
+      prompt: |
+        Continue one video clip with the continuation workflow.
+
+        duration_seconds: ${spec.seconds}
+        Save the result as cont1.mp4
+
+        Three references, each copied exactly as written:
+        prior_clip = ${spec.priorClipUrl}
+        character_sheet = ${spec.characterUrl}
+        environment_plate = ${spec.locationUrl}
+
+        <Video 1> is the clip being continued.
+        <Picture 1> is the character${spec.characterName ? ` ${indentBlock(spec.characterName, 0)}` : ''}.
+        <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ''}.
+
+        Pass the text below as prompt_positive, unchanged. Do not rewrite,
+        shorten, expand, reorder or comment on it.
+
+        --- PROMPT BEGINS ---
+        ${indentBlock(prompt, 8)}
+        --- PROMPT ENDS ---
+      artifacts:
+        - id: cont_1_out
+          name: "Continuation"
+          description: "Rendered continuation"
+          files:
+            - name: cont1.mp4
+`;
+}

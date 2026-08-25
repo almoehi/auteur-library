@@ -72,6 +72,14 @@ export interface RenderRow {
 	locationId?: string;
 	locationName?: string;
 
+	/** For a continuation: the workspace of the clip it continues.
+	 *
+	 *  A chain is walked backwards along this one field — clip, its continuation,
+	 *  that one's continuation. Nothing stores the chain as a whole, because a
+	 *  chain is only ever read from its newest end, and a list that has to be kept
+	 *  consistent with the rows it summarises is a second thing to get wrong. */
+	continuesWorkspace?: string;
+
 	/** Launch to terminal, as this app saw it — so it includes the workspace
 	 *  opening, any model downloads, and up to one poll interval of lag. It is a
 	 *  wall clock, not the GPU's number, and is named for what it is: the GPU's

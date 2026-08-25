@@ -30,6 +30,8 @@ import { importStagedRefs, type RefImportResult } from '../../refs-import.server
 import { listRefs, readRef } from '../../refs.server';
 import { getSheet, readSheet } from '../../sheets.server';
 import { pruneStashes, readStashed, stashRefs } from '../../refstash.server';
+import { cached } from '../../../clips.server';
+import { readFileSync } from 'node:fs';
 import { putObject, s3FromEnv } from '../../s3presign.server';
 import { recordRender } from '../../renders.server';
 import { recordProduction } from '../../history.server';
@@ -42,6 +44,11 @@ import {
 	directWorkspaceId,
 	composeSheetWorkspace,
 	sheetWorkspaceId,
+	composeContinuationWorkspace,
+	continuationWorkspaceId,
+	type ContinuationSpec,
+	CONT_STEPS,
+	CONT_FPS,
 	type SheetSpec,
 	type ApprovedDocs,
 	type DirectSpec,
@@ -237,7 +244,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		});
 	}
 
-	let payload: { brief?: Brief; stage?: unknown; approved?: unknown; direct?: unknown; sheet?: unknown };
+	let payload: {
+		brief?: Brief;
+		stage?: unknown;
+		approved?: unknown;
+		direct?: unknown;
+		sheet?: unknown;
+		continuation?: unknown;
+	};
 	try {
 		payload = await request.json();
 	} catch {
@@ -245,8 +259,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	}
 
 	const stage = payload.stage;
-	if (stage !== 'planning' && stage !== 'render' && stage !== 'direct' && stage !== 'sheet') {
-		throw error(400, "stage must be 'planning', 'render', 'direct' or 'sheet'");
+	if (
+		stage !== 'planning' &&
+		stage !== 'render' &&
+		stage !== 'direct' &&
+		stage !== 'sheet' &&
+		stage !== 'continue'
+	) {
+		throw error(400, "stage must be 'planning', 'render', 'direct', 'sheet' or 'continue'");
 	}
 
 	// A sheet is its own workspace and its own shape: one description, one
@@ -289,6 +309,128 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	// Direct mode carries a spec instead of a brief: there is no plan to open,
 	// only prompts to render. It leaves before the brief checks below, which ask
 	// for a story and a scene count that this stage does not have.
+	// ── continue an existing clip ────────────────────────────────────────────
+	if (stage === 'continue') {
+		const spec = payload.continuation as ContinuationSpec | undefined;
+		if (!spec || typeof spec !== 'object') throw error(400, 'Missing continuation spec');
+		if (!spec.slug || !SLUG_RE.test(spec.slug)) throw error(400, 'Bad slug');
+		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
+
+		// Cleared before anything reads them: the spec arrives from the browser and
+		// these end up in the agent's prompt as links to fetch.
+		spec.priorClipUrl = undefined;
+		spec.characterUrl = undefined;
+		spec.locationUrl = undefined;
+		spec.characterName = undefined;
+		spec.locationName = undefined;
+
+		// The clip itself, read from the local cache by the three ids the card
+		// carries. Not fetched from the harness: that workspace is spent, its agent
+		// may be gone, and the bytes are already here because the page kept them
+		// the moment the clip arrived.
+		const clipPath = cached(spec.priorWorkspace ?? '', spec.priorArtifact ?? '', spec.priorFile ?? '');
+		if (!clipPath) {
+			return json(
+				{ ok: false, error: 'that clip is not in the library any more — it cannot be continued' },
+				{ status: 200 }
+			);
+		}
+
+		const character = spec.characterId ? getSheet(spec.characterId) : null;
+		const location = spec.locationId ? getSheet(spec.locationId) : null;
+		const characterBytes = character ? readSheet(character.id) : null;
+		const locationBytes = location ? readSheet(location.id) : null;
+		if (!character || !characterBytes || !location || !locationBytes) {
+			// Both are required inputs. Rendering without one would either refuse at
+			// the tool or, worse, produce a stranger in the wrong room.
+			return json(
+				{
+					ok: false,
+					error: 'a continuation needs both the character and the location it was shot with — one of them is gone'
+				},
+				{ status: 200 }
+			);
+		}
+		spec.characterName = character.name;
+		spec.locationName = location.name;
+
+		const s3 = s3FromEnv();
+		if (!s3) {
+			return json(
+				{ ok: false, error: 'S3 is not configured in ~/auteur/.env — the GPU has nowhere to read from' },
+				{ status: 200 }
+			);
+		}
+		try {
+			// The extension matters: the harness names the staged file
+			// `<port>.<ext-from-url>`, and the loader nodes expect a video for the
+			// clip and images for the two plates.
+			spec.priorClipUrl = await putObject(
+				s3,
+				`studio-cont/${spec.slug}/prior_clip.mp4`,
+				new Uint8Array(readFileSync(clipPath)),
+				fetch
+			);
+			spec.characterUrl = await putObject(
+				s3,
+				`studio-cont/${spec.slug}/character_sheet.png`,
+				new Uint8Array(characterBytes),
+				fetch
+			);
+			spec.locationUrl = await putObject(
+				s3,
+				`studio-cont/${spec.slug}/environment_plate.png`,
+				new Uint8Array(locationBytes),
+				fetch
+			);
+		} catch (e) {
+			return json({ ok: false, error: `the references could not be uploaded — ${e}` }, { status: 200 });
+		}
+
+		let contYaml: string;
+		try {
+			contYaml = composeContinuationWorkspace(spec, grokKey);
+		} catch (e) {
+			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
+		}
+
+		recordRender({
+			workspace: continuationWorkspaceId(spec),
+			slug: spec.slug,
+			at: Date.now(),
+			request: spec.request ?? '',
+			prompt: spec.prompt ?? '',
+			wrote: spec.loras ?? [],
+			launched: spec.loras ?? [],
+			steps: CONT_STEPS,
+			width: spec.width,
+			height: spec.height,
+			seconds: spec.seconds,
+			fps: CONT_FPS,
+			seed: spec.seed,
+			characterId: spec.characterId,
+			characterName: spec.characterName,
+			locationId: spec.locationId,
+			locationName: spec.locationName,
+			// What this one continues. A chain is walked backwards along this field.
+			continuesWorkspace: spec.priorWorkspace
+		});
+
+		return await openWorkspace(
+			continuationWorkspaceId(spec),
+			contYaml,
+			grokKey,
+			fetch,
+			{
+				slug: spec.slug,
+				title: spec.title || 'Continuation',
+				sceneCount: 1,
+				prompt: spec.prompt
+			},
+			{ withLibrary: true }
+		);
+	}
+
 	if (stage === 'direct') {
 		const spec = payload.direct as DirectSpec | undefined;
 		if (!spec || typeof spec !== 'object') throw error(400, 'Missing direct spec');
