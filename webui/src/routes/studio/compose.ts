@@ -1391,14 +1391,21 @@ export function composeDirectWorkspace(spec: DirectSpec, grokKey = ''): string {
 			(p, i) => `    - id: clip_${i + 1}
       title: "Clip ${i + 1}"
       description: "Render clip ${i + 1} from the given prompt."
-      # llm+hitl rather than the default llm: the agent runs its loop exactly as
-      # before and produces the clip, then stays available instead of ending.
-      # chat() refuses on any task whose effectiveTaskType is not hitl — it is
-      # the first guard in the worker's own chat handler — so this one line is
-      # what makes talking to a finished render possible at all. Nothing in the
-      # app talks to it yet; the cost of declaring it early is that the task
-      # waits for an explicit completion rather than closing itself.
-      taskType: llm+hitl
+      # Plain llm. This was llm+hitl for four hours, declared early so a finished
+      # render could be talked to later, and the note here said the cost was that
+      # "the task waits for an explicit completion rather than closing itself".
+      # That cost was the whole delivery path: nothing sends such a completion, so
+      # the task never ends, the artifact never leaves status "empty", and the page
+      # only collects clips from approved artifacts. The render succeeded and the
+      # mp4 sat in the agent's sandbox where nobody could reach it.
+      #
+      # Six clips arrived on 2026-08-25 before 11:37 and none after — llm+hitl
+      # landed at 14:42 that day. Sheets kept working throughout, because sheet
+      # tasks were never given it.
+      #
+      # Put it back when there is a chat UI AND something that completes the task,
+      # not before. A capability nothing uses is not free if it breaks the one
+      # thing the run exists to produce.
       agent: generic
       prompt: |
         Render one video clip with the minimax workflow.
