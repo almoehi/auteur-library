@@ -145,6 +145,10 @@ export interface ChatItem {
 		wroteLoras?: Pick[];
 		/** Set once this card has been sent to render, so it stops offering. */
 		launched?: boolean;
+		/** The kept character sheet this clip is shot with. Chosen before the
+		 *  writer runs, because it decides which brief template gets written. */
+		characterId?: string;
+		characterName?: string;
 	};
 	/** a planning document or rendered clip presented in the transcript
 	 *  (kind=artifact, clips). `taskId` is what reset-task needs for a revision;

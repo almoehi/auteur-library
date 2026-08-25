@@ -929,7 +929,7 @@
 	 *  the frame — so the prompt is written again rather than patched. */
 	async function callShotPrompt(
 		request: string,
-		pin?: { seconds?: number; orientation?: 'portrait' | 'landscape' }
+		pin?: { seconds?: number; orientation?: 'portrait' | 'landscape'; character?: string }
 	): Promise<ChatItem['shot'] | null> {
 		let res: Response;
 		try {
@@ -1012,12 +1012,22 @@
 	 *  than on a separate screen because they are the same act — you describe
 	 *  something and the machine renders it. */
 	let wantTarget = $state<'clip' | 'character' | 'location'>('clip');
+	/** The kept character the next clip is shot with, by id. Empty means the clip
+	 *  invents whoever the words describe, which is the old behaviour and stays
+	 *  the default. */
+	let wantCharacter = $state('');
 
 	function saveSetup() {
 		try {
 			localStorage.setItem(
 				SETUP_KEY,
-				JSON.stringify({ s: wantSeconds, o: wantOrientation, r: wantRes, t: wantTarget })
+				JSON.stringify({
+					s: wantSeconds,
+					o: wantOrientation,
+					r: wantRes,
+					t: wantTarget,
+					c: wantCharacter
+				})
 			);
 		} catch {
 			/* a preference that will not persist is not worth an error */
@@ -1033,11 +1043,20 @@
 		// and this frame rather than being rewritten into them afterwards.
 		const shot = await callShotPrompt(request, {
 			seconds: wantSeconds,
-			orientation: wantOrientation
+			orientation: wantOrientation,
+			character: chosenCharacter?.name
 		});
 		if (!shot) return;
 		lastRequest = request;
 		shot.resolution = wantRes;
+		// Stamped onto the card rather than read at launch: the brief was written
+		// for this person, so a card that renders with a different one — because
+		// the picker moved while you were reading — would be a brief describing
+		// somebody who is not in the shot.
+		if (chosenCharacter) {
+			shot.characterId = chosenCharacter.id;
+			shot.characterName = chosenCharacter.name;
+		}
 		pushItem({ who: 'studio', kind: 'shot', shot });
 	}
 
@@ -1060,6 +1079,10 @@
 	/** Every sheet this machine has made, newest first. Loaded once on mount and
 	 *  refreshed by every write, so a picker never has to ask. */
 	let sheets = $state<StoredSheet[]>([]);
+	const characters = $derived(sheets.filter((s) => s.kind === 'character'));
+	/** The chosen character, or undefined once it has been deleted from under us.
+	 *  Derived rather than stored so a removed sheet cannot be launched with. */
+	const chosenCharacter = $derived(characters.find((c) => c.id === wantCharacter));
 	let sheetBusy = $state<Record<string, boolean>>({});
 	let sheetsOpen = $state(false);
 
@@ -1364,7 +1387,8 @@
 			loras: shot.loras ?? [],
 			baseLoras: shot.baseLoras ?? {},
 			wroteLoras: shot.wroteLoras ?? shot.loras ?? [],
-			request: lastRequest
+			request: lastRequest,
+			...(shot.characterId ? { characterId: shot.characterId } : {})
 		};
 		try {
 			const res = await fetch('/studio/api/launch', {
@@ -2746,11 +2770,18 @@
 		try {
 			const raw = localStorage.getItem(SETUP_KEY);
 			if (raw) {
-				const v = JSON.parse(raw) as { s?: number; o?: string; r?: string; t?: string };
+				const v = JSON.parse(raw) as {
+					s?: number;
+					o?: string;
+					r?: string;
+					t?: string;
+					c?: string;
+				};
 				if (typeof v.s === 'number' && v.s >= 4 && v.s <= 15) wantSeconds = v.s;
 				if (v.o === 'portrait' || v.o === 'landscape') wantOrientation = v.o;
 				if (v.r && v.r in RESOLUTIONS) wantRes = v.r as ResKey;
 				if (v.t === 'clip' || v.t === 'character' || v.t === 'location') wantTarget = v.t;
+				if (typeof v.c === 'string') wantCharacter = v.c;
 			}
 		} catch {
 			/* a preference that will not load is not worth an error */
@@ -3628,7 +3659,14 @@
 							{@const picked = item.shot.loras ?? []}
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
 								<div class="mb-3 flex items-baseline justify-between gap-4">
-									<h3 class="font-display text-base font-semibold">The prompt</h3>
+									<h3 class="font-display text-base font-semibold">
+										The prompt
+										{#if item.shot.characterName}
+											<span class="ml-2 align-middle text-xs font-normal text-[var(--st-faint)]">
+												with {item.shot.characterName}
+											</span>
+										{/if}
+									</h3>
 									<span
 										class="text-xs tabular-nums {n > 700
 											? 'font-semibold text-[#e0a03a]'
@@ -4324,6 +4362,47 @@
 														saveSetup();
 													}}>{label}</button
 												>
+											{/each}
+										</div>
+									{/if}
+									{#if mode === 'simple' && wantTarget === 'clip' && characters.length}
+										<!-- Who is in it. The sheet becomes the clip's first reference
+											 and the brief is written around it, which is why this is
+											 set here and not on the card: choosing a person after the
+											 brief is written would leave a brief about someone else. -->
+										<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+											<button
+												type="button"
+												title="no character — the clip invents whoever the words describe"
+												class="cursor-pointer rounded-full px-2.5 py-1 text-xs transition-colors {wantCharacter ===
+												''
+													? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+												onclick={() => {
+													wantCharacter = '';
+													saveSetup();
+												}}>anyone</button
+											>
+											{#each characters.slice(0, 4) as c (c.id)}
+												<button
+													type="button"
+													title="shoot this clip with {c.name}"
+													class="flex cursor-pointer items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-xs transition-colors {wantCharacter ===
+													c.id
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+													onclick={() => {
+														wantCharacter = c.id;
+														saveSetup();
+													}}
+												>
+													<img
+														src="/studio/api/sheet/img/{c.id}"
+														alt=""
+														class="size-4 shrink-0 rounded-full object-cover"
+													/>
+													<span class="max-w-24 truncate">{c.name}</span>
+												</button>
 											{/each}
 										</div>
 									{/if}

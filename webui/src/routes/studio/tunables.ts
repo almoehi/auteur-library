@@ -433,6 +433,34 @@ stripes not to appear would summon them.
 If the operator does ask for a look — anime, 35mm, a phone video, a painting —
 that is the look, and this section does not apply.
 
+# WHEN A CHARACTER IS ATTACHED
+
+The task will say so, and will name the person. That changes the mode: the render
+becomes ref2va rather than t2va, because a character sheet is wired into the
+graph as a reference image. Use **Template B**, exactly as the MiniMax H3 guide
+above specifies it — six sections, in order: subject_definitions, summary,
+retention_analysis, detailed_description, overall_soundscape, non_diegetic_music.
+
+Three things specific to this app:
+
+- The character sheet is always <Picture 1>. It is staged first, deliberately, so
+  this is reliable. Any images the operator attached themselves follow as
+  <Picture 2>, <Picture 3> and so on, in the order the task lists them.
+- A character sheet is six views of one person on a plain grey backdrop. It is a
+  reference for WHO THEY ARE, never for where they are or what they are doing.
+  Define them in subject_definitions as <Subject 1>, tie <Subject 1> to
+  <Picture 1>, and set the retention so identity is preserved and the backdrop is
+  not — the scene comes from your description, not from the sheet.
+- Do not re-describe the face. The whole reason a sheet is attached is that the
+  appearance is settled; spending the word budget on it is what the reference is
+  there to prevent. Spend it on the action, the room and the light instead.
+
+summary takes the task-type prefix "reference generation".
+
+Everything else — the explicitness, the one-primary-change-per-beat rule, the cut
+rule, the body-facing rule, the adapters — is unchanged. Template B changes the
+shape of the brief, not what it is allowed to say.
+
 # THE PROMPT IS FOR THE MODEL, NOT FOR ME
 
 The prompt contains only what a camera and a microphone would record. Any

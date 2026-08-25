@@ -113,6 +113,9 @@ function readReply(raw: unknown): ShotPrompt | null {
 	if (!raw || typeof raw !== 'object') return null;
 	const o = raw as Record<string, unknown>;
 	const prompt = typeof o.prompt === 'string' ? o.prompt.trim() : '';
+	// [Shot 1] appears in both templates — in Template B it opens the
+	// detailed_description rather than the whole brief — so this stays the test
+	// for "the writer produced a brief rather than a refusal".
 	if (!prompt || !/\[Shot 1\]/.test(prompt)) return null;
 	const n = Math.round(Number(o.seconds));
 	return {
@@ -125,7 +128,12 @@ function readReply(raw: unknown): ShotPrompt | null {
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-	let payload: { request?: unknown; seconds?: unknown; orientation?: unknown };
+	let payload: {
+		request?: unknown;
+		seconds?: unknown;
+		orientation?: unknown;
+		character?: unknown;
+	};
 	try {
 		payload = (await request.json()) as typeof payload;
 	} catch {
@@ -164,6 +172,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (payload.orientation === 'portrait' || payload.orientation === 'landscape') {
 		pinned.push(
 			`The frame is fixed to ${payload.orientation}. Write the camera language for that shape.`
+		);
+	}
+	// The one thing that changes which template the writer uses. Named rather than
+	// flagged, because the brief reads better when it can say who <Picture 1> is.
+	const character = typeof payload.character === 'string' ? payload.character.trim() : '';
+	if (character) {
+		pinned.push(
+			`A character sheet for ${character} is attached to this clip as <Picture 1>. ` +
+				`Use Template B and treat their appearance as settled — see WHEN A CHARACTER IS ATTACHED.`
 		);
 	}
 

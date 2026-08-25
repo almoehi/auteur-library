@@ -1116,6 +1116,13 @@ export interface DirectSpec {
 	/** How many reference images were staged for this clip. Zero builds exactly
 	 *  the graph that existed before references were possible. */
 	refImages?: number;
+	/** The kept character sheet this clip is shot with, if you picked one. The id
+	 *  is resolved server-side into bytes and staged as the first reference, so
+	 *  the face is the same one every other clip with this character has. */
+	characterId?: string;
+	/** Its name, for the task text and the render log — the id means nothing to
+	 *  anyone reading either. */
+	characterName?: string;
 	/** What the writer chose before anyone touched the card, and what you typed
 	 *  to get it. Neither reaches the workspace — they are here so the launch can
 	 *  write down what was tried, and so a card you corrected is recorded as a
@@ -1139,15 +1146,29 @@ export interface DirectSpec {
  *
  *  Empty for a clip with no references, which keeps the task text exactly as it
  *  has always been. */
-function refClause(count: number): string {
+function refClause(count: number, characterName?: string): string {
 	if (count < 1) return '';
 	// Informational only. The images are wired into the graph as bundle assets,
 	// so the agent has nothing to do about them — but a task that renders with
 	// three faces and never mentions them reads as a mistake to anyone looking.
+	//
+	// The character is named when there is one, because it is the first reference
+	// and the prompt addresses it as <Picture 1>: a reader comparing the prompt
+	// against the task should be able to see which face that is.
+	// Indented to the block scalar this lands inside. The name is free text and can
+	// hold anything, which is safe here only because a `prompt: |` block takes it
+	// verbatim — as long as every line carries the block's indentation. The first
+	// version of this line did not, and the harness rejected the workspace with
+	// "Implicit keys need to be on a single line".
+	const who = characterName
+		? `        The first is the character sheet for ${indentBlock(characterName, 0)}, which the
+        prompt refers to as <Picture 1>.
+`
+		: '';
 	return `
         This clip renders with ${count} reference image${count > 1 ? 's' : ''}, already wired into
         the workflow. You do not need to pass them; call the tool as usual.
-`;
+${who}`;
 }
 
 export const DIRECT_MAX_CLIPS = 4;
@@ -1308,13 +1329,21 @@ export function composeDirectWorkspace(spec: DirectSpec, grokKey = ''): string {
 			(p, i) => `    - id: clip_${i + 1}
       title: "Clip ${i + 1}"
       description: "Render clip ${i + 1} from the given prompt."
+      # llm+hitl rather than the default llm: the agent runs its loop exactly as
+      # before and produces the clip, then stays available instead of ending.
+      # chat() refuses on any task whose effectiveTaskType is not hitl — it is
+      # the first guard in the worker's own chat handler — so this one line is
+      # what makes talking to a finished render possible at all. Nothing in the
+      # app talks to it yet; the cost of declaring it early is that the task
+      # waits for an explicit completion rather than closing itself.
+      taskType: llm+hitl
       agent: generic
       prompt: |
         Render one video clip with the minimax workflow.
 
         video_length: ${spec.seconds}
         Save the result as clip${i + 1}.mp4
-${refClause(spec.refImages ?? 0)}
+${refClause(spec.refImages ?? 0, spec.characterName)}
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
         shorten, expand, reorder or comment on it. It is already in the format
         the workflow expects.

@@ -28,6 +28,7 @@ import { readOverrides } from '../../overrides.server';
 import { loadLibraryInto, type LoadReport } from '../../harness.server';
 import { importStagedRefs, type RefImportResult } from '../../refs-import.server';
 import { listRefs, readRef } from '../../refs.server';
+import { getSheet, readSheet } from '../../sheets.server';
 import { pruneStashes, stashRefs } from '../../refstash.server';
 import { recordRender } from '../../renders.server';
 import { recordProduction } from '../../history.server';
@@ -303,6 +304,27 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		const bytes = staged
 			.map((r) => ({ bytes: readRef(r.stored), name: r.name }))
 			.filter((f): f is { bytes: Buffer; name: string } => !!f.bytes);
+
+		// The chosen character goes FIRST, and the order is the whole contract:
+		// the bundle generator names them ref_0, ref_1 … in this order and the
+		// prompt addresses them as <Picture 1>, <Picture 2> …, so the character
+		// has to be the one the writer was told to call <Picture 1>.
+		spec.characterName = undefined;
+		if (spec.characterId) {
+			const sheet = getSheet(spec.characterId);
+			const sheetBytes = sheet ? readSheet(spec.characterId) : null;
+			if (sheet && sheetBytes) {
+				bytes.unshift({ bytes: sheetBytes, name: `${sheet.name}.png` });
+				spec.characterName = sheet.name;
+			} else {
+				// Named a character that is not there any more. Rendering without it
+				// would quietly produce a stranger, which is worse than not starting.
+				return json(
+					{ ok: false, error: 'that character sheet is gone — pick another, or none' },
+					{ status: 200 }
+				);
+			}
+		}
 		spec.refImages = stashRefs(spec.slug, bytes).length;
 		pruneStashes();
 		let directYaml: string;
