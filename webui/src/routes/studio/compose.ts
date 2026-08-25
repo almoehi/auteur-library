@@ -1123,6 +1123,10 @@ export interface DirectSpec {
 	/** Its name, for the task text and the render log — the id means nothing to
 	 *  anyone reading either. */
 	characterName?: string;
+	/** The kept location this clip is shot in, staged as a reference after the
+	 *  character. */
+	locationId?: string;
+	locationName?: string;
 	/** What the writer chose before anyone touched the card, and what you typed
 	 *  to get it. Neither reaches the workspace — they are here so the launch can
 	 *  write down what was tried, and so a card you corrected is recorded as a
@@ -1146,7 +1150,7 @@ export interface DirectSpec {
  *
  *  Empty for a clip with no references, which keeps the task text exactly as it
  *  has always been. */
-function refClause(count: number, characterName?: string): string {
+function refClause(count: number, characterName?: string, locationName?: string): string {
 	if (count < 1) return '';
 	// Informational only. The images are wired into the graph as bundle assets,
 	// so the agent has nothing to do about them — but a task that renders with
@@ -1160,10 +1164,20 @@ function refClause(count: number, characterName?: string): string {
 	// verbatim — as long as every line carries the block's indentation. The first
 	// version of this line did not, and the harness rejected the workspace with
 	// "Implicit keys need to be on a single line".
-	const who = characterName
-		? `        The first is the character sheet for ${indentBlock(characterName, 0)}, which the
-        prompt refers to as <Picture 1>.
-`
+	// Named in the order they are staged, because that order IS the numbering the
+	// prompt uses. A clip with a location but no character has the location at
+	// <Picture 1>, not <Picture 2> — the writer is told the same thing, and the
+	// two must agree or the brief describes the wrong picture.
+	const named: string[] = [];
+	if (characterName) named.push(`the character ${characterName}`);
+	if (locationName) named.push(`the location ${locationName}`);
+	const who = named.length
+		? named
+				.map(
+					(n, i) =>
+						`        <Picture ${i + 1}> is ${indentBlock(n, 0)}.\n`
+				)
+				.join('')
 		: '';
 	return `
         This clip renders with ${count} reference image${count > 1 ? 's' : ''}, already wired into
@@ -1343,7 +1357,7 @@ export function composeDirectWorkspace(spec: DirectSpec, grokKey = ''): string {
 
         video_length: ${spec.seconds}
         Save the result as clip${i + 1}.mp4
-${refClause(spec.refImages ?? 0, spec.characterName)}
+${refClause(spec.refImages ?? 0, spec.characterName, spec.locationName)}
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
         shorten, expand, reorder or comment on it. It is already in the format
         the workflow expects.

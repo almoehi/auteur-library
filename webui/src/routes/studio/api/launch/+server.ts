@@ -310,21 +310,31 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// prompt addresses them as <Picture 1>, <Picture 2> …, so the character
 		// has to be the one the writer was told to call <Picture 1>.
 		spec.characterName = undefined;
-		if (spec.characterId) {
-			const sheet = getSheet(spec.characterId);
-			const sheetBytes = sheet ? readSheet(spec.characterId) : null;
-			if (sheet && sheetBytes) {
-				bytes.unshift({ bytes: sheetBytes, name: `${sheet.name}.png` });
-				spec.characterName = sheet.name;
-			} else {
-				// Named a character that is not there any more. Rendering without it
-				// would quietly produce a stranger, which is worse than not starting.
+		spec.locationName = undefined;
+		// Built in front of whatever the operator staged by hand, character first
+		// then location, because that order becomes <Picture 1>, <Picture 2> … and
+		// the brief was written against those numbers.
+		const chosen: { bytes: Buffer; name: string }[] = [];
+		for (const [id, set] of [
+			[spec.characterId, (n: string) => (spec.characterName = n)],
+			[spec.locationId, (n: string) => (spec.locationName = n)]
+		] as [string | undefined, (n: string) => void][]) {
+			if (!id) continue;
+			const row = getSheet(id);
+			const rowBytes = row ? readSheet(id) : null;
+			if (!row || !rowBytes) {
+				// Named something that is not there any more. Rendering without it
+				// would quietly produce a stranger or the wrong room, which is worse
+				// than not starting.
 				return json(
-					{ ok: false, error: 'that character sheet is gone — pick another, or none' },
+					{ ok: false, error: 'one of the picks is gone — choose again, or none' },
 					{ status: 200 }
 				);
 			}
+			chosen.push({ bytes: rowBytes, name: `${row.name}.png` });
+			set(row.name);
 		}
+		bytes.unshift(...chosen);
 		spec.refImages = stashRefs(spec.slug, bytes).length;
 		pruneStashes();
 		let directYaml: string;

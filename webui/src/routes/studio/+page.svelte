@@ -946,7 +946,12 @@
 	 *  the frame — so the prompt is written again rather than patched. */
 	async function callShotPrompt(
 		request: string,
-		pin?: { seconds?: number; orientation?: 'portrait' | 'landscape'; character?: string }
+		pin?: {
+			seconds?: number;
+			orientation?: 'portrait' | 'landscape';
+			character?: string;
+			location?: string;
+		}
 	): Promise<ChatItem['shot'] | null> {
 		let res: Response;
 		try {
@@ -1033,6 +1038,9 @@
 	 *  invents whoever the words describe, which is the old behaviour and stays
 	 *  the default. */
 	let wantCharacter = $state('');
+	/** The kept location the next clip is shot in. Empty means the clip invents
+	 *  wherever the words describe, which stays the default. */
+	let wantLocation = $state('');
 
 	function saveSetup() {
 		try {
@@ -1043,7 +1051,8 @@
 					o: wantOrientation,
 					r: wantRes,
 					t: wantTarget,
-					c: wantCharacter
+					c: wantCharacter,
+					l: wantLocation
 				})
 			);
 		} catch {
@@ -1061,7 +1070,8 @@
 		const shot = await callShotPrompt(request, {
 			seconds: wantSeconds,
 			orientation: wantOrientation,
-			character: chosenCharacter?.name
+			character: chosenCharacter?.name,
+			location: chosenLocation?.name
 		});
 		if (!shot) return;
 		lastRequest = request;
@@ -1073,6 +1083,10 @@
 		if (chosenCharacter) {
 			shot.characterId = chosenCharacter.id;
 			shot.characterName = chosenCharacter.name;
+		}
+		if (chosenLocation) {
+			shot.locationId = chosenLocation.id;
+			shot.locationName = chosenLocation.name;
 		}
 		pushItem({ who: 'studio', kind: 'shot', shot });
 	}
@@ -1097,9 +1111,11 @@
 	 *  refreshed by every write, so a picker never has to ask. */
 	let sheets = $state<StoredSheet[]>([]);
 	const characters = $derived(sheets.filter((s) => s.kind === 'character'));
+	const locations = $derived(sheets.filter((s) => s.kind === 'location'));
 	/** The chosen character, or undefined once it has been deleted from under us.
 	 *  Derived rather than stored so a removed sheet cannot be launched with. */
 	const chosenCharacter = $derived(characters.find((c) => c.id === wantCharacter));
+	const chosenLocation = $derived(locations.find((l) => l.id === wantLocation));
 	let sheetBusy = $state<Record<string, boolean>>({});
 	let sheetsOpen = $state(false);
 	/** Which sheet has been asked about but not yet confirmed for deletion. */
@@ -1550,7 +1566,8 @@
 			baseLoras: shot.baseLoras ?? {},
 			wroteLoras: shot.wroteLoras ?? shot.loras ?? [],
 			request: lastRequest,
-			...(shot.characterId ? { characterId: shot.characterId } : {})
+			...(shot.characterId ? { characterId: shot.characterId } : {}),
+			...(shot.locationId ? { locationId: shot.locationId } : {})
 		};
 		try {
 			const res = await fetch('/studio/api/launch', {
@@ -2941,12 +2958,14 @@
 					r?: string;
 					t?: string;
 					c?: string;
+					l?: string;
 				};
 				if (typeof v.s === 'number' && v.s >= 4 && v.s <= 15) wantSeconds = v.s;
 				if (v.o === 'portrait' || v.o === 'landscape') wantOrientation = v.o;
 				if (v.r && v.r in RESOLUTIONS) wantRes = v.r as ResKey;
 				if (v.t === 'clip' || v.t === 'character' || v.t === 'location') wantTarget = v.t;
 				if (typeof v.c === 'string') wantCharacter = v.c;
+				if (typeof v.l === 'string') wantLocation = v.l;
 			}
 		} catch {
 			/* a preference that will not load is not worth an error */
@@ -3903,9 +3922,12 @@
 								<div class="mb-3 flex items-baseline justify-between gap-4">
 									<h3 class="font-display text-base font-semibold">
 										The prompt
-										{#if item.shot.characterName}
+										{#if item.shot.characterName || item.shot.locationName}
 											<span class="ml-2 align-middle text-xs font-normal text-[var(--st-faint)]">
-												with {item.shot.characterName}
+												{item.shot.characterName ? `with ${item.shot.characterName}` : ''}{item.shot
+													.characterName && item.shot.locationName
+													? ' '
+													: ''}{item.shot.locationName ? `in ${item.shot.locationName}` : ''}
 											</span>
 										{/if}
 									</h3>
@@ -4652,6 +4674,47 @@
 												</button>
 											{/each}
 										</div>
+
+										{#if locations.length}
+											<!-- Where it happens. Same shape as the people row above because
+												 it answers the same kind of question — which kept thing this
+												 clip is made with. -->
+											<div class="flex items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+												<button
+													type="button"
+													title="nowhere in particular — the clip invents wherever the words describe"
+													class="cursor-pointer rounded-full px-2.5 py-1 text-xs transition-colors {wantLocation ===
+													''
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+													onclick={() => {
+														wantLocation = '';
+														saveSetup();
+													}}>anywhere</button
+												>
+												{#each locations.slice(0, 3) as l (l.id)}
+													<button
+														type="button"
+														title="shoot this clip in {l.name}"
+														class="flex cursor-pointer items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-xs transition-colors {wantLocation ===
+														l.id
+															? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+															: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+														onclick={() => {
+															wantLocation = l.id;
+															saveSetup();
+														}}
+													>
+														<img
+															src="/studio/api/sheet/img/{l.id}"
+															alt=""
+															class="size-4 shrink-0 rounded-[3px] object-cover"
+														/>
+														<span class="max-w-24 truncate">{l.name}</span>
+													</button>
+												{/each}
+											</div>
+										{/if}
 
 										<!-- The way in. Deliberately not chips like the ones above: these
 											 do not select anything, they take you somewhere. -->

@@ -133,6 +133,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		seconds?: unknown;
 		orientation?: unknown;
 		character?: unknown;
+		location?: unknown;
 	};
 	try {
 		payload = (await request.json()) as typeof payload;
@@ -176,11 +177,20 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	// The one thing that changes which template the writer uses. Named rather than
 	// flagged, because the brief reads better when it can say who <Picture 1> is.
+	// The numbering is computed here rather than assumed, because it depends on
+	// what is attached: a clip with a location but no character has the location
+	// at <Picture 1>. compose.ts stages them in this same order and names them the
+	// same way in the task, so the brief and the graph agree.
 	const character = typeof payload.character === 'string' ? payload.character.trim() : '';
-	if (character) {
+	const location = typeof payload.location === 'string' ? payload.location.trim() : '';
+	const attached: string[] = [];
+	if (character) attached.push(`the character ${character}`);
+	if (location) attached.push(`the location ${location}`);
+	if (attached.length) {
+		const list = attached.map((a, i) => `<Picture ${i + 1}> is ${a}`).join(', and ');
 		pinned.push(
-			`A character sheet for ${character} is attached to this clip as <Picture 1>. ` +
-				`Use Template B and treat their appearance as settled — see WHEN A CHARACTER IS ATTACHED.`
+			`${list}. Use Template B and treat what those pictures show as settled — ` +
+				`see WHEN A REFERENCE IS ATTACHED.`
 		);
 	}
 

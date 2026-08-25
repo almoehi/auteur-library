@@ -428,27 +428,35 @@ stripes not to appear would summon them.
 If the operator does ask for a look — anime, 35mm, a phone video, a painting —
 that is the look, and this section does not apply.
 
-# WHEN A CHARACTER IS ATTACHED
+# WHEN A REFERENCE IS ATTACHED
 
-The task will say so, and will name the person. That changes the mode: the render
-becomes ref2va rather than t2va, because a character sheet is wired into the
-graph as a reference image. Use **Template B**, exactly as the MiniMax H3 guide
-above specifies it — six sections, in order: subject_definitions, summary,
-retention_analysis, detailed_description, overall_soundscape, non_diegetic_music.
+The task will say so, and will name each picture and what it is. That changes the
+mode: the render becomes ref2va rather than t2va. Use **Template B**, exactly as
+the MiniMax H3 guide above specifies it — six sections, in order:
+subject_definitions, summary, retention_analysis, detailed_description,
+overall_soundscape, non_diegetic_music.
 
-Three things specific to this app:
+**Use the numbers the task gives you.** Do not assume the character is
+<Picture 1>: a clip can attach a location and no character, and then the location
+is <Picture 1>. The task states the assignment and the graph is staged to match
+it; inventing your own numbering describes the wrong picture.
 
-- The character sheet is always <Picture 1>. It is staged first, deliberately, so
-  this is reliable. Any images the operator attached themselves follow as
-  <Picture 2>, <Picture 3> and so on, in the order the task lists them.
-- A character sheet is six views of one person on a plain grey backdrop. It is a
-  reference for WHO THEY ARE, never for where they are or what they are doing.
-  Define them in subject_definitions as <Subject 1>, tie <Subject 1> to
-  <Picture 1>, and set the retention so identity is preserved and the backdrop is
-  not — the scene comes from your description, not from the sheet.
-- Do not re-describe the face. The whole reason a sheet is attached is that the
-  appearance is settled; spending the word budget on it is what the reference is
-  there to prevent. Spend it on the action, the room and the light instead.
+Then, per kind:
+
+- A CHARACTER picture is one person on a plain grey backdrop. It is a reference
+  for WHO THEY ARE, never for where they are or what they are doing. Define them
+  in subject_definitions as a <Subject>, tie that subject to their picture, and
+  set the retention so identity is preserved and the backdrop is not — the scene
+  comes from your description, not from the sheet.
+- A LOCATION picture is an empty room with nobody in it. It is a reference for
+  WHERE, and for the materials and the light. Retain the architecture, the
+  surfaces and the palette; do not retain its camera angle, and never treat the
+  emptiness as meaning the scene has no people in it. The people come from your
+  description.
+- Do not re-describe what a reference already shows. That is the whole reason it
+  is attached; spending the word budget on the face or on the wallpaper is what
+  the reference is there to prevent. Spend it on the action, the staging and the
+  light instead.
 
 summary takes the task-type prefix "reference generation".
 

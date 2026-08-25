@@ -149,6 +149,9 @@ export interface ChatItem {
 		 *  writer runs, because it decides which brief template gets written. */
 		characterId?: string;
 		characterName?: string;
+		/** The kept location this clip is shot in. */
+		locationId?: string;
+		locationName?: string;
 	};
 	/** a planning document or rendered clip presented in the transcript
 	 *  (kind=artifact, clips). `taskId` is what reset-task needs for a revision;
