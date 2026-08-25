@@ -4837,6 +4837,28 @@
 									</span>
 								{/if}
 
+								{#if !planningWs}
+									<!-- Beside the format chip rather than in the field row: both
+										 answer "what will this message make", both open a panel, and
+										 in the row it was squeezing the sentence into a box one line
+										 tall — at 390px the placeholder was clipped by it. -->
+									<button
+										type="button"
+										aria-expanded={modeOpen}
+										onclick={() => {
+											const open = !modeOpen;
+											shutMenus();
+											modeOpen = open;
+										}}
+										class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 text-xs whitespace-nowrap text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+									>
+										{mode === 'simple' ? 'one clip' : 'full production'}
+										<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
+											<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+										</svg>
+									</button>
+								{/if}
+
 								<!-- Length, size and frame in one chip. All three keep a saved
 									 default, so none of them is a question you have to answer
 									 before the first send. -->
@@ -4848,9 +4870,15 @@
 										shutMenus();
 										fmtOpen = open;
 									}}
-									class="cursor-pointer rounded-full bg-[var(--st-bg)] px-3 py-1.5 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+									class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
 								>
 									{wantSeconds}s · {wantRes} · {wantOrientation === 'portrait' ? '9:16' : '16:9'}
+									<!-- The same chevron the mode control carries. Two chips that open
+										 the same kind of panel were reading as two different kinds of
+										 thing: one looked like a control, the other like a readout. -->
+									<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
+										<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+									</svg>
 								</button>
 							</div>
 						{/if}
@@ -5055,7 +5083,7 @@
 						{#if modeOpen}
 							<div
 								role="menu"
-								class="enter absolute right-2 bottom-full z-30 mb-2 w-[17rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+								class="enter absolute bottom-full left-2 z-30 mb-2 w-[17rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
 							>
 								{#each [['simple', 'one clip', 'one shot, about eleven minutes'], ['advanced', 'full production', 'screenplay and cast first, then a multi-scene shoot']] as [val, label, hint] (val)}
 									<button
@@ -5080,73 +5108,99 @@
 
 						<!-- ── length, size, frame ─────────────────────────────────── -->
 						{#if fmtOpen}
+							<!-- One row per question, label left, choices right — the shape an
+								 inspector has. Stacked as three headed groups, six durations did
+								 not fit the panel's width and 15s fell onto a line of its own, so
+								 the block stopped reading as one set. A row per question makes
+								 that wrap impossible by construction. -->
 							<div
 								role="menu"
-								class="enter absolute bottom-full left-2 z-30 mb-2 w-[17rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-3 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+								class="enter absolute bottom-full left-2 z-30 mb-2 w-[19.5rem] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl bg-[var(--st-surface)] shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
 							>
-								<p class="px-1 pb-2 font-mono text-[0.7rem] tracking-[0.13em] text-[var(--st-faint)] uppercase">
-									seconds
-								</p>
-								<div class="mb-3 flex flex-wrap gap-1">
-									{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
-										<button
-											type="button"
-											aria-pressed={wantSeconds === sec}
-											onclick={() => {
-												wantSeconds = sec;
-												saveSetup();
-											}}
-											class="min-h-8 cursor-pointer rounded-full px-3 font-mono text-xs tabular-nums transition-colors {wantSeconds ===
-											sec
-												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-												: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{sec}s</button
-										>
-									{/each}
+								<div class="flex items-center gap-3 px-3 py-2.5">
+									<span class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]">
+										<svg viewBox="0 0 16 16" class="size-[15px] shrink-0 opacity-80" fill="none" aria-hidden="true">
+											<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.4" />
+											<path d="M8 4.8V8l2.2 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+										</svg>
+										Length
+									</span>
+									<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+										{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
+											<button
+												type="button"
+												aria-pressed={wantSeconds === sec}
+												title="{sec} seconds"
+												onclick={() => {
+													wantSeconds = sec;
+													saveSetup();
+												}}
+												class="flex min-h-7 min-w-7 cursor-pointer items-center justify-center rounded-full px-1.5 font-mono text-xs tabular-nums transition-colors {wantSeconds ===
+												sec
+													? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{sec}</button
+											>
+										{/each}
+									</span>
 								</div>
 
-								<p class="px-1 pb-2 font-mono text-[0.7rem] tracking-[0.13em] text-[var(--st-faint)] uppercase">
-									size
-								</p>
-								<div class="mb-3 flex flex-wrap gap-1">
-									{#each RES_KEYS as r (r)}
-										{@const f = frameFor(r, wantOrientation)}
-										<button
-											type="button"
-											aria-pressed={wantRes === r}
-											title="{f.width}x{f.height} — bigger frames cost render time"
-											onclick={() => {
-												wantRes = r;
-												saveSetup();
-											}}
-											class="min-h-8 cursor-pointer rounded-full px-3 font-mono text-xs tabular-nums transition-colors {wantRes ===
-											r
-												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-												: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{r}</button
-										>
-									{/each}
+								<div class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]">
+									<span class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]">
+										<svg viewBox="0 0 16 16" class="size-[15px] shrink-0 opacity-80" fill="none" aria-hidden="true">
+											<rect x="2" y="4" width="12" height="8" rx="1.4" stroke="currentColor" stroke-width="1.4" />
+											<path d="M5 7.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+										</svg>
+										Size
+									</span>
+									<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+										{#each RES_KEYS as r (r)}
+											{@const f = frameFor(r, wantOrientation)}
+											<button
+												type="button"
+												aria-pressed={wantRes === r}
+												title="{f.width}x{f.height} — bigger frames cost render time"
+												onclick={() => {
+													wantRes = r;
+													saveSetup();
+												}}
+												class="flex min-h-7 cursor-pointer items-center justify-center rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {wantRes ===
+												r
+													? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{r}</button
+											>
+										{/each}
+									</span>
 								</div>
 
-								<p class="px-1 pb-2 font-mono text-[0.7rem] tracking-[0.13em] text-[var(--st-faint)] uppercase">
-									frame
-								</p>
-								<div class="flex flex-wrap gap-1">
-									{#each [['portrait', '9:16'], ['landscape', '16:9']] as [val, label] (val)}
-										<button
-											type="button"
-											aria-pressed={wantOrientation === val}
-											onclick={() => {
-												wantOrientation = val as 'portrait' | 'landscape';
-												saveSetup();
-											}}
-											class="flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 font-mono text-xs tabular-nums transition-colors {wantOrientation ===
-											val
-												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-												: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-										>
-											<span class="block rounded-[2px] border border-current {val === 'portrait' ? 'h-3 w-2' : 'h-2 w-3'}"></span>
-											{label}
-										</button>
-									{/each}
+								<div class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]">
+									<span class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]">
+										<svg viewBox="0 0 16 16" class="size-[15px] shrink-0 opacity-80" fill="none" aria-hidden="true">
+											<rect x="2.4" y="3" width="11.2" height="10" rx="1.4" stroke="currentColor" stroke-width="1.4" />
+										</svg>
+										Frame
+									</span>
+									<!-- The one place a glyph beats the label: the thing being chosen
+										 IS a shape, and two rectangles say it faster than 9:16 does. -->
+									<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+										{#each [['portrait', '9:16', 'h-3 w-2'], ['landscape', '16:9', 'h-2 w-3.5']] as [val, label, box] (val)}
+											<button
+												type="button"
+												aria-pressed={wantOrientation === val}
+												title={label}
+												onclick={() => {
+													wantOrientation = val as 'portrait' | 'landscape';
+													saveSetup();
+												}}
+												class="flex min-h-7 cursor-pointer items-center gap-1.5 rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {wantOrientation ===
+												val
+													? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+											>
+												<span class="block rounded-[2px] border border-current {box}"></span>
+												{label}
+											</button>
+										{/each}
+									</span>
 								</div>
 							</div>
 						{/if}
@@ -5247,26 +5301,6 @@
 										>
 									{/each}
 								</div>
-							{/if}
-
-							{#if !planningWs && wantTarget === 'clip'}
-								<!-- Named for what it produces, and carrying how long that takes,
-									 because the two differ by half an hour. -->
-								<button
-									type="button"
-									aria-expanded={modeOpen}
-									onclick={() => {
-										const open = !modeOpen;
-										shutMenus();
-										modeOpen = open;
-									}}
-									class="flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
-								>
-									{mode === 'simple' ? 'one clip' : 'full production'}
-									<svg viewBox="0 0 10 10" class="size-2.5" fill="none" aria-hidden="true">
-										<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-									</svg>
-								</button>
 							{/if}
 
 							<button
