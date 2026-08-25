@@ -3613,7 +3613,7 @@
 	<path d="M2.5 4h11M2.5 8h11M2.5 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
 </svg>
 			</button>
-			<span class="font-display truncate text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</span>
+			<h1 class="font-display truncate text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
 		</div>
 
 		<div class="px-3 pt-2 pb-2">
@@ -3741,10 +3741,26 @@
 				{/if}
 		</header>
 
-		<div class="mx-auto flex min-h-0 w-full max-w-[66rem] flex-1 flex-col px-5 pt-1">
-
+		<!-- 66rem only when the task rail is beside it and needs the room. On its
+			 own a reading column that wide is not a measure, it is a stretch: the
+			 composer became a thousand pixels of single line and the eye had to
+			 travel the width of the screen to find the send button. -->
 		<div
-			class="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-10"
+			class="mx-auto flex min-h-0 w-full flex-1 flex-col px-5 pt-1 {brief
+				? 'max-w-[66rem]'
+				: 'max-w-[48rem]'}"
+		>
+
+		<!-- Two columns only when there is a second column to put something in.
+			 The task rail below is behind an if, but the grid reserved its 16rem
+			 and the 40px gap unconditionally — so with no production running the
+			 page held 296px of nothing on the right and pushed the reading column
+			 148px left of centre. That was the centring that would not come right,
+			 and it was never the sidebar. -->
+		<div
+			class="flex min-h-0 flex-1 flex-col {brief
+				? 'lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-10'
+				: ''}"
 		>
 			<!-- ── chat column ─────────────────────────────────────────────── -->
 			<!-- min-h-0 is load-bearing: without it a flex child refuses to shrink
@@ -3804,13 +3820,13 @@
 						{:else if item.kind === 'text' && item.id === welcomeId && showExamples}
 							<!-- The greeting is the page, not a message in it. Short enough to
 								 set at display size, so it gets one. -->
-							<h1
+							<h2
 								class="font-display enter mx-auto max-w-[26rem] text-center text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
 							>
 								{#each WELCOME_LINES as line, i (line)}
 									{line}{#if i === 0}<br />{/if}
 								{/each}
-							</h1>
+							</h2>
 						{:else if item.kind === 'text'}
 							<div class="enter">
 								<p class="doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">{item.text}</p>
