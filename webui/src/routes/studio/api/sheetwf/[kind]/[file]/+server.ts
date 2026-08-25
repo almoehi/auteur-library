@@ -6,7 +6,7 @@
  *  harness picks the **cheapest** — so it ran on an l40s, the slowest card
  *  available, while our render profile politely asked for a100 and was ignored.
  *  Modal's own logs settle it: the job ran in `comfy-compute-l40s`, 09:54:22 to
- *  09:57:17.
+ *  09:57:17, 175 seconds of sampling on the wrong hardware.
  *
  *  A profile cannot override this. `resolveGpuType` consults the workflow's own
  *  allowlist, and a request outside it — or a workflow provisioned before the
@@ -37,12 +37,21 @@ const SHEETS: Record<string, string> = {
 
 /** The one card we pin to.
  *
- *  a100 rather than h100 because a100 is the only faster card actually deployed
- *  — `modal app list` shows `comfy-compute-l40s` and `comfy-compute-a100` and
- *  nothing else. Naming a card with no endpoint would not fail loudly; it would
- *  fall back to the cheapest discovered one, which is the l40s we are trying to
- *  leave. Deploy h100 first, then change this. */
-const PIN = 'a100';
+ *  h100, deployed 2026-08-25 as `comfy-compute-h100-cu13-0-32-0` alongside the
+ *  l40s and a100 apps that were already there. Nothing about this workflow
+ *  argues against it: the attention backend it selects is
+ *  `comfy kitchen (int8)`, not SageAttention, so the sm_90 kernel gap that pins
+ *  our clip workflow to a100 does not apply here.
+ *
+ *  Naming a tier is not free of consequence, and the earlier note in this spot
+ *  had the consequence backwards. Modal endpoints are not probed — the harness
+ *  constructs a URL for every supported tier from the workspace slug and the
+ *  version, so an undeployed card is "discovered" like any other and fails at
+ *  submit with a retryable error that starts a GPU downgrade ladder. It does not
+ *  quietly resolve to something cheaper. That makes an undeployed pin a slow,
+ *  confusing failure rather than a silent demotion — worth knowing before
+ *  changing this line. */
+const PIN = 'h100';
 
 /** Fetched per request, but not per fetch: the harness asks for the YAML once
  *  per workspace and there is no reason to hit GitHub every time somebody
