@@ -3795,7 +3795,7 @@
 				<div
 					bind:this={scrollEl}
 					onscroll={onTranscriptScroll}
-					class="scroller min-h-0 flex-1 space-y-5 overflow-y-auto pr-1 pb-2 {showExamples
+					class="scroller min-h-0 flex-1 space-y-5 overflow-y-auto px-1 pb-2 {showExamples
 						? 'flex flex-col justify-center'
 						: ''}"
 				>
