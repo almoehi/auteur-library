@@ -340,6 +340,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		spec.refImages = stashedNames.length;
 		spec.refNames = stashedNames;
 
+		// Cleared before anything can read it, for the same reason studioOrigin and
+		// the two names above are set here rather than taken from the payload: this
+		// object arrives from the browser, and these urls end up in the render
+		// agent's prompt as links to fetch. Assigning inside the branch below would
+		// leave a caller-supplied value standing whenever a clip has no references
+		// — which is most of them.
+		spec.refUrls = [];
+
 		// Up to the bucket, because that is the only address the render can read
 		// from. The GPU runs on Modal; this server answers on host.docker.internal,
 		// which the harness refuses by name along with every private range. The
@@ -358,7 +366,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				);
 			}
 			try {
-				spec.refUrls = [];
 				for (const name of stashedNames) {
 					const local = readStashed(spec.slug, name);
 					if (!local) throw new Error(`${name} vanished from the staging area`);
