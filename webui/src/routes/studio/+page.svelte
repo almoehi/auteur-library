@@ -298,7 +298,12 @@
 		pitch?: string;
 	};
 	let history = $state<Production[]>([]);
+	/** The rail is a place you go back to, not a thing you read, so it closes.
+	 *  It used to be permanent above lg with no way to shut it, and off-canvas
+	 *  below with no way to keep it — one control now does both, and the choice
+	 *  survives a reload because it is a working habit, not a per-run decision. */
 	let sidebarOpen = $state(false);
+	const NAV_KEY = 'auteur-studio-nav';
 
 	async function loadHistory() {
 		try {
@@ -3060,7 +3065,25 @@
 		requestAnimationFrame(() => requestAnimationFrame(() => scrollToBottom('smooth')));
 	});
 
+	function setNavOpen(open: boolean) {
+		sidebarOpen = open;
+		try {
+			localStorage.setItem(NAV_KEY, open ? '1' : '0');
+		} catch {
+			/* a preference that will not persist is not worth an error */
+		}
+	}
+
 	onMount(() => {
+		try {
+			const saved = localStorage.getItem(NAV_KEY);
+			// Open on a desktop by default, shut on a phone, where the transcript
+			// is the page and a rail would take a third of it.
+			sidebarOpen = saved === null ? window.innerWidth >= 1024 : saved === '1';
+		} catch {
+			sidebarOpen = window.innerWidth >= 1024;
+		}
+
 		// Staged references survive a reload — they live on the server, not in
 		// this tab — so the composer has to ask for them rather than assume none.
 		void loadRefFiles();
@@ -3378,28 +3401,28 @@
 			type="button"
 			aria-label="close the production list"
 			class="fixed inset-0 z-30 cursor-default bg-black/50 lg:hidden"
-			onclick={() => (sidebarOpen = false)}
+			onclick={() => setNavOpen(false)}
 		></button>
 	{/if}
 
 	<aside
-		class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--st-surface-2)] bg-[var(--st-bg)] transition-transform lg:static lg:z-auto lg:translate-x-0 {sidebarOpen
-			? 'translate-x-0'
-			: '-translate-x-full'}"
+		class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--st-line)] bg-[var(--st-bg)] transition-transform lg:static lg:z-auto {sidebarOpen
+			? 'translate-x-0 lg:translate-x-0'
+			: '-translate-x-full lg:hidden'}"
 	>
 		<div class="px-3 pt-4 pb-2">
 			<button
 				type="button"
 				onclick={() => {
 					reset();
-					sidebarOpen = false;
+					if (window.innerWidth < 1024) setNavOpen(false);
 				}}
-				class="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--st-surface)]"
+				class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm text-[var(--st-text)] transition-colors hover:bg-[var(--st-surface)]"
 			>
 				<svg viewBox="0 0 16 16" class="size-4 shrink-0 text-[var(--st-muted)]" fill="none" aria-hidden="true">
 					<path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
 				</svg>
-				<span class="font-display font-semibold">New production</span>
+				<span>New production</span>
 			</button>
 		</div>
 
@@ -3457,14 +3480,20 @@
 		     and below the run list because that is what they are — not a setting
 		     and not a run, but the material every run is shot with. -->
 		{#if sheets.length}
-			<div class="border-t border-[var(--st-surface-2)] px-3 py-2">
+			<div class="border-t border-[var(--st-line)] px-3 pt-2">
 				<button
 					type="button"
-					class="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+					aria-expanded={sheetsOpen}
+					class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
 					onclick={() => (sheetsOpen = !sheetsOpen)}
 				>
+					<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" aria-hidden="true">
+						<circle cx="6" cy="6.2" r="2.3" stroke="currentColor" stroke-width="1.4" />
+						<path d="M2.2 12.6c.5-1.8 2-2.7 3.8-2.7s3.3.9 3.8 2.7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+						<rect x="9.4" y="3.4" width="4.4" height="3.6" rx="1" stroke="currentColor" stroke-width="1.4" />
+					</svg>
 					<span>Cast &amp; sets</span>
-					<span class="text-xs tabular-nums text-[var(--st-faint)]">{sheets.length}</span>
+					<span class="ml-auto text-xs tabular-nums text-[var(--st-faint)]">{sheets.length}</span>
 				</button>
 				{#if sheetsOpen}
 					<div class="mt-1 max-h-64 space-y-1 overflow-y-auto pb-1">
@@ -3556,11 +3585,11 @@
 
 		<!-- Tuning lives at the bottom because it is a settings surface, not a
 		     destination — the same place every app of this shape puts one. -->
-		<div class="border-t border-[var(--st-surface-2)] px-3 py-3">
+		<div class="px-3 pt-1 pb-3 {sheets.length ? '' : 'border-t border-[var(--st-line)]'}">
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a
 				href="/studio/admin"
-				class="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+				class="flex min-h-10 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
 			>
 				<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" aria-hidden="true">
 					<path d="M3 5h10M3 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
@@ -3577,9 +3606,10 @@
 			<header class="mb-4 flex shrink-0 items-center gap-3">
 				<button
 					type="button"
-					aria-label="show past productions"
-					class="-ml-1.5 cursor-pointer rounded-lg p-1.5 text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)] lg:hidden"
-					onclick={() => (sidebarOpen = true)}
+					aria-label={sidebarOpen ? 'hide past productions' : 'show past productions'}
+					aria-expanded={sidebarOpen}
+					class="-ml-1.5 flex size-9 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+					onclick={() => setNavOpen(!sidebarOpen)}
 				>
 					<svg viewBox="0 0 16 16" class="size-5" fill="none" aria-hidden="true">
 						<path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
