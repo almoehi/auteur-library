@@ -156,9 +156,16 @@ function buildJson(entries: { lora: Lora; strength: number }[], assets: string[]
 	entries.forEach((e, i) => {
 		node.inputs![`lora_${i + 1}`] = {
 			on: true,
-			// The graph addresses adapters by their folder on the volume, and the
-			// separator is a backslash because that is what the loader wrote.
-			lora: `MINIMAX\\${e.lora.file}`,
+			// A bare filename, no folder. The rgthree loader exported these as
+			// `MINIMAX\name.safetensors` and we kept that, but the harness was
+			// quietly flattening it: the old release ran the graph through
+			// flattenModelPaths() before storing it, so the renderer only ever
+			// saw the basename. The HITL release stores the graph as written and
+			// checks each loader path against the declared filenames, which is
+			// what turned an invisible mismatch into a hard prefetch failure.
+			// Writing the basename ourselves reproduces the graph that has been
+			// rendering all along, rather than inventing a layout to test.
+			lora: e.lora.file,
 			strength: e.strength
 		};
 	});

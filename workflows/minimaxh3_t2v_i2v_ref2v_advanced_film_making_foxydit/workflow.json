@@ -328,12 +328,12 @@
       },
       "lora_1": {
         "on": true,
-        "lora": "MINIMAX\\minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
+        "lora": "minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
         "strength": 0.7
       },
       "lora_2": {
         "on": true,
-        "lora": "MINIMAX\\PlagueKind-tiddies-realismslider.safetensors",
+        "lora": "PlagueKind-tiddies-realismslider.safetensors",
         "strength": 1.6
       },
       "\u2795 Add Lora": ""
