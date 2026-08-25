@@ -21,6 +21,7 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readOverrides } from '../../overrides.server';
 import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
+import { checkDescription, checkRequest } from '../../minors.server';
 
 const XAI = 'https://api.x.ai/v1/chat/completions';
 const MODEL_FALLBACK = 'grok-4.5';
@@ -51,6 +52,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	// description the writer would start over from three words and lose every
 	// attribute that was already right.
 	const previous = typeof payload.previous === 'string' ? payload.previous.trim() : '';
+
+	// Before the writer, not after: there is no point spending a model call on
+	// something that will be refused, and the operator gets the reason in the
+	// words they typed rather than in the writer's paraphrase of them.
+	const gate = checkRequest(`${want}\n${previous}`);
+	if (gate.refuse) return json({ ok: false, error: gate.refuse });
 
 	const key = env.GROK_API_KEY;
 	if (!key) {
@@ -134,6 +141,17 @@ ${want}`
 	const description = typeof o.description === 'string' ? o.description.trim() : '';
 	if (!description) {
 		return json({ ok: false, error: 'the sheet writer produced nothing usable — try rephrasing' });
+	}
+
+	// And after the writer, because a rule in a prompt is guidance and this needs
+	// to be a control. The writer is told to state an adult age; this is what
+	// makes it true.
+	const out = checkDescription(description);
+	if (out.refuse) {
+		return json({
+			ok: false,
+			error: `The description was refused — ${out.refuse}. Say how old they are and try again.`
+		});
 	}
 
 	return json({

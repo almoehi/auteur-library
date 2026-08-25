@@ -23,6 +23,7 @@ import { join } from 'node:path';
 import { readOverrides } from '../../overrides.server';
 import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
 import { MAX_PICKS, catalogueForWriter, loraFor, type Pick } from '../../loras';
+import { checkRequest } from '../../minors.server';
 
 const XAI = 'https://api.x.ai/v1/chat/completions';
 
@@ -134,6 +135,13 @@ export const POST: RequestHandler = async ({ request }) => {
 	const want = typeof payload.request === 'string' ? payload.request.trim() : '';
 	if (!want) throw error(400, 'Missing request');
 	if (want.length > REQUEST_MAX) throw error(400, `Request is longer than ${REQUEST_MAX} characters`);
+
+	// The same gate the sheet writer has. A clip prompt is not checked on the way
+	// out the way a sheet description is — it is a scene rather than a subject and
+	// carries no single age to test — but nothing that names a minor gets as far
+	// as the writer.
+	const gate = checkRequest(want);
+	if (gate.refuse) return json({ ok: false, error: gate.refuse });
 
 	const key = env.GROK_API_KEY;
 	if (!key) {
