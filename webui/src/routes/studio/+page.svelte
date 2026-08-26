@@ -841,8 +841,23 @@
 	 *  There is no render here and no GPU. The picture is the character, and a
 	 *  clip that uses it stages it exactly as it stages a drawn one.
 	 */
-	async function uploadSubject(list: FileList | null) {
+	/** A picked photograph, waiting for you to press send.
+	 *
+	 *  It used to upload the instant it was chosen, which put the description on
+	 *  the wrong side of the click: attach first and then start typing, and the
+	 *  character was already made — named after the file, with nothing for the
+	 *  turnaround to work from. Holding it here means one flow either way, and the
+	 *  text in the box at send time is the text that counts. */
+	let pendingPhoto = $state<File | null>(null);
+
+	function holdPhoto(list: FileList | null) {
 		const file = list?.[0];
+		if (!file) return;
+		pendingPhoto = file;
+		composer?.focus();
+	}
+
+	async function uploadSubject(file: File | null) {
 		if (!file || refBusy) return;
 		const kind: 'character' | 'location' = wantTarget === 'location' ? 'location' : 'character';
 		refBusy = true;
@@ -882,7 +897,17 @@
 					launched: true
 				}
 			});
+			// Said out loud now, unlike the first version of this. A render starts
+			// here — minutes of GPU — and someone who does not know that reads the
+			// pause as the app having done nothing.
+			if (kind === 'character') {
+				pushStudio(
+					'Building the six views behind this — a short turnaround render of the photograph, ' +
+						'which is what the longer videos use to keep the same person across shots.'
+				);
+			}
 			input = '';
+			pendingPhoto = null;
 			wantTarget = 'clip';
 			currentCharacter = null;
 			persist();
@@ -1202,7 +1227,10 @@
 
 	async function submit() {
 		const text = input.trim();
-		if (!text || sending) return;
+		// A held photograph is a message on its own: the picture is the character,
+		// and the description is optional. Without this the send button stays dead
+		// until you type something, which reads as the attachment not having worked.
+		if ((!text && !pendingPhoto) || sending) return;
 		input = '';
 		shrink(composer);
 		pushItem({ who: 'user', kind: 'text', text });
@@ -1212,7 +1240,8 @@
 			// answer is the prompt itself — offered for reading and editing before
 			// it costs anything.
 			if (mode === 'simple') {
-				if (continuing) await continueFromRequest(text);
+				if (pendingPhoto && wantTarget !== 'clip') await uploadSubject(pendingPhoto);
+				else if (continuing) await continueFromRequest(text);
 				else if (wantTarget === 'clip') await shotFromRequest(text);
 				else await sheetFromRequest(text, wantTarget);
 			}
@@ -5865,6 +5894,27 @@
 								</div>
 							</div>
 						{/if}
+						{#if pendingPhoto}
+							<!-- Held, not sent. A description is written after the picture is
+								 chosen at least as often as before it, so the upload waits here
+								 and takes whatever is in the box when send is pressed. -->
+							<div class="mb-1.5 flex items-center gap-2">
+								<span
+									class="flex min-w-0 items-center gap-1.5 rounded-full bg-[var(--st-surface-2)] px-2.5 py-1 text-xs text-[var(--st-text)]"
+								>
+									<span class="truncate">{pendingPhoto.name}</span>
+									<button
+										type="button"
+										aria-label="drop the photo"
+										onclick={() => (pendingPhoto = null)}
+										class="cursor-pointer text-[var(--st-faint)] hover:text-[var(--st-text)]">×</button
+									>
+								</span>
+								<span class="text-xs text-[var(--st-faint)]">
+									describe {wantTarget === 'location' ? 'the place' : 'them'} if you like, then send
+								</span>
+							</div>
+						{/if}
 						<!-- One row: the way in, the sentence, the mode, the send. Everything
 							 that used to sit under this in three rows of chips either became a
 							 chip above (because you chose it) or moved into the menu on the left
@@ -5914,7 +5964,7 @@
 										disabled={refBusy}
 										onchange={(e) => {
 											const el = e.currentTarget as HTMLInputElement;
-											uploadSubject(el.files);
+											holdPhoto(el.files);
 											el.value = '';
 										}}
 									/>
@@ -5967,7 +6017,7 @@
 							<button
 								type="button"
 								aria-label="send"
-								disabled={sending || !input.trim()}
+								disabled={sending || (!input.trim() && !pendingPhoto)}
 								onclick={submit}
 								class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
 							>
