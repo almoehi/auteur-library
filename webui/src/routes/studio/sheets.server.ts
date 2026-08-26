@@ -156,15 +156,19 @@ function mkId(): string {
  *  it may be opened before you have got round to naming it. The first few words
  *  of what you asked for are a better guess than "Sheet 3". */
 export function nameFromDescription(description: string, kind: SheetKind): string {
-	const words = description
-		.replace(/[\n\r]+/g, ' ')
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 6)
-		.join(' ')
-		.slice(0, 60)
-		.trim();
-	return words || (kind === 'character' ? 'Character' : 'Location');
+	const all = description.replace(/[\n\r]+/g, ' ').split(/\s+/).filter(Boolean);
+	const words = all.slice(0, 6).join(' ').slice(0, 60).trim();
+	if (!words) return kind === 'character' ? 'Character' : 'Location';
+	// Say it is shortened, when it is.
+	//
+	// A name cut out of a description stops mid-sentence, and the card announces
+	// it as "Kept as <name>" — which reads exactly like the sentence you typed
+	// having been truncated on its way to the render. It has not been: the
+	// description is stored whole and the whole of it is what the render gets.
+	// But a label that looks like data loss costs someone the trust to keep
+	// typing, and one character fixes it.
+	const cut = all.length > 6 || words.length < description.trim().length;
+	return cut ? `${words.replace(/[.,;:]$/, '')}…` : words;
 }
 
 export function addSheet(row: {
