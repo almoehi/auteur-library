@@ -121,6 +121,34 @@ async function poll(workspace: string): Promise<{ artifact: string; file: string
 
 /** Render the turn, cut it up, file it. Every exit writes a state, so nothing is
  *  left saying "rendering" for ever. */
+/** What the operator typed, in the language the render actually reads.
+ *
+ *  The drawn-character path has always run its description through sheet_writer,
+ *  which writes it into English and fills the gaps. The upload path skipped the
+ *  writer for speed and lost the translation with it — so a Hungarian sentence
+ *  went into an otherwise English prompt, in front of a text encoder tuned for
+ *  English. It may work; it was not decided.
+ *
+ *  Best-effort on purpose, unlike the frame: this only improves a line of
+ *  description, and a writer that is slow or refuses should cost the wording,
+ *  not the sheet. */
+async function englishLook(look: string, fetchFn: typeof globalThis.fetch): Promise<string> {
+	const said = look.trim();
+	if (!said) return '';
+	try {
+		const res = await fetchFn('/studio/api/sheetprompt', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ request: said, kind: 'character' })
+		});
+		const r = (await res.json()) as { ok?: boolean; sheet?: { description?: string } };
+		const out = r?.sheet?.description?.trim();
+		return out || said;
+	} catch {
+		return said;
+	}
+}
+
 async function build(id: string, look: string, fetchFn: typeof globalThis.fetch): Promise<void> {
 	const sheet = getSheet(id);
 	if (!sheet) return;
@@ -137,7 +165,7 @@ async function build(id: string, look: string, fetchFn: typeof globalThis.fetch)
 				direct: {
 					slug: `turn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
 					title: `${sheet.name} — turnaround`,
-					prompts: [turnPrompt(look)],
+					prompts: [turnPrompt(await englishLook(look, fetchFn))],
 					seconds: TURN_SECONDS,
 					width: TURN_W,
 					height: TURN_H,
