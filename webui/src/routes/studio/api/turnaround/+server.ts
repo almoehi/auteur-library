@@ -61,7 +61,21 @@ const TURN_H = 1024;
  *  know about the picture is that somebody chose it as a character. Naming a sex
  *  here would tell the model something we do not know, against a photograph that
  *  already shows it. */
-function turnPrompt(look = ''): string {
+/** Whether the operator stated an age themselves.
+ *
+ *  The writer supplies one when they did not, because the gate after it refuses
+ *  a description with none — so by the time the sentence gets here an age is
+ *  always present, and the sentence cannot tell you who put it there. The raw
+ *  typed line can.
+ *
+ *  It matters because the two deserve opposite treatment against a photograph.
+ *  Theirs is a correction — they know the person, the camera caught one moment —
+ *  and should win. The writer's is a guess, and a guess must never outrank the
+ *  picture: that is how a woman in her mid-thirties reached the model as
+ *  twenty-five. */
+const AGE_IS_THEIRS = /\d|\béves|\bévesen|\baged\b|years?[- ]old/i;
+
+function turnPrompt(look = '', theirAge = false): string {
 	// What the operator typed, if anything.
 	//
 	// A photograph shows one angle, and everything outside it — the build, the
@@ -72,7 +86,11 @@ function turnPrompt(look = ''): string {
 	const said = look.trim().slice(0, 400);
 	return `subject_definitions:
 <Subject 1> is the adult person shown in <Picture 1>. Their face, hair, skin tone, body type and identity come only from that picture. They are the sole subject.${
-		said ? `\nThe operator describes them as: ${said}. This description OVERRIDES the picture where it names a build, proportions or clothing — follow it there even where the picture shows otherwise. On every other point, including age, the picture governs unchanged. The face, hair and skin always come from the picture.` : ''
+		said ? `\nThe operator describes them as: ${said}. This description OVERRIDES the picture where it names a build, proportions${
+			theirAge ? ', an age' : ''
+		} or clothing — follow it there even where the picture shows otherwise. On every other point${
+			theirAge ? '' : ', including age'
+		}, the picture governs unchanged. The face, hair and skin always come from the picture.` : ''
 	}
 
 summary:
@@ -81,7 +99,11 @@ reference generation. A character turnaround: <Subject 1> stands still on a plai
 retention_analysis:
 <Picture 1> / <Subject 1>: fully_preserved for face, hair, skin tone and identity.${
 		said
-			? ' Body type, proportions and clothing are preserved from <Picture 1> EXCEPT where the operator description above names them, and there the description wins. Age is preserved from <Picture 1> regardless.'
+			? ` Body type, proportions${
+					theirAge ? ', age' : ''
+			  } and clothing are preserved from <Picture 1> EXCEPT where the operator description above names them, and there the description wins.${
+					theirAge ? '' : ' Age is preserved from <Picture 1> regardless.'
+			  }`
 			: ' Body type and clothing are also fully_preserved.'
 	} The background of <Picture 1> is not retained. The pose of <Picture 1> is not retained.
 
@@ -185,7 +207,7 @@ async function build(id: string, look: string, fetchFn: typeof globalThis.fetch)
 	// Named and the brief written before the launch, so the words that reach the
 	// GPU are kept beside the references they were rendered against.
 	const slug = `turn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-	const prompt = turnPrompt(await englishLook(look, fetchFn));
+	const prompt = turnPrompt(await englishLook(look, fetchFn), AGE_IS_THEIRS.test(look));
 	stashBrief(slug, prompt);
 
 	let workspace = '';
