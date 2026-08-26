@@ -37,6 +37,31 @@ const POLL_MS = 6_000;
  *  them: without them the model decides its own pacing and lands two of the six
  *  frames on the same angle.
  */
+/** The two adapters a turnaround does not want, off.
+ *
+ *  Three adapters load on every render whether or not it asks for them. Turbo is
+ *  structural — the eight-step count is built around it. The other two impose a
+ *  look: a skin-texture slider at 1.6 and an anatomy corrector at 0.9, both
+ *  tuned on pornography. A clip wants them; a turnaround is the one render whose
+ *  entire job is to resemble a particular person, and they were beating the
+ *  prompt at it.
+ *
+ *  Measured on the same photograph, same description, same brief, only these two
+ *  moved to zero. With them on: hair down, nude, a face that was close and not
+ *  hers. With them off: the pinned-up bun, the black vest, the freckles, even
+ *  the pale blue nail varnish — every one of them from the photograph. The brief
+ *  had asked for exactly that the whole time ("Preserve their identity from
+ *  <Picture 1> exactly, including their clothing"); the adapters simply pulled
+ *  harder than the words.
+ *
+ *  Only here. `mystic` earns its place on a real clip, where bodies meet and
+ *  come apart without it, and this measured nothing about that.
+ *
+ *  `stack()` can move a base strength but cannot drop a base adapter, so zero is
+ *  the lever: the file still loads and contributes nothing.
+ */
+const TURN_BASE: Record<string, number> = { realism: 0, mystic: 0 };
+
 const TURN_SECONDS = 6;
 const TURN_W = 576;
 const TURN_H = 1024;
@@ -202,12 +227,8 @@ async function build(
 	id: string,
 	look: string,
 	fetchFn: typeof globalThis.fetch,
-	// Strengths for the three adapters that load on every render whether or not
-	// it asks for them. Two impose a look — skin texture at 1.6 and an anatomy
-	// corrector at 0.9, both tuned on pornography — and a turnaround is the one
-	// render whose whole job is to resemble somebody in particular. Passing zero
-	// is how that is measured: `stack()` can move a base strength but not drop
-	// the adapter, and zero contributes nothing.
+	// Overrides for the always-on adapters. Merged over TURN_BASE, so a caller
+	// can put one back to compare without restating the others.
 	baseLoras: Record<string, number> = {}
 ): Promise<void> {
 	const sheet = getSheet(id);
@@ -240,7 +261,7 @@ async function build(
 					// adapter here would push the pose away from the one thing wanted:
 					// standing still and rotating.
 					loras: [],
-					baseLoras,
+					baseLoras: { ...TURN_BASE, ...baseLoras },
 					wroteLoras: [],
 					request: 'turnaround from an uploaded photograph',
 					characterId: id,
