@@ -3252,7 +3252,12 @@
 			seenActivity: [...seenActivity],
 			shootsAnnounced,
 			finalPosted,
-			finalByNameOnly
+			finalByNameOnly,
+			// Without this the greeting returns as the transcript's first paragraph
+			// on every reopen: the item is in `chat`, but the id that tells the
+			// template it is the greeting was minted fresh on load and no longer
+			// matches it, so it falls through to the plain-text branch.
+			welcomeId
 		};
 	}
 
@@ -3591,6 +3596,7 @@
 						shootsAnnounced = s.shootsAnnounced ?? shootsAnnounced;
 						finalPosted = s.finalPosted ?? false;
 						finalByNameOnly = s.finalByNameOnly ?? finalByNameOnly;
+						welcomeId = s.welcomeId ?? '';
 					} else if (brief) {
 						const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
 						latestPlanId = item.id;
@@ -3875,7 +3881,10 @@
 						{day.label}
 					</p>
 					{#each day.items as p (p.slug)}
-						{@const current = brief?.slug === p.slug}
+						<!-- `brief` is null for every one-clip run, so this was dead-false on
+							 all of them and reopening one looked like nothing had happened.
+							 runSlug is the same value the row is filed under. -->
+						{@const current = (runSlug || brief?.slug) === p.slug}
 						{@const kind = runKind(p)}
 						<div class="group relative">
 							<button
