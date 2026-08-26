@@ -151,6 +151,22 @@ export function toActivity(e: HarnessEvent): ActivityRow | null {
  *  rather than throwing: this is a progress display, and it must never be the
  *  thing that breaks the run it is describing. */
 export function parseEventLog(raw: unknown): ActivityRow[] {
+	// Three shapes, because the log arrives as all three.
+	//
+	// The harness returns newline-separated JSON as one string, and the proxy
+	// parses whatever comes back. With several events that string is not itself
+	// valid JSON, so it survives as a string and this worked. With exactly ONE
+	// event it IS valid JSON, the proxy parses it a second time, and an object
+	// arrives here — where a string was the only thing accepted, so the feed went
+	// silent precisely when a run had a single event in it. That is the first
+	// moment of every run: the operator saw no "Started clip 1." at all, and the
+	// page had already dropped its own announcement on the grounds that this feed
+	// carried it.
+	if (Array.isArray(raw)) return raw.flatMap((e) => parseEventLog(e));
+	if (raw && typeof raw === 'object') {
+		const row = toActivity(raw as HarnessEvent);
+		return row ? [row] : [];
+	}
 	if (typeof raw !== 'string' || !raw.trim()) return [];
 	const rows: ActivityRow[] = [];
 	for (const line of raw.trim().split('\n')) {

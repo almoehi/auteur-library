@@ -2290,7 +2290,18 @@
 		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return;
 		shotBusy[itemId] = true;
 		try {
-			if (await launchShot(item.shot)) item.shot.launched = true;
+			if (await launchShot(item.shot)) {
+				item.shot.launched = true;
+				// Written down, not just remembered.
+				//
+				// launchShot persists on its way out — before this line runs — so the
+				// snapshot on disk said the card had never been launched. Leave the
+				// conversation and come back and the restore believed it: the card
+				// came up with its controls live and "render this" ready, over a clip
+				// that was already on a GPU. Pressing it would have paid for the same
+				// five seconds twice.
+				persist();
+			}
 		} finally {
 			shotBusy[itemId] = false;
 		}
