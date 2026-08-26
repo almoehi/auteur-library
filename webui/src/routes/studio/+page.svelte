@@ -370,6 +370,23 @@
 		void loadHistory();
 	});
 
+	/** How much of a conversation a saved snapshot actually holds.
+	 *
+	 *  The greeting does not count: it is pushed on load by every session,
+	 *  including one that went on to do nothing, so a snapshot containing only
+	 *  the greeting is an empty page that happens to have a file. */
+	function savedTurns(slug: string): number {
+		try {
+			const raw = localStorage.getItem(runKey(slug));
+			if (!raw) return 0;
+			const s = JSON.parse(raw) as { chat?: { id?: string }[]; welcomeId?: string };
+			const chat = s.chat ?? [];
+			return chat.filter((c) => !s.welcomeId || c.id !== s.welcomeId).length;
+		} catch {
+			return 0;
+		}
+	}
+
 	/** A run rebuilt from the records that outlived its conversation.
 	 *
 	 *  Productions launched before conversations were saved have no transcript,
@@ -440,7 +457,13 @@
 			// The run's own conversation, if it was saved: what you typed, the
 			// prompt or the plan you approved, the documents, the clips. Pointing
 			// at it is the whole of reopening.
-			if (localStorage.getItem(runKey(p.slug))) {
+			//
+			// A key is not the same as a conversation, though, and the two were
+			// being treated as one. A snapshot written before the run had said
+			// anything holds nothing but the greeting, and taking its existence as
+			// proof of content opened the row onto a blank page — with the rebuild
+			// below skipped, because the key was there. So ask what is in it.
+			if (savedTurns(p.slug) > 0) {
 				localStorage.setItem(POINTER_KEY, p.slug);
 				location.href = '/studio';
 				return;
