@@ -3442,6 +3442,27 @@
 			/* default stands */
 		}
 
+		// Continuations saved their conversation under `cont-xxx-cont`, because the
+		// slug derivation did not strip the `-cont` suffix that the workspace ids
+		// had grown — see WS_SUFFIX. The sidebar files those runs under `cont-xxx`
+		// and so could never find them. The snapshots are still there and still
+		// good, so bring them to the name they should have had.
+		//
+		// Copied rather than moved, and never over an existing one: this runs on a
+		// user's only copy of conversations that cannot be regenerated.
+		try {
+			for (const k of Object.keys(localStorage)) {
+				const m = /^auteur-studio-run-(.+)-cont$/.exec(k);
+				if (!m) continue;
+				const right = runKey(m[1]);
+				if (localStorage.getItem(right)) continue;
+				const body = localStorage.getItem(k);
+				if (body) localStorage.setItem(right, body);
+			}
+		} catch {
+			/* a full quota or private mode — the orphans stay orphans, nothing is lost */
+		}
+
 		let resumed = false;
 		try {
 			const pointer = localStorage.getItem(POINTER_KEY);
