@@ -329,6 +329,10 @@
 		startedAt: number;
 		updatedAt: number;
 		pitch?: string;
+		/** Simple mode keeps the writer's prompt whole on the row. Dropped from
+		 *  this type until now, which is why a run with no saved conversation had
+		 *  nothing to show even though the text was on disk. */
+		prompt?: string;
 	};
 	let history = $state<Production[]>([]);
 	/** The rail is a place you go back to, not a thing you read, so it closes.
@@ -366,6 +370,65 @@
 		void loadHistory();
 	});
 
+	/** A run rebuilt from the records that outlived its conversation.
+	 *
+	 *  Productions launched before conversations were saved have no transcript,
+	 *  so their sidebar row opened onto an empty page. But the two halves worth
+	 *  reading both survived on disk: the render log keeps the request verbatim —
+	 *  untruncated, unlike the history row's sixty-character title — and the
+	 *  prompt the writer produced from it, with the adapters it chose.
+	 *
+	 *  The clip cannot come back. Its cache file is named
+	 *  sha256(workspace + artifact + file) and the artifact id was written down
+	 *  nowhere, so the mp4 is still in ~/auteur/studio-library/clips with nothing
+	 *  to say which run it belongs to. A page that silently omits the video looks
+	 *  like a page that lost it, so this says so instead.
+	 *
+	 *  The shot card is marked launched: it is a record of what ran, not an offer
+	 *  to spend a GPU running it again.
+	 */
+	function rebuiltChat(p: Production): ChatItem[] | null {
+		const row = p.renderWs ? logRow[p.renderWs] : undefined;
+		const prompt = row?.prompt ?? p.prompt ?? '';
+		const request = row?.request ?? p.title ?? '';
+		if (!prompt && !request) return null;
+
+		const at = p.startedAt || Date.now();
+		const out: ChatItem[] = [];
+		const add = (i: Omit<ChatItem, 'id' | 'at'>) => out.push({ ...i, id: mkId(), at });
+
+		add({
+			who: 'studio',
+			kind: 'text',
+			text: row
+				? 'This conversation was not saved. Rebuilt from the render log — the request and the prompt below are exact. The clip it produced cannot be located.'
+				: 'This conversation was not saved, and there is no render log for it. All that is left is the request.'
+		});
+		if (request) add({ who: 'user', kind: 'text', text: request });
+		if (prompt) {
+			add({
+				who: 'studio',
+				kind: 'shot',
+				shot: {
+					prompt,
+					seconds: row?.seconds ?? 0,
+					orientation: (row?.width ?? 0) >= (row?.height ?? 1) ? 'landscape' : 'portrait',
+					why: '',
+					loras: row?.launched ?? [],
+					launched: true,
+					...(row?.characterId ? { characterId: row.characterId } : {}),
+					...(row?.characterName ? { characterName: row.characterName } : {}),
+					...(row?.locationId ? { locationId: row.locationId } : {}),
+					...(row?.locationName ? { locationName: row.locationName } : {})
+				}
+			});
+		}
+		if (row?.outcome) {
+			add({ who: 'studio', kind: 'text', text: `You marked this one ${row.outcome}.` });
+		}
+		return out;
+	}
+
 	/** Reopening writes the resume payload and reloads.
 	 *
 	 *  Deliberately not a soft in-place swap: restoring a run means rebuilding
@@ -382,9 +445,11 @@
 				location.href = '/studio';
 				return;
 			}
-			// Older runs, saved before conversations were kept. All that can be
-			// rebuilt is the identity — enough to poll the workspace and show what
-			// is in it, not enough to show how it got there.
+			// Older runs, saved before conversations were kept. The identity is
+			// enough to poll the workspace, and for a run past RUN_CEILING_MS not
+			// even that happens — so without the rebuild below the page would open
+			// empty. See rebuiltChat for what can honestly be put back.
+			const rebuilt = rebuiltChat(p);
 			localStorage.removeItem(POINTER_KEY);
 			localStorage.setItem(
 				RESUME_KEY,
@@ -412,7 +477,8 @@
 					// A simple run never had a brief. Handing one back draws the
 					// advanced plan card over a run that has no plan, with a start
 					// button that would open a second workspace.
-					...(ONE_CLIP_WS.test(p.renderWs ?? '') ? { brief: null, launchedBrief: null } : {})
+					...(ONE_CLIP_WS.test(p.renderWs ?? '') ? { brief: null, launchedBrief: null } : {}),
+					...(rebuilt ? { chat: rebuilt } : {})
 				})
 			);
 		} catch {
@@ -2090,6 +2156,9 @@
 		seed?: number;
 		wallSeconds?: number;
 		outcome?: string;
+		/** What you typed, verbatim. The history row's title is the same text cut
+		 *  to sixty characters; this one is not cut. */
+		request?: string;
 		/** What the clip was shot with, and what it continues. Both arrived with the
 		 *  render log rather than the chat, so an old clip has neither. */
 		prompt?: string;
