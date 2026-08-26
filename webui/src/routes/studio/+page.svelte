@@ -934,6 +934,10 @@
 				return;
 			}
 			if (r.sheets) sheets = r.sheets;
+			// Start watching. The turnaround runs server-side, so nothing else in
+			// this tab will ever notice it finish — and without this the cards it
+			// posts on that transition simply never arrive.
+			watchSheets();
 			pushItem({
 				who: 'studio',
 				kind: 'sheet',
