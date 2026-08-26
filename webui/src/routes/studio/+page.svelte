@@ -453,61 +453,75 @@
 	 *  from scratch, and there is already one tested path that does all of that —
 	 *  the one that runs on load. Reusing it is worth the reload. */
 	function reopen(p: Production) {
+		if (runSlug === p.slug) {
+			// Already the run on screen. On a phone the rail covers the page, so
+			// the only useful thing left to do is get out of the way.
+			if (window.innerWidth < 1024) setNavOpen(false);
+			return;
+		}
+
+		// Read what this run should show BEFORE anything is torn down: reset()
+		// clears the pointer and the resume slot, and the payload for the run
+		// being opened may be sitting in exactly those places.
+		let raw: string | null = null;
+		let saved = false;
 		try {
+			saved = savedTurns(p.slug) > 0;
 			// The run's own conversation, if it was saved: what you typed, the
-			// prompt or the plan you approved, the documents, the clips. Pointing
-			// at it is the whole of reopening.
+			// prompt or the plan you approved, the documents, the clips.
 			//
-			// A key is not the same as a conversation, though, and the two were
-			// being treated as one. A snapshot written before the run had said
-			// anything holds nothing but the greeting, and taking its existence as
-			// proof of content opened the row onto a blank page — with the rebuild
-			// below skipped, because the key was there. So ask what is in it.
-			if (savedTurns(p.slug) > 0) {
-				localStorage.setItem(POINTER_KEY, p.slug);
-				location.href = '/studio';
-				return;
-			}
+			// A key is not the same as a conversation, and the two were being
+			// treated as one. A snapshot written before the run had said anything
+			// holds nothing but the greeting, and taking its existence as proof of
+			// content opened the row onto a blank page — with the rebuild below
+			// skipped, because the key was there. So ask what is in it.
+			if (saved) raw = localStorage.getItem(runKey(p.slug));
+		} catch {
+			/* private mode — fall through to the rebuild */
+		}
+
+		if (!raw) {
 			// Older runs, saved before conversations were kept. The identity is
 			// enough to poll the workspace, and for a run past RUN_CEILING_MS not
-			// even that happens — so without the rebuild below the page would open
+			// even that happens — so without the rebuild the page would open
 			// empty. See rebuiltChat for what can honestly be put back.
 			const rebuilt = rebuiltChat(p);
-			localStorage.removeItem(POINTER_KEY);
-			localStorage.setItem(
-				RESUME_KEY,
-				JSON.stringify({
-					brief: {
-						slug: p.slug,
-						title: p.title,
-						story: p.pitch ?? '',
-						style: '',
-						sceneCount: p.sceneCount,
-						seed: 0
-					},
-					launchedBrief: {
-						slug: p.slug,
-						title: p.title,
-						story: p.pitch ?? '',
-						style: '',
-						sceneCount: p.sceneCount,
-						seed: 0
-					},
-					planningWs: p.planningWs ?? '',
-					renderWs: p.renderWs ?? '',
-					assemblySent: false,
-					startedAt: p.startedAt,
-					// A simple run never had a brief. Handing one back draws the
-					// advanced plan card over a run that has no plan, with a start
-					// button that would open a second workspace.
-					...(ONE_CLIP_WS.test(p.renderWs ?? '') ? { brief: null, launchedBrief: null } : {}),
-					...(rebuilt ? { chat: rebuilt } : {})
-				})
-			);
-		} catch {
-			/* private mode — fall through to a plain reload, which starts fresh */
+			const asBrief = {
+				slug: p.slug,
+				title: p.title,
+				story: p.pitch ?? '',
+				style: '',
+				sceneCount: p.sceneCount,
+				seed: 0
+			};
+			raw = JSON.stringify({
+				brief: asBrief,
+				launchedBrief: asBrief,
+				planningWs: p.planningWs ?? '',
+				renderWs: p.renderWs ?? '',
+				assemblySent: false,
+				startedAt: p.startedAt,
+				// A simple run never had a brief. Handing one back draws the
+				// advanced plan card over a run that has no plan, with a start
+				// button that would open a second workspace.
+				...(ONE_CLIP_WS.test(p.renderWs ?? '') ? { brief: null, launchedBrief: null } : {}),
+				...(rebuilt ? { chat: rebuilt } : {})
+			});
 		}
-		location.href = '/studio';
+
+		// Swapped in place rather than through a reload. Reopening used to write a
+		// pointer and set location.href, which threw away a warm page — fonts,
+		// history, staged references and all — and blanked the screen, to arrive
+		// at a state this tab could simply have adopted. reset() and resumeFrom()
+		// between them are the whole of what that reload was for.
+		reset();
+		if (!resumeFrom(raw)) showWelcome();
+		try {
+			if (saved) localStorage.setItem(POINTER_KEY, p.slug);
+		} catch {
+			/* the run is on screen either way; the pointer only matters next load */
+		}
+		if (window.innerWidth < 1024) setNavOpen(false);
 	}
 
 	async function dropFromHistory(p: Production, e: MouseEvent) {
@@ -3484,6 +3498,92 @@
 		}
 	}
 
+	/** Put a saved run on screen: the transcript, the workspaces, the poller.
+	 *
+	 *  Lifted out of onMount so reopening a production can call it directly. It
+	 *  used to live inline there, which is why reopening had to write a pointer
+	 *  and reload the whole document to reach it — a white flash and a cold boot
+	 *  of the app to move between two conversations already in the same tab.
+	 *
+	 *  Everything it touches is component state, so it may be called more than
+	 *  once in a session provided reset() has run in between.
+	 */
+	function resumeFrom(raw: string | null): boolean {
+		if (!raw) return false;
+		let s: Partial<ReturnType<typeof snapshot>>;
+		try {
+			s = JSON.parse(raw) as Partial<ReturnType<typeof snapshot>>;
+		} catch {
+			return false;
+		}
+		// A workspace to poll is the whole requirement. Requiring a brief on top
+		// of it meant a simple run could not be resumed at all — there is no plan
+		// in one, only a prompt — and a reload mid-render left the clip finishing
+		// on the harness with nothing watching for it.
+		if (!(s.planningWs || s.renderWs)) return false;
+			brief = s.brief ?? null;
+			launchedBrief = s.launchedBrief ?? s.brief ?? null;
+			sceneCount = s.brief?.sceneCount ?? sceneCount;
+			planningWs = s.planningWs ?? '';
+			renderWs = s.renderWs ?? '';
+			// The mode follows the run you opened. Landing in a simple run with
+			// the advanced composer under it is the same mismatch as the rail:
+			// the page describing one mode while showing the other.
+			if (ONE_CLIP_WS.test(renderWs)) mode = 'simple';
+			else if (s.planningWs) mode = 'advanced';
+			assemblySent = s.assemblySent ?? false;
+			startedAt = s.startedAt || Date.now();
+			// Asked here rather than anywhere later, because everything below
+			// reads as live: the poller, the clock, the rail's pills.
+			staleRun = Date.now() - startedAt > RUN_CEILING_MS;
+			if (assemblySent) {
+				shootsAnnounced = true;
+				finalByNameOnly = true;
+			}
+
+			// A saved conversation is restored as itself. Anything older —
+			// written before transcripts were saved — falls back to the plan
+			// card, which is what it used to do.
+			if (s.chat?.length) {
+				chat = s.chat;
+				superseded = s.superseded ?? {};
+				latestPlanId = s.latestPlanId ?? '';
+				boardId = s.boardId ?? '';
+				approvalId = s.approvalId ?? '';
+				gateOpen = s.gateOpen ?? {};
+				docPhase = s.docPhase ?? {};
+				docAccepted = s.docAccepted ?? {};
+				latestDocItem = s.latestDocItem ?? {};
+				docBody = s.docBody ?? {};
+				docFile = s.docFile ?? {};
+				docUrl = s.docUrl ?? {};
+				docTaskId = s.docTaskId ?? {};
+				for (const id of s.clipPosted ?? []) clipPosted.add(id);
+				for (const id of s.failedNoted ?? []) failedNoted.add(id);
+				for (const id of s.preAssemblyIds ?? []) preAssemblyIds.add(id);
+				seenActivity = new Set(s.seenActivity ?? []);
+				shootsAnnounced = s.shootsAnnounced ?? shootsAnnounced;
+				finalPosted = s.finalPosted ?? false;
+				finalByNameOnly = s.finalByNameOnly ?? finalByNameOnly;
+				welcomeId = s.welcomeId ?? '';
+			} else if (brief) {
+				const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
+				latestPlanId = item.id;
+			}
+			// A run past the ceiling is not polled. The harness has already
+			// given up on every task it could have been running, so the loop
+			// would only ask a dead workspace the same question every thirty
+			// seconds while the page counted the hours since the tab closed.
+			//
+			// The cost, stated plainly: work that finished after this tab was
+			// closed is not collected. Nothing that was still running can be —
+			// it was abandoned hours before the ceiling — but a clip that
+			// landed and was never posted stays uncollected until the run is
+			// started again.
+			if (!staleRun) startPolling();
+		return true;
+	}
+
 	onMount(() => {
 		try {
 			const saved = localStorage.getItem(NAV_KEY);
@@ -3560,87 +3660,16 @@
 			/* a full quota or private mode — the orphans stay orphans, nothing is lost */
 		}
 
-		let resumed = false;
-		try {
-			const pointer = localStorage.getItem(POINTER_KEY);
-			const raw =
+		const pointer = localStorage.getItem(POINTER_KEY);
+		if (
+			!resumeFrom(
 				(pointer && localStorage.getItem(runKey(pointer))) ??
-				localStorage.getItem(RESUME_KEY) ??
-				sessionStorage.getItem(RESUME_KEY);
-			if (raw) {
-				const s = JSON.parse(raw) as Partial<ReturnType<typeof snapshot>>;
-				// A workspace to poll is the whole requirement. Requiring a brief on
-				// top of it meant a simple run could not be resumed at all — there is
-				// no plan in one, only a prompt — and a reload mid-render left the
-				// clip finishing on the harness with nothing watching for it.
-				if (s.planningWs || s.renderWs) {
-					resumed = true;
-					brief = s.brief ?? null;
-					launchedBrief = s.launchedBrief ?? s.brief ?? null;
-					sceneCount = s.brief?.sceneCount ?? sceneCount;
-					planningWs = s.planningWs ?? '';
-					renderWs = s.renderWs ?? '';
-					// The mode follows the run you opened. Landing in a simple run with
-					// the advanced composer under it is the same mismatch as the rail:
-					// the page describing one mode while showing the other.
-					if (ONE_CLIP_WS.test(renderWs)) mode = 'simple';
-					else if (s.planningWs) mode = 'advanced';
-					assemblySent = s.assemblySent ?? false;
-					startedAt = s.startedAt || Date.now();
-					// Asked here rather than anywhere later, because everything below
-					// reads as live: the poller, the clock, the rail's pills.
-					staleRun = Date.now() - startedAt > RUN_CEILING_MS;
-					if (assemblySent) {
-						shootsAnnounced = true;
-						finalByNameOnly = true;
-					}
-
-					// A saved conversation is restored as itself. Anything older —
-					// written before transcripts were saved — falls back to the plan
-					// card, which is what it used to do.
-					if (s.chat?.length) {
-						chat = s.chat;
-						superseded = s.superseded ?? {};
-						latestPlanId = s.latestPlanId ?? '';
-						boardId = s.boardId ?? '';
-						approvalId = s.approvalId ?? '';
-						gateOpen = s.gateOpen ?? {};
-						docPhase = s.docPhase ?? {};
-						docAccepted = s.docAccepted ?? {};
-						latestDocItem = s.latestDocItem ?? {};
-						docBody = s.docBody ?? {};
-						docFile = s.docFile ?? {};
-						docUrl = s.docUrl ?? {};
-						docTaskId = s.docTaskId ?? {};
-						for (const id of s.clipPosted ?? []) clipPosted.add(id);
-						for (const id of s.failedNoted ?? []) failedNoted.add(id);
-						for (const id of s.preAssemblyIds ?? []) preAssemblyIds.add(id);
-						seenActivity = new Set(s.seenActivity ?? []);
-						shootsAnnounced = s.shootsAnnounced ?? shootsAnnounced;
-						finalPosted = s.finalPosted ?? false;
-						finalByNameOnly = s.finalByNameOnly ?? finalByNameOnly;
-						welcomeId = s.welcomeId ?? '';
-					} else if (brief) {
-						const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
-						latestPlanId = item.id;
-					}
-					// A run past the ceiling is not polled. The harness has already
-					// given up on every task it could have been running, so the loop
-					// would only ask a dead workspace the same question every thirty
-					// seconds while the page counted the hours since the tab closed.
-					//
-					// The cost, stated plainly: work that finished after this tab was
-					// closed is not collected. Nothing that was still running can be —
-					// it was abandoned hours before the ceiling — but a clip that
-					// landed and was never posted stays uncollected until the run is
-					// started again.
-					if (!staleRun) startPolling();
-				}
-			}
-		} catch {
-			/* nothing to resume */
+					localStorage.getItem(RESUME_KEY) ??
+					sessionStorage.getItem(RESUME_KEY)
+			)
+		) {
+			showWelcome();
 		}
-		if (!resumed) showWelcome();
 
 		// Elapsed time is shown in whole minutes, so a 15s clock is plenty.
 		const clock = setInterval(() => (now = Date.now()), 15_000);
