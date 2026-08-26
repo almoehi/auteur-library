@@ -24,6 +24,7 @@ import { HARNESS } from '$lib/harness';
 import { sheetGrid } from '../../ffmpeg.server';
 import { store } from '../../../clips.server';
 import { attachSheetImage, getSheet, setSheetRender } from '../../sheets.server';
+import { stashBrief } from '../../refstash.server';
 
 const DEADLINE_MS = 25 * 60 * 1000;
 const POLL_MS = 6_000;
@@ -181,6 +182,12 @@ async function build(id: string, look: string, fetchFn: typeof globalThis.fetch)
 
 	setSheetRender(id, { state: 'rendering', startedAt: new Date().toISOString(), attempt: 1 });
 
+	// Named and the brief written before the launch, so the words that reach the
+	// GPU are kept beside the references they were rendered against.
+	const slug = `turn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+	const prompt = turnPrompt(await englishLook(look, fetchFn));
+	stashBrief(slug, prompt);
+
 	let workspace = '';
 	try {
 		const res = await fetchFn('/studio/api/launch', {
@@ -189,9 +196,9 @@ async function build(id: string, look: string, fetchFn: typeof globalThis.fetch)
 			body: JSON.stringify({
 				stage: 'direct',
 				direct: {
-					slug: `turn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+					slug,
 					title: `${sheet.name} — turnaround`,
-					prompts: [turnPrompt(await englishLook(look, fetchFn))],
+					prompts: [prompt],
 					seconds: TURN_SECONDS,
 					width: TURN_W,
 					height: TURN_H,

@@ -52,6 +52,27 @@ export function stashRefs(slug: string, files: { bytes: Buffer; name: string }[]
 	}
 }
 
+/** The brief a run was launched with, kept beside the references it was given.
+ *
+ *  Internal renders are deliberately absent from the render log — nobody rates a
+ *  turnaround and the browser never watches one, so the row could only ever be
+ *  half-written. But removing them took the prompt with it, and the prompt is
+ *  the evidence: when a sheet comes back looking like someone else, the first
+ *  question is always what words actually reached the GPU. Kept here rather than
+ *  put back in the log, so it sits with the pictures it was rendered against and
+ *  is pruned on the same schedule.
+ */
+export function stashBrief(slug: string, prompt: string): void {
+	if (!SLUG_OK.test(slug)) return;
+	try {
+		const dir = join(DIR, slug);
+		if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, 'prompt.txt'), prompt, 'utf8');
+	} catch {
+		// Evidence is worth having and never worth failing a render for.
+	}
+}
+
 export function stashedNames(slug: string): string[] {
 	const dir = runDir(slug);
 	if (!dir || !existsSync(dir)) return [];
