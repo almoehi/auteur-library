@@ -1544,21 +1544,19 @@
 		const c = continuing;
 		if (!c) return;
 		const prior = logRow[c.workspace];
-		// The length follows the clip being continued, not the composer — the same
-		// reason the frame does, one line further down.
+		// The length is yours, and only the length.
 		//
-		// Tapping a number of seconds on a card sets that card and nothing else;
-		// the composer never learns it. So a clip shot at five seconds, chosen on
-		// its own card, was continued at whatever the composer still held from
-		// before — ten, in the run that caught this. Nobody asked for ten, nobody
-		// saw a ten anywhere, and it cost a sixteen-minute render.
+		// This followed the prior clip for a while, on the same argument that makes
+		// the frame follow it. That argument does not reach this far: two pieces at
+		// different sizes cannot be concatenated, but two pieces of different
+		// LENGTHS join perfectly well. Deciding how long the next beat runs is a
+		// director's choice and taking it away was a mistake.
 		//
-		// Still a free choice: the seconds row is on the continuation card too, so
-		// a longer or shorter next beat is a tap away. This only decides what it
-		// starts at, and starting at "the same as the one before" is the answer
-		// that is never a surprise.
+		// What actually went wrong was never the source of the number, it was that
+		// there were two of them — the card's and the composer's — and only one was
+		// on screen. They are kept in step now, at setShotSeconds.
 		const shot = await callShotPrompt(request, {
-			seconds: prior?.seconds && prior.seconds >= 4 && prior.seconds <= 15 ? prior.seconds : wantSeconds,
+			seconds: wantSeconds,
 			orientation: wantOrientation,
 			character: c.characterName,
 			location: c.locationName,
@@ -2329,6 +2327,15 @@
 	function setShotSeconds(itemId: string, seconds: number) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.shot || item.shot.seconds === seconds) return;
+		// Through to the composer as well.
+		//
+		// The card and the chip were two stores of one setting, and only the chip
+		// is on screen when you press "continue this". Change it on a card, and
+		// the chip went on showing the old number and quietly sending it — the way
+		// a clip made at five seconds came to be continued at ten. Whichever of
+		// the two you touch, both now say the same thing.
+		wantSeconds = seconds;
+		saveSetup();
 		void respin(itemId, { seconds, orientation: item.shot.orientation });
 	}
 
@@ -2491,9 +2498,10 @@
 			return { seconds: wantSeconds, res: wantRes, portrait: wantOrientation === 'portrait', fixed: false };
 		}
 		const longest = Math.max(prior.width, prior.height);
-		const sec = prior.seconds;
+		// Length stays yours even here. Only the two that decide whether the pieces
+		// can be joined are taken over.
 		return {
-			seconds: sec && sec >= 4 && sec <= 15 ? sec : wantSeconds,
+			seconds: wantSeconds,
 			res: RES_KEYS.find((k) => RESOLUTIONS[k].long === longest) ?? wantRes,
 			portrait: prior.height > prior.width,
 			fixed: true
@@ -5800,20 +5808,13 @@
 									 before the first send. -->
 								<button
 									type="button"
-									aria-expanded={composerShape.fixed ? undefined : fmtOpen}
-									disabled={composerShape.fixed}
-									title={composerShape.fixed
-										? 'Follows the clip you are continuing — the pieces have to match to join'
-										: undefined}
+									aria-expanded={fmtOpen}
 									onclick={() => {
-										if (composerShape.fixed) return;
 										const open = !fmtOpen;
 										shutMenus();
 										fmtOpen = open;
 									}}
-									class="flex min-h-8 items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors {composerShape.fixed
-										? 'cursor-default'
-										: 'cursor-pointer hover:text-[var(--st-text)]'}"
+									class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
 								>
 									{composerShape.seconds}s · {composerShape.res} · {composerShape.portrait
 										? '9:16'
@@ -5822,11 +5823,9 @@
 										 the same kind of panel were reading as two different kinds of
 										 thing: one looked like a control, the other like a readout.
 										 Dropped while continuing, where it really is a readout. -->
-									{#if !composerShape.fixed}
-										<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
-											<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-										</svg>
-									{/if}
+									<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
+										<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+									</svg>
 								</button>
 							</div>
 						{/if}
@@ -6153,6 +6152,17 @@
 									</span>
 								</div>
 
+								{#if composerShape.fixed}
+									<!-- Size and frame are not yours while you are continuing: two pieces
+										 at different sizes cannot be concatenated, and the mismatch only
+										 shows up after both have been rendered. Length is not like that —
+										 clips of different lengths join perfectly well — so it stays above,
+										 live. -->
+									<div class="px-3 py-2.5 text-xs text-[var(--st-faint)] shadow-[inset_0_1px_0_var(--st-line)]">
+										{composerShape.res} · {composerShape.portrait ? '9:16' : '16:9'} — follows the clip
+										you are continuing, so the pieces can be joined.
+									</div>
+								{:else}
 								<div class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]">
 									<span class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]">
 										<svg viewBox="0 0 16 16" class="size-[15px] shrink-0 opacity-80" fill="none" aria-hidden="true">
@@ -6211,6 +6221,7 @@
 										{/each}
 									</span>
 								</div>
+								{/if}
 							</div>
 						{/if}
 						{#if pendingPhoto}
