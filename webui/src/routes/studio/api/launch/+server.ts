@@ -83,7 +83,7 @@ async function openWorkspace(
 	grokKey: string,
 	fetch: typeof globalThis.fetch,
 	record: { slug: string; title: string; sceneCount: number; pitch?: string; prompt?: string },
-	opts: { planning?: boolean; withLibrary?: boolean } = {}
+	opts: { planning?: boolean; withLibrary?: boolean; internal?: boolean } = {}
 ): Promise<Response> {
 	const openedAt = Date.now();
 	const planning = opts.planning ?? false;
@@ -198,7 +198,16 @@ async function openWorkspace(
 	// Bookmark it. Until this existed a run lived only in the tab that started
 	// it: close the tab and the film was still on the harness but unreachable,
 	// because nothing remembered its id.
-	recordProduction({ ...record, ...(planning ? { planningWs: workspaceId } : { renderWs: workspaceId }) });
+	//
+	// Except when the run is ours rather than the operator's. A turnaround is
+	// started by an upload, not by a person writing something, and booking it as
+	// a production gave one action two entries in the sidebar — and opening the
+	// second rebuilt a conversation from the render log that nobody had, showing
+	// an internal prompt nobody wrote. It still shows: as a line and a clip
+	// inside the session that caused it, which is where it belongs.
+	if (!opts.internal) {
+		recordProduction({ ...record, ...(planning ? { planningWs: workspaceId } : { renderWs: workspaceId }) });
+	}
 
 	// The workspace is live from here on. Everything below adds to it and can
 	// only fail partially: the production is already running, so a workflow that
@@ -585,7 +594,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				pitch: spec.prompts?.[0]?.slice(0, 200),
 				prompt: spec.prompts?.[0]
 			},
-			{ withLibrary: true }
+			{ withLibrary: true, internal: spec.internal === true }
 		);
 	}
 

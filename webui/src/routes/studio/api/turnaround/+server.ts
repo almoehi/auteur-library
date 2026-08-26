@@ -181,7 +181,8 @@ async function build(id: string, look: string, fetchFn: typeof globalThis.fetch)
 					baseLoras: {},
 					wroteLoras: [],
 					request: 'turnaround from an uploaded photograph',
-					characterId: id
+					characterId: id,
+					internal: true
 				}
 			})
 		});

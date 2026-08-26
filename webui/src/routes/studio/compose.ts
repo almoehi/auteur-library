@@ -1127,6 +1127,10 @@ export interface DirectSpec {
 	 *  presence matters to the workspace now; the bundle derives the port names
 	 *  from the same list server-side. */
 	refNames?: string[];
+	/** Started by the app rather than by a person — a turnaround behind an upload.
+	 *  Kept out of the production history: one action should not put two entries
+	 *  in the sidebar, and the second one has no conversation to show. */
+	internal?: boolean;
 	/** A presigned S3 GET url per reference, same order.
 	 *
 	 *  These are what the render actually loads. The staged copies on this disk
