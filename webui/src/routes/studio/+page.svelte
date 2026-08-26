@@ -1926,19 +1926,51 @@
 	 *  throughout and the row looked asleep while a GPU was busy. */
 	const sheetsWorking = $derived(sheets.some((x) => x.sheet?.state === 'rendering'));
 
+	/** The characters this conversation is still owed a sheet for.
+	 *
+	 *  Read out of the chat rather than held in a variable, because the wait
+	 *  outlives the tab. An upload posts its picture and the turnaround then runs
+	 *  for minutes on a server that does not care whether anyone is still looking:
+	 *  close the tab, reload, and the expectation has to survive that. The card
+	 *  that announced the render is the record of it. */
+	function awaitedSheets(): Set<string> {
+		const out = new Set<string>();
+		for (const c of chat) {
+			const sh = c.sheet;
+			if (c.kind === 'sheet' && sh?.uploaded && sh.stage === 'anchor' && sh.id) out.add(sh.id);
+		}
+		return out;
+	}
+
+	/** Whether the six views are already in this conversation. The chat is the
+	 *  record and a set in memory is not — the set dies on reload, and then the
+	 *  same sheet is posted a second time. */
+	function sheetShown(id: string): boolean {
+		return chat.some((c) => c.kind === 'sheet' && c.sheet?.stage === 'sheet' && c.sheet.id === id);
+	}
+
 	function watchSheets() {
 		if (sheetWatch) clearTimeout(sheetWatch);
 		const tick = async () => {
-			// Which ones were still being drawn before this poll. Compared after,
-			// because a sheet finishing is the only moment worth a card and the
-			// list alone cannot say whether it just happened or happened yesterday.
+			// Which ones were still being drawn before this poll.
 			const wasRendering = new Set(
 				sheets.filter((x) => x.sheet?.state === 'rendering').map((x) => x.id)
 			);
 			await loadSheets();
+			// Two ways to be due a card. Watching one finish is the obvious one, and
+			// it was the only one — which made the card depend on this tab happening
+			// to be looking at the right second. It was not, twice: once because the
+			// upload path never started this poller, and once because a reload landed
+			// mid-render. The moment passed and the sheet was never mentioned again.
+			//
+			// So the question asked here is not "did it just finish" but "am I still
+			// waiting for it" — which the chat can answer at any time, including
+			// minutes later in a tab that was closed when it happened.
+			const awaited = awaitedSheets();
 			for (const x of sheets) {
-				if (!wasRendering.has(x.id) || x.sheet?.state !== 'ready' || !x.sheet.file) continue;
-				if (sheetPosted.has(x.id)) continue;
+				if (x.sheet?.state !== 'ready' || !x.sheet.file) continue;
+				if (!wasRendering.has(x.id) && !awaited.has(x.id)) continue;
+				if (sheetPosted.has(x.id) || sheetShown(x.id)) continue;
 				sheetPosted.add(x.id);
 				// The turnaround first, then what was cut out of it. That is the order
 				// they happened in and the order they explain each other in: the video
@@ -3782,10 +3814,11 @@
 		void loadVerdicts();
 		// Sheets live on the server too, and outlast every run — the picker has to
 		// ask rather than assume this tab has seen them before.
-		void loadSheets().then(() => {
-			// A turnaround started before this reload is still going server-side.
-			if (sheets.some((s) => s.sheet?.state === 'rendering')) watchSheets();
-		});
+		// Unconditionally, not only when something is still rendering. A turnaround
+		// that finished while this tab was closed is the case that kept losing its
+		// cards, and by definition nothing is rendering by the time you come back.
+		// One poll, four seconds in; it stops itself if there is nothing to wait for.
+		void loadSheets().then(() => watchSheets());
 		try {
 			const raw = localStorage.getItem(SETUP_KEY);
 			if (raw) {
