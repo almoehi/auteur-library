@@ -1919,7 +1919,35 @@
 	function watchSheets() {
 		if (sheetWatch) clearTimeout(sheetWatch);
 		const tick = async () => {
+			// Which ones were still being drawn before this poll. Compared after,
+			// because a sheet finishing is the only moment worth a card and the
+			// list alone cannot say whether it just happened or happened yesterday.
+			const wasRendering = new Set(
+				sheets.filter((x) => x.sheet?.state === 'rendering').map((x) => x.id)
+			);
 			await loadSheets();
+			for (const x of sheets) {
+				if (!wasRendering.has(x.id) || x.sheet?.state !== 'ready' || !x.sheet.file) continue;
+				if (sheetPosted.has(x.id)) continue;
+				sheetPosted.add(x.id);
+				// The six views, in the conversation that asked for them. The upload
+				// itself stays quiet; this is the other end of it — you were told a
+				// render had started, so you are told when it finished.
+				pushItem({
+					who: 'studio',
+					kind: 'sheet',
+					sheet: {
+						kind: x.kind,
+						stage: 'sheet',
+						description: x.description ?? '',
+						name: x.name,
+						id: x.id,
+						url: `/studio/api/sheet/full/${x.id}`,
+						launched: true
+					}
+				});
+				persist();
+			}
 			if (sheets.some((s) => s.sheet?.state === 'rendering')) {
 				sheetWatch = setTimeout(tick, 8000);
 			} else {
@@ -1928,6 +1956,9 @@
 		};
 		sheetWatch = setTimeout(tick, 4000);
 	}
+
+	/** Sheets already shown as a card, so a later poll does not post them twice. */
+	const sheetPosted = new Set<string>();
 
 	/** What the running sheet render was asked for. The finished artifact carries
 	 *  no memory of the description that produced it, and that description is the
