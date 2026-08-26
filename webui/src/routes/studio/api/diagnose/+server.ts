@@ -28,8 +28,8 @@ import { readRenders } from '../../renders.server';
 import { catalogueForWriter, loraFor, MAX_PICKS, type Pick } from '../../loras';
 import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
 import { readOverrides } from '../../overrides.server';
+import { xaiPost } from '../../xai.server';
 
-const XAI = 'https://api.x.ai/v1/chat/completions';
 
 /** Vision and explicit material both, which is the pair that rules most models
  *  out. 4.6 refuses the text alone, and the smaller models do not see. */
@@ -166,10 +166,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	let res: Response;
 	try {
-		res = await fetch(XAI, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-			body: JSON.stringify({
+		res = await xaiPost({
 				model,
 				response_format: { type: 'json_object' },
 				messages: [
@@ -182,9 +179,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						]
 					}
 				]
-			}),
-			signal: AbortSignal.timeout(TIMEOUT_MS)
-		});
+			}, key, TIMEOUT_MS);
 	} catch (e) {
 		const timedOut = e instanceof Error && e.name === 'TimeoutError';
 		return json({

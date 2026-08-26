@@ -24,8 +24,8 @@ import { readOverrides } from '../../overrides.server';
 import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
 import { MAX_PICKS, catalogueForWriter, loraFor, type Pick } from '../../loras';
 import { checkRequest } from '../../minors.server';
+import { xaiPost } from '../../xai.server';
 
-const XAI = 'https://api.x.ai/v1/chat/completions';
 
 /** grok-4.5 for the same reason the crew runs on it: 4.6 refuses this material
  *  outright and the smaller models write prompts that read like a summary. The
@@ -255,19 +255,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	let res: Response;
 	try {
-		res = await fetch(XAI, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-			body: JSON.stringify({
+		res = await xaiPost({
 				model,
 				response_format: { type: 'json_object' },
 				messages: [
 					{ role: 'system', content: system },
 					{ role: 'user', content: user }
 				]
-			}),
-			signal: AbortSignal.timeout(TIMEOUT_MS)
-		});
+			}, key, TIMEOUT_MS);
 	} catch (e) {
 		const timedOut = e instanceof Error && e.name === 'TimeoutError';
 		return json({

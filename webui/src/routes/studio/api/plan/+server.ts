@@ -33,11 +33,11 @@ import type { RequestHandler } from './$types';
 import { SCENE_COUNT_MAX, SCENE_COUNT_MIN, type Brief } from '../../types';
 import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
 import { readOverrides } from '../../overrides.server';
+import { xaiPost } from '../../xai.server';
 
 /** Ollama Cloud — the same provider the workspace's own model registry points
  *  at (see spec.models in the composed workspace), so if a production can run
  *  at all, this key works. */
-const XAI = 'https://api.x.ai/v1/chat/completions';
 
 /** Cheapest of the four cloud models the harness registers, and verified
  *  working on this account. Planning is a two-paragraph job; it does not need
@@ -178,10 +178,7 @@ function extractJson(raw: string): Draft | null {
 }
 
 async function ask(key: string, model: string, system: string, user: string): Promise<string> {
-	const res = await fetch(XAI, {
-		method: 'POST',
-		headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-		body: JSON.stringify({
+	const res = await xaiPost({
 			model,
 			messages: [
 				{ role: 'system', content: system },
@@ -189,9 +186,7 @@ async function ask(key: string, model: string, system: string, user: string): Pr
 			],
 			response_format: { type: 'json_object' },
 			stream: false
-		}),
-		signal: AbortSignal.timeout(TIMEOUT_MS)
-	});
+		}, key, TIMEOUT_MS);
 
 	const text = await res.text();
 	// Never echo the request back on failure — the Authorization header is not

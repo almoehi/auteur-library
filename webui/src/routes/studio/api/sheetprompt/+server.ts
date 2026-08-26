@@ -22,8 +22,8 @@ import type { RequestHandler } from './$types';
 import { readOverrides } from '../../overrides.server';
 import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
 import { checkDescription, checkRequest } from '../../minors.server';
+import { xaiPost } from '../../xai.server';
 
-const XAI = 'https://api.x.ai/v1/chat/completions';
 const MODEL_FALLBACK = 'grok-4.5';
 
 /** Shorter than the shot writer's, because the work is smaller: a sentence in,
@@ -120,19 +120,14 @@ ${want}`
 
 	let res: Response;
 	try {
-		res = await fetch(XAI, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-			body: JSON.stringify({
+		res = await xaiPost({
 				model,
 				response_format: { type: 'json_object' },
 				messages: [
 					{ role: 'system', content: writer },
 					{ role: 'user', content: user }
 				]
-			}),
-			signal: AbortSignal.timeout(TIMEOUT_MS)
-		});
+			}, key, TIMEOUT_MS);
 	} catch (e) {
 		const timedOut = e instanceof Error && e.name === 'TimeoutError';
 		return json({
