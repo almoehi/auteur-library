@@ -4146,12 +4146,18 @@
 									 title is the prompt, so a second line under it would be filler;
 									 a film has a scene count, which is the one number that says how
 									 big the thing is. -->
-								{#if working}
-									<!-- The elapsed clock, not the word "running". A number that moves
-										 is the proof; a label that does not is what a stuck page also
-										 shows. -->
-									<span class="mt-0.5 block text-xs tabular-nums text-[var(--st-muted)]">
-										{elapsedLabel(now - startedAt)}{railRunning ? ` · ${friendly(railRunning.label)}` : ''}
+								<!-- No clock here.
+									 It used to show the elapsed time, on the argument that a moving
+									 number proves the page is alive where a static label does not.
+									 That was written when a row was one render. A row is a session
+									 now, and the number became "how long you have been sitting here"
+									 — which nobody asked to be told, and which reads as pressure
+									 rather than progress. The pulsing dot says the same thing
+									 without the running total, and the clip card still carries the
+									 render's own timing where it means something. -->
+								{#if working && railRunning}
+									<span class="mt-0.5 block text-xs text-[var(--st-muted)]">
+										{friendly(railRunning.label)}
 									</span>
 								{:else if kind === 'film'}
 									<span class="mt-0.5 block text-xs text-[var(--st-faint)]">
