@@ -2471,6 +2471,34 @@
 	 *  exists. Setting it puts the composer into continuation mode; sending or
 	 *  cancelling clears it. */
 	let continuing = $state<NonNullable<ChatItem['shot']>['continues'] | null>(null);
+
+	/** What the composer is actually about to send, which is not always what the
+	 *  composer is set to.
+	 *
+	 *  While you are continuing a clip, its length, size and frame all come from
+	 *  the clip being continued — they have to, or the pieces cannot be joined.
+	 *  The chip went on showing the saved defaults anyway, so the screen read
+	 *  "5s" directly beside "Continuing — 10s more." and the honest question
+	 *  followed immediately: why is it making ten. It was right to make ten. The
+	 *  chip was wrong to say five.
+	 *
+	 *  Declared here rather than up with the other settings because it reads
+	 *  `continuing`, and a derived that reads a state declared below it is the
+	 *  dead zone this file has already been caught by once. */
+	const composerShape = $derived.by(() => {
+		const prior = continuing ? logRow[continuing.workspace] : null;
+		if (!prior?.width || !prior?.height) {
+			return { seconds: wantSeconds, res: wantRes, portrait: wantOrientation === 'portrait', fixed: false };
+		}
+		const longest = Math.max(prior.width, prior.height);
+		const sec = prior.seconds;
+		return {
+			seconds: sec && sec >= 4 && sec <= 15 ? sec : wantSeconds,
+			res: RES_KEYS.find((k) => RESOLUTIONS[k].long === longest) ?? wantRes,
+			portrait: prior.height > prior.width,
+			fixed: true
+		};
+	});
 	/** Pinned to the prior clip's last frame, or a free start. On by default: the
 	 *  join is the reason the feature exists, and the looser setting is the one
 	 *  you reach for deliberately. */
@@ -5772,21 +5800,33 @@
 									 before the first send. -->
 								<button
 									type="button"
-									aria-expanded={fmtOpen}
+									aria-expanded={composerShape.fixed ? undefined : fmtOpen}
+									disabled={composerShape.fixed}
+									title={composerShape.fixed
+										? 'Follows the clip you are continuing — the pieces have to match to join'
+										: undefined}
 									onclick={() => {
+										if (composerShape.fixed) return;
 										const open = !fmtOpen;
 										shutMenus();
 										fmtOpen = open;
 									}}
-									class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+									class="flex min-h-8 items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors {composerShape.fixed
+										? 'cursor-default'
+										: 'cursor-pointer hover:text-[var(--st-text)]'}"
 								>
-									{wantSeconds}s · {wantRes} · {wantOrientation === 'portrait' ? '9:16' : '16:9'}
+									{composerShape.seconds}s · {composerShape.res} · {composerShape.portrait
+										? '9:16'
+										: '16:9'}
 									<!-- The same chevron the mode control carries. Two chips that open
 										 the same kind of panel were reading as two different kinds of
-										 thing: one looked like a control, the other like a readout. -->
-									<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
-										<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-									</svg>
+										 thing: one looked like a control, the other like a readout.
+										 Dropped while continuing, where it really is a readout. -->
+									{#if !composerShape.fixed}
+										<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
+											<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+										</svg>
+									{/if}
 								</button>
 							</div>
 						{/if}
