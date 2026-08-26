@@ -857,7 +857,7 @@
 		composer?.focus();
 	}
 
-	async function uploadSubject(file: File | null) {
+	async function uploadSubject(file: File | null, said: string) {
 		if (!file || refBusy) return;
 		const kind: 'character' | 'location' = wantTarget === 'location' ? 'location' : 'character';
 		refBusy = true;
@@ -866,9 +866,13 @@
 			const fd = new FormData();
 			fd.append('file', file);
 			fd.append('kind', kind);
-			// Whatever is in the box, if anything. It becomes the description, which
-			// is the only record of who this is once the picture is in the picker.
-			fd.append('description', input.trim());
+			// Passed in, not read from the box.
+			//
+			// submit() clears the composer before it dispatches, so reading `input`
+			// here found an empty string every time — three uploads went out
+			// described only by their filename because of it, and each one looked
+			// like the operator had forgotten to type.
+			fd.append('description', said.trim());
 			const res = await fetch('/studio/api/sheet', { method: 'POST', body: fd });
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -1240,7 +1244,7 @@
 			// answer is the prompt itself — offered for reading and editing before
 			// it costs anything.
 			if (mode === 'simple') {
-				if (pendingPhoto && wantTarget !== 'clip') await uploadSubject(pendingPhoto);
+				if (pendingPhoto && wantTarget !== 'clip') await uploadSubject(pendingPhoto, text);
 				else if (continuing) await continueFromRequest(text);
 				else if (wantTarget === 'clip') await shotFromRequest(text);
 				else await sheetFromRequest(text, wantTarget);
