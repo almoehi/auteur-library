@@ -144,7 +144,14 @@ async function englishLook(look: string, fetchFn: typeof globalThis.fetch): Prom
 		const res = await fetchFn('/studio/api/sheetprompt', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ request: said, kind: 'character' })
+			// photo: this description sits beside a picture, so the writer must not
+			// fill the gaps it would fill for a drawn character. It filled them
+			// here: "vékony test, nagyon kis mell" came back as "a 25-year-old
+			// woman with thin body, very small breasts and long brown hair" — and
+			// since the description overrides the picture on every point it makes,
+			// an invented brown beat the blonde in the photograph. Three runs out
+			// of three added hair the operator never mentioned.
+			body: JSON.stringify({ request: said, kind: 'character', photo: true })
 		});
 		const r = (await res.json()) as { ok?: boolean; sheet?: { description?: string } };
 		const out = r?.sheet?.description?.trim();

@@ -36,7 +36,7 @@ const REQUEST_MAX = 4_000;
 const DESCRIPTION_MAX = 900;
 
 export const POST: RequestHandler = async ({ request }) => {
-	let payload: { request?: unknown; kind?: unknown; previous?: unknown };
+	let payload: { request?: unknown; kind?: unknown; previous?: unknown; photo?: unknown };
 	try {
 		payload = (await request.json()) as typeof payload;
 	} catch {
@@ -52,6 +52,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	// description the writer would start over from three words and lose every
 	// attribute that was already right.
 	const previous = typeof payload.previous === 'string' ? payload.previous.trim() : '';
+	// Whether a photograph of this person exists. It changes what the writer is
+	// for: with no picture the description IS the character and a gap in it gets
+	// invented at random, so filling the gap is the writer's whole job. With a
+	// picture the description is a correction to it, and filling a gap
+	// manufactures a claim that then beats the photograph.
+	const photo = payload.photo === true && kind === 'character';
 
 	// Before the writer, not after: there is no point spending a model call on
 	// something that will be refused, and the operator gets the reason in the
@@ -76,7 +82,28 @@ export const POST: RequestHandler = async ({ request }) => {
 		kind === 'character'
 			? 'This is a CHARACTER sheet. Describe the person only.'
 			: 'This is a LOCATION sheet. Describe the place only, with no people in it.';
-	const user = previous
+	const user = photo
+		? `${subject}
+
+The operator has ALREADY SUPPLIED A PHOTOGRAPH of this person. Your sentence will
+be read beside it, and it OVERRIDES the photograph wherever the two disagree.
+
+So put into English exactly what they said, and ADD NOTHING ELSE. No hair, no
+build, no features, no clothing, nothing they left out. The photograph answers
+all of that, and anything you invent here overrules a real person with a guess.
+Filling gaps is right when there is no picture; here it is the failure.
+
+The age rule still applies — that is a floor, not a description.
+
+Do not use the "A photography of full body of" opener here: the sentence is read
+as a note about the person, not as a caption for a render.
+
+Return "why" as exactly "Nothing added." unless you had to supply the age.
+
+---
+
+${want}`
+		: previous
 		? `${subject}
 
 This is a REFINEMENT. Below is the description currently in use, followed by what
