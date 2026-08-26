@@ -3938,6 +3938,11 @@
 							 runSlug is the same value the row is filed under. -->
 						{@const current = (runSlug || brief?.slug) === p.slug}
 						{@const kind = runKind(p)}
+						<!-- Only ever the run this tab is watching. Whether some other run is
+							 working is not knowable from here without polling sixty
+							 workspaces, and a dot that is sometimes right is worse than no
+							 dot at all. -->
+						{@const working = current && pollingActive && !staleRun}
 						<div class="group relative">
 							<button
 								type="button"
@@ -3946,12 +3951,27 @@
 									? 'bg-[var(--st-surface)]'
 									: 'hover:bg-[var(--st-surface)]'}"
 							>
-								<span class="block truncate text-sm text-[var(--st-text)]">{p.title}</span>
+								<span class="flex items-center gap-2">
+									{#if working}
+										<span
+											class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+											aria-hidden="true"
+										></span>
+									{/if}
+									<span class="min-w-0 flex-1 truncate text-sm text-[var(--st-text)]">{p.title}</span>
+								</span>
 								<!-- Only what is true and only where it adds something. A clip's
 									 title is the prompt, so a second line under it would be filler;
 									 a film has a scene count, which is the one number that says how
 									 big the thing is. -->
-								{#if kind === 'film'}
+								{#if working}
+									<!-- The elapsed clock, not the word "running". A number that moves
+										 is the proof; a label that does not is what a stuck page also
+										 shows. -->
+									<span class="mt-0.5 block text-xs tabular-nums text-[var(--st-muted)]">
+										{elapsedLabel(now - startedAt)}{railRunning ? ` · ${friendly(railRunning.label)}` : ''}
+									</span>
+								{:else if kind === 'film'}
 									<span class="mt-0.5 block text-xs text-[var(--st-faint)]">
 										{p.sceneCount} scene{p.sceneCount === 1 ? '' : 's'}{p.renderWs ? ' · shot' : ' · planning'}
 									</span>
