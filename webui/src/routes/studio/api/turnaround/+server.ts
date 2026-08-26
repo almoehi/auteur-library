@@ -56,14 +56,18 @@ function turnPrompt(look = ''): string {
 	const said = look.trim().slice(0, 400);
 	return `subject_definitions:
 <Subject 1> is the adult person shown in <Picture 1>. Their face, hair, skin tone, body type and identity come only from that picture. They are the sole subject.${
-		said ? `\nThe operator describes them as: ${said}. Where the picture and this description agree, follow both; where the picture cannot show something — build, height, what the clothing does from behind — follow the description.` : ''
+		said ? `\nThe operator describes them as: ${said}. This description OVERRIDES the picture on build, proportions and clothing — where the two disagree about how the body is shaped or what it is wearing, follow the description. The face, hair and skin still come from the picture.` : ''
 	}
 
 summary:
 reference generation. A character turnaround: <Subject 1> stands still on a plain studio backdrop and rotates slowly and continuously through one full turn, so the same person is seen from the front, both sides and the back in a single unbroken take.
 
 retention_analysis:
-<Picture 1> / <Subject 1>: fully_preserved for face, hair, skin tone, body type, clothing and identity. The background of <Picture 1> is not retained. The pose of <Picture 1> is not retained.
+<Picture 1> / <Subject 1>: fully_preserved for face, hair, skin tone and identity.${
+		said
+			? ' Body type and clothing are NOT taken from <Picture 1> — they follow the operator description above.'
+			: ' Body type and clothing are also fully_preserved.'
+	} The background of <Picture 1> is not retained. The pose of <Picture 1> is not retained.
 
 detailed_description:
 Photoreal live-action video, real recorded footage of a real person, colour flat and ungraded. Matte skin with visible pores and fine down, even skin tone, natural facial asymmetry, individual strands of hair out of place. Even, soft, shadowless studio lighting from the front and both sides, no coloured light, no rim light. Plain mid-grey seamless backdrop, empty, nothing else in frame. Fine sensor noise in the shadows.
