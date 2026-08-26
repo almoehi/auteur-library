@@ -93,6 +93,30 @@ function ensure(): void {
 	if (!existsSync(DIR)) mkdirSync(DIR, { recursive: true });
 }
 
+/** A turnaround nobody is still rendering.
+ *
+ *  'rendering' is written to the manifest, on disk, but the only thing that can
+ *  clear it is a loop inside the process that started it. Restart the dev
+ *  server mid-render and that loop is gone while the word stays — so the row
+ *  says rendering for ever. It is not only a stuck spinner: the POST refuses to
+ *  start another turnaround for a character already rendering one, so the
+ *  character is locked out of every future attempt, and the sidebar's dot
+ *  pulses for work that stopped hours ago.
+ *
+ *  Read-side rather than a repair written back, so a process that IS still
+ *  working recovers on its own the moment it finishes. The cutoff is longer
+ *  than either deadline that could still be counting down.
+ */
+const STALE_MS = 30 * 60 * 1000;
+
+function stale(s: Sheet): Sheet {
+	const r = s.sheet;
+	if (!r || r.state !== 'rendering') return s;
+	const began = r.startedAt ? Date.parse(r.startedAt) : NaN;
+	if (!Number.isFinite(began) || Date.now() - began < STALE_MS) return s;
+	return { ...s, sheet: { ...r, state: 'failed', error: 'the turnaround was interrupted' } };
+}
+
 export function listSheets(): Sheet[] {
 	ensure();
 	try {
@@ -106,6 +130,7 @@ export function listSheets(): Sheet[] {
 			// turnaround is a turnaround that failed or has not arrived, not a
 			// reason to forget the person.
 			.filter((s) => s?.id && s?.file && existsSync(join(DIR, s.file)))
+			.map(stale)
 			.sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1));
 	} catch {
 		return [];

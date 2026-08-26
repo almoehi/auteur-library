@@ -1760,8 +1760,29 @@
 				card.text = r.error || 'The preview did not start.';
 				return;
 			}
-			// Polled rather than awaited so the card can say something while it
-			// works, and so a failure has somewhere to land.
+			// Durable before the picture exists, not after it arrives.
+			//
+			// This handle is the only way back to a render that runs server-side
+			// for roughly two minutes, and it used to be written onto the card only
+			// once the loop below saw the picture land. Reload during those two
+			// minutes and the id was gone: the card came back saying "Rendering…"
+			// with its button dead, and the finished PNG sat on disk with nothing
+			// able to ask for it.
+			if (card.sheet) card.sheet.job = r.job;
+			persist();
+			await followPreview(card, r.job);
+		} catch (e) {
+			card.kind = 'error';
+			card.text = String(e);
+		} finally {
+			previewBusy = false;
+		}
+	}
+
+	/** Watch a character preview to its end. Separate from starting one, because
+	 *  a reload has to be able to do the second half without the first. */
+	async function followPreview(card: ChatItem, job: string) {
+		{
 			const started = Date.now();
 			for (;;) {
 				if (Date.now() - started > 10 * 60 * 1000) {
@@ -1772,7 +1793,7 @@
 				await new Promise((r2) => setTimeout(r2, 2500));
 				let st: { ok?: boolean; phase?: string; url?: string; error?: string; elapsedSec?: number };
 				try {
-					const p = await fetch(`/studio/api/anchor?job=${encodeURIComponent(r.job)}`);
+					const p = await fetch(`/studio/api/anchor?job=${encodeURIComponent(job)}`);
 					st = (await p.json()) as typeof st;
 				} catch {
 					continue;
@@ -1780,22 +1801,38 @@
 				if (st.phase === 'failed') {
 					card.kind = 'error';
 					card.text = st.error || 'The preview failed.';
+					persist();
+					return;
+				}
+				// A reply with no phase at all is the "no such preview" envelope: the
+				// job is gone, not slow. Treated as still running it would spin until
+				// the ten minutes were up.
+				if (!st.phase && st.ok === false) {
+					card.kind = 'error';
+					card.text = st.error || 'That preview is gone — render it again.';
+					persist();
 					return;
 				}
 				if (st.phase !== 'done' || !st.url) continue;
 				if (card.sheet) {
 					card.sheet.url = st.url;
-					card.sheet.job = r.job;
-					card.sheet.name = firstWords(description, kind);
+					card.sheet.job = job;
+					card.sheet.name = firstWords(card.sheet.description ?? '', card.sheet.kind);
 				}
 				persist();
 				return;
 			}
-		} catch (e) {
-			card.kind = 'error';
-			card.text = String(e);
-		} finally {
-			previewBusy = false;
+		}
+	}
+
+	/** Re-attach to any preview that was still rendering when this tab last
+	 *  closed. The render did not stop when the page did. */
+	function resumePreviews() {
+		for (const c of chat) {
+			const sh = c.sheet;
+			if (c.kind !== 'sheet' || !sh) continue;
+			if (sh.stage !== 'anchor' || sh.url || !sh.job) continue;
+			void followPreview(c, sh.job);
 		}
 	}
 
@@ -3912,6 +3949,13 @@
 		) {
 			showWelcome();
 		}
+
+		// After the restore, not before it. A character preview runs server-side
+		// for about two minutes, and this re-enters the poll for any card still
+		// waiting on one — but the cards only exist once resumeFrom has put the
+		// conversation back, so called any earlier it reads an empty list and
+		// quietly does nothing, which is the failure that looks like a fix.
+		resumePreviews();
 
 		// Elapsed time is shown in whole minutes, so a 15s clock is plenty.
 		const clock = setInterval(() => (now = Date.now()), 15_000);
