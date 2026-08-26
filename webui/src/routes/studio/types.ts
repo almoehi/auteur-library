@@ -323,6 +323,8 @@ export interface StoredSheet {
 		state: 'rendering' | 'ready' | 'failed';
 		file?: string;
 		error?: string;
+		/** The turnaround clip the six views were cut from, when there was one. */
+		clip?: { workspace: string; artifact: string; file: string };
 		attempt?: number;
 	};
 }

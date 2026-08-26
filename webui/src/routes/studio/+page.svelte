@@ -1930,6 +1930,25 @@
 				if (!wasRendering.has(x.id) || x.sheet?.state !== 'ready' || !x.sheet.file) continue;
 				if (sheetPosted.has(x.id)) continue;
 				sheetPosted.add(x.id);
+				// The turnaround first, then what was cut out of it. That is the order
+				// they happened in and the order they explain each other in: the video
+				// is why the six views look the way they do.
+				const c = x.sheet.clip;
+				if (c?.workspace && c.artifact && c.file) {
+					pushItem({
+						who: 'studio',
+						kind: 'clips',
+						text: `The turn ${x.name} was built from.`,
+						artifact: {
+							id: c.artifact,
+							key: 'turnaround',
+							title: `${x.name} — the turn`,
+							taskId: '',
+							files: [{ name: c.file, url: fileUrl(c.workspace, c.artifact, c.file) }],
+							workspace: c.workspace
+						}
+					});
+				}
 				// The six views, in the conversation that asked for them. The upload
 				// itself stays quiet; this is the other end of it — you were told a
 				// render had started, so you are told when it finished.

@@ -22,6 +22,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { HARNESS } from '$lib/harness';
 import { sheetGrid } from '../../ffmpeg.server';
+import { store } from '../../../clips.server';
 import { attachSheetImage, getSheet, setSheetRender } from '../../sheets.server';
 
 const DEADLINE_MS = 25 * 60 * 1000;
@@ -212,9 +213,20 @@ async function build(id: string, look: string, fetchFn: typeof globalThis.fetch)
 			setSheetRender(id, { state: 'failed', error: `the turnaround could not be fetched — ${res.status}`, workspace });
 			return;
 		}
+		const bytes = new Uint8Array(await res.arrayBuffer());
 		const clip = join(dir, 'turn.mp4');
-		writeFileSync(clip, new Uint8Array(await res.arrayBuffer()));
-		attachSheetImage(id, await sheetGrid(clip, TURN_SECONDS), workspace);
+		writeFileSync(clip, bytes);
+
+		// Kept in the clip store as well as cut up. The store is what the page can
+		// address bytes through, and the turnaround is worth watching: when a view
+		// on the sheet looks wrong, the video is the only place the reason shows.
+		store(workspace, got.artifact, got.file, bytes);
+
+		attachSheetImage(id, await sheetGrid(clip, TURN_SECONDS), workspace, {
+			workspace,
+			artifact: got.artifact,
+			file: got.file
+		});
 	} catch (e) {
 		setSheetRender(id, { state: 'failed', error: `the six views could not be built — ${e}`, workspace });
 	} finally {

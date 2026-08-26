@@ -48,6 +48,13 @@ export interface SheetRender {
 	/** Which attempt this is. One automatic retry, then it stops and waits for a
 	 *  person — see the note in api/sheetfull. */
 	attempt?: number;
+	/** The turnaround clip the six views were cut out of, by the three ids the
+	 *  clip store addresses bytes with.
+	 *
+	 *  Kept because the video is worth seeing: it is the evidence behind the
+	 *  sheet, and when a view looks wrong it is the only place the reason shows.
+	 *  Absent for sheets drawn from a description, which have no clip. */
+	clip?: { workspace: string; artifact: string; file: string };
 }
 
 export interface Sheet {
@@ -197,7 +204,12 @@ export function setSheetRender(id: string, patch: Partial<SheetRender>): Sheet |
 }
 
 /** Store the finished turnaround beside the profile picture. */
-export function attachSheetImage(id: string, bytes: Uint8Array, workspace?: string): Sheet | null {
+export function attachSheetImage(
+	id: string,
+	bytes: Uint8Array,
+	workspace?: string,
+	clip?: { workspace: string; artifact: string; file: string }
+): Sheet | null {
 	ensure();
 	const rows = listSheets();
 	const row = rows.find((s) => s.id === id);
@@ -210,7 +222,7 @@ export function attachSheetImage(id: string, bytes: Uint8Array, workspace?: stri
 		writeManifest(rows);
 		return row;
 	}
-	row.sheet = { state: 'ready', file, ...(workspace ? { workspace } : {}) };
+	row.sheet = { state: 'ready', file, ...(workspace ? { workspace } : {}), ...(clip ? { clip } : {}) };
 	writeManifest(rows);
 	return row;
 }
