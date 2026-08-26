@@ -228,6 +228,12 @@
 	 *  offered a planning rail it has no documents for and an assembly step it has
 	 *  nothing to assemble. */
 	const ONE_CLIP_WS = /-(direct|cont)@/;
+	/** Every suffix a render workspace id can carry. It lives beside ONE_CLIP_WS
+	 *  because the two have to agree, and they had stopped: `cont` was added there
+	 *  and not to the slug derivation below, so a continuation filed its
+	 *  conversation under `cont-xxx-cont` while the sidebar looked it up as
+	 *  `cont-xxx`. Reopening one could never find what it had just saved. */
+	const WS_SUFFIX = /-(shoot|direct|cont)$/;
 	const simpleRun = $derived(ONE_CLIP_WS.test(renderWs));
 
 	/** Whether the live render is a sheet rather than a clip. Read off the id for
@@ -245,7 +251,7 @@
 		planningWs
 			? planningWs.split('@')[0]
 			: renderWs
-				? renderWs.split('@')[0].replace(/-(shoot|direct)$/, '')
+				? renderWs.split('@')[0].replace(WS_SUFFIX, '')
 				: ''
 	);
 
@@ -3190,7 +3196,12 @@
 	let persistTimer: ReturnType<typeof setTimeout> | null = null;
 	$effect(() => {
 		chat.length;
-		if (!brief || !(planningWs || renderWs)) return;
+		// The precondition is a slug to file it under, and nothing more. It used
+		// to also demand a brief — which only an advanced production has — so in
+		// simple mode the conversation was written once, by the explicit call at
+		// launch, and then never again: the clip that came back, the activity and
+		// every later message were all dropped. That is most of the list.
+		if (!runSlug) return;
 		if (persistTimer) clearTimeout(persistTimer);
 		persistTimer = setTimeout(persist, 800);
 	});
