@@ -53,6 +53,37 @@ export const SLUG_RE = /^[A-Za-z0-9._-]+$/;
 export const SCENE_COUNT_MIN = 2;
 export const SCENE_COUNT_MAX = 6;
 
+/** What the harness will spend on one render, and how many times it will try.
+ *
+ *  These are not the studio's numbers to choose. They are written into the
+ *  compute profile of every workspace it composes — compose.ts reads them from
+ *  here — and the harness abandons a task that outlives them. They live in this
+ *  file because the studio also has to read them back: a run can only still be
+ *  running for as long as the harness is still prepared to run it.
+ */
+export const RENDER_TIMEOUT_SEC = 1800;
+export const RENDER_MAX_ATTEMPTS = 2;
+
+/** How long a run can still plausibly be alive.
+ *
+ *  Deliberately not a round number. It is the longest thing the harness can
+ *  produce, worked out from its own budget: the longest phase is the shoot, at
+ *  most SCENE_COUNT_MAX clips plus the assembly, and each of those is one task
+ *  the harness gives up on after RENDER_TIMEOUT_SEC x RENDER_MAX_ATTEMPTS. They
+ *  are counted end to end rather than overlapping, because the studio does not
+ *  schedule them — the planner creates them at runtime and we do not get to
+ *  assume they run at once. Every other phase fits well inside it: planning is
+ *  LLM-only and takes minutes, and a clip, a sheet or a continuation is a single
+ *  task under the same budget (a continuation's is longer — CONT_TIMEOUT_SEC in
+ *  compose.ts — and still well short of this).
+ *
+ *  Past this point nothing the harness was asked to do is still being attempted.
+ *  A run restored from older than this is a record of something that ended, not
+ *  work in progress, and must not be presented as one.
+ */
+export const RUN_CEILING_MS =
+	(SCENE_COUNT_MAX + 1) * RENDER_TIMEOUT_SEC * RENDER_MAX_ATTEMPTS * 1_000;
+
 /** What POST /studio/api/launch answers with. It always returns 200:
  *  a down container and a rejected YAML are both normal states here, to be drawn
  *  as a banner rather than thrown. */

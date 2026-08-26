@@ -25,7 +25,14 @@
  *  no randomness, no I/O. The slug and seed are the caller's business, which is
  *  what makes a launch reproducible and these functions testable.
  */
-import { SCENE_COUNT_MAX, SCENE_COUNT_MIN, SLUG_RE, type Brief } from './types';
+import {
+	RENDER_MAX_ATTEMPTS,
+	RENDER_TIMEOUT_SEC,
+	SCENE_COUNT_MAX,
+	SCENE_COUNT_MIN,
+	SLUG_RE,
+	type Brief
+} from './types';
 import { BASE, formatPicks, type Pick } from './loras';
 import { modelFor, textFor, type Overrides } from './tunables';
 
@@ -301,7 +308,7 @@ function profilesBlock(seed: number): string {
       image: { width: 720, height: 480, steps: 4, seed: ${seed} }
       video: { width: 720, height: 480, steps: 4, fps: 48, seed: ${seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }`;
+      compute: { backend: modal, gpuType: a100, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }`;
 }
 
 /** The model registry.
@@ -1339,7 +1346,7 @@ function directProfiles(spec: DirectSpec): string {
       image: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, seed: ${spec.seed} }
       video: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, fps: ${DIRECT_FPS}, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }`;
+      compute: { backend: modal, gpuType: a100, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }`;
 }
 
 const DIRECT_AGENT = (model: string) => `    generic:
@@ -1660,7 +1667,7 @@ spec:
       image: { width: ${SHEET_W}, height: ${SHEET_H}, steps: ${SHEET_STEPS}, seed: ${spec.seed} }
       video: { width: ${SHEET_W}, height: ${SHEET_H}, steps: ${SHEET_STEPS}, fps: ${SHEET_FPS}, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: a100, timeoutSec: 1800, maxAttempts: 2 }
+      compute: { backend: modal, gpuType: a100, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }
 
 ${modelsBlock(grokKey)}
 
@@ -1770,6 +1777,9 @@ export function continuationWorkspaceId(spec: ContinuationSpec): string {
  *  choice: a continuation that samples differently is a different look. */
 export const CONT_STEPS = DIRECT_STEPS;
 export const CONT_FPS = DIRECT_FPS;
+/** Longer than a first-pass render: a continuation carries three references
+ *  into the graph, and the extra conditioning costs time on the same card. */
+export const CONT_TIMEOUT_SEC = 2400;
 
 export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = ''): string {
 	if (!spec || typeof spec !== 'object') throw new Error('spec is missing');
@@ -1830,7 +1840,7 @@ spec:
       image: { width: ${spec.width}, height: ${spec.height}, steps: ${CONT_STEPS}, seed: ${spec.seed} }
       video: { width: ${spec.width}, height: ${spec.height}, steps: ${CONT_STEPS}, fps: ${CONT_FPS}, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: a100, timeoutSec: 2400, maxAttempts: 2 }
+      compute: { backend: modal, gpuType: a100, timeoutSec: ${CONT_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }
 
 ${modelsBlock(grokKey)}
 
