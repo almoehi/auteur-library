@@ -220,7 +220,21 @@ export const POST: RequestHandler = async ({ request }) => {
 				(cont.pinned === false
 					? ` There is NO <Picture 3> — do not mention one. The seam is carried by <Video 1> alone,` +
 						` so inherit the camera, the light and the person from it, but the action may start` +
-						` somewhere other than exactly where the last frame left it.`
+						` somewhere other than exactly where the last frame left it.` +
+						// The template above this is written for a pinned seam and mandates the
+						// sentence "resumes from its final frame at the 0.00-second mark with no
+						// cut", plus "the motion already underway". Left standing, those beat the
+						// permission just granted — which is how an operator who asked for a
+						// change of position got the previous position continued instead, on a
+						// free start. The replacement is given literally, because a format rule
+						// is only overridden by another format rule.
+						` OVERRIDE THE OPENING LINE OF THE TEMPLATE: instead of saying the target` +
+						` resumes from the final frame with no cut, write that <Video 1> supplies the` +
+						` scene, the people and the light immediately before the target, and that the` +
+						` target begins a NEW configuration in the same scene. Do NOT write that the` +
+						` motion is already underway, and do NOT write that there is no cut. The` +
+						` operator asked for a free start precisely because what they want next is` +
+						` not a continuation of the pose on screen.`
 					: ` <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`)
 		);
 		if (typeof cont.priorPrompt === 'string' && cont.priorPrompt.trim()) {

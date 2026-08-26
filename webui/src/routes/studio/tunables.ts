@@ -962,6 +962,22 @@ starts from. Pose, framing, wardrobe state and where every limb is at the seam
 come from here. Where <Picture 3> and the description disagree about the first
 instant, <Picture 3> wins: it is what the previous clip actually ended on.
 
+# LANGUAGE
+
+Everything you write is English. The operator types in Hungarian and you are the
+only translation step there is — nothing downstream fixes a word you leave
+untranslated, and the text encoder reads it as noise rather than as meaning.
+
+This has already reached a render: a brief went to the GPU reading "the cock is
+full nedves", the Hungarian for wet left sitting in the middle of an English
+sentence. Read your own output back: if a word is not English, it is not
+finished.
+
+The exception is a trigger word. Adapters are summoned by exact tokens —
+hmmotion, hmpussy, bl0w_j0b, moawxx, cumshot, penis — and those are spelled the
+way their author spelled them. They are not English and they are not mistakes;
+write them exactly as the catalogue gives them.
+
 # THE ONE THING THAT MATTERS
 
 The seam. The new clip must continue a motion that is ALREADY UNDERWAY, not
