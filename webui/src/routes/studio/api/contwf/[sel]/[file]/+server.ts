@@ -32,6 +32,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { modelBlock, stack, writeLoraStack } from '../../../../bundle.server';
 import { parseBaseOverrides, parsePicks } from '../../../../loras';
+import { CONT_FPS } from '../../../../compose';
 
 const REPO =
 	'https://raw.githubusercontent.com/almoehi/auteur-library/refs/heads/main/workflows';
@@ -65,6 +66,7 @@ const N = {
 	noise: '161',
 	videoDecode: '139',
 	createVideo: '150',
+	saveVideo: '176',
 	resolution: '157'
 } as const;
 
@@ -244,6 +246,56 @@ function fitOurOutputShape(graph: Graph): void {
 		}
 	};
 	create.inputs.images = [OUR.rife, 0];
+
+	// And write the file the way our own graph writes it.
+	//
+	// The seventh difference, and the one this route missed for weeks. The six in
+	// the header are all about how the frames are MADE; this is about how they are
+	// written, and nothing in the earlier audit looked there. Their bundle ends in
+	// SaveVideo with format "auto" and codec "auto", which is ComfyUI's default and
+	// far more compressed than ours: measured across one finished scene, 4782 kb/s
+	// for the clip and 1597 then 1287 for the two continuations joined onto it.
+	// Three to four times, at a hard cut, in the middle of a scene — which is
+	// exactly the "there is a cut at five seconds" that got reported and that I
+	// first, wrongly, blamed on a colour tag worth less than one percent.
+	//
+	// VHS_VideoCombine at crf 16, the same as api/wf. Safe to reach for here: the
+	// bundle already loads VHS_LoadVideoFFmpeg, so the VideoHelperSuite pack is
+	// installed on the machine this runs on — that is evidence rather than hope.
+	//
+	// Replaced in place, keeping the node id, because the bundle's outputs section
+	// names it (`node_id: "176"`) and the harness collects the artifact from
+	// there. A new id would have left the harness collecting from a node that no
+	// longer produces anything.
+	const save = graph[N.saveVideo];
+	if (save?.class_type !== 'SaveVideo') {
+		throw error(500, `node ${N.saveVideo} is ${save?.class_type ?? 'missing'}, not the SaveVideo this replaces`);
+	}
+	const audio = create.inputs.audio;
+	if (!audio) throw error(500, `node ${N.createVideo} has no audio input to carry over`);
+	graph[N.saveVideo] = {
+		class_type: 'VHS_VideoCombine',
+		inputs: {
+			images: [OUR.rife, 0],
+			audio,
+			// A literal rather than nothing: the fps port is rebound onto this node
+			// in the yaml, but a bundle served without one must still come back at
+			// the rate a clip is joined at, not at their native 24.
+			frame_rate: CONT_FPS,
+			loop_count: 0,
+			filename_prefix: 'mmh3_cont',
+			format: 'video/h264-mp4',
+			pix_fmt: 'yuv420p',
+			crf: 16,
+			save_output: true,
+			pingpong: false,
+			save_metadata: false,
+			trim_to_audio: false
+		}
+	};
+	// CreateVideo is left in place and unread. Nothing consumes it now, so ComfyUI
+	// will not execute it, and deleting a node the bundle's own yaml still mentions
+	// is a bigger change than leaving one idle.
 }
 
 async function fetchBundle(file: 'workflow.json' | 'workflow.yaml'): Promise<string> {
@@ -313,6 +365,54 @@ async function buildYaml(entries: ReturnType<typeof stack>): Promise<string> {
 	// continuation that cannot be joined to its clip is not a continuation. They
 	// are ports rather than constants so the size can follow the source clip once
 	// the app passes it.
+	// The fps port drives whichever node writes the file, and that is no longer
+	// theirs. buildJson replaces node 176 with a VHS_VideoCombine at crf 16 — see
+	// the note there — so the binding has to follow it or the render comes back at
+	// their native 24 and cannot be joined to the clip it continues.
+	const fpsBinding = 'binding: fps@' + N.createVideo;
+	if (!out.includes(fpsBinding)) {
+		throw error(502, `the continuation bundle no longer binds fps to ${N.createVideo} — it has been restructured`);
+	}
+	out = out.replace(fpsBinding, `binding: frame_rate@${N.saveVideo}`);
+
+	// The rest of the fps port, which the binding alone left lying.
+	//
+	// It arrives required, defaulting to 24, described as "no RIFE interpolation —
+	// output is exactly this FPS". All three are false of the graph we serve: RIFE
+	// doubles the frames, and a continuation at 24 cannot be joined to the 48 fps
+	// clip it continues. The harness oplog shows the operator agent doing exactly
+	// what the port tells it — `"fps":24` in the dispatch — and the render profile
+	// overriding it to 48 afterwards, which is why the finished clips are right.
+	//
+	// That is a rescue, not a design. It holds only while the profile carries an
+	// fps, and the profile is looked up by quality tier while the continuation
+	// workspace declares one tier. Our own bundle does not rely on it: there the
+	// port is optional and defaults to 48. Same here now, so the graph literal is
+	// a real floor rather than something the port routinely overwrites.
+	const fpsRequired = '\n      required: true\n      default: 24\n';
+	if (!out.includes(fpsRequired)) {
+		throw error(502, 'the continuation bundle no longer declares fps as required/24 — it has been restructured');
+	}
+	out = out.replace(fpsRequired, `\n      required: false\n      default: ${CONT_FPS}\n`);
+
+	const fpsWords =
+		'"Output video frame rate in FPS. Default 24 matches the model\'s native rate. No RIFE interpolation — output is exactly this FPS."';
+	if (!out.includes(fpsWords)) {
+		throw error(502, 'the continuation bundle no longer describes fps the way this rewrites — it has been restructured');
+	}
+	out = out.replace(
+		fpsWords,
+		`"Output video frame rate. ${CONT_FPS} is the model's native 24 through RIFE 2x, and must match the clip being continued or the two cannot be joined."`
+	);
+
+	// The one anchor that lives in the other file. buildJson replaces node 176 in
+	// place precisely because this names it, so if their outputs section ever
+	// points somewhere else the swap would write a file nothing collects — a
+	// render that succeeds and delivers nothing, which reads as a failed render.
+	if (!out.includes(`node_id: "${N.saveVideo}"`)) {
+		throw error(502, `the continuation bundle no longer takes its output from node ${N.saveVideo} — it has been restructured`);
+	}
+
 	const outputs = '\n  outputs:';
 	if (!out.includes(outputs)) {
 		throw error(502, 'the continuation bundle has no outputs: section — it has been restructured');
