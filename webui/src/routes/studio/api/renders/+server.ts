@@ -47,7 +47,14 @@ export const POST: RequestHandler = async ({ request }) => {
 	// wrong for a number nobody would notice being wrong.
 	if (body.finished === true) {
 		const row = readRenders().find((r) => r.workspace === workspace);
-		if (row?.at) patch.wallSeconds = Math.round((Date.now() - row.at) / 1000);
+		// Once. The elapsed time is measured from the launch on the row, so a
+		// second call — two tabs open, a reload re-attaching to a finished run —
+		// recomputes it against a later clock and overwrites the real figure with
+		// a bigger one. Seen: the same render closed at 1002s and then again at
+		// 1251s, having taken 1002.
+		if (row?.at && !Number.isFinite(row.wallSeconds as number)) {
+			patch.wallSeconds = Math.round((Date.now() - row.at) / 1000);
+		}
 	}
 	if (body.outcome === 'kept' || body.outcome === 'rejected' || body.outcome === 'failed') {
 		patch.outcome = body.outcome;

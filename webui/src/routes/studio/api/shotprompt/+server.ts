@@ -308,5 +308,22 @@ export const POST: RequestHandler = async ({ request }) => {
 		});
 	}
 
+	// The pins are settings, not suggestions.
+	//
+	// They are given to the writer as sentences, and a sentence is guidance: the
+	// duration that comes back is whatever number the model put in its JSON, and
+	// when it puts none the parser falls back to ten. So a card pinned to five
+	// seconds could still return ten, and did — a continuation nobody had asked
+	// to be twice as long, discovered after a sixteen-minute render.
+	//
+	// The writer still needs the sentence, because the beats have to be written
+	// to fit the duration. But what the render is launched with is decided here.
+	if (Number.isFinite(askedSeconds) && askedSeconds >= 4 && askedSeconds <= 15) {
+		shot.seconds = askedSeconds;
+	}
+	if (payload.orientation === 'portrait' || payload.orientation === 'landscape') {
+		shot.orientation = payload.orientation;
+	}
+
 	return json({ ok: true, shot });
 };

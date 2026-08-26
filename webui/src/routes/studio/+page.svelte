@@ -1544,8 +1544,21 @@
 		const c = continuing;
 		if (!c) return;
 		const prior = logRow[c.workspace];
+		// The length follows the clip being continued, not the composer — the same
+		// reason the frame does, one line further down.
+		//
+		// Tapping a number of seconds on a card sets that card and nothing else;
+		// the composer never learns it. So a clip shot at five seconds, chosen on
+		// its own card, was continued at whatever the composer still held from
+		// before — ten, in the run that caught this. Nobody asked for ten, nobody
+		// saw a ten anywhere, and it cost a sixteen-minute render.
+		//
+		// Still a free choice: the seconds row is on the continuation card too, so
+		// a longer or shorter next beat is a tap away. This only decides what it
+		// starts at, and starting at "the same as the one before" is the answer
+		// that is never a surprise.
 		const shot = await callShotPrompt(request, {
-			seconds: wantSeconds,
+			seconds: prior?.seconds && prior.seconds >= 4 && prior.seconds <= 15 ? prior.seconds : wantSeconds,
 			orientation: wantOrientation,
 			character: c.characterName,
 			location: c.locationName,
