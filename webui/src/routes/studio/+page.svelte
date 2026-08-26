@@ -348,6 +348,24 @@
 		}
 	}
 
+	/** Put a run in the sidebar the moment it becomes one.
+	 *
+	 *  The list was fetched once, on mount, so a production you had just started
+	 *  was absent from its own history until the next reload — the one place a
+	 *  user is certain to look for it. The server row is written during the
+	 *  launch request, so by the time a slug exists here it exists there too.
+	 *
+	 *  Keyed on the slug rather than on every change: a run's row is written
+	 *  once, and re-fetching the whole list on each poll would be sixty rows a
+	 *  second for a number that did not move. */
+	let listedSlug = '';
+	$effect(() => {
+		const slug = runSlug;
+		if (!slug || slug === listedSlug) return;
+		listedSlug = slug;
+		void loadHistory();
+	});
+
 	/** Reopening writes the resume payload and reloads.
 	 *
 	 *  Deliberately not a soft in-place swap: restoring a run means rebuilding
