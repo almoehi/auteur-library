@@ -45,9 +45,19 @@ const TURN_H = 1024;
  *  know about the picture is that somebody chose it as a character. Naming a sex
  *  here would tell the model something we do not know, against a photograph that
  *  already shows it. */
-function turnPrompt(): string {
+function turnPrompt(look = ''): string {
+	// What the operator typed, if anything.
+	//
+	// A photograph shows one angle, and everything outside it — the build, the
+	// height, what the clothing does from behind — the model invents. Two turns
+	// from the same picture tonight came back in different outfits, which is that
+	// invention working exactly as it must with nothing to go on. A line of
+	// description is the only thing that narrows it.
+	const said = look.trim().slice(0, 400);
 	return `subject_definitions:
-<Subject 1> is the adult person shown in <Picture 1>. Their face, hair, skin tone, body type and identity come only from that picture. They are the sole subject.
+<Subject 1> is the adult person shown in <Picture 1>. Their face, hair, skin tone, body type and identity come only from that picture. They are the sole subject.${
+		said ? `\nThe operator describes them as: ${said}. Where the picture and this description agree, follow both; where the picture cannot show something — build, height, what the clothing does from behind — follow the description.` : ''
+	}
 
 summary:
 reference generation. A character turnaround: <Subject 1> stands still on a plain studio backdrop and rotates slowly and continuously through one full turn, so the same person is seen from the front, both sides and the back in a single unbroken take.
@@ -111,7 +121,7 @@ async function poll(workspace: string): Promise<{ artifact: string; file: string
 
 /** Render the turn, cut it up, file it. Every exit writes a state, so nothing is
  *  left saying "rendering" for ever. */
-async function build(id: string, fetchFn: typeof globalThis.fetch): Promise<void> {
+async function build(id: string, look: string, fetchFn: typeof globalThis.fetch): Promise<void> {
 	const sheet = getSheet(id);
 	if (!sheet) return;
 
@@ -127,7 +137,7 @@ async function build(id: string, fetchFn: typeof globalThis.fetch): Promise<void
 				direct: {
 					slug: `turn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
 					title: `${sheet.name} — turnaround`,
-					prompts: [turnPrompt()],
+					prompts: [turnPrompt(look)],
 					seconds: TURN_SECONDS,
 					width: TURN_W,
 					height: TURN_H,
@@ -180,7 +190,7 @@ async function build(id: string, fetchFn: typeof globalThis.fetch): Promise<void
 }
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
-	let body: { id?: unknown };
+	let body: { id?: unknown; look?: unknown };
 	try {
 		body = await request.json();
 	} catch {
@@ -192,6 +202,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	if (sheet.sheet?.state === 'rendering') return json({ ok: true, already: true });
 
 	// Detached: the answer is that it started, not that it finished.
-	void build(id, fetch);
+	void build(id, typeof body.look === 'string' ? body.look : '', fetch);
 	return json({ ok: true });
 };

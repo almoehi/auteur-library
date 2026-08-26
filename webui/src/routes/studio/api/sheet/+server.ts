@@ -99,7 +99,10 @@ async function fromUpload(request: Request, fetchFn: typeof globalThis.fetch): P
 		void fetchFn('/studio/api/turnaround', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ id: sheet.id })
+			// `typed`, not the stored description: with nothing typed the description
+			// falls back to the filename, and "Screenshot 2026 08 25 at 23.23.38" in
+			// a render prompt is worse than no description at all.
+			body: JSON.stringify({ id: sheet.id, look: typed })
 		}).catch(() => {
 			// A character that exists is the product here. The sheet is an
 			// improvement to it, and one that fails to start is not worth telling

@@ -5139,7 +5139,7 @@
 									</p>
 									<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
 										{wantTarget === 'character'
-											? 'Describe the person — one picture in about a minute, then the six-view sheet when you like them. Or attach a photograph and keep that instead.'
+											? 'Describe the person — one picture in about a minute, then the six-view sheet when you like them. Or attach a photograph instead: say what the picture cannot show — build, height, what they are wearing — and attach it.'
 											: 'Describe the place — six views of it to shoot against. Or attach a photograph and keep that instead.'}
 									</p>
 								</div>
