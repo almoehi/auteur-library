@@ -198,7 +198,18 @@ async function englishLook(look: string, fetchFn: typeof globalThis.fetch): Prom
 	}
 }
 
-async function build(id: string, look: string, fetchFn: typeof globalThis.fetch): Promise<void> {
+async function build(
+	id: string,
+	look: string,
+	fetchFn: typeof globalThis.fetch,
+	// Strengths for the three adapters that load on every render whether or not
+	// it asks for them. Two impose a look — skin texture at 1.6 and an anatomy
+	// corrector at 0.9, both tuned on pornography — and a turnaround is the one
+	// render whose whole job is to resemble somebody in particular. Passing zero
+	// is how that is measured: `stack()` can move a base strength but not drop
+	// the adapter, and zero contributes nothing.
+	baseLoras: Record<string, number> = {}
+): Promise<void> {
 	const sheet = getSheet(id);
 	if (!sheet) return;
 
@@ -229,7 +240,7 @@ async function build(id: string, look: string, fetchFn: typeof globalThis.fetch)
 					// adapter here would push the pose away from the one thing wanted:
 					// standing still and rotating.
 					loras: [],
-					baseLoras: {},
+					baseLoras,
 					wroteLoras: [],
 					request: 'turnaround from an uploaded photograph',
 					characterId: id,
@@ -285,7 +296,7 @@ async function build(id: string, look: string, fetchFn: typeof globalThis.fetch)
 }
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
-	let body: { id?: unknown; look?: unknown };
+	let body: { id?: unknown; look?: unknown; baseLoras?: unknown };
 	try {
 		body = await request.json();
 	} catch {
@@ -297,6 +308,11 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	if (sheet.sheet?.state === 'rendering') return json({ ok: true, already: true });
 
 	// Detached: the answer is that it started, not that it finished.
-	void build(id, typeof body.look === 'string' ? body.look : '', fetch);
+	const base = Object.fromEntries(
+		Object.entries((body.baseLoras ?? {}) as Record<string, unknown>).filter(
+			([, v]) => typeof v === 'number' && v >= 0 && v <= 3
+		)
+	) as Record<string, number>;
+	void build(id, typeof body.look === 'string' ? body.look : '', fetch, base);
 	return json({ ok: true });
 };
