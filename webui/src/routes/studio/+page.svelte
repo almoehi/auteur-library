@@ -3294,7 +3294,12 @@
 			// on every reopen: the item is in `chat`, but the id that tells the
 			// template it is the greeting was minted fresh on load and no longer
 			// matches it, so it falls through to the plain-text branch.
-			welcomeId
+			welcomeId,
+			// The text a re-render is a re-render OF. Without it a clip launched
+			// after reopening files itself under the title 'Direct render' and
+			// writes an empty request into the render log — the one record that is
+			// supposed to say what was asked for.
+			lastRequest
 		};
 	}
 
@@ -3566,6 +3571,7 @@
 				finalPosted = s.finalPosted ?? false;
 				finalByNameOnly = s.finalByNameOnly ?? finalByNameOnly;
 				welcomeId = s.welcomeId ?? '';
+			lastRequest = s.lastRequest ?? '';
 			} else if (brief) {
 				const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
 				latestPlanId = item.id;
