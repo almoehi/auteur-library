@@ -1555,9 +1555,18 @@
 		lastRequest = request;
 		// The frame follows the clip being continued, not the composer: two pieces
 		// at different sizes cannot be joined, and joining is the whole point.
-		shot.resolution = wantRes;
+		//
+		// This said exactly that and then read the composer anyway, so a clip whose
+		// size was set on its own card was continued at whatever the composer still
+		// had — and the join refused the pair it had just offered to make, after
+		// both renders were paid for. The composer is the fallback now, for a prior
+		// row that has no size recorded.
 		if (prior?.width && prior?.height) {
+			const longest = Math.max(prior.width, prior.height);
+			shot.resolution = RES_KEYS.find((k) => RESOLUTIONS[k].long === longest) ?? wantRes;
 			shot.orientation = prior.width >= prior.height ? 'landscape' : 'portrait';
+		} else {
+			shot.resolution = wantRes;
 		}
 		shot.continues = { ...c, pinned: pinSeam };
 		shot.characterId = c.characterId;
@@ -2082,6 +2091,31 @@
 
 	/** Rewrite the card in place. The old one collapses rather than disappearing:
 	 *  a prompt that was nearly right is worth being able to look back at. */
+	/** What a rewrite must not touch.
+	 *
+	 *  The writer authored the brief and nothing else on the card. Who is in the
+	 *  shot, where it is, what clip it follows, the frame size and any adapter
+	 *  strengths you moved were all your decisions — and they are the fields that
+	 *  decide what actually gets sent to the GPU. Dropping them turned "make this
+	 *  eight seconds instead of six" into a render of a different person in a
+	 *  different room that could then neither be continued nor joined, because
+	 *  nothing recorded what it followed.
+	 *
+	 *  Carried explicitly rather than by spreading the old shot: the brief fields
+	 *  must lose to the new one, and a blanket spread in the wrong order is how
+	 *  that silently reverses. */
+	function carried(prev: NonNullable<ChatItem['shot']>) {
+		return {
+			...(prev.continues ? { continues: prev.continues } : {}),
+			...(prev.characterId ? { characterId: prev.characterId } : {}),
+			...(prev.characterName ? { characterName: prev.characterName } : {}),
+			...(prev.locationId ? { locationId: prev.locationId } : {}),
+			...(prev.locationName ? { locationName: prev.locationName } : {}),
+			resolution: prev.resolution ?? wantRes,
+			baseLoras: prev.baseLoras
+		};
+	}
+
 	async function rewriteShot(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.shot || shotBusy[itemId]) return;
@@ -2093,7 +2127,7 @@
 			});
 			if (!shot) return;
 			superseded[itemId] = true;
-			pushItem({ who: 'studio', kind: 'shot', shot });
+			pushItem({ who: 'studio', kind: 'shot', shot: { ...shot, ...carried(item.shot) } });
 		} finally {
 			shotBusy[itemId] = false;
 		}
@@ -2228,20 +2262,14 @@
 		try {
 			const shot = await callShotPrompt(lastRequest || item.shot.prompt, pin);
 			if (!shot) return;
-			// The frame size and any adapter strengths you had moved survive the
-			// rewrite. Only the brief is being written again; the settings around it
-			// were your decisions and losing them silently is how a rewrite turns
-			// into a step backwards.
+			// Everything except the brief survives the rewrite. Only the words are
+			// being written again; the settings around them were your decisions and
+			// losing them silently is how a rewrite turns into a step backwards.
 			superseded[itemId] = true;
 			pushItem({
 				who: 'studio',
 				kind: 'shot',
-				shot: {
-					...shot,
-					...pin,
-					resolution: item.shot.resolution ?? wantRes,
-					baseLoras: item.shot.baseLoras
-				}
+				shot: { ...shot, ...pin, ...carried(item.shot) }
 			});
 		} finally {
 			shotBusy[itemId] = false;
@@ -4970,40 +4998,53 @@
 												>
 											{/each}
 										</div>
-										<div class="flex items-center gap-1.5">
-											<!-- Unlike seconds and frame shape, this changes no words in
-												 the brief, so it is set in place and costs no rewrite. -->
-											<span class="mr-1 text-xs text-[var(--st-faint)]">size</span>
-											{#each RES_KEYS as r (r)}
-												{@const f = frameFor(r, item.shot.orientation)}
-												<button
-													type="button"
-													title="{f.width}x{f.height}"
-													class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {(item
-														.shot.resolution ?? '576p') === r
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
-													onclick={() => {
-														if (item.shot) item.shot.resolution = r;
-													}}>{r}</button
-												>
-											{/each}
-										</div>
-										<div class="flex items-center gap-1.5">
-											<span class="mr-1 text-xs text-[var(--st-faint)]">frame</span>
-											{#each [['portrait', 'portrait'], ['landscape', 'landscape']] as [val, label] (val)}
-												<button
-													type="button"
-													class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {item
-														.shot.orientation === val
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
-													onclick={() =>
-														setShotOrientation(item.id, val as 'portrait' | 'landscape')}
-													>{label}</button
-												>
-											{/each}
-										</div>
+										<!-- Not offered on a continuation. The frame there is not a choice:
+											 it is whatever the clip being continued was shot at, and anything
+											 else produces two pieces that cannot be concatenated — which is
+											 discovered only after both have been rendered. A control whose
+											 every other setting breaks the thing it feeds is not a control. -->
+										{#if item.shot.continues}
+											<span class="text-xs text-[var(--st-faint)]"
+												>{frameFor(item.shot.resolution ?? '576p', item.shot.orientation)
+													.width}x{frameFor(item.shot.resolution ?? '576p', item.shot.orientation)
+													.height} · follows the clip before it</span
+											>
+										{:else}
+											<div class="flex items-center gap-1.5">
+												<!-- Unlike seconds and frame shape, this changes no words in
+													 the brief, so it is set in place and costs no rewrite. -->
+												<span class="mr-1 text-xs text-[var(--st-faint)]">size</span>
+												{#each RES_KEYS as r (r)}
+													{@const f = frameFor(r, item.shot.orientation)}
+													<button
+														type="button"
+														title="{f.width}x{f.height}"
+														class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {(item
+															.shot.resolution ?? '576p') === r
+															? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+															: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+														onclick={() => {
+															if (item.shot) item.shot.resolution = r;
+														}}>{r}</button
+													>
+												{/each}
+											</div>
+											<div class="flex items-center gap-1.5">
+												<span class="mr-1 text-xs text-[var(--st-faint)]">frame</span>
+												{#each [['portrait', 'portrait'], ['landscape', 'landscape']] as [val, label] (val)}
+													<button
+														type="button"
+														class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {item
+															.shot.orientation === val
+															? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+															: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+														onclick={() =>
+															setShotOrientation(item.id, val as 'portrait' | 'landscape')}
+														>{label}</button
+													>
+												{/each}
+											</div>
+										{/if}
 									</div>
 
 									<div class="mt-5 flex flex-wrap items-center gap-2.5">
