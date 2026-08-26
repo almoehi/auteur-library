@@ -1916,6 +1916,12 @@
 	 *  none is. A spinner that never resolves is worse than no spinner. */
 	let sheetWatch: ReturnType<typeof setTimeout> | null = null;
 
+	/** A sheet being drawn somewhere. It is work in this session even though this
+	 *  tab is polling nothing: the turnaround runs server-side, so the render
+	 *  poller — which is what the sidebar's dot used to key off — sits idle
+	 *  throughout and the row looked asleep while a GPU was busy. */
+	const sheetsWorking = $derived(sheets.some((x) => x.sheet?.state === 'rendering'));
+
 	function watchSheets() {
 		if (sheetWatch) clearTimeout(sheetWatch);
 		const tick = async () => {
@@ -4112,8 +4118,13 @@
 						<!-- Only ever the run this tab is watching. Whether some other run is
 							 working is not knowable from here without polling sixty
 							 workspaces, and a dot that is sometimes right is worse than no
-							 dot at all. -->
-						{@const working = current && pollingActive && !staleRun}
+							 dot at all.
+
+							 A sheet counts as work even though nothing here polls for it: the
+							 turnaround behind an upload runs server-side, so the render poller
+							 is idle for its whole six minutes and the row sat dark while a GPU
+							 was busy. -->
+						{@const working = current && !staleRun && (pollingActive || sheetsWorking)}
 						<div class="group relative">
 							<button
 								type="button"
