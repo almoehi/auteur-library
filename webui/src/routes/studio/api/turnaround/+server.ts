@@ -56,7 +56,7 @@ function turnPrompt(look = ''): string {
 	const said = look.trim().slice(0, 400);
 	return `subject_definitions:
 <Subject 1> is the adult person shown in <Picture 1>. Their face, hair, skin tone, body type and identity come only from that picture. They are the sole subject.${
-		said ? `\nThe operator describes them as: ${said}. This description OVERRIDES the picture on build, proportions and clothing — where the two disagree about how the body is shaped or what it is wearing, follow the description. The face, hair and skin still come from the picture.` : ''
+		said ? `\nThe operator describes them as: ${said}. This description OVERRIDES the picture on ANY POINT IT ACTUALLY MAKES — if it names a build, proportions, an age or clothing, follow it even where the picture shows otherwise. On every point it does NOT mention, the picture governs unchanged. The face, hair and skin always come from the picture.` : ''
 	}
 
 summary:
@@ -65,7 +65,7 @@ reference generation. A character turnaround: <Subject 1> stands still on a plai
 retention_analysis:
 <Picture 1> / <Subject 1>: fully_preserved for face, hair, skin tone and identity.${
 		said
-			? ' Body type and clothing are NOT taken from <Picture 1> — they follow the operator description above.'
+			? ' Body type, proportions, age and clothing are preserved from <Picture 1> EXCEPT where the operator description above names them, and there the description wins.'
 			: ' Body type and clothing are also fully_preserved.'
 	} The background of <Picture 1> is not retained. The pose of <Picture 1> is not retained.
 
