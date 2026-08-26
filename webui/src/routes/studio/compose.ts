@@ -1131,6 +1131,13 @@ export interface DirectSpec {
 	 *  Kept out of the production history: one action should not put two entries
 	 *  in the sidebar, and the second one has no conversation to show. */
 	internal?: boolean;
+	/** The working session this render belongs to.
+	 *
+	 *  The sidebar files a row per slug, so without this every launch opened its
+	 *  own row and an afternoon of one character, one location and three clips
+	 *  read as five separate productions. The session is the unit a person works
+	 *  in; the render is not. */
+	sessionSlug?: string;
 	/** A presigned S3 GET url per reference, same order.
 	 *
 	 *  These are what the render actually loads. The staged copies on this disk
@@ -1740,6 +1747,8 @@ export interface ContinuationSpec {
 	locationId?: string;
 	characterName?: string;
 	locationName?: string;
+	/** The working session this continuation belongs to — see DirectSpec. */
+	sessionSlug?: string;
 
 	/** Presigned urls, set server-side once the three files are uploaded. Never
 	 *  taken from the payload: they end up in the agent's prompt as links to

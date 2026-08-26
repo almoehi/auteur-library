@@ -1,4 +1,19 @@
 <script lang="ts">
+	/*  Two workspace-id patterns, hoisted to the very top of the script.
+	 *
+	 *  They used to sit among the $derived declarations, and one of the deriveds
+	 *  reads WS_SUFFIX — which is a temporal dead zone waiting to happen, because
+	 *  Svelte evaluates the reactive graph by dependency rather than by source
+	 *  order. It happened: every load threw "WS_SUFFIX is not defined" from inside
+	 *  the runtime, and the derived that throws is the one that names the slug a
+	 *  conversation is saved under. That is why runs kept coming back with
+	 *  "this conversation was not saved".
+	 *
+	 *  Plain constants at the top of the file cannot be caught out that way.
+	 *  ONE_CLIP_WS comes along because the two have to agree about `cont`. */
+	const ONE_CLIP_WS = /-(direct|cont)@/;
+	const WS_SUFFIX = /-(shoot|direct|cont)$/;
+
 	/** Studio — chat-first surface for the local auteur harness (~/auteur).
 	 *
 	 *  The whole production happens in one growing transcript, like a chat with a
@@ -227,13 +242,11 @@
 	 *  place because it is asked in five, and a run that answers "no" here is
 	 *  offered a planning rail it has no documents for and an assembly step it has
 	 *  nothing to assemble. */
-	const ONE_CLIP_WS = /-(direct|cont)@/;
 	/** Every suffix a render workspace id can carry. It lives beside ONE_CLIP_WS
 	 *  because the two have to agree, and they had stopped: `cont` was added there
 	 *  and not to the slug derivation below, so a continuation filed its
 	 *  conversation under `cont-xxx-cont` while the sidebar looked it up as
 	 *  `cont-xxx`. Reopening one could never find what it had just saved. */
-	const WS_SUFFIX = /-(shoot|direct|cont)$/;
 	const simpleRun = $derived(ONE_CLIP_WS.test(renderWs));
 
 	/** Whether the live render is a sheet rather than a clip. Read off the id for
@@ -247,13 +260,46 @@
 	 *  Derived rather than stored: the planning workspace is `<slug>@v` and the
 	 *  render one `<slug>-shoot@v` or `<slug>-direct@v`, so the ids already carry
 	 *  it and cannot disagree with a copy. */
+	/** The working session, once one has been started.
+	 *
+	 *  A session is what a person does in one sitting: describe a character, keep
+	 *  it, shoot a clip with it, continue the clip. The sidebar files a row per
+	 *  slug, and before this the slug came off the workspace id — so each of those
+	 *  four steps opened its own row, and the first minute of a session, before
+	 *  any render existed, had no row at all. */
+	let sessionSlug = $state('');
+
 	const runSlug = $derived(
-		planningWs
-			? planningWs.split('@')[0]
-			: renderWs
-				? renderWs.split('@')[0].replace(WS_SUFFIX, '')
-				: ''
+		sessionSlug ||
+			(planningWs
+				? planningWs.split('@')[0]
+				: renderWs
+					? renderWs.split('@')[0].replace(WS_SUFFIX, '')
+					: '')
 	);
+
+	/** Open a row the moment work starts, rather than when a GPU does.
+	 *
+	 *  Called from every path a session can begin on. It is idempotent: a session
+	 *  that already has a slug keeps it, which is the whole point — the row is the
+	 *  sitting, not the render. */
+	async function startSession(title: string): Promise<void> {
+		if (sessionSlug) return;
+		const slug = `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+		sessionSlug = slug;
+		try {
+			const r = await fetch('/studio/api/history', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ slug, title: title.slice(0, 80) || 'New session', pitch: title.slice(0, 200) })
+			});
+			const d = (await r.json()) as { productions?: Production[] };
+			if (d.productions) history = d.productions;
+		} catch {
+			// The row is a convenience. A session that could not announce itself
+			// still works; it simply appears when its first render lands.
+		}
+	}
 
 	/** One saved conversation per run, plus a pointer at the live one.
 	 *  Before this there was a single slot, so opening an older run from the
@@ -495,6 +541,9 @@
 				seed: 0
 			};
 			raw = JSON.stringify({
+				// Reopening a row puts you back in that session, not in a new one
+				// that happens to show its workspace.
+				sessionSlug: p.slug,
 				brief: asBrief,
 				launchedBrief: asBrief,
 				planningWs: p.planningWs ?? '',
@@ -1231,6 +1280,9 @@
 
 	async function submit() {
 		const text = input.trim();
+		// The row appears now, not when a GPU starts. Idempotent, so the second
+		// message of a session does nothing here.
+		if (text || pendingPhoto) void startSession(text || pendingPhoto?.name || 'New session');
 		// A held photograph is a message on its own: the picture is the character,
 		// and the description is optional. Without this the send button stays dead
 		// until you type something, which reads as the attachment not having worked.
@@ -1987,7 +2039,8 @@
 				priorFile: c.file,
 				characterId: c.characterId,
 				locationId: c.locationId,
-				pinned: c.pinned !== false
+				pinned: c.pinned !== false,
+				...(sessionSlug ? { sessionSlug } : {})
 			};
 			try {
 				const res = await fetch('/studio/api/launch', {
@@ -2024,6 +2077,7 @@
 			baseLoras: shot.baseLoras ?? {},
 			wroteLoras: shot.wroteLoras ?? shot.loras ?? [],
 			request: lastRequest,
+			...(sessionSlug ? { sessionSlug } : {}),
 			...(shot.characterId ? { characterId: shot.characterId } : {}),
 			...(shot.locationId ? { locationId: shot.locationId } : {})
 		};
@@ -3311,6 +3365,7 @@
 	 */
 	function snapshot(withBodies: boolean) {
 		return {
+			sessionSlug,
 			brief,
 			launchedBrief,
 			planningWs,
@@ -3418,6 +3473,7 @@
 		originalPitch = '';
 		launchedBrief = null;
 		latestPlanId = '';
+		sessionSlug = '';
 		planningWs = '';
 		renderWs = '';
 		planningPoll = null;
@@ -3579,7 +3635,12 @@
 		// of it meant a simple run could not be resumed at all — there is no plan
 		// in one, only a prompt — and a reload mid-render left the clip finishing
 		// on the harness with nothing watching for it.
-		if (!(s.planningWs || s.renderWs)) return false;
+		// ...or a session that has started and not yet rendered anything. Before
+		// sessions existed there was nothing to restore in that state; now there
+		// is a conversation, and dropping it on reload was the same loss as
+		// dropping a run.
+		if (!(s.planningWs || s.renderWs || s.sessionSlug)) return false;
+			sessionSlug = s.sessionSlug ?? '';
 			brief = s.brief ?? null;
 			launchedBrief = s.launchedBrief ?? s.brief ?? null;
 			sceneCount = s.brief?.sceneCount ?? sceneCount;

@@ -445,7 +445,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			grokKey,
 			fetch,
 			{
-				slug: spec.slug,
+				slug: spec.sessionSlug || spec.slug,
 				title: spec.title || 'Continuation',
 				sceneCount: 1,
 				prompt: spec.prompt
@@ -588,7 +588,9 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			grokKey,
 			fetch,
 			{
-				slug: spec.slug,
+				// The session, when the page named one. The render still has its own
+				// slug — it is the workspace id — but the history is filed by session.
+				slug: spec.sessionSlug || spec.slug,
 				title: spec.title || 'Direct render',
 				sceneCount: spec.prompts?.length ?? 0,
 				pitch: spec.prompts?.[0]?.slice(0, 200),
