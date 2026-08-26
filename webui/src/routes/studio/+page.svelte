@@ -1492,7 +1492,14 @@
 			seconds: wantSeconds,
 			orientation: wantOrientation,
 			character: chosenCharacter?.name,
-			location: chosenLocation?.name
+			// The description, not the label.
+			//
+			// The writer's only knowledge of the place is this string, and a plate
+			// uploaded without a description falls back to its filename — so it was
+			// being told "the location IMG 2482" and inventing the room from the act
+			// instead. A scene that needs no furniture survives that; one that needs
+			// a surface gets a mattress conjured into a dining room.
+			location: chosenLocation?.description || chosenLocation?.name
 		});
 		if (!shot) return;
 		lastRequest = request;

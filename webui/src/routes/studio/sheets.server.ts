@@ -268,11 +268,22 @@ export function readSheetImage(id: string): Buffer | null {
 	}
 }
 
-export function renameSheet(id: string, name: string): Sheet | null {
+/** Rename, and — since it was never editable and needed to be — redescribe.
+ *
+ *  The description is not decoration on a location. It is the only thing the shot
+ *  writer is told about the place, and a plate uploaded without one falls back to
+ *  its filename: the writer is handed "IMG 2482", knows nothing about the room,
+ *  and invents whatever the act needs. It invented a mattress into a dining room
+ *  and said so in its own brief — "the bed staging comes only from the
+ *  description below" — and the render obeyed. */
+export function renameSheet(id: string, name: string, description?: string): Sheet | null {
 	const rows = listSheets();
 	const row = rows.find((s) => s.id === id);
 	if (!row) return null;
 	row.name = name.trim().slice(0, 80) || row.name;
+	if (typeof description === 'string' && description.trim()) {
+		row.description = description.trim().slice(0, 600);
+	}
 	writeManifest(rows);
 	return row;
 }

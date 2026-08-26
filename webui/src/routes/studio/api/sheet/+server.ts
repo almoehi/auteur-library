@@ -213,7 +213,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 };
 
 export const PATCH: RequestHandler = async ({ request }) => {
-	let body: { id?: unknown; name?: unknown };
+	let body: { id?: unknown; name?: unknown; description?: unknown };
 	try {
 		body = await request.json();
 	} catch {
@@ -222,7 +222,11 @@ export const PATCH: RequestHandler = async ({ request }) => {
 	if (typeof body.id !== 'string' || typeof body.name !== 'string') {
 		throw error(400, 'id and name are required');
 	}
-	const row = renameSheet(body.id, body.name);
+	const row = renameSheet(
+		body.id,
+		body.name,
+		typeof body.description === 'string' ? body.description : undefined
+	);
 	if (!row) return json({ ok: false, error: 'no such sheet' }, { status: 200 });
 	return json({ ok: true, sheet: row, sheets: listSheets() });
 };
