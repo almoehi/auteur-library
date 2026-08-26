@@ -219,7 +219,16 @@
 	 *
 	 *  The id cannot be missed. composeDirectWorkspace names every direct
 	 *  workspace `<slug>-direct`, so this is true however we arrived. */
-	const simpleRun = $derived(/-direct@/.test(renderWs));
+	/** One task, one clip — as opposed to a planned shoot with several scenes and
+	 *  a final cut.
+	 *
+	 *  Two id shapes qualify, and forgetting the second cost a delivery: a
+	 *  continuation opens `<slug>-cont@v`, not `<slug>-direct@v`. Tested in one
+	 *  place because it is asked in five, and a run that answers "no" here is
+	 *  offered a planning rail it has no documents for and an assembly step it has
+	 *  nothing to assemble. */
+	const ONE_CLIP_WS = /-(direct|cont)@/;
+	const simpleRun = $derived(ONE_CLIP_WS.test(renderWs));
 
 	/** Whether the live render is a sheet rather than a clip. Read off the id for
 	 *  exactly the reason simpleRun is: composeSheetWorkspace names every one of
@@ -379,7 +388,7 @@
 					// A simple run never had a brief. Handing one back draws the
 					// advanced plan card over a run that has no plan, with a start
 					// button that would open a second workspace.
-					...(/-direct@/.test(p.renderWs ?? '') ? { brief: null, launchedBrief: null } : {})
+					...(ONE_CLIP_WS.test(p.renderWs ?? '') ? { brief: null, launchedBrief: null } : {})
 				})
 			);
 		} catch {
@@ -3427,7 +3436,7 @@
 					// The mode follows the run you opened. Landing in a simple run with
 					// the advanced composer under it is the same mismatch as the rail:
 					// the page describing one mode while showing the other.
-					if (/-direct@/.test(renderWs)) mode = 'simple';
+					if (ONE_CLIP_WS.test(renderWs)) mode = 'simple';
 					else if (s.planningWs) mode = 'advanced';
 					assemblySent = s.assemblySent ?? false;
 					startedAt = s.startedAt || Date.now();
