@@ -38,12 +38,39 @@ function worthRetrying(status: number): boolean {
 	return status === 429 || status === 502 || status === 503 || status === 504;
 }
 
+/** Ask to be scheduled ahead of standard traffic.
+ *
+ *  Every call behind this helper is one a person is sitting and waiting for — a
+ *  brief before a render, a subject line before a character exists, a plan, a
+ *  diagnosis of a clip that just missed. That is precisely the traffic xAI says
+ *  priority is for, and the traffic the retries above exist to rescue: a 429 is
+ *  a queue we lost, and this is asking not to be in it.
+ *
+ *  It is a request, not a reservation. The response reports the tier it was
+ *  actually served at, and the premium rate is charged only when that says
+ *  "priority" — so on a day the priority pool is also full this costs nothing
+ *  and behaves exactly as before.
+ *
+ *  Worth it here because of the ratio, not the rate. A prompt call measured
+ *  1,663 tokens in and about 220 out; the render it precedes occupies an A100
+ *  for seven to twenty minutes. Whatever the premium multiplier is, it is
+ *  applied to the cheapest part of the job, to save the operator from retyping
+ *  a scene into a wall of provider JSON.
+ *
+ *  Not for anything unattended. Background and bulk work belongs on the Batch
+ *  API instead — the moment something here stops having a person waiting on it,
+ *  it should stop asking for this.
+ */
+const SERVICE_TIER = 'priority';
+
 export async function xaiPost(body: unknown, key: string, timeoutMs: number): Promise<Response> {
+	const payload =
+		body && typeof body === 'object' ? { service_tier: SERVICE_TIER, ...body } : body;
 	for (let attempt = 0; ; attempt++) {
 		const res = await fetch(XAI, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-			body: JSON.stringify(body),
+			body: JSON.stringify(payload),
 			// Fresh per attempt: a timeout signal is spent once it has fired, and
 			// reusing one would abort the retry before it left.
 			signal: AbortSignal.timeout(timeoutMs)
