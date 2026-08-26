@@ -559,28 +559,40 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// dies on the way still leaves a record of what was attempted — those are
 		// the interesting ones to go back to, and a row that only appears on
 		// success is a log of the good days.
-		recordRender({
-			workspace: directWorkspaceId(spec),
-			slug: spec.slug,
-			at: Date.now(),
-			request: spec.request ?? '',
-			prompt: spec.prompts?.[0] ?? '',
-			wrote: spec.wroteLoras ?? spec.loras ?? [],
-			launched: spec.loras ?? [],
-			steps: DIRECT_STEPS,
-			width: spec.width,
-			height: spec.height,
-			seconds: spec.seconds,
-			fps: DIRECT_FPS,
-			seed: spec.seed,
-			// Who and where. Set above from the picks, after the sheets were read —
-			// so a name here means the render really got that picture, not merely
-			// that the browser asked for it.
-			...(spec.characterId ? { characterId: spec.characterId } : {}),
-			...(spec.characterName ? { characterName: spec.characterName } : {}),
-			...(spec.locationId ? { locationId: spec.locationId } : {}),
-			...(spec.locationName ? { locationName: spec.locationName } : {})
-		});
+		//
+		// Ours are not logged at all. The row's closing half — how long it took,
+		// and what you made of the clip — is written by the browser's poller when
+		// it watches a run end, and nothing in a tab ever watches a turnaround:
+		// an upload starts it server-side and returns. So an internal render could
+		// only ever produce a half-row, and it did — four of seven turnarounds had
+		// no time recorded at all, and the three that did read 46, 30 and 14
+		// minutes for six seconds of video, which is not how long they took but
+		// when some tab happened to look. A number that wrong is worse in a log
+		// than no number, because the log is what gets trusted later.
+		if (!spec.internal) {
+			recordRender({
+				workspace: directWorkspaceId(spec),
+				slug: spec.slug,
+				at: Date.now(),
+				request: spec.request ?? '',
+				prompt: spec.prompts?.[0] ?? '',
+				wrote: spec.wroteLoras ?? spec.loras ?? [],
+				launched: spec.loras ?? [],
+				steps: DIRECT_STEPS,
+				width: spec.width,
+				height: spec.height,
+				seconds: spec.seconds,
+				fps: DIRECT_FPS,
+				seed: spec.seed,
+				// Who and where. Set above from the picks, after the sheets were read —
+				// so a name here means the render really got that picture, not merely
+				// that the browser asked for it.
+				...(spec.characterId ? { characterId: spec.characterId } : {}),
+				...(spec.characterName ? { characterName: spec.characterName } : {}),
+				...(spec.locationId ? { locationId: spec.locationId } : {}),
+				...(spec.locationName ? { locationName: spec.locationName } : {})
+			});
+		}
 
 		return await openWorkspace(
 			directWorkspaceId(spec),
