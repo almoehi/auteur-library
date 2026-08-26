@@ -3536,6 +3536,15 @@
 	function snapshot(withBodies: boolean) {
 		return {
 			sessionSlug,
+			// What you are in the middle of continuing.
+			//
+			// It lived only in memory, so a reload between pressing "continue this"
+			// and sending the next beat dropped the intent silently — and the text
+			// you then typed would have been shot as an unrelated new clip rather
+			// than as the next part of the scene. The banner disappears with it, so
+			// there is a version of this that is merely confusing and a version that
+			// costs a render.
+			continuing,
 			brief,
 			launchedBrief,
 			planningWs,
@@ -3811,6 +3820,9 @@
 		// dropping a run.
 		if (!(s.planningWs || s.renderWs || s.sessionSlug)) return false;
 			sessionSlug = s.sessionSlug ?? '';
+			// Back into the same state the banner reads, so a reload lands you where
+			// you were rather than one step to the side of it.
+			continuing = s.continuing ?? null;
 			brief = s.brief ?? null;
 			launchedBrief = s.launchedBrief ?? s.brief ?? null;
 			sceneCount = s.brief?.sceneCount ?? sceneCount;
