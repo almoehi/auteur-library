@@ -40,6 +40,20 @@ const TURN_SECONDS = 6;
 const TURN_W = 576;
 const TURN_H = 1024;
 
+/** Age is the one thing the operator's line no longer outranks the picture on.
+ *
+ *  The writer supplies an adult age whenever none was typed — measured three
+ *  runs out of three — and it has to, because the deterministic gate after it
+ *  refuses a description that states none. But a supplied age is a guess, and
+ *  this clause used to hand every guess authority over the photograph: a woman
+ *  who reads mid-thirties reached the model as twenty-five, with instructions
+ *  to believe the sentence over the picture.
+ *
+ *  The adult floor is untouched. It is asserted in the first line of
+ *  subject_definitions and enforced by the gate, and neither is what this
+ *  changes.
+ */
+
 /** Deliberately says "person", not "woman".
  *
  *  This prompt is generated for every upload, sight unseen — the only thing we
@@ -57,7 +71,7 @@ function turnPrompt(look = ''): string {
 	const said = look.trim().slice(0, 400);
 	return `subject_definitions:
 <Subject 1> is the adult person shown in <Picture 1>. Their face, hair, skin tone, body type and identity come only from that picture. They are the sole subject.${
-		said ? `\nThe operator describes them as: ${said}. This description OVERRIDES the picture on ANY POINT IT ACTUALLY MAKES — if it names a build, proportions, an age or clothing, follow it even where the picture shows otherwise. On every point it does NOT mention, the picture governs unchanged. The face, hair and skin always come from the picture.` : ''
+		said ? `\nThe operator describes them as: ${said}. This description OVERRIDES the picture where it names a build, proportions or clothing — follow it there even where the picture shows otherwise. On every other point, including age, the picture governs unchanged. The face, hair and skin always come from the picture.` : ''
 	}
 
 summary:
@@ -66,7 +80,7 @@ reference generation. A character turnaround: <Subject 1> stands still on a plai
 retention_analysis:
 <Picture 1> / <Subject 1>: fully_preserved for face, hair, skin tone and identity.${
 		said
-			? ' Body type, proportions, age and clothing are preserved from <Picture 1> EXCEPT where the operator description above names them, and there the description wins.'
+			? ' Body type, proportions and clothing are preserved from <Picture 1> EXCEPT where the operator description above names them, and there the description wins. Age is preserved from <Picture 1> regardless.'
 			: ' Body type and clothing are also fully_preserved.'
 	} The background of <Picture 1> is not retained. The pose of <Picture 1> is not retained.
 
