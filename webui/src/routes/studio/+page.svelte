@@ -2219,6 +2219,27 @@
 	 *  you reach for deliberately. */
 	let pinSeam = $state(true);
 	let joining = $state<Record<string, boolean>>({});
+	/** The character or location the delete button is armed on.
+	 *
+	 *  Two clicks, because one is how a face nobody meant to touch disappears —
+	 *  and a sheet is minutes of GPU time, not a row in a list. */
+	let dropArmed = $state('');
+
+	async function dropSheet(id: string) {
+		try {
+			const res = await fetch(`/studio/api/sheet?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+			const r = (await res.json()) as { ok?: boolean; sheets?: StoredSheet[] };
+			if (r.sheets) sheets = r.sheets;
+			// Whatever was pointing at it stops pointing at it.
+			if (wantCharacter === id) wantCharacter = '';
+			if (wantLocation === id) wantLocation = '';
+			saveSetup();
+		} catch (e) {
+			pushError(`could not remove that: ${e}`);
+		} finally {
+			dropArmed = '';
+		}
+	}
 
 	/** Whether a clip can be continued, and if not, what to do about it.
 	 *
@@ -5609,6 +5630,9 @@
 									<div class="grid grid-cols-5 gap-x-2 gap-y-3">
 										{#each [{ id: '', name: pickKind === 'character' ? 'anyone' : 'anywhere' }, ...kept] as s (s.id)}
 											{@const on = pickKind === 'character' ? wantCharacter === s.id : wantLocation === s.id}
+											{@const row = sheets.find((x) => x.id === s.id)}
+											{@const sheetState = row?.sheet?.state}
+											<div class="group relative flex min-w-0 flex-col">
 											<button
 												type="button"
 												role="menuitemradio"
@@ -5652,6 +5676,64 @@
 													{s.name}
 												</span>
 											</button>
+
+											{#if s.id}
+												<!-- The six views: a quiet dot while they render, and the
+												     sheet itself to open once they are there. Not announced
+												     anywhere else — this is where you would look for it. -->
+												{#if sheetState === 'rendering'}
+													<span
+														title="the six views are rendering"
+														class="beacon pointer-events-none absolute top-1 right-1 size-2 rounded-full bg-[var(--st-accent)]"
+													></span>
+												{:else if row?.sheet?.file}
+													<a
+														href="/studio/api/sheet/full/{s.id}"
+														target="_blank"
+														rel="noreferrer"
+														title="open the six views"
+														onclick={(e) => e.stopPropagation()}
+														class="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-[var(--st-bg)]/80 text-[0.6rem] text-[var(--st-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
+														>⤢</a
+													>
+												{/if}
+
+												<!-- Two clicks. A face is minutes of GPU time, not a row. -->
+												{#if dropArmed === s.id}
+													<div class="absolute inset-x-0 bottom-5 flex justify-center gap-1">
+														<button
+															type="button"
+															onclick={(e) => {
+																e.stopPropagation();
+																dropSheet(s.id);
+															}}
+															class="cursor-pointer rounded-full bg-[var(--st-bg)] px-2 py-0.5 text-[0.6rem] text-[var(--st-text)]"
+															>remove</button
+														>
+														<button
+															type="button"
+															onclick={(e) => {
+																e.stopPropagation();
+																dropArmed = '';
+															}}
+															class="cursor-pointer rounded-full bg-[var(--st-bg)] px-2 py-0.5 text-[0.6rem] text-[var(--st-faint)]"
+															>keep</button
+														>
+													</div>
+												{:else}
+													<button
+														type="button"
+														aria-label="remove {s.name}"
+														onclick={(e) => {
+															e.stopPropagation();
+															dropArmed = s.id;
+														}}
+														class="absolute top-1 left-1 flex size-5 cursor-pointer items-center justify-center rounded-full bg-[var(--st-bg)]/80 text-[0.7rem] leading-none text-[var(--st-faint)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
+														>×</button
+													>
+												{/if}
+											{/if}
+											</div>
 										{/each}
 									</div>
 								</div>
