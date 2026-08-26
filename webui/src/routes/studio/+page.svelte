@@ -6152,17 +6152,6 @@
 									</span>
 								</div>
 
-								{#if composerShape.fixed}
-									<!-- Size and frame are not yours while you are continuing: two pieces
-										 at different sizes cannot be concatenated, and the mismatch only
-										 shows up after both have been rendered. Length is not like that —
-										 clips of different lengths join perfectly well — so it stays above,
-										 live. -->
-									<div class="px-3 py-2.5 text-xs text-[var(--st-faint)] shadow-[inset_0_1px_0_var(--st-line)]">
-										{composerShape.res} · {composerShape.portrait ? '9:16' : '16:9'} — follows the clip
-										you are continuing, so the pieces can be joined.
-									</div>
-								{:else}
 								<div class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]">
 									<span class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]">
 										<svg viewBox="0 0 16 16" class="size-[15px] shrink-0 opacity-80" fill="none" aria-hidden="true">
@@ -6173,16 +6162,19 @@
 									</span>
 									<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
 										{#each RES_KEYS as r (r)}
-											{@const f = frameFor(r, wantOrientation)}
+											{@const f = frameFor(r, composerShape.portrait ? 'portrait' : 'landscape')}
 											<button
 												type="button"
-												aria-pressed={wantRes === r}
+												disabled={composerShape.fixed}
+												aria-pressed={composerShape.res === r}
 												title="{f.width}x{f.height} — bigger frames cost render time"
 												onclick={() => {
 													wantRes = r;
 													saveSetup();
 												}}
-												class="flex min-h-7 cursor-pointer items-center justify-center rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {wantRes ===
+												class="flex min-h-7 items-center justify-center rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {composerShape.fixed
+													? 'cursor-default opacity-40'
+													: 'cursor-pointer'} {composerShape.res ===
 												r
 													? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
 													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{r}</button
@@ -6204,13 +6196,16 @@
 										{#each [['portrait', '9:16', 'h-3 w-2'], ['landscape', '16:9', 'h-2 w-3.5']] as [val, label, box] (val)}
 											<button
 												type="button"
-												aria-pressed={wantOrientation === val}
+												disabled={composerShape.fixed}
+												aria-pressed={(composerShape.portrait ? 'portrait' : 'landscape') === val}
 												title={label}
 												onclick={() => {
 													wantOrientation = val as 'portrait' | 'landscape';
 													saveSetup();
 												}}
-												class="flex min-h-7 cursor-pointer items-center gap-1.5 rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {wantOrientation ===
+												class="flex min-h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {composerShape.fixed
+													? 'cursor-default opacity-40'
+													: 'cursor-pointer'} {(composerShape.portrait ? 'portrait' : 'landscape') ===
 												val
 													? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
 													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
@@ -6221,7 +6216,6 @@
 										{/each}
 									</span>
 								</div>
-								{/if}
 							</div>
 						{/if}
 						{#if pendingPhoto}
