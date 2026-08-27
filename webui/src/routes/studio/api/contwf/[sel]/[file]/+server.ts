@@ -72,6 +72,17 @@ const N = {
 
 /** Ids we add. Named rather than numbered so a reader can tell at a glance which
  *  nodes are ours and which came with the bundle. */
+/** The card this bundle is pinned to, and the cards whose compute image cannot
+ *  run SageAttention.
+ *
+ *  The second list is the harness's own — SAGE_BLACKLIST_GPU_TYPES in
+ *  video_harness_harness.wasm reads ["h100", "l40s"] — repeated here because two
+ *  decisions depend on it locally: whether to add the patch that has no off
+ *  switch, and what SolAttn should take its model from. The harness handles the
+ *  one that does have a switch, on its own, from the port declared below. */
+const CARD = 'h100';
+const SAGE_BLIND = ['h100', 'l40s'];
+
 const OUR = {
 	sageKj: 'our_sage_kj',
 	sageMm: 'our_sage_mm',
@@ -140,18 +151,49 @@ function fitOurModelPath(graph: Graph, entries: ReturnType<typeof stack>): void 
 		n.inputs[l.key] = l.file;
 	}
 
+	// SageAttention, kept but switchable — and one of its two patches removed.
+	//
+	// The wheel in every published compute image is an sm_80-only build: no
+	// _qattn_sm90.so, and no PTX, so no JIT fallback either. sageattention has no
+	// CUDA 13 support (it stops at 12.8), so the image's nvcc emitted nothing for
+	// sm89/sm90 and the omission stays silent until a kernel launches. Tracked
+	// upstream as video-harness#107. Measured here: the h100 dies at node 142 with
+	// cudaErrorNoKernelImageForDevice while the a100 renders the same graph.
+	//
+	// MiniMaxH3MemoryEfficientSageAttentionPatch is gone for good. It takes a model
+	// and nothing else — no toggle anywhere — and unconditionally rewrites every
+	// transformer block onto the fp8+int8 path that has no sm_90 build. Nothing can
+	// switch it off, so it cannot stay in a graph allowed to run on an h100.
+	//
+	// PathchSageAttentionKJ stays, and its mode is a PORT rather than a constant.
+	// That is the whole trick: the harness carries
+	// SAGE_BLACKLIST_GPU_TYPES = ["h100", "l40s"] and forces a param named exactly
+	// `sage_attention` to disabled when dispatching to one of them. Its own comment
+	// says the mechanism exists so a workflow need not hardcode Sage off and lose
+	// it on the cards where it works. Declaring the port serves both from one
+	// bundle: off on the h100, on wherever it runs.
 	graph[OUR.sageKj] = {
 		class_type: 'PathchSageAttentionKJ',
 		inputs: { sage_attention: 'auto', allow_compile: false, model: [N.unet, 0] }
 	};
-	graph[OUR.sageMm] = {
-		class_type: 'MiniMaxH3MemoryEfficientSageAttentionPatch',
-		inputs: { model: [OUR.sageKj, 0] }
-	};
+
+	// The second patch, only where it can run.
+	//
+	// Tied to the card rather than deleted, because on the a100 it works and helps.
+	// Deleting it outright would have quietly slowed the card that has carried
+	// every render so far, to fix one it never runs on.
+	if (!SAGE_BLIND.includes(CARD)) {
+		graph[OUR.sageMm] = {
+			class_type: 'MiniMaxH3MemoryEfficientSageAttentionPatch',
+			inputs: { model: [OUR.sageKj, 0] }
+		};
+	}
+
+
 	graph[OUR.solAttn] = {
 		class_type: 'SolAttnPatch',
 		inputs: {
-			model: [OUR.sageMm, 0],
+			model: [SAGE_BLIND.includes(CARD) ? OUR.sageKj : OUR.sageMm, 0],
 			tau: 1.3,
 			start_percent: 0.2,
 			end_percent: 0.9,
@@ -370,7 +412,7 @@ async function buildYaml(entries: ReturnType<typeof stack>): Promise<string> {
 	// sm_90 kernels — a TORCH_CUDA_ARCH_LIST at build time, not a setting here.
 	// It arrived with the compute image this project upgraded to today
 	// (cu13 / comfy 0.32.0). The endpoint deploys and can run nothing.
-	out = out.replace(gpu, 'gpu_types: [a100]');
+	out = out.replace(gpu, `gpu_types: [${CARD}]`);
 
 	// The three the render profile must be able to reach, and cannot as shipped.
 	//
@@ -436,6 +478,12 @@ async function buildYaml(entries: ReturnType<typeof stack>): Promise<string> {
 		throw error(502, 'the continuation bundle has no outputs: section — it has been restructured');
 	}
 	const added =
+		`    - name: sage_attention\n` +
+		`      kind: string\n` +
+		`      description: "SageAttention mode. Left to the harness, which forces it to disabled on the cards whose compute image has no sm89/sm90 kernels and leaves it alone elsewhere."\n` +
+		`      binding: sage_attention@${OUR.sageKj}\n` +
+		`      required: false\n` +
+		`      default: auto\n` +
 		`    - name: seed\n` +
 		`      kind: int\n` +
 		`      description: "Noise seed. -1 draws a new one, so a second take differs from the first."\n` +

@@ -47,6 +47,50 @@ function basePath(name: string): string {
  *  cannot be switched through a port and have to be written into the graph. */
 const LOADER_NODE = '674';
 
+/** The card this bundle runs on, and the cards whose compute image cannot run
+ *  SageAttention.
+ *
+ *  The second list is the harness's own — SAGE_BLACKLIST_GPU_TYPES in
+ *  video_harness_harness.wasm reads ["h100", "l40s"]. It is repeated here because
+ *  one of this graph's two Sage patches has no off switch and must be removed
+ *  from the graph rather than disabled; the harness deals with the other itself,
+ *  from the port declared in buildYaml. */
+const CARD = 'h100';
+const SAGE_BLIND = ['h100', 'l40s'];
+
+const SAGE_KJ = '157';
+const SAGE_MM = '663';
+const SOL_ATTN = '636';
+
+/** Take out the patch that cannot be switched off, when the card cannot run it.
+ *
+ *  MiniMaxH3MemoryEfficientSageAttentionPatch takes a model and nothing else, and
+ *  rewrites every transformer block onto an fp8+int8 path the published compute
+ *  images have no sm89/sm90 build for — sageattention stops at CUDA 12.8, so the
+ *  image's nvcc emitted nothing for those architectures and said nothing about
+ *  it. On an h100 the render dies at the sampler with
+ *  cudaErrorNoKernelImageForDevice; on an a100 the same graph is fine and the
+ *  patch earns its place. So it is removed for the blind cards and kept for the
+ *  rest, rather than deleted outright — deleting it would quietly slow the card
+ *  that has carried every render so far, to fix one it never runs on. */
+function fitSageForCard(
+	graph: Record<string, { class_type?: string; inputs?: Record<string, unknown> }>
+): void {
+	const kj = graph[SAGE_KJ];
+	const mm = graph[SAGE_MM];
+	const sol = graph[SOL_ATTN];
+	if (
+		kj?.class_type !== 'PathchSageAttentionKJ' ||
+		mm?.class_type !== 'MiniMaxH3MemoryEfficientSageAttentionPatch' ||
+		!sol?.inputs
+	) {
+		throw error(500, 'the base graph no longer carries the Sage nodes this expects — it has been re-exported');
+	}
+	if (!SAGE_BLIND.includes(CARD)) return;
+	delete graph[SAGE_MM];
+	sol.inputs.model = [SAGE_KJ, 0];
+}
+
 
 /** Reference-to-video, grafted in only when a clip actually has references.
  *
@@ -129,6 +173,7 @@ function buildJson(entries: { lora: Lora; strength: number }[], refs: string[] =
 	writeLoraStack(node, entries);
 
 	addReferencePath(graph, refs);
+	fitSageForCard(graph);
 	return JSON.stringify(graph, null, 2);
 }
 
@@ -228,8 +273,35 @@ function buildYaml(entries: { lora: Lora; strength: number }[], refs: string[] =
 	// is where the base bundle would carry them if it had any. It has none: this
 	// graph was a text-to-video export, and the reference path is grafted in by
 	// addReferencePath above.
-	const block = inputsBlock(refs);
-	return block ? out.replace(/^ports:\n/m, `ports:\n${block}`) : out;
+	const inputs = inputsBlock(refs);
+	let withPorts = inputs ? out.replace(/^ports:\n/m, `ports:\n${inputs}`) : out;
+
+	// The card, and the switch the harness needs to see.
+	//
+	// A param named exactly `sage_attention` is what makes the harness's own
+	// per-GPU override fire: it forces the value to disabled when dispatching to a
+	// card on its blacklist and leaves it alone everywhere else. Declaring it is
+	// what lets one bundle serve both cards correctly.
+	// The bracket, and whatever the line says after it — this one carries a
+	// trailing comment, and an anchored $ silently matched nothing until the guard
+	// below turned that into a 500 instead of a bundle served on the wrong card.
+	const gpu = /^gpu_types: \[[^\]]*\].*$/m;
+	if (!gpu.test(withPorts)) {
+		throw error(500, 'the base bundle has no gpu_types line — it has been re-exported');
+	}
+	withPorts = withPorts.replace(gpu, `gpu_types: [${CARD}]`);
+
+	const sagePort =
+		`    - name: sage_attention\n` +
+		`      kind: string\n` +
+		`      description: "SageAttention mode. Left to the harness, which forces it to disabled on the cards whose compute image has no sm89/sm90 kernels and leaves it alone elsewhere."\n` +
+		`      binding: sage_attention@${SAGE_KJ}\n` +
+		`      required: false\n` +
+		`      default: auto\n`;
+	if (!withPorts.includes('\n  outputs:')) {
+		throw error(500, 'the base bundle has no outputs: section — it has been re-exported');
+	}
+	return withPorts.replace('\n  outputs:', `\n${sagePort}  outputs:`);
 }
 
 export const GET: RequestHandler = async ({ params }) => {
