@@ -1608,7 +1608,28 @@ function sheetUrl(spec: SheetSpec, name: string): string {
 	if (spec.stage === 'anchor') {
 		return `${spec.studioOrigin}/studio/api/anchorwf/${spec.kind}/workflow.yaml`;
 	}
-	return `${spec.studioOrigin}/studio/api/sheetwf/${spec.kind}/workflow.yaml`;
+	return `${spec.studioOrigin}/studio/api/sheetwf/${sheetSegment(spec)}/workflow.yaml`;
+}
+
+/** Outdoor places, by their own words.
+ *
+ *  The location graph writes its six camera positions differently for an
+ *  interior than for an exterior — walls and the middle of the room in one case,
+ *  facade and elevations in the other — and it has no way to tell which it is
+ *  looking at. Asked for walls, a farmyard gave back one angle six times.
+ *
+ *  Decided here, from the description, because the description is the only thing
+ *  that knows. A word list rather than a model: it is inspectable, it costs
+ *  nothing, and when it guesses wrong the fix is to edit the description, which
+ *  is a thing the operator can already do. Interior stays the default, so a
+ *  place that says nothing either way behaves exactly as it did.
+ */
+const OUTDOOR =
+	/\b(outdoor|outside|exterior|yard|farmyard|farm|barnyard|field|meadow|pasture|street|road|alley|driveway|garden|lawn|park|playground|beach|shore|coast|forest|wood|woodland|jungle|desert|mountain|hillside|cliff|riverbank|lakeside|poolside|rooftop|roof|terrace|balcony|courtyard|patio|car park|parking lot|stadium|pier|dock|harbour|harbor|marina|campsite|vineyard|orchard|udvar|kert|utca|mezo|mező|erdo|erdő|strand|teto|tető|terasz|erkely|erkély|tanya)\b/i;
+
+export function sheetSegment(spec: SheetSpec): string {
+	if (spec.kind !== 'location') return spec.kind;
+	return OUTDOOR.test(spec.description ?? '') ? 'location-outdoor' : 'location';
 }
 
 export function sheetWorkspaceId(spec: SheetSpec): string {

@@ -32,8 +32,49 @@ const REPO = 'https://raw.githubusercontent.com/almoehi/auteur-library/refs/head
 
 const SHEETS: Record<string, string> = {
 	character: 'krea2_character_sheet',
-	location: 'krea2_location_sheet'
+	location: 'krea2_location_sheet',
+	// The same bundle, asked to describe an outdoor place. See patchLocation.
+	'location-outdoor': 'krea2_location_sheet'
 };
+
+/** Make the location sheet actually cover six positions.
+ *
+ *  Two widgets are baked into their graph and both are wrong for us.
+ *
+ *  The prompt node scripts four locked-off views and only adds the wide overview
+ *  and the detail shot when its two flags are set. They ship off, so four shots
+ *  are written — while the frame selector below is set to cut SIX. It always
+ *  returns the number asked for whether or not the take holds that many, so two
+ *  of the six repeat before the model has done anything. Their own conversion
+ *  report says as much.
+ *
+ *  Worse, space defaults to interior, and the interior branch writes its four
+ *  views as walls: the front wall square from the middle of the room, then the
+ *  right, the rear, the left. A farmyard has no walls and no middle of the room.
+ *  Every cut asks for a frame the place cannot show, the take never really cuts,
+ *  and all six picks collapse onto the one angle that existed — which is exactly
+ *  what came back: one exterior wide and five slices of it. The exterior branch
+ *  writes facade, side elevation, rear elevation, three-quarter establishing and
+ *  entrance instead, which an outdoor place can honour.
+ *
+ *  The node also emits a warning when its picks repeat. It is wired to a preview
+ *  node and declared as no port, so nothing here has ever been able to read it —
+ *  worth asking Hannes to expose.
+ */
+function patchLocation(json: string, outdoor: boolean): string {
+	const graph = JSON.parse(json) as Record<string, { class_type?: string; inputs?: Record<string, unknown> }>;
+	const node = Object.values(graph).find((n) => n?.class_type === 'OrbitSheetsLocationPrompt');
+	if (!node?.inputs) {
+		throw error(502, 'the location bundle has no OrbitSheetsLocationPrompt — it has been restructured');
+	}
+	if (!('space' in node.inputs) || !('wide_establishing_shot' in node.inputs)) {
+		throw error(502, 'the location prompt node no longer takes space and wide_establishing_shot');
+	}
+	node.inputs.space = outdoor ? 'exterior' : 'interior';
+	node.inputs.wide_establishing_shot = true;
+	node.inputs.detail_shot = true;
+	return JSON.stringify(graph);
+}
 
 /** The one card we pin to — and it is the cheapest one, which took two
  *  measurements to earn.
@@ -119,13 +160,12 @@ async function upstream(
 export const GET: RequestHandler = async ({ params, fetch }) => {
 	const name = SHEETS[params.kind ?? ''];
 	if (!name) throw error(404, 'a sheet is either a character or a location');
-	// The graph, straight through. Nothing about it is ours to change: the only
-	// thing this route exists to alter is which card the workflow may run on, and
-	// that is declared in the YAML.
 	if (params.file === 'workflow.json') {
-		return text(await upstream(name, 'workflow.json', fetch), {
-			headers: { 'content-type': 'application/json' }
-		});
+		const raw = await upstream(name, 'workflow.json', fetch);
+		// The character graph goes through untouched — it is a turnaround of one
+		// person and already scripts six shots against its own six-way cut.
+		const body = params.kind === 'character' ? raw : patchLocation(raw, params.kind === 'location-outdoor');
+		return text(body, { headers: { 'content-type': 'application/json' } });
 	}
 	if (params.file !== 'workflow.yaml' && params.file !== 'workflow.yml') {
 		throw error(404, 'a bundle is workflow.yaml and workflow.json');
