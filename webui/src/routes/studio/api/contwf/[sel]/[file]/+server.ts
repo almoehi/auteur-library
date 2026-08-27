@@ -352,6 +352,24 @@ async function buildYaml(entries: ReturnType<typeof stack>): Promise<string> {
 	if (!gpu.test(out)) {
 		throw error(502, 'the continuation bundle has no gpu_types line — it has been restructured');
 	}
+	// a100, and not h100 — tried, 2026-08-27.
+	//
+	// The card looked worth testing once the idle timeout landed: a warm 5s
+	// continuation measured 458s and 455s against 730s and 728s cold, so most of
+	// what remained was arithmetic rather than model loading, and that is the part
+	// an h100 does roughly twice as fast.
+	//
+	// It cannot run this graph any more, and that is a REGRESSION rather than a
+	// gap: the operator had rendered whole productions on the h100 before, and
+	// moved to the a100 only because it showed no speed advantage — which is
+	// exactly what a cold-start-dominated workload would look like.
+	//
+	// The render now fails in 147s with "CUDA error: no kernel image is available
+	// for execution on the device". The a100 runs the same graph on the same
+	// endpoints, deployed in the same pass, so the compute image simply carries no
+	// sm_90 kernels — a TORCH_CUDA_ARCH_LIST at build time, not a setting here.
+	// It arrived with the compute image this project upgraded to today
+	// (cu13 / comfy 0.32.0). The endpoint deploys and can run nothing.
 	out = out.replace(gpu, 'gpu_types: [a100]');
 
 	// The three the render profile must be able to reach, and cannot as shipped.
