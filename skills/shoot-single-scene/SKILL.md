@@ -40,6 +40,8 @@ For each shot, call `draft_prompt(workflow_name, context)` once per prompt param
 
 Draft a shared negative prompt once and reuse it across all shots.
 
+Optionally, audit each drafted prompt with `review_prompt` before moving on. If it finds gaps, call `enhance_prompt` to correct them, then re-check only what was flagged — do not loop indefinitely once a prompt passes review.
+
 Complete prompts for all shots before rendering.
 
 ## 5. Render

@@ -47,6 +47,17 @@ Identify from context (attached inputs, workflow config, or explicit statement):
 
 > ⚠️ `fl2va` and `ref2va` model weights are mutually exclusive — a single generation cannot use both.
 
+> ⚠️ **Reference-video timing must be measured, not assumed.** When the brief references a prior
+> clip / reference video (`<Video 1>` in ref2va / video-continuation contexts) and states timing
+> information about it — e.g. "the target video resumes from its final frame at the 0.00-second
+> mark", or any offset/duration claim about that source video — that timing must come from the
+> reference video's REAL measured duration, obtained via the `get_video_info` tool, never assumed
+> from what the source clip was originally requested or targeted to be. Generative video models
+> (including MiniMax H3 itself) routinely produce output that doesn't exactly match a requested
+> target duration, so a chained "prior clip" cannot be assumed to be any particular length.
+> Cross-reference: MiniMax H3 requires at least ~5 frames (~0.2s at 24fps) of reference video to
+> remain after any such offset is applied, or the render fails.
+
 ---
 
 ## Step 2 — Select Template and Write Preamble (if applicable)
