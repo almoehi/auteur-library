@@ -1528,14 +1528,30 @@
 	function startContinue(item: ChatItem) {
 		const ws = item.artifact?.workspace ?? '';
 		const info = contInfo(ws);
-		if (!info.ok || !info.row || !item.artifact?.id || !item.artifact.files?.length) {
+		// A joined scene has no artifact id of its own — it is a file assembled
+		// here out of clips that each have one. So continue its LAST PART, which
+		// is what continuing a scene means anyway: the scene ends where that clip
+		// ends, and the workflow reads its reference video from the start, so
+		// handing it a 25-second assembly would ask the model to guess what
+		// follows second 25 from the first few seconds of it.
+		//
+		// Until now the button was offered on the scene card and answered with an
+		// error, which is a wall placed exactly where somebody would carry on.
+		const part = item.artifact?.id
+			? { artifact: item.artifact.id, file: item.artifact.files?.[0]?.name ?? '' }
+			: (() => {
+					const chain = chainOf(ws);
+					const last = chain[chain.length - 1];
+					return last ? { artifact: last.artifact, file: last.file } : null;
+				})();
+		if (!info.ok || !info.row || !part?.artifact || !part.file) {
 			pushError(info.why || 'this clip cannot be continued');
 			return;
 		}
 		continuing = {
 			workspace: ws,
-			artifact: item.artifact.id,
-			file: item.artifact.files[0].name,
+			artifact: part.artifact,
+			file: part.file,
 			characterId: info.row.characterId!,
 			locationId: info.row.locationId!,
 			characterName: info.row.characterName,
