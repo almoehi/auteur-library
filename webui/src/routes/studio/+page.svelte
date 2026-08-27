@@ -2360,18 +2360,28 @@
 					}
 				})
 			});
-			const r = (await res.json()) as { ok?: boolean; error?: string; runs?: { state: string }[] };
-			if (!r.ok) {
+			const r = (await res.json()) as {
+				ok?: boolean;
+				error?: string;
+				batch?: string;
+				runs?: ServerRun[];
+			};
+			if (!r.ok || !r.batch) {
 				pushError(r.error || 'The takes could not start.');
 				return;
 			}
-			const live = (r.runs ?? []).filter((x) => x.state === 'rendering').length;
 			shot.launched = true;
+			// The card goes up with every take already on it, the ones still on the
+			// GPU included. The strip is then its final shape from the first second
+			// and nothing moves under the cursor as they land — which matters here
+			// more than usual, because the thing you do on this card is aim at a
+			// small picture.
+			pushItem({
+				who: 'studio',
+				kind: 'takes',
+				takes: { batch: r.batch, runs: (r.runs ?? []).map(takeRun) }
+			});
 			persist();
-			pushStudio(
-				`${live} takes of this, rendering together. They appear here as they land — ` +
-					`you can close this and come back, the server is following them.`
-			);
 			watchBatches();
 		} catch (e) {
 			pushError(`The takes could not start: ${e}`);
@@ -2380,57 +2390,83 @@
 		}
 	}
 
-	/** Post a card for every take that has landed and has not been shown.
+	/** What the batch record looks like on the wire. Wider than the card needs,
+	 *  so it is narrowed on the way in rather than stored as it arrives: every
+	 *  poll writes the transcript to localStorage, and a batch of four carries
+	 *  four seeds, four timestamps and four workspace ids that nothing reads. */
+	type ServerRun = {
+		batch?: string;
+		index: number;
+		slug: string;
+		state: string;
+		error?: string;
+		clip?: { workspace: string; artifact: string; file: string };
+	};
+
+	function takeRun(r: ServerRun): NonNullable<ChatItem['takes']>['runs'][number] {
+		return {
+			index: r.index,
+			slug: r.slug,
+			state: r.state === 'ready' ? 'ready' : r.state === 'failed' ? 'failed' : 'rendering',
+			...(r.error ? { error: r.error } : {}),
+			...(r.clip ? { clip: r.clip } : {})
+		};
+	}
+
+	/** Bring the takes cards in this conversation up to date, and stop.
 	 *
-	 *  Keyed on the chat rather than a set in memory, for the reason the sheet
-	 *  watcher had to learn: a set dies on reload and the same clip is posted
-	 *  twice, or — worse — the moment of arrival is missed entirely and it is
-	 *  never posted at all. The question asked here is "is this one already on
-	 *  screen", which the transcript can answer at any time. */
+	 *  It only ever updates cards that are already here. The version before it
+	 *  created one card per landed take, keyed on "is this take already on
+	 *  screen" — which is a question a fresh transcript answers no to for every
+	 *  take of every batch ever run, so opening the studio in a new conversation
+	 *  would have posted the whole history into it. A batch is announced by the
+	 *  press that started it and by nothing else; a poll may only bring news
+	 *  about one that is already on the page. */
 	let batchWatch: ReturnType<typeof setTimeout> | null = null;
 
 	function watchBatches() {
 		if (batchWatch) clearTimeout(batchWatch);
+		const waiting = () =>
+			chat.filter((c) => c.kind === 'takes' && c.takes?.runs.some((r) => r.state === 'rendering'));
+		if (!waiting().length) {
+			batchWatch = null;
+			return;
+		}
 		const tick = async () => {
-			let runs: {
-				slug: string;
-				index: number;
-				state: string;
-				error?: string;
-				clip?: { workspace: string; artifact: string; file: string };
-			}[] = [];
+			const cards = waiting();
+			if (!cards.length) {
+				batchWatch = null;
+				return;
+			}
+			let runs: ServerRun[] = [];
 			try {
-				const r = (await (await fetch('/studio/api/batch')).json()) as { runs?: typeof runs };
+				const r = (await (await fetch('/studio/api/batch')).json()) as { runs?: ServerRun[] };
 				runs = r.runs ?? [];
 			} catch {
 				batchWatch = setTimeout(tick, 12000);
 				return;
 			}
-			for (const run of runs) {
-				if (run.state === 'rendering') continue;
-				if (chat.some((c) => c.kind === 'clips' && c.artifact?.key === run.slug)) continue;
-				if (run.state === 'failed') {
-					pushError(`Take ${run.index} failed — ${run.error || 'no reason given'}`);
-					continue;
+			let moved = false;
+			for (const card of cards) {
+				const t = card.takes;
+				if (!t) continue;
+				for (const run of runs) {
+					if (run.batch !== t.batch) continue;
+					const mine = t.runs.find((x) => x.slug === run.slug);
+					if (!mine || mine.state !== 'rendering') continue;
+					const next = takeRun(run);
+					if (next.state === 'rendering') continue;
+					Object.assign(mine, next);
+					moved = true;
 				}
-				const c = run.clip;
-				if (!c) continue;
-				pushItem({
-					who: 'studio',
-					kind: 'clips',
-					text: `Take ${run.index}.`,
-					artifact: {
-						id: c.artifact,
-						key: run.slug,
-						title: `Take ${run.index}`,
-						taskId: '',
-						files: [{ name: c.file, url: fileUrl(c.workspace, c.artifact, c.file) }],
-						workspace: c.workspace
-					}
-				});
-				persist();
 			}
-			batchWatch = runs.some((r) => r.state === 'rendering') ? setTimeout(tick, 12000) : null;
+			if (moved) {
+				persist();
+				// A take that has landed has a row in the render log, and the card
+				// under it reads that row for the adapters, the size and the seed.
+				void loadVerdicts();
+			}
+			batchWatch = waiting().length ? setTimeout(tick, 12000) : null;
 		};
 		batchWatch = setTimeout(tick, 5000);
 	}
@@ -2544,6 +2580,120 @@
 		// model is about to look at the frames and can see it for itself, and the
 		// question only stood between you and the fix.
 		if (outcome === 'rejected') void diagnose(workspace);
+	}
+
+	/** The takes card you are looking at properly, and which take of it.
+	 *
+	 *  One overlay for the whole page, because only one can be open and because
+	 *  of the single number this feature turns on: the clip is 1024 across in
+	 *  here, which is its own width, and the transcript column can never give it
+	 *  more than 720. Four near-identical five-second takes are not separable at
+	 *  thumbnail size and barely separable at column width, so the room to look
+	 *  at them properly is the feature — the strip is only the way in. */
+	let takesAt = $state<{ id: string; index: number } | null>(null);
+	/** The tile it was opened from, to hand focus back to on the way out. */
+	let takesFrom: HTMLElement | null = null;
+
+	/** The takes there is anything to look at. One still on the GPU and one that
+	 *  failed have no frames, so the arrows step over them rather than landing on
+	 *  a black rectangle. */
+	function readyTakes(id: string) {
+		const item = chat.find((c) => c.id === id);
+		return (item?.takes?.runs ?? []).filter((r) => r.state === 'ready' && r.clip);
+	}
+
+	function openTake(id: string, index: number, from?: HTMLElement) {
+		if (!readyTakes(id).some((r) => r.index === index)) return;
+		takesFrom = from ?? null;
+		takesAt = { id, index };
+	}
+
+	function shutTake() {
+		takesAt = null;
+		takesFrom?.focus();
+		takesFrom = null;
+	}
+
+	/** Left and right on the picture itself. The arrows are hidden on a phone —
+	 *  a 44px target floating over a 316px-wide clip covers the thing it is there
+	 *  to help you look at — so this is how you move between takes there.
+	 *  Vertical drags are left alone, or the transcript could not be scrolled
+	 *  from over the viewer. */
+	let swipeX = 0;
+	let swipeY = 0;
+
+	function swipeStart(e: TouchEvent) {
+		swipeX = e.changedTouches[0].clientX;
+		swipeY = e.changedTouches[0].clientY;
+	}
+
+	function swipeEnd(e: TouchEvent) {
+		const dx = e.changedTouches[0].clientX - swipeX;
+		const dy = e.changedTouches[0].clientY - swipeY;
+		if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) stepTake(dx < 0 ? 1 : -1);
+	}
+
+	function stepTake(d: number) {
+		const at = takesAt;
+		if (!at) return;
+		const list = readyTakes(at.id);
+		if (list.length < 2) return;
+		const i = list.findIndex((r) => r.index === at.index);
+		takesAt = { id: at.id, index: list[(i + d + list.length) % list.length].index };
+	}
+
+	/** Keep one take: the card becomes the clip you chose.
+	 *
+	 *  It writes the same `artifact` a single render produces, and that is the
+	 *  whole trick — the kept take then draws through the clip card unchanged,
+	 *  with the verdict buttons, the continue and the scene join it already has.
+	 *  None of that was rewritten for batches.
+	 *
+	 *  Choosing does not rate anything. Best of four and good are different
+	 *  claims, and the card goes on asking "how was it?" underneath, because a
+	 *  batch where you kept the least bad of four is exactly the case the quality
+	 *  signal most needs to hear about. The takes you passed over are not marked
+	 *  bad either, and not deleted: they stay behind "the other three". */
+	function keepTake(id: string, index: number) {
+		const item = chat.find((c) => c.id === id);
+		const run = item?.takes?.runs.find((r) => r.index === index);
+		if (!item?.takes || !run?.clip) return;
+		const c = run.clip;
+		item.takes.kept = index;
+		item.text = `Take ${index}, kept.`;
+		item.artifact = {
+			id: c.artifact,
+			key: run.slug,
+			title: `Take ${index}`,
+			taskId: '',
+			files: [{ name: c.file, url: fileUrl(c.workspace, c.artifact, c.file) }],
+			workspace: c.workspace
+		};
+		persist();
+		shutTake();
+	}
+
+	/** Tiles play, silently, and only while they are on screen.
+	 *
+	 *  A take cannot be judged from a poster frame — the takes share the shot,
+	 *  the prompt and the framing, and what separates them is motion. So they
+	 *  move. But a transcript with a few batches in it would then be a dozen
+	 *  videos decoding at once, on a laptop that is also running the render, so
+	 *  the ones scrolled away from stop. */
+	let tileEyes: IntersectionObserver | null = null;
+
+	function looping(el: HTMLVideoElement) {
+		tileEyes ??= new IntersectionObserver(
+			(entries) =>
+				entries.forEach((e) => {
+					const v = e.target as HTMLVideoElement;
+					if (e.isIntersecting) void v.play().catch(() => {});
+					else v.pause();
+				}),
+			{ rootMargin: '120px' }
+		);
+		tileEyes.observe(el);
+		return { destroy: () => tileEyes?.unobserve(el) };
 	}
 
 	/** Three stills off the clip that is already on screen: near the start, the
@@ -4363,12 +4513,85 @@
 	</figure>
 {/snippet}
 
+<!-- One take, at whatever size the grid it sits in gives it. The same tile
+	 serves the strip in the transcript and the filmstrip inside the viewer, so
+	 the two can never drift apart — pressing one in the strip opens the viewer
+	 on exactly the picture that was pressed.
+
+	 A run still on the GPU keeps its place and its number rather than being left
+	 out: the strip is then its final shape from the first second, and nothing
+	 moves under the cursor as the takes land. -->
+{#snippet takeTile(
+	item: ChatItem,
+	run: NonNullable<ChatItem['takes']>['runs'][number],
+	film = false
+)}
+	{@const chosen = film && takesAt?.index === run.index}
+	{#if run.state === 'ready' && run.clip}
+		<button
+			type="button"
+			aria-label="take {run.index}"
+			aria-current={film ? chosen : undefined}
+			onclick={(e) => openTake(item.id, run.index, e.currentTarget)}
+			class="relative block aspect-video w-full cursor-pointer overflow-hidden rounded-[10px] bg-[var(--st-surface)] transition-[transform,opacity] duration-200 hover:scale-[1.014] {film
+				? chosen
+					? 'opacity-100 shadow-[inset_0_0_0_2px_var(--st-text)]'
+					: 'opacity-50 hover:opacity-80'
+				: ''}"
+		>
+			<!-- svelte-ignore a11y_media_has_caption -->
+			<video
+				src={fileUrl(run.clip.workspace, run.clip.artifact, run.clip.file)}
+				muted
+				loop
+				playsinline
+				preload="auto"
+				use:looping
+				class="h-full w-full bg-black object-cover"
+			></video>
+			<span
+				class="pointer-events-none absolute bottom-1.5 left-1.5 rounded-[5px] px-1.5 py-px text-[11px] font-medium tabular-nums backdrop-blur-md {chosen
+					? 'bg-[var(--st-text)] text-black'
+					: 'bg-black/50 text-white'}"
+			>
+				{run.index}
+			</span>
+		</button>
+	{:else}
+		<div
+			class="st-slot relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-[10px] bg-[var(--st-surface)] {run.state ===
+			'rendering'
+				? 'st-waiting'
+				: ''}"
+		>
+			{#if run.state === 'failed'}
+				<!-- The word, not the reason: the tile is 175px across and the reason
+					 is a sentence. It goes on the card's own line underneath. -->
+				<span class="px-2 text-center text-[11px] text-[var(--st-faint)]">interrupted</span>
+			{/if}
+			<span
+				class="pointer-events-none absolute bottom-1.5 left-1.5 rounded-[5px] bg-black/50 px-1.5 py-px text-[11px] font-medium tabular-nums text-white backdrop-blur-md"
+			>
+				{run.index}
+			</span>
+		</div>
+	{/if}
+{/snippet}
+
 <!-- Escape closes the composer's menus. A click outside them is handled by the
 	 backdrop the menus render behind themselves, not from here: Svelte delegates
 	 element handlers to the root, so a window-level listener and a
 	 stopPropagation in a delegated handler do not reliably compose. -->
+<!-- The takes viewer takes the keyboard first while it is open: it covers the
+	 page, so Escape belongs to it and not to menus nobody can see. -->
 <svelte:window
 	onkeydown={(e) => {
+		if (takesAt) {
+			if (e.key === 'Escape') shutTake();
+			else if (e.key === 'ArrowLeft') stepTake(-1);
+			else if (e.key === 'ArrowRight') stepTake(1);
+			return;
+		}
 		if (e.key === 'Escape') shutMenus();
 	}}
 />
@@ -5570,7 +5793,72 @@
 							<p class="enter doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
 								{item.text}
 							</p>
-						{:else if item.kind === 'clips' && item.artifact}
+						{:else if item.kind === 'takes' && item.takes && !item.artifact}
+							<!-- A batch nobody has chosen from yet: the strip, and nothing else.
+								 No verdict row and no continue here — those belong to the take you
+								 keep, and offering them on four clips at once would ask for four
+								 answers to a question that has one. -->
+							{@const t = item.takes}
+							{@const live = t.runs.filter((r) => r.state === 'rendering').length}
+							{@const done = t.runs.filter((r) => r.state === 'ready')}
+							{@const gone = t.runs.filter((r) => r.state === 'failed')}
+							{@const row = done[0]?.clip ? logRow[done[0].clip.workspace] : undefined}
+							<div class="enter">
+								<p class="text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+									{#if live}
+										{t.runs.length} takes of this beat, rendering together.
+									{:else if done.length}
+										{done.length}
+										{done.length === 1 ? 'take' : 'takes'} of this beat.
+										<span class="text-[var(--st-faint)]">Press one to look properly.</span>
+									{:else}
+										None of the takes finished.
+									{/if}
+								</p>
+
+								<!-- The grid follows the count rather than always being four: two
+									 takes in a four-column grid leave half the row empty and the card
+									 reads as broken. Two across on a phone whatever the count — at
+									 375px four tiles are 77 wide, which is too small to press, and
+									 two are 161. -->
+								<div class="st-takes mt-3" data-n={t.runs.length}>
+									{#each t.runs as run (run.slug)}
+										{@render takeTile(item, run)}
+									{/each}
+								</div>
+
+								<div
+									class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--st-faint)]"
+								>
+									{#if live}
+										<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+										></span>
+										<span class="tabular-nums">{done.length} of {t.runs.length} landed</span>
+									{/if}
+									<!-- One row describes all of them: the takes differ by seed and by
+										 nothing else, so the size, the length and the adapters are the
+										 same sentence four times over. -->
+									{#if row}
+										{#if row.launched?.length}
+											<span class="text-[var(--st-muted)]">
+												{row.launched
+													.map((p) => `${loraFor(p.key)?.label ?? p.key} ${p.strength}`)
+													.join(' · ')}
+											</span>
+										{/if}
+										<span class="tabular-nums"
+											>{row.steps} steps · {row.width}×{row.height} · {row.fps}fps · {row.seconds}s</span
+										>
+									{/if}
+								</div>
+
+								{#each gone as g (g.slug)}
+									<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
+										Take {g.index} — {g.error || 'no reason given'}
+									</p>
+								{/each}
+							</div>
+						{:else if (item.kind === 'clips' || item.kind === 'takes') && item.artifact}
 							{@const ws = item.artifact.workspace ?? ''}
 							{@const v = verdict[ws]}
 							<div class="enter">
@@ -5665,6 +5953,23 @@
 													? 'joining…'
 													: `the whole scene · ${chain.length} clips`}</button
 											>
+										{/if}
+										<!-- The takes you passed over. They were rendered and paid for,
+											 and a choice you can walk back is the only kind worth making
+											 quickly — so they stay reachable rather than being cleared
+											 away the moment one is kept. -->
+										{#if item.kind === 'takes' && item.takes}
+											{@const others = readyTakes(item.id).filter(
+												(r) => r.index !== item.takes?.kept
+											)}
+											{#if others.length}
+												<button
+													type="button"
+													onclick={(e) => openTake(item.id, others[0].index, e.currentTarget)}
+													class="cursor-pointer py-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+													>the other {others.length === 1 ? 'one' : others.length}</button
+												>
+											{/if}
 										{/if}
 										{#if !ci.ok}
 											<span class="text-xs leading-relaxed text-[var(--st-faint)]">{ci.why}</span>
@@ -6667,7 +6972,116 @@
 	{#if sidebarOpen}
 		<div class="hidden w-64 shrink-0 lg:block" aria-hidden="true"></div>
 	{/if}
+
+	<!-- ── the takes viewer ───────────────────────────────────────────────────────
+		 The room for choosing. The clip is 1024 across in here, which is the width
+		 it was rendered at, so this is the one place it is never resampled — the
+		 transcript column tops out at 720. On a short window the picture gives way
+		 first and the bar and the filmstrip stay put, because a viewer you cannot
+		 reach the controls of is not a viewer. -->
+	{#if takesAt}
+		{@const item = chat.find((c) => c.id === takesAt?.id)}
+		{@const runs = readyTakes(takesAt.id)}
+		{@const run = runs.find((r) => r.index === takesAt?.index)}
+		{#if item && run?.clip}
+			{@const row = logRow[run.clip.workspace]}
+			<div
+				class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/92 px-6 py-12 backdrop-blur-3xl"
+				role="dialog"
+				aria-modal="true"
+				aria-label="the takes of this beat"
+			>
+				<button
+					type="button"
+					aria-label="close"
+					onclick={shutTake}
+					class="absolute top-5 right-5 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/10 text-sm text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20"
+				>
+					✕
+				</button>
+				{#if runs.length > 1}
+					<button
+						type="button"
+						aria-label="previous take"
+						onclick={() => stepTake(-1)}
+						class="absolute top-1/2 left-6 hidden size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/10 text-xl text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20 sm:flex"
+					>
+						‹
+					</button>
+					<button
+						type="button"
+						aria-label="next take"
+						onclick={() => stepTake(1)}
+						class="absolute top-1/2 right-6 hidden size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/10 text-xl text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20 sm:flex"
+					>
+						›
+					</button>
+				{/if}
+
+				<div
+
+					class="lift stage overflow-hidden rounded-2xl bg-black shadow-[0_24px_70px_rgba(0,0,0,.6)]"
+
+					ontouchstart={swipeStart}
+
+					ontouchend={swipeEnd}
+
+				>
+					<!-- Keyed so that stepping to another take replaces the element rather
+						 than swapping its src: a <video> handed a new src keeps the old
+						 frame on screen until the new one decodes, which reads as the arrow
+						 having done nothing. -->
+					{#key run.slug}
+						<!-- svelte-ignore a11y_media_has_caption -->
+						<video
+							src={fileUrl(run.clip.workspace, run.clip.artifact, run.clip.file)}
+							controls
+							autoplay
+							muted
+							loop
+							playsinline
+							preload="auto"
+							class="video-with-controls block aspect-video w-full bg-black"
+						></video>
+					{/key}
+				</div>
+
+				<div class="lift stage mt-4 flex flex-wrap items-center gap-2">
+					<span class="text-[13px] font-medium tabular-nums text-[var(--st-text)]"
+						>Take {run.index}</span
+					>
+					{#if row}
+						<span class="text-xs tabular-nums text-[var(--st-faint)]">seed {row.seed}</span>
+					{/if}
+					<span class="flex-1"></span>
+					<!-- On the take you already kept there is nothing to press: a button
+						 that repeats a decision you have made is a control that does
+						 nothing, dressed as one that does something. -->
+					{#if item.takes?.kept === run.index}
+						<span class="text-xs text-[var(--st-faint)]">kept</span>
+					{:else}
+						<button
+							type="button"
+							onclick={() => keepTake(item.id, run.index)}
+							class="cursor-pointer rounded-full bg-[var(--st-text)] px-3.5 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white"
+						>
+							use this take
+						</button>
+					{/if}
+				</div>
+
+				{#if runs.length > 1}
+					<div class="st-takes st-film lift stage mt-4" data-n={runs.length}>
+						{#each runs as r (r.slug)}
+							{@render takeTile(item, r, true)}
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
+	{/if}
 </div>
+
 
 <style>
 	/* The one moving thing on the page, and it earns it: during a render nothing
@@ -6676,6 +7090,86 @@
 	   is already carried by the shape and the word beside it. */
 	.spin {
 		animation: st-spin 0.9s linear infinite;
+	}
+
+	/* The takes grid, in :global for the reason the sidebar spacer above
+	   documents twice over: the pruner drops scoped attribute selectors and the
+	   Tailwind scanner does not reliably find a conditionally built variant.
+	   Both failed silently the last time. A phone gets two columns whatever the
+	   count — three across at 375px is a 113px tile, too small to judge motion
+	   in — and above that the grid is as wide as the batch. */
+	:global(.st-takes) {
+		display: grid;
+		gap: 0.375rem;
+		grid-template-columns: repeat(2, 1fr);
+	}
+	@media (min-width: 640px) {
+		:global(.st-takes[data-n='3']) {
+			grid-template-columns: repeat(3, 1fr);
+		}
+		:global(.st-takes[data-n='4']) {
+			grid-template-columns: repeat(4, 1fr);
+		}
+	}
+
+	/* The viewer's filmstrip is a way back to the other takes, not a second place
+	   to judge them — the picture above it is that. So its tiles are capped and
+	   the row is centred: without the cap a batch of two put two 509px thumbnails
+	   under a 1024px stage, which reads as three players stacked rather than one
+	   picture and its index. Four takes are unaffected; they were already 251. */
+	:global(.st-takes.st-film) {
+		justify-content: center;
+		grid-template-columns: repeat(2, minmax(0, 16rem));
+	}
+	@media (min-width: 640px) {
+		:global(.st-takes.st-film[data-n='3']) {
+			grid-template-columns: repeat(3, minmax(0, 16rem));
+		}
+		:global(.st-takes.st-film[data-n='4']) {
+			grid-template-columns: repeat(4, minmax(0, 16rem));
+		}
+	}
+
+	/* A take still on the GPU. Global, because the class is only ever produced by
+	   an expression and Svelte's pruner drops what it cannot see in the markup —
+	   the same silent failure the sidebar spacer above documents. */
+	:global(.st-waiting) {
+		animation: st-breathe 2.6s ease-in-out infinite;
+	}
+	@keyframes st-breathe {
+		0%,
+		100% {
+			opacity: 0.45;
+		}
+		50% {
+			opacity: 0.8;
+		}
+	}
+
+	/* 64rem is 1024px, which is the width the clips are rendered at, so the
+	   viewer shows one at 1:1 and never resamples it. The transcript column tops
+	   out at 720. Below that the height decides: the picture gives way first so
+	   the bar and the filmstrip cannot be pushed off a short window — a viewer
+	   whose controls are off-screen is worse than no viewer. */
+	.stage {
+		width: min(64rem, 100%, calc((100dvh - 19rem) * 16 / 9));
+	}
+
+	/* The sheet curve: slow out, no bounce. */
+	.lift {
+		animation: st-lift 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
+	}
+	@keyframes st-lift {
+		from {
+			opacity: 0;
+			transform: scale(0.965);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		:global(.st-waiting),
+		.lift {
+			animation: none;
+		}
 	}
 	@keyframes st-spin {
 		to {

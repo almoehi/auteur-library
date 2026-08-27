@@ -145,7 +145,8 @@ export interface ChatItem {
 		| 'activity'
 		| 'board'
 		| 'shootboard'
-		| 'sheet';
+		| 'sheet'
+		| 'takes';
 	/** plain text content (kind=text, error, approval) */
 	text?: string;
 	/** the expanded brief awaiting the user's yes (kind=plan) */
@@ -218,6 +219,35 @@ export interface ChatItem {
 		/** Which run produced this, so a verdict given on a card you scrolled back
 		 *  to lands on that run's row and not on whichever one is current. */
 		workspace?: string;
+	};
+	/** several takes of one beat, rendered at once, waiting to be chosen between
+	 *  (kind=takes).
+	 *
+	 *  One card for the whole batch rather than one per take, because four takes
+	 *  exist for a single reason — one of them gets used — and four independent
+	 *  cards make the only decision that matters a scroll-and-remember. The runs
+	 *  keep their own workspaces, so a chosen take rates, continues and joins a
+	 *  scene exactly like a clip rendered on its own.
+	 *
+	 *  Every run is listed from the moment the batch starts, including the ones
+	 *  still on the GPU: the strip then has its final shape from the first
+	 *  second and nothing moves as they land. */
+	takes?: {
+		/** The batch id the server groups these under, and the key this card is
+		 *  found by when a poll brings news. */
+		batch: string;
+		runs: {
+			index: number;
+			slug: string;
+			state: 'rendering' | 'ready' | 'failed';
+			error?: string;
+			clip?: { workspace: string; artifact: string; file: string };
+		}[];
+		/** The take you kept, once you have chosen one. Choosing also fills in
+		 *  `artifact` above, which is what lets the kept take render through the
+		 *  same card a single clip does — with the same verdict, continue and
+		 *  scene controls, none of them rewritten for this. */
+		kept?: number;
 	};
 	/** a rendered character or location sheet, awaiting a name and a keep
 	 *  (kind=sheet). `id` is set once it has been stored, which is also what
