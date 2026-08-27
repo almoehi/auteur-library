@@ -2292,6 +2292,116 @@
 		}
 	}
 
+	/** Several takes of one card, rendered at once and followed by the server.
+	 *
+	 *  A continuation cannot be one of these: take two would need take one's clip
+	 *  as its reference, so the chain is sequential by physics rather than by
+	 *  interface. Only a fresh clip can be forked.
+	 *
+	 *  The card is marked launched exactly as a single render marks it, because it
+	 *  has been: the beat is spent, and offering "render this" underneath four
+	 *  takes of it already running is how somebody pays for a fifth by accident. */
+	async function renderTakes(itemId: string, takes: number) {
+		const item = chat.find((c) => c.id === itemId);
+		if (!item?.shot || item.shot.launched || shotBusy[itemId] || item.shot.continues) return;
+		shotBusy[itemId] = true;
+		try {
+			const shot = item.shot;
+			const res = await fetch('/studio/api/batch', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					takes,
+					direct: {
+						title: (lastRequest || 'Take').slice(0, 60),
+						prompts: [shot.prompt],
+						seconds: shot.seconds,
+						...frameFor((shot.resolution as ResKey) ?? wantRes, shot.orientation),
+						loras: shot.loras ?? [],
+						baseLoras: shot.baseLoras ?? {},
+						wroteLoras: shot.wroteLoras ?? shot.loras ?? [],
+						request: lastRequest,
+						...(sessionSlug ? { sessionSlug } : {}),
+						...(shot.characterId ? { characterId: shot.characterId } : {}),
+						...(shot.locationId ? { locationId: shot.locationId } : {})
+					}
+				})
+			});
+			const r = (await res.json()) as { ok?: boolean; error?: string; runs?: { state: string }[] };
+			if (!r.ok) {
+				pushError(r.error || 'The takes could not start.');
+				return;
+			}
+			const live = (r.runs ?? []).filter((x) => x.state === 'rendering').length;
+			shot.launched = true;
+			persist();
+			pushStudio(
+				`${live} takes of this, rendering together. They appear here as they land — ` +
+					`you can close this and come back, the server is following them.`
+			);
+			watchBatches();
+		} catch (e) {
+			pushError(`The takes could not start: ${e}`);
+		} finally {
+			shotBusy[itemId] = false;
+		}
+	}
+
+	/** Post a card for every take that has landed and has not been shown.
+	 *
+	 *  Keyed on the chat rather than a set in memory, for the reason the sheet
+	 *  watcher had to learn: a set dies on reload and the same clip is posted
+	 *  twice, or — worse — the moment of arrival is missed entirely and it is
+	 *  never posted at all. The question asked here is "is this one already on
+	 *  screen", which the transcript can answer at any time. */
+	let batchWatch: ReturnType<typeof setTimeout> | null = null;
+
+	function watchBatches() {
+		if (batchWatch) clearTimeout(batchWatch);
+		const tick = async () => {
+			let runs: {
+				slug: string;
+				index: number;
+				state: string;
+				error?: string;
+				clip?: { workspace: string; artifact: string; file: string };
+			}[] = [];
+			try {
+				const r = (await (await fetch('/studio/api/batch')).json()) as { runs?: typeof runs };
+				runs = r.runs ?? [];
+			} catch {
+				batchWatch = setTimeout(tick, 12000);
+				return;
+			}
+			for (const run of runs) {
+				if (run.state === 'rendering') continue;
+				if (chat.some((c) => c.kind === 'clips' && c.artifact?.key === run.slug)) continue;
+				if (run.state === 'failed') {
+					pushError(`Take ${run.index} failed — ${run.error || 'no reason given'}`);
+					continue;
+				}
+				const c = run.clip;
+				if (!c) continue;
+				pushItem({
+					who: 'studio',
+					kind: 'clips',
+					text: `Take ${run.index}.`,
+					artifact: {
+						id: c.artifact,
+						key: run.slug,
+						title: `Take ${run.index}`,
+						taskId: '',
+						files: [{ name: c.file, url: fileUrl(c.workspace, c.artifact, c.file) }],
+						workspace: c.workspace
+					}
+				});
+				persist();
+			}
+			batchWatch = runs.some((r) => r.state === 'rendering') ? setTimeout(tick, 12000) : null;
+		};
+		batchWatch = setTimeout(tick, 5000);
+	}
+
 	async function renderShot(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return;
@@ -4035,6 +4145,9 @@
 		// conversation back, so called any earlier it reads an empty list and
 		// quietly does nothing, which is the failure that looks like a fix.
 		resumePreviews();
+		// And any takes still rendering. They run server-side, so this tab simply
+		// has to ask — the same reason the sheet watcher starts unconditionally.
+		watchBatches();
 
 		// Elapsed time is shown in whole minutes, so a 15s clock is plenty.
 		const clock = setInterval(() => (now = Date.now()), 15_000);
@@ -5193,6 +5306,24 @@
 											class="cursor-pointer rounded-full px-3 py-2 text-sm text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)] disabled:opacity-40"
 											onclick={() => rewriteShot(item.id)}>write it again</button
 										>
+										<!-- Takes, not offered on a continuation: take two would need take
+											 one's clip as its reference, so a chain is sequential by physics.
+											 The harness runs four at once, and four at once share one warm
+											 container where four in a row pay four cold starts. -->
+										{#if !item.shot.continues}
+											<span class="ml-auto flex items-center gap-1.5">
+												<span class="mr-1 text-xs text-[var(--st-faint)]">takes</span>
+												{#each [2, 3, 4] as n (n)}
+													<button
+														type="button"
+														disabled={shotBusy[item.id]}
+														title="render {n} takes of this at once, followed by the server"
+														class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:opacity-40"
+														onclick={() => renderTakes(item.id, n)}>{n}</button
+													>
+												{/each}
+											</span>
+										{/if}
 									</div>
 								{/if}
 							</article>
