@@ -1352,12 +1352,27 @@ function directProfiles(spec: DirectSpec): string {
 	// 6 is the middle if the render time starts to hurt, and is equally inside the
 	// range. And the slider at 1.6 was tuned with 4 steps underneath it, so if the
 	// surface ever needs revisiting, that pairing has not actually been tested.
-	return `  profiles:
-    draft:
-      image: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, seed: ${spec.seed} }
+	// The same body under all three tier names, on purpose.
+	//
+	// The profile is looked up by the quality tier the operator agent chooses, and
+	// only draft was ever declared — so a run that came back as preview or master
+	// found an empty profile and nothing overrode the agent. That matters because
+	// width, height and steps are REQUIRED ports on this workflow: the agent
+	// cannot omit them, so it sends the bundle's schema defaults, and those are
+	// 480x864 at 4 steps — a size this app never offers and a step count it does
+	// not use. The oplog has exactly that on a landscape clip. Only the profile
+	// override made the frame come back right.
+	//
+	// So the three are identical, and the size stops depending on which word the
+	// agent picked. It disarms a knob the harness advertises: master renders what
+	// draft renders. That is the intent — the app owns the frame, not the agent —
+	// and anyone wanting a real master tier has to notice these are deliberately
+	// the same rather than assume one of them is live.
+	const tier = `      image: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, seed: ${spec.seed} }
       video: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, fps: ${DIRECT_FPS}, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
       compute: { backend: modal, gpuType: a100, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }`;
+	return '  profiles:\n' + ['draft', 'preview', 'master'].map((t) => `    ${t}:\n${tier}`).join('\n');
 }
 
 const DIRECT_AGENT = (model: string) => `    generic:
@@ -1373,8 +1388,13 @@ const DIRECT_AGENT = (model: string) => `    generic:
 
         For your task: call the wf_ tool for the minimax workflow with
         prompt_positive set to the prompt text given in the task, character for
-        character, and video_length set to the seconds the task names. Resolution,
-        fps and steps come from the render profile — do not pass your own.
+        character, and video_length set to the seconds the task names.
+
+        The tool requires width, height and steps, so pass them — you have no
+        choice about that. Whatever you pass is replaced by the render profile
+        before the graph runs, so do not spend any thought on the numbers and do
+        not read anything into them. An earlier version of this instruction told
+        you not to pass them at all, which the tool schema does not allow.
 
         If the task lists reference inputs (ref_0, ref_1 …), pass each one as an
         argument of that name, with the URL copied exactly as the task wrote it —
