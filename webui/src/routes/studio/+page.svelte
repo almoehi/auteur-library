@@ -1456,6 +1456,19 @@
 	 *  to send, so it belongs beside the send button. */
 	let modeOpen = $state(false);
 
+	/** How many takes one message makes.
+	 *
+	 *  One is the resting answer and always will be: the common case must not pay
+	 *  for the rare one. Above one, the same beat is rendered that many times with
+	 *  different seeds, at once — the harness runs four together, and four at once
+	 *  cost about what one costs, where four in a row cost four cold starts.
+	 *
+	 *  It lives on the mode chip rather than beside it because that chip already
+	 *  answers the same question — what will this message make — and because this
+	 *  is the first control here where one press spends four times. A commitment
+	 *  like that has to be readable without opening anything. */
+	let takes = $state(1);
+
 	function shutMenus() {
 		addOpen = false;
 		pickKind = null;
@@ -1473,7 +1486,11 @@
 					r: wantRes,
 					t: wantTarget,
 					c: wantCharacter,
-					l: wantLocation
+					l: wantLocation,
+					// Not persisted for a while, which made it the one composer setting
+					// that silently reset — and the one whose reset costs money in the
+					// wrong direction is worth writing down.
+					k: takes
 				})
 			);
 		} catch {
@@ -4099,6 +4116,7 @@
 					t?: string;
 					c?: string;
 					l?: string;
+					k?: number;
 				};
 				if (typeof v.s === 'number' && v.s >= 4 && v.s <= 15) wantSeconds = v.s;
 				if (v.o === 'portrait' || v.o === 'landscape') wantOrientation = v.o;
@@ -4106,6 +4124,7 @@
 				if (v.t === 'clip' || v.t === 'character' || v.t === 'location') wantTarget = v.t;
 				if (typeof v.c === 'string') wantCharacter = v.c;
 				if (typeof v.l === 'string') wantLocation = v.l;
+				if (typeof v.k === 'number' && v.k >= 1 && v.k <= 4) takes = Math.round(v.k);
 			}
 		} catch {
 			/* a preference that will not load is not worth an error */
@@ -5307,14 +5326,24 @@
 										{/if}
 									</div>
 
+									<!-- The button states what it will do. Takes are chosen once, in the
+										 composer, and confirmed here at the moment of spend — a second
+										 control asking the same question is how a card grows a settings
+										 panel. A continuation is always one: take two would need take
+										 one's clip as its reference. -->
+									{@const n = item.shot.continues ? 1 : takes}
 									<div class="mt-5 flex flex-wrap items-center gap-2.5">
 										<button
 											type="button"
 											disabled={shotBusy[item.id]}
 											class="btn btn-primary"
-											onclick={() => renderShot(item.id)}
+											onclick={() => (n > 1 ? renderTakes(item.id, n) : renderShot(item.id))}
 										>
-											{shotBusy[item.id] ? 'starting…' : 'render this'}
+											{shotBusy[item.id]
+												? 'starting…'
+												: n > 1
+													? `render ${n} takes`
+													: 'render this'}
 										</button>
 										<button
 											type="button"
@@ -5322,24 +5351,7 @@
 											class="cursor-pointer rounded-full px-3 py-2 text-sm text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)] disabled:opacity-40"
 											onclick={() => rewriteShot(item.id)}>write it again</button
 										>
-										<!-- Takes, not offered on a continuation: take two would need take
-											 one's clip as its reference, so a chain is sequential by physics.
-											 The harness runs four at once, and four at once share one warm
-											 container where four in a row pay four cold starts. -->
-										{#if !item.shot.continues}
-											<span class="ml-auto flex items-center gap-1.5">
-												<span class="mr-1 text-xs text-[var(--st-faint)]">takes</span>
-												{#each [2, 3, 4] as n (n)}
-													<button
-														type="button"
-														disabled={shotBusy[item.id]}
-														title="render {n} takes of this at once, followed by the server"
-														class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:opacity-40"
-														onclick={() => renderTakes(item.id, n)}>{n}</button
-													>
-												{/each}
-											</span>
-										{/if}
+
 									</div>
 								{/if}
 							</article>
@@ -5969,7 +5981,11 @@
 										}}
 										class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 text-xs whitespace-nowrap text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
 									>
-										{mode === 'simple' ? 'one clip' : 'full production'}
+										{mode !== 'simple'
+											? 'full production'
+											: takes > 1
+												? `${takes} takes`
+												: 'one clip'}
 										<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
 											<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
 										</svg>
@@ -6266,24 +6282,61 @@
 								role="menu"
 								class="enter absolute bottom-full left-2 z-30 mb-2 w-[17rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
 							>
-								{#each [['simple', 'one clip', 'one shot, about eleven minutes'], ['advanced', 'full production', 'screenplay and cast first, then a multi-scene shoot']] as [val, label, hint] (val)}
+								<!-- One list, one question. Takes sit with the modes because they
+									 answer the same one — what this message makes — and a second
+									 control asking it again in other words is how a composer
+									 becomes a control panel. -->
+								{#each [1, 2, 3, 4] as n (n)}
 									<button
 										type="button"
 										role="menuitemradio"
-										aria-checked={mode === val}
+										aria-checked={mode === 'simple' && takes === n}
 										onclick={() => {
-											setMode(val as 'simple' | 'advanced');
+											setMode('simple');
+											takes = n;
+											saveSetup();
 											shutMenus();
 										}}
 										class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
 									>
-										<span class="w-3.5 shrink-0 text-xs {mode === val ? '' : 'invisible'}">&#10003;</span>
-										<span class="min-w-0">
-											<span class="block">{label}</span>
-											<span class="mt-0.5 block text-xs text-[var(--st-faint)]">{hint}</span>
-										</span>
+										<span
+											class="w-3.5 shrink-0 text-xs {mode === 'simple' && takes === n ? '' : 'invisible'}"
+											>&#10003;</span
+										>
+										<!-- No subtitle on these four.
+											 The first draft gave each one "the same shot, drawn again",
+											 which read as three identical lines stacked on top of each
+											 other — repetition that says nothing the titles have not
+											 already said. The row before them carried "about eleven
+											 minutes", which was measured on the a100 and is now false: the
+											 same clip takes 165s warm. A number in an interface has to be
+											 maintained or removed, and this one had quietly gone stale, so
+											 it is removed rather than replaced with the next number to go
+											 stale. -->
+										<span class="min-w-0">{n === 1 ? 'one clip' : `${n} takes`}</span>
 									</button>
 								{/each}
+								<div class="my-1 h-px bg-[var(--st-line)]"></div>
+								<button
+									type="button"
+									role="menuitemradio"
+									aria-checked={mode === 'advanced'}
+									onclick={() => {
+										setMode('advanced');
+										shutMenus();
+									}}
+									class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+								>
+									<span class="w-3.5 shrink-0 text-xs {mode === 'advanced' ? '' : 'invisible'}"
+										>&#10003;</span
+									>
+									<span class="min-w-0">
+										<span class="block">full production</span>
+										<span class="mt-0.5 block text-xs text-[var(--st-faint)]"
+											>screenplay and cast first, then a multi-scene shoot</span
+										>
+									</span>
+								</button>
 							</div>
 						{/if}
 
