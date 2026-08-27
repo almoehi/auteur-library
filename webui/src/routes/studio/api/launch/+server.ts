@@ -85,7 +85,6 @@ async function openWorkspace(
 	record: { slug: string; title: string; sceneCount: number; pitch?: string; prompt?: string },
 	opts: { planning?: boolean; withLibrary?: boolean; internal?: boolean } = {}
 ): Promise<Response> {
-	const openedAt = Date.now();
 	const planning = opts.planning ?? false;
 	const withLibrary = opts.withLibrary ?? false;
 
@@ -220,16 +219,8 @@ async function openWorkspace(
 	let library: LoadReport | undefined;
 	let refs: RefImportResult | undefined;
 	if (withLibrary) {
-		const t1 = Date.now();
 		library = await loadLibraryInto(workspaceId);
-		const t2 = Date.now();
 		refs = await importStagedRefs(workspaceId);
-		const t3 = Date.now();
-		// Temporary: 61% of the wait for a clip happens before the GPU starts and
-		// nobody has ever seen inside it. Remove once the breakdown is known.
-		console.log(
-			`[phase] ${workspaceId} open=${t1 - openedAt}ms library=${t2 - t1}ms refs=${t3 - t2}ms`
-		);
 	}
 
 	return json({ ok: true, workspaceId, library, refs }, { status: 200 });

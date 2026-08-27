@@ -4857,11 +4857,19 @@
 											<span class="text-[var(--st-text)]">+</span> in the box below.
 										</p>
 									{:else if item.sheet.id}
+										{@const kept = sheets.find((x) => x.id === item.sheet?.id)}
+										<!-- Only claim they are drawing while they are. This said it
+											 unconditionally, so a card whose six views had finished — or
+											 whose render had failed — went on promising them for ever. -->
 										<p class="text-sm text-[var(--st-muted)]">
 											Saved as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
 											Pick {item.sheet.kind === 'character' ? 'them' : 'it'} from
-											<span class="text-[var(--st-text)]">+</span> in the box below — the six views are
-											still drawing.
+											<span class="text-[var(--st-text)]">+</span> in the box below{kept?.sheet?.state ===
+											'rendering'
+												? ' — the six views are still drawing.'
+												: kept?.sheet?.file
+													? ' — the six views are ready on it.'
+													: '.'}
 										</p>
 									{:else}
 										<label class="block text-xs text-[var(--st-faint)]" for="char-name-{item.id}">
