@@ -113,7 +113,20 @@ export const BASE: Lora[] = [
 		file: 'MysticXXX_MMH3-V3.safetensors',
 		url: 'https://civitai.com/api/download/models/3260276?fileId=3143593',
 		sha256: '99307e313784cbea7d9ee2a56ecb8794272f1024737985b824eca8c5c619a0b6',
-		strength: 0.9,
+		/** 0.6, inside the author's band and at the other end of it, because at 0.9
+		 *  this adapter overrules the reference face.
+		 *
+		 *  Measured on one prompt at one seed, the first batch that actually
+		 *  reached the GPU with a character sheet attached: at 0.9 her hair comes
+		 *  out long and loose and the build is fuller than the sheet; at 0.6, same
+		 *  seed and same composition, the hair is up and the build is thin, which
+		 *  is what the sheet shows. The turnaround path already learned this and
+		 *  zeroes the base adapters; the clip path had not.
+		 *
+		 *  It does not cost explicitness — the mid-clip close-up at 0.6 is at least
+		 *  as graphic as at 0.9, which was the risk worth checking before moving
+		 *  it. One pair, so treat it as a direction rather than a constant. */
+		strength: 0.6,
 		/** author: '0.5 - 0.9', runs 0.9 themselves */
 		band: [0.5, 0.9],
 		// Described here as general scene quality until someone asked whether it
