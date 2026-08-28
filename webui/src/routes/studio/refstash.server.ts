@@ -13,7 +13,15 @@
  *  user's own filenames are neither. The extension is kept because it is part of
  *  the basename that has to match, and because a decoder is entitled to it.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	readdirSync,
+	rmSync,
+	statSync,
+	writeFileSync
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { extname, join } from 'node:path';
 
@@ -105,15 +113,33 @@ export function readStashed(slug: string, base: string): Buffer | null {
 
 /** Older runs' copies, dropped once there are more than a handful. The clips
  *  are the product and are cached elsewhere; these are working files. */
-export function pruneStashes(keep = 20): void {
+export function pruneStashes(keep = 20, spare?: string): void {
 	try {
 		if (!existsSync(DIR)) return;
+		// By age, and it has to be: this sorted by NAME, and a run's slug decides
+		// its name. Batch takes are slugged `b-…`, which is first in the alphabet
+		// — so with the directory full, the freshest batch stash was the one this
+		// function deleted, in the same request that had just written it, minutes
+		// before the harness came to fetch the graph that names those files. The
+		// clips then rendered with no character reference at all, which is a
+		// convincing video of the wrong person and no error anywhere.
 		const dirs = readdirSync(DIR, { withFileTypes: true })
 			.filter((d) => d.isDirectory())
-			.map((d) => d.name)
-			.sort();
-		for (const name of dirs.slice(0, Math.max(0, dirs.length - keep))) {
-			rmSync(join(DIR, name), { recursive: true, force: true });
+			.map((d) => {
+				let at = 0;
+				try {
+					at = statSync(join(DIR, d.name)).mtimeMs;
+				} catch {
+					/* unreadable: treat as ancient, it is going anyway */
+				}
+				return { name: d.name, at };
+			})
+			.sort((a, b) => a.at - b.at);
+		// And never the run being launched right now, whatever the count says.
+		const doomed = dirs.slice(0, Math.max(0, dirs.length - keep));
+		for (const d of doomed) {
+			if (spare && d.name === spare) continue;
+			rmSync(join(DIR, d.name), { recursive: true, force: true });
 		}
 	} catch {
 		// Housekeeping is not worth failing a launch over.

@@ -539,7 +539,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				);
 			}
 		}
-		pruneStashes();
+		pruneStashes(20, spec.slug);
 		let directYaml: string;
 		try {
 			directYaml = composeDirectWorkspace(spec, grokKey);
