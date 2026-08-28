@@ -85,7 +85,22 @@ export const BASE: Lora[] = [
 		file: 'PlagueKind-tiddies-realismslider.safetensors',
 		url: 'https://civitai.com/api/download/models/3229050?fileId=3111384',
 		sha256: 'e5c8c275af58663a664ad2922cc10a248bff70b941043375d2c82d9cc55b7030',
-		strength: 1.6,
+		/** 0.5, which is below the author's band on purpose — measured, not guessed.
+		 *
+		 *  Four renders of one prompt at one seed, 1.6 / 1.0 / 0.8 / 0.5: the body
+		 *  the brief asked for (thin, flat) and the anatomy both resolve as this
+		 *  comes down, and the wardrobe is the last thing to survive. At 0.8 the
+		 *  skirt the prompt named five times was simply absent; at 0.5, same seed
+		 *  and same composition, it is there — the only difference between those
+		 *  two frames. Above 1.0 the clips were the ones that got reported as
+		 *  "body parts completely mixed up".
+		 *
+		 *  The band below is the author's, for this slider used alone on stills.
+		 *  We run it under Mystic, LightX2V turbo and two act adapters, which is
+		 *  not what it was rated against — and in that stack it overpowers the
+		 *  prompt rather than adding skin texture. Raise it if skin starts looking
+		 *  plastic; this is one number and it is easy to walk back. */
+		strength: 0.5,
 		/** author: realistic band 1.0-2.0, breaks past 2.0 */
 		band: [1.0, 2.0],
 		use: 'skin texture — pores, freckles, uneven tone',

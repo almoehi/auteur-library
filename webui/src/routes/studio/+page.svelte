@@ -2794,10 +2794,11 @@
 			continues: logRow[c.workspace]?.continuesWorkspace || undefined,
 			at: new Date().toISOString()
 		});
-		if (!filmEverOpened) {
-			filmOpen = true;
-			filmEverOpened = true;
-		}
+		// Always, not just the first time. Adding a clip is the one moment you want
+		// to see what the film now looks like — and the reel is where the order and
+		// the seams are, which is exactly what a new clip changes.
+		filmOpen = true;
+		filmEverOpened = true;
 		void saveFilm();
 	}
 

@@ -53,6 +53,13 @@ Change only:
 Rules:
 - Every version must describe the SAME moment of the SAME action. They are
   angles on one event, not different events.
+- Do NOT place the camera so that it looks along the length of a body from
+  beside or behind someone's head, and do not use extreme foreshortening. That
+  framing is the one the model cannot resolve: it renders a second head and
+  duplicate limbs. Measured on one prompt at one seed, it failed at every
+  adapter strength we tried, while an ordinary side or high angle of the same
+  moment was clean. Keep the camera off to the side, above, or at the level of
+  the action.
 - Do not add or remove beats. Do not change any timestamp.
 - Do not introduce a person, an object or a location that is not already there.
 - Keep any trigger words and adapter tokens exactly as written.
