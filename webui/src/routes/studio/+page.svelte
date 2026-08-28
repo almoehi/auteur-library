@@ -2673,6 +2673,179 @@
 		shutTake();
 	}
 
+	// --- the film -----------------------------------------------------------------
+
+	/** The clips you have decided to keep, in the order they will be cut.
+	 *
+	 *  Server-side, not in the transcript: a transcript is stored per run, so a
+	 *  film living there would vanish the moment you opened another production —
+	 *  which is exactly the thing it must survive. It holds the same
+	 *  (workspace, artifact, file) triple `api/join` already takes, so a clip
+	 *  from any run, of any age, can be added without copying anything. That is
+	 *  also why it works backwards: every clip card in every old conversation
+	 *  already carries those three ids. */
+	interface FilmClip {
+		workspace: string;
+		artifact: string;
+		file: string;
+		title?: string;
+		continues?: string;
+		at: string;
+	}
+	let film = $state<FilmClip[]>([]);
+	/** Open by choice, remembered for the session. The first clip opens it once —
+	 *  so the shelf is discovered rather than explained — and after that it obeys
+	 *  you. */
+	let filmOpen = $state(false);
+	let filmEverOpened = false;
+	let filmBusy = $state(false);
+
+	const filmKey = (c: { workspace: string; artifact: string; file: string }) =>
+		`${c.workspace} ${c.artifact} ${c.file}`;
+	const filmSeconds = $derived(film.reduce((n, c) => n + (logRow[c.workspace]?.seconds || 5), 0));
+
+	function inFilm(a: NonNullable<ChatItem['artifact']> | undefined): boolean {
+		const c = filmPart(a);
+		return !!c && film.some((x) => filmKey(x) === filmKey(c));
+	}
+
+	/** The three ids, or null when the card cannot name them — a joined scene has
+	 *  no artifact id of its own, and neither has anything that arrived before the
+	 *  studio recorded one. Those cannot be cut into a film, and the button is not
+	 *  offered rather than offered and failing. */
+	function filmPart(a: NonNullable<ChatItem['artifact']> | undefined) {
+		const f = a?.files?.[0]?.name;
+		if (!a?.workspace || !a?.id || !f) return null;
+		return { workspace: a.workspace, artifact: a.id, file: f };
+	}
+
+	async function saveFilm() {
+		try {
+			const res = await fetch('/studio/api/film', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ clips: film })
+			});
+			const r = (await res.json()) as { ok?: boolean; clips?: FilmClip[]; error?: string };
+			if (r.ok && r.clips) film = r.clips;
+			else if (r.error) pushError(r.error);
+		} catch (e) {
+			pushError(`the film could not be saved: ${e}`);
+		}
+	}
+
+	function addToFilm(item: ChatItem) {
+		const part = filmPart(item.artifact);
+		if (!part || inFilm(item.artifact)) return;
+		film.push({
+			...part,
+			title: item.artifact?.title || item.text || '',
+			continues: logRow[part.workspace]?.continuesWorkspace || undefined,
+			at: new Date().toISOString()
+		});
+		if (!filmEverOpened) {
+			filmOpen = true;
+			filmEverOpened = true;
+		}
+		void saveFilm();
+	}
+
+	function dropFromFilm(i: number) {
+		film.splice(i, 1);
+		if (!film.length) filmOpen = false;
+		void saveFilm();
+	}
+
+	function moveInFilm(from: number, to: number) {
+		if (from === to || from < 0 || to < 0 || from >= film.length || to >= film.length) return;
+		const [m] = film.splice(from, 1);
+		film.splice(to, 0, m);
+		void saveFilm();
+	}
+
+	/** Two neighbours match only when one continues the other — the workflow
+	 *  starts the second from the first's final frame. Anything else will jump,
+	 *  and the reel marks the seam rather than letting playback be the first
+	 *  place you find out. */
+	function seamJumps(i: number): boolean {
+		if (i <= 0 || i >= film.length) return false;
+		return film[i].continues !== film[i - 1].workspace;
+	}
+
+	/** Assemble what is in the reel. Same endpoint the scene join has always
+	 *  used — it never cared whether the parts were a chain. */
+	async function exportFilm() {
+		if (film.length < 2 || filmBusy) return;
+		filmBusy = true;
+		try {
+			const res = await fetch('/studio/api/join', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ parts: film.map((c) => ({ workspace: c.workspace, artifact: c.artifact, file: c.file })) })
+			});
+			const r = (await res.json()) as {
+				ok?: boolean;
+				error?: string;
+				url?: string;
+				parts?: number;
+				seconds?: number;
+			};
+			if (!r.ok || !r.url) {
+				pushError(r.error || 'the film could not be assembled');
+				return;
+			}
+			pushItem({
+				who: 'studio',
+				kind: 'clips',
+				text: `The film — ${r.parts} clips, ${r.seconds}s.`,
+				artifact: {
+					key: 'film',
+					title: 'The film',
+					taskId: '',
+					files: [{ name: 'film.mp4', url: r.url }],
+					// The last clip's workspace, so continuing the film continues where
+					// it ends — the same rule joinScene already follows.
+					workspace: film[film.length - 1]?.workspace
+				}
+			});
+			persist();
+		} catch (e) {
+			pushError(`the film could not be assembled: ${e}`);
+		} finally {
+			filmBusy = false;
+		}
+	}
+
+	/** Which shot of the film is on screen, or null. Separate from `takesAt`
+	 *  rather than folded into it: the takes viewer exists to choose between
+	 *  drafts and carries the controls for it, while this one is a cut being
+	 *  watched. Sharing the state would mean every control asking which of the
+	 *  two it is in. */
+	let filmAt = $state<number | null>(null);
+	let filmReturn: HTMLElement | null = null;
+
+	function openFilmViewer(i: number, from?: HTMLElement) {
+		if (!film.length) return;
+		filmReturn = from ?? null;
+		filmAt = Math.min(Math.max(0, i), film.length - 1);
+	}
+	function shutFilmViewer() {
+		filmAt = null;
+		filmReturn?.focus();
+		filmReturn = null;
+	}
+	function stepFilm(d: number) {
+		if (filmAt === null || film.length < 2) return;
+		filmAt = (filmAt + d + film.length) % film.length;
+	}
+	/** The clips are separate files, so playing the film means chaining them:
+	 *  when one ends the next begins. Nothing is written to disk until Export —
+	 *  you can watch the cut before paying to assemble it. */
+	function nextShot() {
+		if (filmAt === null) return;
+		if (filmAt < film.length - 1) filmAt += 1;
+	}
+
 	/** Tiles play, silently, and only while they are on screen.
 	 *
 	 *  A take cannot be judged from a poster frame — the takes share the shot,
@@ -4333,6 +4506,17 @@
 		// And any takes still rendering. They run server-side, so this tab simply
 		// has to ask — the same reason the sheet watcher starts unconditionally.
 		watchBatches();
+		// The film is not part of this conversation, so it is not in the snapshot
+		// the restore just replayed. It is asked for once, here, and is the same
+		// film in every production and every browser.
+		void (async () => {
+			try {
+				const r = (await (await fetch('/studio/api/film')).json()) as { clips?: FilmClip[] };
+				if (Array.isArray(r.clips)) film = r.clips;
+			} catch {
+				/* a film that will not load is not a reason to fail the studio */
+			}
+		})();
 
 		// Elapsed time is shown in whole minutes, so a 15s clock is plenty.
 		const clock = setInterval(() => (now = Date.now()), 15_000);
@@ -4586,6 +4770,12 @@
 	 page, so Escape belongs to it and not to menus nobody can see. -->
 <svelte:window
 	onkeydown={(e) => {
+		if (filmAt !== null) {
+			if (e.key === 'Escape') shutFilmViewer();
+			else if (e.key === 'ArrowLeft') stepFilm(-1);
+			else if (e.key === 'ArrowRight') stepFilm(1);
+			return;
+		}
 		if (takesAt) {
 			if (e.key === 'Escape') shutTake();
 			else if (e.key === 'ArrowLeft') stepTake(-1);
@@ -5936,6 +6126,25 @@
 									{@const ci = contInfo(ws)}
 									{@const chain = chainOf(ws)}
 									<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+										<!-- Any clip with its three ids can go into the film, whichever
+											 run made it and however long ago — the card has carried
+											 them all along, which is why this works backwards through
+											 conversations that existed before the film did. -->
+										{#if filmPart(item.artifact)}
+											{#if inFilm(item.artifact)}
+												<span class="flex items-center gap-1.5 text-xs text-[var(--st-muted)]">
+													<span aria-hidden="true">✓</span>
+													<span>in the film</span>
+												</span>
+											{:else}
+												<button
+													type="button"
+													onclick={() => addToFilm(item)}
+													class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+													>add to film</button
+												>
+											{/if}
+										{/if}
 										<button
 											type="button"
 											disabled={!ci.ok}
@@ -6131,7 +6340,97 @@
 					{#if refError}
 						<p class="mb-2 px-2 text-xs text-[var(--st-muted)]">{refError}</p>
 					{/if}
-					<p class="mb-1.5 px-2 text-xs text-[var(--st-faint)]">{composerHint}</p>
+					<!-- The hint line was a full-width row with an empty right half, so the
+						 film costs no height at all. It belongs in this band and not among
+						 the composer's setting chips: there it read as a parameter, which
+						 is not what it is, and nobody looked for it. -->
+					<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3 px-2">
+						<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
+						<span class="flex-1"></span>
+						{#if film.length}
+							<button
+								type="button"
+								aria-expanded={filmOpen}
+								onclick={() => (filmOpen = !filmOpen)}
+								class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs tabular-nums text-[var(--st-text)] transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
+									? 'bg-[var(--st-surface-2)]'
+									: ''}"
+							>
+								<span class="reelmark" aria-hidden="true"></span>
+								<span>{film.length} {film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span>
+								<span class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
+									>⌄</span
+								>
+							</button>
+						{/if}
+					</div>
+
+					{#if film.length && filmOpen}
+						<!-- The reel. Whole clips only — that is the line between a strip and
+							 an editor, and the one that keeps this from becoming a tool you
+							 have to learn. -->
+						<div class="enter mb-2 flex items-center gap-2.5 px-2">
+							<button
+								type="button"
+								aria-label="play the film"
+								onclick={() => openFilmViewer(0)}
+								class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[0.7rem] text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control)]"
+							>
+								▶
+							</button>
+							<div class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5">
+								{#each film as c, i (filmKey(c))}
+									{#if i}
+										<span
+											class="relative w-1.5 shrink-0 self-stretch"
+											aria-hidden="true"
+											class:seam-jump={seamJumps(i)}
+										></span>
+									{/if}
+									<button
+										type="button"
+										aria-label="shot {i + 1}"
+										draggable="true"
+										ondragstart={(e) => e.dataTransfer?.setData('text/plain', String(i))}
+										ondragover={(e) => e.preventDefault()}
+										ondrop={(e) => {
+											e.preventDefault();
+											moveInFilm(Number(e.dataTransfer?.getData('text/plain')), i);
+										}}
+										onclick={(e) => {
+											const r = e.currentTarget.getBoundingClientRect();
+											if (e.clientX > r.right - 22 && e.clientY < r.top + 22) dropFromFilm(i);
+											else openFilmViewer(i);
+										}}
+										class="group relative aspect-video w-[5.4rem] shrink-0 cursor-grab overflow-hidden rounded-lg bg-[var(--st-surface)] active:cursor-grabbing"
+									>
+										<!-- svelte-ignore a11y_media_has_caption -->
+										<video
+											src={fileUrl(c.workspace, c.artifact, c.file)}
+											muted
+											loop
+											playsinline
+											preload="auto"
+											use:looping
+											class="h-full w-full bg-black object-cover"
+										></video>
+										<span
+											class="pointer-events-none absolute top-0.5 right-0.5 flex size-[1.1rem] items-center justify-center rounded-full bg-black/60 text-[0.65rem] text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+											>✕</span
+										>
+									</button>
+								{/each}
+							</div>
+							<button
+								type="button"
+								disabled={film.length < 2 || filmBusy}
+								onclick={exportFilm}
+								class="shrink-0 cursor-pointer rounded-full bg-[var(--st-text)] px-3.5 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-text)]"
+							>
+								{filmBusy ? 'assembling…' : 'Export'}
+							</button>
+						</div>
+					{/if}
 					<!-- `relative` is load-bearing: the add and format menus open upward
 						 from inside the composer and anchor to this box, not to the page. -->
 					<div
@@ -6973,6 +7272,97 @@
 		<div class="hidden w-64 shrink-0 lg:block" aria-hidden="true"></div>
 	{/if}
 
+	<!-- ── the film viewer ────────────────────────────────────────────────────────
+		 Watch the cut before paying to assemble it. One clip at a time, chained on
+		 `ended`, with the reel along the bottom saying where you are. No keep and
+		 no add: nothing here is a draft you are choosing between. -->
+	{#if filmAt !== null && film[filmAt]}
+		{@const shot = film[filmAt]}
+		<div
+			class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/92 px-6 py-12 backdrop-blur-[28px]"
+			role="dialog"
+			aria-modal="true"
+			aria-label="the film"
+		>
+			<button
+				type="button"
+				aria-label="close"
+				onclick={shutFilmViewer}
+				class="absolute top-5 right-5 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/10 text-sm text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20"
+			>
+				✕
+			</button>
+			{#if film.length > 1}
+				<button
+					type="button"
+					aria-label="previous shot"
+					onclick={() => stepFilm(-1)}
+					class="absolute top-1/2 left-6 hidden size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/10 text-xl text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20 sm:flex"
+				>
+					‹
+				</button>
+				<button
+					type="button"
+					aria-label="next shot"
+					onclick={() => stepFilm(1)}
+					class="absolute top-1/2 right-6 hidden size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/10 text-xl text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20 sm:flex"
+				>
+					›
+				</button>
+			{/if}
+
+			<div class="lift stage overflow-hidden rounded-2xl bg-black shadow-[0_24px_70px_rgba(0,0,0,.6)]">
+				{#key filmKey(shot)}
+					<!-- svelte-ignore a11y_media_has_caption -->
+					<video
+						src={fileUrl(shot.workspace, shot.artifact, shot.file)}
+						controls
+						autoplay
+						playsinline
+						preload="auto"
+						onended={nextShot}
+						class="video-with-controls block aspect-video w-full bg-black"
+					></video>
+				{/key}
+			</div>
+
+			<div class="lift stage mt-4 flex flex-wrap items-center gap-2">
+				<span class="text-[13px] font-medium text-[var(--st-text)]">The film</span>
+				<span class="text-xs tabular-nums text-[var(--st-faint)]">
+					shot {filmAt + 1} of {film.length} · {filmSeconds}s
+				</span>
+			</div>
+
+			{#if film.length > 1}
+				<div class="lift stage mt-4 flex justify-center gap-1.5 overflow-x-auto">
+					{#each film as c, i (filmKey(c))}
+						<button
+							type="button"
+							aria-label="shot {i + 1}"
+							aria-current={i === filmAt}
+							onclick={() => (filmAt = i)}
+							class="aspect-video w-[min(16rem,22vw)] min-w-[6rem] shrink-0 cursor-pointer overflow-hidden rounded-lg bg-[var(--st-surface)] transition-opacity {i ===
+							filmAt
+								? 'opacity-100 shadow-[inset_0_0_0_2px_var(--st-text)]'
+								: 'opacity-50 hover:opacity-80'}"
+						>
+							<!-- svelte-ignore a11y_media_has_caption -->
+							<video
+								src={fileUrl(c.workspace, c.artifact, c.file)}
+								muted
+								loop
+								playsinline
+								preload="auto"
+								use:looping
+								class="h-full w-full bg-black object-cover"
+							></video>
+						</button>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	{/if}
+
 	<!-- ── the takes viewer ───────────────────────────────────────────────────────
 		 The room for choosing. The clip is 1024 across in here, which is the width
 		 it was rendered at, so this is the one place it is never resampled — the
@@ -7128,6 +7518,51 @@
 		:global(.st-takes.st-film[data-n='4']) {
 			grid-template-columns: repeat(4, minmax(0, 16rem));
 		}
+	}
+
+	/* Two tiny frames — a reel, at chip scale. */
+	.reelmark {
+		position: relative;
+		width: 0.85rem;
+		height: 0.6rem;
+		display: inline-block;
+	}
+	.reelmark::before,
+	.reelmark::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 0.36rem;
+		border-radius: 2px;
+		background: var(--st-muted);
+	}
+	.reelmark::before {
+		left: 0;
+	}
+	.reelmark::after {
+		right: 0;
+	}
+
+	/* The seam between two shots. A hairline gap where they match, a dotted rule
+	   where they do not — the cut will jump there, and playback should not be the
+	   first place that becomes apparent. */
+	.seam-jump::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 14%;
+		bottom: 14%;
+		width: 1px;
+		background: repeating-linear-gradient(var(--st-faint) 0 2px, transparent 2px 5px);
+	}
+
+	/* The reel scrolls without a bar of its own. */
+	.reel {
+		scrollbar-width: none;
+	}
+	.reel::-webkit-scrollbar {
+		display: none;
 	}
 
 	/* A take still on the GPU. Global, because the class is only ever produced by
