@@ -1468,6 +1468,33 @@
 	 *  is the first control here where one press spends four times. A commitment
 	 *  like that has to be readable without opening anything. */
 	let takes = $state(1);
+	/** How many camera angles the same beat is shot from.
+	 *
+	 *  A second axis, not a second mode: every message makes `takes × angles`
+	 *  clips, and "one clip" is simply 1 × 1. Both end the same way — you look at
+	 *  what came back and carry one forward — and they differ only in what varies
+	 *  between them, the seed or the camera.
+	 *
+	 *  The product is capped at MAX_AT_ONCE because that is the harness's
+	 *  RENDER_PARALLELISM: every allowed combination is one warm batch of about
+	 *  210 seconds. Without the cap 3 × 3 is nine renders in three waves, and the
+	 *  thing this app promises about speed quietly stops being true. */
+	let angles = $state(1);
+	const MAX_AT_ONCE = 4;
+	const atOnce = $derived(takes * angles);
+	/** What the next message will make, in the fewest words that are still true.
+	 *  With one axis raised the beat is named; with both, only the total is —
+	 *  "2 camera angles, 2 versions each" on a chip is a recipe, and the chip's
+	 *  job is the size of the commitment. The breakdown is one tap away. */
+	const batchLabel = $derived(
+		atOnce === 1
+			? 'one clip'
+			: angles === 1
+				? `${takes} versions`
+				: takes === 1
+					? `${angles} camera angles`
+					: `${atOnce} clips`
+	);
 
 	function shutMenus() {
 		addOpen = false;
@@ -1490,7 +1517,8 @@
 					// Not persisted for a while, which made it the one composer setting
 					// that silently reset — and the one whose reset costs money in the
 					// wrong direction is worth writing down.
-					k: takes
+					k: takes,
+					kk: angles
 				})
 			);
 		} catch {
@@ -2334,17 +2362,38 @@
 	 *  The card is marked launched exactly as a single render marks it, because it
 	 *  has been: the beat is spent, and offering "render this" underneath four
 	 *  takes of it already running is how somebody pays for a fifth by accident. */
-	async function renderTakes(itemId: string, takes: number) {
+	async function renderBatch(itemId: string, takes: number, angles: number) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.shot || item.shot.launched || shotBusy[itemId] || item.shot.continues) return;
 		shotBusy[itemId] = true;
 		try {
 			const shot = item.shot;
+
+			// Angles are written before anything is launched, from the prompt on the
+			// card rather than from the request behind it. By now that prompt has
+			// been read and possibly edited; sending the request back to the writer
+			// would produce different scenes, and sending it the prompt produces
+			// different views of one.
+			let variants: string[] = [];
+			if (angles > 1) {
+				const a = await fetch('/studio/api/angles', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ prompt: shot.prompt, count: angles })
+				});
+				const ar = (await a.json()) as { ok?: boolean; angles?: string[]; error?: string };
+				if (!ar.ok || !ar.angles?.length) {
+					pushError(ar.error || 'the camera angles could not be written');
+					return;
+				}
+				variants = ar.angles;
+			}
 			const res = await fetch('/studio/api/batch', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					takes,
+					...(variants.length ? { variants } : {}),
 					direct: {
 						title: (lastRequest || 'Take').slice(0, 60),
 						prompts: [shot.prompt],
@@ -2734,13 +2783,15 @@
 		}
 	}
 
-	function addToFilm(item: ChatItem) {
-		const part = filmPart(item.artifact);
-		if (!part || inFilm(item.artifact)) return;
+	/** Add a clip the film by its three ids. The card path and the viewer path
+	 *  both end here — the film has never cared where a clip came from, only
+	 *  that it can be found. */
+	function addClipToFilm(c: { workspace: string; artifact: string; file: string }, title: string) {
+		if (film.some((x) => filmKey(x) === filmKey(c))) return;
 		film.push({
-			...part,
-			title: item.artifact?.title || item.text || '',
-			continues: logRow[part.workspace]?.continuesWorkspace || undefined,
+			...c,
+			title,
+			continues: logRow[c.workspace]?.continuesWorkspace || undefined,
 			at: new Date().toISOString()
 		});
 		if (!filmEverOpened) {
@@ -2748,6 +2799,12 @@
 			filmEverOpened = true;
 		}
 		void saveFilm();
+	}
+
+	function addToFilm(item: ChatItem) {
+		const part = filmPart(item.artifact);
+		if (!part) return;
+		addClipToFilm(part, item.artifact?.title || item.text || '');
 	}
 
 	function dropFromFilm(i: number) {
@@ -4440,6 +4497,7 @@
 					c?: string;
 					l?: string;
 					k?: number;
+					kk?: number;
 				};
 				if (typeof v.s === 'number' && v.s >= 4 && v.s <= 15) wantSeconds = v.s;
 				if (v.o === 'portrait' || v.o === 'landscape') wantOrientation = v.o;
@@ -4448,6 +4506,8 @@
 				if (typeof v.c === 'string') wantCharacter = v.c;
 				if (typeof v.l === 'string') wantLocation = v.l;
 				if (typeof v.k === 'number' && v.k >= 1 && v.k <= 4) takes = Math.round(v.k);
+				if (typeof v.kk === 'number' && v.kk >= 1 && v.kk <= 4) angles = Math.round(v.kk);
+				if (takes * angles > 4) angles = 1;
 			}
 		} catch {
 			/* a preference that will not load is not worth an error */
@@ -5739,23 +5799,28 @@
 										{/if}
 									</div>
 
-									<!-- The button states what it will do. Takes are chosen once, in the
-										 composer, and confirmed here at the moment of spend — a second
-										 control asking the same question is how a card grows a settings
-										 panel. A continuation is always one: take two would need take
-										 one's clip as its reference. -->
-									{@const n = item.shot.continues ? 1 : takes}
+									<!-- The button states what it will do. How many clips is chosen
+										 once, in the composer, and confirmed here at the moment of
+										 spend — a second control asking the same question is how a card
+										 grows a settings panel. A continuation is always one: a second
+										 version would need the first one's clip as its reference, and a
+										 second camera angle on a shot that continues another would
+										 break the join it exists to make. -->
+									{@const n = item.shot.continues ? 1 : atOnce}
 									<div class="mt-5 flex flex-wrap items-center gap-2.5">
 										<button
 											type="button"
 											disabled={shotBusy[item.id]}
 											class="btn btn-primary"
-											onclick={() => (n > 1 ? renderTakes(item.id, n) : renderShot(item.id))}
+											onclick={() =>
+												n > 1
+													? renderBatch(item.id, item.shot?.continues ? 1 : takes, item.shot?.continues ? 1 : angles)
+													: renderShot(item.id)}
 										>
 											{shotBusy[item.id]
 												? 'starting…'
 												: n > 1
-													? `render ${n} takes`
+													? `render ${batchLabel}`
 													: 'render this'}
 										</button>
 										<button
@@ -5996,13 +6061,11 @@
 							<div class="enter">
 								<p class="text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
 									{#if live}
-										{t.runs.length} takes of this beat, rendering together.
+										{t.runs.length} clips of this shot, rendering together.
 									{:else if done.length}
 										{done.length}
-										{done.length === 1 ? 'take' : 'takes'} of this beat.
+										{done.length === 1 ? 'clip' : 'clips'} of this shot.
 										<span class="text-[var(--st-faint)]">Press one to look properly.</span>
-									{:else}
-										None of the takes finished.
 									{/if}
 								</p>
 
@@ -6042,9 +6105,14 @@
 									{/if}
 								</div>
 
+								{#if !live && !done.length}
+									<p class="text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+										None of them finished.
+									</p>
+								{/if}
 								{#each gone as g (g.slug)}
 									<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
-										Take {g.index} — {g.error || 'no reason given'}
+										Clip {g.index} — {g.error || 'no reason given'}
 									</p>
 								{/each}
 							</div>
@@ -6585,11 +6653,7 @@
 										}}
 										class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 text-xs whitespace-nowrap text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
 									>
-										{mode !== 'simple'
-											? 'full production'
-											: takes > 1
-												? `${takes} takes`
-												: 'one clip'}
+										{mode !== 'simple' ? 'full production' : batchLabel}
 										<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
 											<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
 										</svg>
@@ -6884,42 +6948,82 @@
 						{#if modeOpen}
 							<div
 								role="menu"
-								class="enter absolute bottom-full left-2 z-30 mb-2 w-[17rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+								class="enter absolute bottom-full left-2 z-30 mb-2 w-[19.5rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
 							>
-								<!-- One list, one question. Takes sit with the modes because they
-									 answer the same one — what this message makes — and a second
-									 control asking it again in other words is how a composer
-									 becomes a control panel. -->
-								{#each [1, 2, 3, 4] as n (n)}
-									<button
-										type="button"
-										role="menuitemradio"
-										aria-checked={mode === 'simple' && takes === n}
-										onclick={() => {
-											setMode('simple');
-											takes = n;
-											saveSetup();
-											shutMenus();
-										}}
-										class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+								<!-- One list, one question — what this message makes. Two axes on
+									 it rather than two modes: versions vary the draw, angles vary
+									 the camera, and every message makes the product of the two.
+									 "one clip" is 1 x 1 rather than a special case.
+
+									 No subtitles on the two rows. The titles carry it, a popover
+									 menu is not a settings list, and beside a count they wrapped to
+									 two lines each — which is the clutter this menu has already
+									 been cleaned of twice. -->
+								<button
+									type="button"
+									role="menuitemradio"
+									aria-checked={mode === 'simple' && atOnce === 1}
+									onclick={() => {
+										setMode('simple');
+										takes = 1;
+										angles = 1;
+										saveSetup();
+										shutMenus();
+									}}
+									class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+								>
+									<span class="w-3.5 shrink-0 text-xs {mode === 'simple' && atOnce === 1 ? '' : 'invisible'}"
+										>&#10003;</span
+									>
+									<span class="min-w-0">one clip</span>
+								</button>
+
+								{#each [{ id: 'versions', label: 'versions' }, { id: 'angles', label: 'camera angles' }] as axis (axis.id)}
+									{@const mine = axis.id === 'versions' ? takes : angles}
+									{@const other = axis.id === 'versions' ? angles : takes}
+									<div
+										class="flex min-h-[2.75rem] w-full items-center gap-2.5 rounded-xl px-3 text-sm"
 									>
 										<span
-											class="w-3.5 shrink-0 text-xs {mode === 'simple' && takes === n ? '' : 'invisible'}"
+											class="w-3.5 shrink-0 text-xs {mode === 'simple' && mine > 1 ? '' : 'invisible'}"
 											>&#10003;</span
 										>
-										<!-- No subtitle on these four.
-											 The first draft gave each one "the same shot, drawn again",
-											 which read as three identical lines stacked on top of each
-											 other — repetition that says nothing the titles have not
-											 already said. The row before them carried "about eleven
-											 minutes", which was measured on the a100 and is now false: the
-											 same clip takes 165s warm. A number in an interface has to be
-											 maintained or removed, and this one had quietly gone stale, so
-											 it is removed rather than replaced with the next number to go
-											 stale. -->
-										<span class="min-w-0">{n === 1 ? 'one clip' : `${n} takes`}</span>
-									</button>
+										<span class="min-w-0 flex-1 whitespace-nowrap">{axis.label}</span>
+										<span class="flex shrink-0 gap-0.5">
+											{#each [1, 2, 3, 4] as n (n)}
+												{@const over = n * other > MAX_AT_ONCE}
+												<button
+													type="button"
+													role="menuitemradio"
+													aria-checked={mode === 'simple' && mine === n}
+													aria-disabled={over}
+													onclick={() => {
+														if (over) return;
+														setMode('simple');
+														if (axis.id === 'versions') takes = n;
+														else angles = n;
+														saveSetup();
+													}}
+													class="flex size-[1.55rem] items-center justify-center rounded-lg text-xs font-medium tabular-nums transition-colors {mode ===
+														'simple' && mine === n
+														? 'bg-[var(--st-text)] text-black'
+														: over
+															? 'cursor-default text-[var(--st-faint)] opacity-25'
+															: 'cursor-pointer text-[var(--st-faint)] hover:bg-white/10 hover:text-[var(--st-text)]'}"
+													>{n}</button
+												>
+											{/each}
+										</span>
+									</div>
 								{/each}
+
+								{#if mode === 'simple' && takes > 1 && angles > 1}
+									<!-- Only when they actually multiply. Saying "3 clips" under a
+										 row that already reads "3" is noise. -->
+									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs tabular-nums text-[var(--st-faint)]">
+										{atOnce} clips — {angles} angles, {takes} versions of each
+									</p>
+								{/if}
 								<div class="my-1 h-px bg-[var(--st-line)]"></div>
 								<button
 									type="button"
@@ -7457,6 +7561,21 @@
 						>
 							use this take
 						</button>
+					{/if}
+					{#if run.clip}
+						{@const already = film.some((x) => filmKey(x) === filmKey(run.clip!))}
+						{#if already}
+							<span class="flex items-center gap-1.5 text-xs text-[var(--st-faint)]">
+								<span aria-hidden="true">✓</span><span>in the film</span>
+							</span>
+						{:else}
+							<button
+								type="button"
+								onclick={() => addClipToFilm(run.clip!, `Take ${run.index}`)}
+								class="cursor-pointer rounded-full bg-white/10 px-3.5 py-1.5 text-xs text-[var(--st-text)] transition-colors hover:bg-white/20"
+								>add to film</button
+							>
+						{/if}
 					{/if}
 				</div>
 

@@ -101,7 +101,7 @@ export const GET: RequestHandler = async () => {
 };
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
-	let body: { direct?: Record<string, unknown>; takes?: unknown };
+	let body: { direct?: Record<string, unknown>; takes?: unknown; variants?: unknown };
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -110,13 +110,33 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	const spec = body.direct;
 	if (!spec || typeof spec !== 'object') throw error(400, 'Missing direct spec');
 	const asked = Math.round(Number(body.takes));
-	const takes = Number.isFinite(asked) ? Math.min(MAX_TAKES, Math.max(2, asked)) : 2;
+	const takes = Number.isFinite(asked) ? Math.min(MAX_TAKES, Math.max(1, asked)) : 2;
+
+	/** One prompt per camera angle, or none — in which case every run shoots the
+	 *  prompt already in the spec and the only thing separating them is the seed.
+	 *  The two multiply: three angles at two versions each is six clips, and the
+	 *  caller is responsible for not asking for more than the harness runs at
+	 *  once. */
+	const variants = (Array.isArray(body.variants) ? body.variants : [])
+		.filter((v): v is string => typeof v === 'string' && !!v.trim());
+	const angles: (string | null)[] = variants.length ? variants : [null];
+	const total = angles.length * takes;
+	if (total > MAX_TAKES) {
+		return json(
+			{ ok: false, error: `that is ${total} clips at once, and ${MAX_TAKES} is the most that render together` },
+			{ status: 200 }
+		);
+	}
 
 	const batch = `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 	const runs: BatchRun[] = [];
 	const started: BatchRun[] = [];
 
-	for (let i = 0; i < takes; i++) {
+	for (let i = 0; i < total; i++) {
+		// Angle-major, so takes 1 and 2 are two versions of the first angle rather
+		// than one of each — the strip then reads as groups, in the order the
+		// angles were written.
+		const angle = angles[Math.floor(i / takes)];
 		// A slug and a seed per take. The seed is what makes them different takes
 		// rather than the same clip four times; the slug is what keeps each one a
 		// separate workspace, and so a separate row everywhere else.
@@ -127,7 +147,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			const res = await fetch('/studio/api/launch', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ stage: 'direct', direct: { ...spec, slug, seed } })
+				body: JSON.stringify({
+					stage: 'direct',
+					direct: { ...spec, slug, seed, ...(angle ? { prompts: [angle] } : {}) }
+				})
 			});
 			const r = (await res.json()) as { ok?: boolean; workspaceId?: string; error?: string };
 			if (!r.ok || !r.workspaceId) {
