@@ -72,6 +72,24 @@ export async function lastFrame(clipPath: string): Promise<Uint8Array> {
 	}
 }
 
+/** How long a clip runs, in seconds.
+ *
+ *  Read out of ffmpeg's own banner rather than ffprobe, which is not installed
+ *  on this machine. Zero when the line cannot be found, and every caller treats
+ *  that as "no idea" and falls back — computing an offset from a wrong duration
+ *  is worse than not computing one.
+ */
+export async function durationOf(clipPath: string): Promise<number> {
+	let text = '';
+	try {
+		text = (await ffmpeg(['-hide_banner', '-i', clipPath])).stderr;
+	} catch (e) {
+		text = (e as { stderr?: string }).stderr ?? '';
+	}
+	const d = /Duration:\s(\d+):(\d\d):(\d\d\.\d+)/.exec(text);
+	return d ? Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]) : 0;
+}
+
 /** One frame from inside a clip, as PNG bytes.
  *
  *  For continuing a clip that was shot without a kept character or a kept
@@ -94,16 +112,8 @@ export async function frameAt(clipPath: string, at: number): Promise<Uint8Array>
 	const dir = mkdtempSync(join(tmpdir(), 'auteur-frame-'));
 	try {
 		const out = join(dir, 'frame.png');
-		// Duration from ffmpeg's own report — the same trick shapeOf uses, since
-		// ffprobe is not installed on this machine.
-		let text = '';
-		try {
-			text = (await ffmpeg(['-hide_banner', '-i', clipPath])).stderr;
-		} catch (e) {
-			text = (e as { stderr?: string }).stderr ?? '';
-		}
-		const d = /Duration:\s(\d+):(\d\d):(\d\d\.\d+)/.exec(text);
-		const seconds = d ? Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]) : 0;
+		// Duration from ffmpeg's own report — ffprobe is not installed here.
+		const seconds = await durationOf(clipPath);
 		// Held off both ends: the first frames of a generated clip are often the
 		// model settling, and the last one belongs to the seam.
 		const t = seconds > 0 ? Math.max(0.1, Math.min(seconds - 0.2, seconds * at)) : 0.5;

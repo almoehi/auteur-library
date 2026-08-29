@@ -1844,6 +1844,35 @@ export const CONT_FPS = DIRECT_FPS;
  *  same card — measured at roughly twice a direct clip, 32-35¢ against 14-17¢. */
 export const CONT_TIMEOUT_SEC = 2400;
 
+/** Whether the seam is anchored as a keyframe as well as described.
+ *
+ *  Off, and measured rather than assumed. The mechanism is real and the wiring
+ *  works — H3KeyframeInject ships in the node pack nodes.lock already pins, the
+ *  render completes, and the anchor demonstrably takes hold: three anchored runs
+ *  produced a first frame within 0.4 units of each other while differing in
+ *  adapters and in how much of the prior clip they read, where two runs of the
+ *  identical un-anchored configuration differed by twice that many times over.
+ *  It pins. It just pins to the wrong place.
+ *
+ *  Measured against the prior clip's final frame, as a multiple of the ordinary
+ *  frame-to-frame change inside that clip (a genuinely continuous cut scores
+ *  0.9x, so 1x is the floor):
+ *
+ *      un-anchored   9.3  11.4  21.6  22.3  37.5
+ *      anchored     12.2  13.2  13.2
+ *
+ *  Tighter, but nowhere near the floor, and no better on average than a good
+ *  un-anchored draw. The reason is known and is not ours: at the ComfyUI this
+ *  deployment pins (v0.32.0, 2026-08-11) a frame-0 anchor is placed at the text
+ *  origin while the target timeline begins after the reference span, so the
+ *  latent lands displaced by the whole of it. Upstream fixed exactly that on
+ *  2026-08-13, two days later, in e01fb4c56b — the commit that also added
+ *  MiniMaxH3AddGuide. Flip this to true after the compute image moves past it
+ *  and measure again; the expectation is the floor, not a small improvement.
+ */
+const SEAM_ANCHOR = false;
+
+
 export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = ''): string {
 	if (!spec || typeof spec !== 'object') throw new Error('spec is missing');
 	if (typeof spec.slug !== 'string' || !SLUG_RE.test(spec.slug)) throw new Error('bad slug');
@@ -1871,7 +1900,13 @@ export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = '
 
 	const origin = spec.studioOrigin || 'http://host.docker.internal:5290';
 	const base = BASE.map((l) => ({ key: l.key, strength: spec.baseLoras?.[l.key] ?? l.strength }));
-	const sel = formatPicks([...base, ...(spec.loras ?? [])]) || 'base';
+	// `pin-1` rides in the same segment as the adapters, beside `ref-<n>` on the
+	// clip side. The bundle is built per workspace and the seam anchor is a node
+	// that must not exist on a free start, so the flag has to reach the builder,
+	// and this is the only channel it has.
+	const sel =
+		(formatPicks([...base, ...(spec.loras ?? [])]) || 'base') +
+		(SEAM_ANCHOR && spec.pinned !== false ? ',pin-1' : '');
 
 	return `version: "1.0"
 kind: Workspace

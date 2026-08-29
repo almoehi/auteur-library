@@ -31,7 +31,7 @@ import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { modelBlock, stack, writeLoraStack } from '../../../../bundle.server';
-import { parseBaseOverrides, parsePicks } from '../../../../loras';
+import { parseBaseOverrides, parsePicks, parsePinSeam } from '../../../../loras';
 import { CONT_FPS } from '../../../../compose';
 
 const REPO =
@@ -67,7 +67,10 @@ const N = {
 	videoDecode: '139',
 	createVideo: '150',
 	saveVideo: '176',
-	resolution: '157'
+	resolution: '157',
+	videoVae: '144',
+	frames: '156',
+	seamRef: '187'
 } as const;
 
 /** Ids we add. Named rather than numbered so a reader can tell at a glance which
@@ -92,7 +95,8 @@ const OUR = {
 	width: 'wh_width',
 	height: 'wh_height',
 	seed: 'our_seed',
-	rife: 'our_rife'
+	rife: 'our_rife',
+	seam: 'our_seam'
 } as const;
 
 type Node = { class_type?: string; inputs?: Record<string, unknown> };
@@ -340,16 +344,93 @@ function fitOurOutputShape(graph: Graph): void {
 	// is a bigger change than leaving one idle.
 }
 
+/** The seam, nailed to the frame it continues from.
+ *
+ *  A continuation already carries the prior clip's final frame — it goes up as
+ *  ref_picture_3 and the brief names it <Picture 3> as "the frame the new clip
+ *  starts from". That is a description, and the model is free to read it as
+ *  guidance: the clips come back close to the frame rather than on it, which is
+ *  the visible cut that gets reported at the join.
+ *
+ *  A keyframe is not a description. It packs the frame's latent into the
+ *  sequence at frame 0 of the target, and the model resumes from it rather than
+ *  near it. The two mechanisms are separate and coexist by design — refs travel
+ *  on `minimax_refs`, anchors on `minimax_keyframes`, and MiniMaxH3's own
+ *  layout walks the reference spans before placing the anchor so the two cannot
+ *  collide.
+ *
+ *  Reading the node ports says the opposite, which is the trap: the node that
+ *  takes first_frame takes no references and the node that takes references
+ *  takes no first_frame. The anchor does not travel on a port. H3KeyframeInject
+ *  puts it on conditioning that already has references, which is exactly this
+ *  case, and it ships in ComfyUI-H3-Multishot — already in nodes.lock, so this
+ *  adds a node rather than a dependency.
+ *
+ *  Only when the seam is pinned. A free start has no frame to resume from, and
+ *  ref_picture_3 is a placeholder there — anchoring frame 0 to a placeholder is
+ *  the one way this could make a clip strictly worse.
+ *
+ *  Everything it needs is already in the graph and taken from the graph rather
+ *  than restated: the frame from the loader the seam reference is on, the frame
+ *  count from the same expression node the reference node's `length` reads, so
+ *  the anchor cannot land on a clip of a different length than the one being
+ *  sampled.
+ */
+function pinSeamAnchor(graph: Graph): void {
+	const guider = graph[N.guider];
+	const from = guider?.inputs?.conditioning;
+	if (!guider?.inputs || !Array.isArray(from) || from[0] !== N.refToVideo) {
+		throw error(
+			502,
+			`node ${N.guider} no longer takes its conditioning from ${N.refToVideo} — the bundle has been restructured`
+		);
+	}
+	// Every node this reads, checked by class as well as id. A renumbered graph
+	// that still answers to the old id would otherwise anchor the clip to
+	// whatever image happened to land on 187.
+	for (const [id, cls] of [
+		[N.seamRef, 'LoadImage'],
+		[N.frames, 'ComfyMathExpression'],
+		[N.videoVae, 'VAELoader']
+	] as const) {
+		if (graph[id]?.class_type !== cls) {
+			throw error(
+				502,
+				`node ${id} is ${graph[id]?.class_type ?? 'missing'}, expected ${cls} — the bundle has been restructured`
+			);
+		}
+	}
+
+	graph[OUR.seam] = {
+		class_type: 'H3KeyframeInject',
+		inputs: {
+			conditioning: [N.refToVideo, 0],
+			vae: [N.videoVae, 0],
+			start_image: [N.seamRef, 0],
+			width: [OUR.width, 0],
+			height: [OUR.height, 0],
+			// Slot 1 of the expression node, which is the aligned frame count the
+			// reference node itself is given. The node re-aligns what it is handed
+			// and aligning an aligned count changes nothing, so this stays right
+			// even if the expression is edited.
+			length: [N.frames, 1]
+		}
+	};
+	guider.inputs.conditioning = [OUR.seam, 0];
+}
+
 async function fetchBundle(file: 'workflow.json' | 'workflow.yaml'): Promise<string> {
 	const res = await fetch(`${REPO}/${BUNDLE}/${file}`, { signal: AbortSignal.timeout(30_000) });
 	if (!res.ok) throw error(502, `the continuation bundle answered ${res.status} for ${file}`);
 	return await res.text();
 }
 
-async function buildJson(entries: ReturnType<typeof stack>): Promise<string> {
+async function buildJson(entries: ReturnType<typeof stack>, pinned: boolean): Promise<string> {
 	const graph = JSON.parse(await fetchBundle('workflow.json')) as Graph;
 	fitOurModelPath(graph, entries);
+	// Before the anchor, which reads the width and height nodes this creates.
 	fitOurOutputShape(graph);
+	if (pinned) pinSeamAnchor(graph);
 	return JSON.stringify(graph, null, 2);
 }
 
@@ -512,7 +593,9 @@ export const GET: RequestHandler = async ({ params }) => {
 	const file = params.file ?? '';
 
 	if (file === 'workflow.json') {
-		return text(await buildJson(entries), { headers: { 'content-type': 'application/json' } });
+		return text(await buildJson(entries, parsePinSeam(params.sel ?? '')), {
+			headers: { 'content-type': 'application/json' }
+		});
 	}
 	if (file === 'workflow.yaml' || file === 'workflow.yml') {
 		return text(await buildYaml(entries), { headers: { 'content-type': 'text/yaml' } });

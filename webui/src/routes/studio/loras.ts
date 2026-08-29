@@ -381,6 +381,19 @@ export function parseRunSlug(seg: string): string {
 	return '';
 }
 
+/** Whether this continuation is pinned to the prior clip's final frame.
+ *
+ *  Carried as `pin-1`, beside `ref-<n>` and for the same reason: the bundle is
+ *  built per workspace, and the seam anchor is a node that must not exist when
+ *  the operator asked for a free start. Absent means the bundle is built exactly
+ *  as it was before the anchor existed.
+ */
+export function parsePinSeam(seg: string): boolean {
+	return decodeURIComponent(seg)
+		.split(',')
+		.some((raw) => raw.trim() === 'pin-1');
+}
+
 export function formatPicks(picks: Pick[]): string {
 	return picks.map((p) => `${p.key}-${p.strength}`).join(',');
 }
