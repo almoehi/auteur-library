@@ -1625,6 +1625,12 @@
 			exact: info.exact
 		};
 		pinSeam = true;
+		// Angles cannot apply to a pinned seam, and a chip left reading "2 camera
+		// angles" with the row inert is a control the user cannot put down. Reset it
+		// here: a continuation starts as one clip per version, and raising it again
+		// is one tap once the seam is free.
+		angles = 1;
+		saveSetup();
 		wantTarget = 'clip';
 		composer?.focus();
 	}
@@ -7261,9 +7267,8 @@
 										 controls with the reason left to be guessed at. And it names
 										 the way out: the same continuation on a free start can have
 										 angles, because nothing is nailed to the last frame then. -->
-									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs leading-relaxed text-[var(--st-faint)]">
-										A continuation from the last frame starts on that frame, so it can only be
-										shot from that camera. Switch it to a free start for angles.
+									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs text-[var(--st-faint)]">
+										Angles need a free start.
 									</p>
 								{:else if mode === 'simple' && takes > 1 && effAngles > 1}
 									<!-- Only when they actually multiply. Saying "3 clips" under a
