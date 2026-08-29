@@ -158,10 +158,15 @@ video:not(.video-with-controls)::-webkit-media-controls-enclosure {
 
 .btn-secondary {
 	background: var(--color-surface-2);
-	color: var(--color-text);
+	/* Muted, not full text. On a filled pill the label was as bright as the
+	 * primary's, so a row of them read as a row of equals and the eye had to
+	 * work out which one mattered. One step down here is what makes the primary
+	 * legible as primary — 6.5:1 against the fill, so nothing is lost to it. */
+	color: var(--color-muted);
 }
 .btn-secondary:hover:not(:disabled) {
 	background: var(--color-border);
+	color: var(--color-text);
 }
 
 .btn-quiet {

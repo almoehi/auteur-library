@@ -5380,7 +5380,7 @@
 														<button
 															type="button"
 															onclick={() => (changeOpen[row.key] = !changeOpen[row.key])}
-															class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 py-2 text-xs font-semibold text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+															class="btn btn-secondary btn-sm"
 														>
 															request a change
 														</button>
@@ -6177,7 +6177,7 @@
 												<button
 													type="button"
 													onclick={() => (docAccepted[art.key] = true)}
-													class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-2 text-xs font-semibold text-[var(--st-text)] transition-colors hover:bg-[var(--st-line)]"
+													class="btn btn-secondary btn-sm"
 												>
 													ok
 												</button>
@@ -6340,7 +6340,7 @@
 												type="button"
 												disabled={!ci.ok}
 												onclick={() => startContinue(item)}
-												class="min-h-8 cursor-pointer rounded-full bg-[var(--st-text)] px-4 text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-30 disabled:hover:bg-[var(--st-text)]"
+												class="btn btn-primary btn-sm"
 												>Continue</button
 											>
 											{#if filmPart(item.artifact)}
@@ -6352,7 +6352,7 @@
 													<button
 														type="button"
 														onclick={() => addToFilm(item)}
-														class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
+														class="btn btn-secondary btn-sm"
 														>Add to film</button
 													>
 												{/if}
@@ -6362,7 +6362,7 @@
 													type="button"
 													disabled={joining[ws]}
 													onclick={() => joinScene(ws)}
-													class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40"
+													class="btn btn-secondary btn-sm"
 													>{joining[ws] ? 'Joining…' : `The whole scene · ${chain.length}`}</button
 												>
 											{/if}
@@ -6370,7 +6370,7 @@
 												<button
 													type="button"
 													onclick={(e) => openTake(item.id, others[0].index, e.currentTarget)}
-													class="min-h-8 cursor-pointer px-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+													class="btn btn-quiet btn-sm"
 													>{others.length === 1 ? 'Other take' : `${others.length} other takes`}</button
 												>
 											{/if}
@@ -6382,13 +6382,13 @@
 													<button
 														type="button"
 														onclick={() => rate(ws, 'kept')}
-														class="min-h-8 cursor-pointer px-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+														class="btn btn-quiet btn-sm"
 														>Good</button
 													>
 													<button
 														type="button"
 														onclick={() => rate(ws, 'rejected')}
-														class="min-h-8 cursor-pointer px-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+														class="btn btn-quiet btn-sm"
 														>Not good</button
 													>
 												{:else if v === 'kept'}
@@ -6403,7 +6403,7 @@
 													<button
 														type="button"
 														onclick={() => diagnose(ws)}
-														class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
+														class="btn btn-secondary btn-sm"
 														>Work out why</button
 													>
 												{/if}
