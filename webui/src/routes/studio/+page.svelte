@@ -2650,9 +2650,12 @@
 		batchWatch = setTimeout(tick, 5000);
 	}
 
-	async function renderShot(itemId: string) {
+	/** Returns whether the brief actually reached a GPU. The retry button reads it:
+	 *  a launch that never started should hand the button back, and one that did
+	 *  must not. */
+	async function renderShot(itemId: string): Promise<boolean> {
 		const item = chat.find((c) => c.id === itemId);
-		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return;
+		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return false;
 		shotBusy[itemId] = true;
 		try {
 			if (await launchShot(item.shot)) {
@@ -2666,7 +2669,9 @@
 				// that was already on a GPU. Pressing it would have paid for the same
 				// five seconds twice.
 				persist();
+				return true;
 			}
+			return false;
 		} finally {
 			shotBusy[itemId] = false;
 		}
@@ -2680,11 +2685,29 @@
 	 *  cleared first because renderShot refuses a card that has already been sent,
 	 *  which is the guard that stops a double-spend and has to be stood down
 	 *  deliberately rather than worked around. */
-	async function retryShot(shotItemId: string) {
+	async function retryShot(errorItemId: string, shotItemId: string) {
+		const err = chat.find((c) => c.id === errorItemId);
 		const item = chat.find((c) => c.id === shotItemId);
-		if (!item?.shot || shotBusy[shotItemId]) return;
+		if (!err || !item?.shot || shotBusy[shotItemId] || err.retried) return;
+		// On the card, not in a map beside it.
+		//
+		// A map is component state and a reload empties it, so the button came back
+		// live over a render that was already going — which is what a person
+		// reloading to pick up a fix saw, and it is the same double-spend the guard
+		// was added to stop. The transcript is saved; the press belongs in it.
+		err.retried = true;
+		persist();
+		// Stood down so renderShot will take the card, and put back if it does not.
+		// Leaving it false after a launch that never started loses the retry
+		// altogether: the error card finds its brief by looking for a launched one,
+		// so the button would vanish at exactly the moment it is wanted. Measured,
+		// after breaking it that way.
 		item.shot.launched = false;
-		await renderShot(shotItemId);
+		if (!(await renderShot(shotItemId))) {
+			item.shot.launched = true;
+			err.retried = false;
+			persist();
+		}
 	}
 
 	/** Moving the duration or the frame rewrites the prompt rather than relabelling
@@ -5610,10 +5633,14 @@
 								{#if src}
 									<button
 										type="button"
-										disabled={shotBusy[src.id]}
+										disabled={shotBusy[src.id] || item.retried}
 										class="btn btn-secondary btn-sm mt-3"
-										onclick={() => retryShot(src.id)}
-										>{shotBusy[src.id] ? 'starting…' : 'try it again'}</button
+										onclick={() => retryShot(item.id, src.id)}
+										>{shotBusy[src.id]
+											? 'starting…'
+											: item.retried
+												? 'started again'
+												: 'try it again'}</button
 									>
 								{/if}
 							</div>

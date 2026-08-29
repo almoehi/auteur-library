@@ -213,6 +213,10 @@ export interface ChatItem {
 		 *  line that says what to look at if the clip comes back wrong. */
 		warn?: string[];
 	};
+	/** This error's retry has been pressed. On the item so it survives a reload —
+	 *  a flag beside the transcript emptied on every refresh and handed the button
+	 *  back over a render that was already running. */
+	retried?: boolean;
 	/** a planning document or rendered clip presented in the transcript
 	 *  (kind=artifact, clips). `taskId` is what reset-task needs for a revision;
 	 *  `body` is the fetched text of a planning document, absent for videos. */
