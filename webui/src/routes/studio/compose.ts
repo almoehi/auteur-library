@@ -1791,6 +1791,21 @@ export interface ContinuationSpec {
 	locationId?: string;
 	characterName?: string;
 	locationName?: string;
+	/** The kept character sheet a second time, in a spare reference slot.
+	 *
+	 *  Set only when the character plate is a real sheet. A continuation is
+	 *  conditioned on a generated video, so every link inherits the last one's
+	 *  drift and adds its own — measured over six links, a grey-haired
+	 *  sixty-five-year-old arrived at the far end with a dark brown bob and a
+	 *  younger face, while the words in the brief still said grey. The sheet is
+	 *  the only sharp, un-generated picture in the whole chain, and the workflow
+	 *  offers slots that were sitting empty. A second copy is a second vote.
+	 *
+	 *  Only the character. The location plate would be the same idea and is not
+	 *  safe: the scene can move to another room, and then an old frame is not a
+	 *  sharper version of where they are, it is somewhere else. A person does not
+	 *  change when the room does. */
+	characterAnchorUrl?: string;
 	/** Set when either plate is a frame of the prior clip rather than a kept
 	 *  sheet. The writer is told, because it changes what the pictures mean: a
 	 *  sheet is identity on a grey backdrop with the backdrop explicitly not
@@ -1839,8 +1854,9 @@ export function continuationWorkspaceId(spec: ContinuationSpec): string {
  *  choice: a continuation that samples differently is a different look. */
 export const CONT_STEPS = DIRECT_STEPS;
 export const CONT_FPS = DIRECT_FPS;
-/** Longer than a first-pass render: a continuation carries three references
- *  into the graph, and the extra conditioning costs time on the same card. */
+/** Longer than a first-pass render: a continuation carries a video and up to
+ *  four pictures into the graph, and the extra conditioning costs time on the
+ *  same card — measured at roughly twice a direct clip, 32-35¢ against 14-17¢. */
 export const CONT_TIMEOUT_SEC = 2400;
 
 export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = ''): string {
@@ -1912,7 +1928,7 @@ ${modelsBlock(grokKey)}
       name: "Operator"
       model: grok-fast
       role: "Render operator"
-      objective: "Send the given prompt and the three references to the continuation workflow and save the clip"
+      objective: "Send the given prompt and every listed reference to the continuation workflow and save the clip"
       systemPrompt: >
         You operate a render workflow. You do not write prompts, improve them,
         shorten them, restructure them or comment on them. The prompt arrives
@@ -1923,10 +1939,13 @@ ${modelsBlock(grokKey)}
         duration_seconds set to the seconds the task names. Resolution, fps,
         steps and seed come from the render profile — do not pass your own.
 
-        The task lists three references: prior_clip, character_sheet and
-        environment_plate. Pass each one as an argument of that name, with the
-        URL copied exactly as written — every character, including the whole
-        query string. They are signed links and expire; do not shorten,
+        The task lists the references under "References". Pass every one of them
+        as an argument of the name it is given — prior_clip, character_sheet,
+        environment_plate, ref_picture_3, ref_picture_4 — with the URL copied
+        exactly as written, every character including the whole query string.
+        How many there are varies: a free start has no ref_picture_3, and a clip
+        shot without a kept character has no ref_picture_4. Count the lines, do
+        not assume a number. They are signed links and expire; do not shorten,
         re-encode, split or tidy them, and never invent one.
 
         Then save the returned mp4 to the exact filename the task declares and
@@ -1952,12 +1971,16 @@ ${modelsBlock(grokKey)}
         prior_clip = ${spec.priorClipUrl}
         character_sheet = ${spec.characterUrl}
         environment_plate = ${spec.locationUrl}${spec.pinned === false ? '' : `
-        ref_picture_3 = ${spec.lastFrameUrl}`}
+        ref_picture_3 = ${spec.lastFrameUrl}`}${spec.characterAnchorUrl ? `
+        ref_picture_4 = ${spec.characterAnchorUrl}` : ''}
 
         <Video 1> is the clip being continued.
         <Picture 1> is the character${spec.characterName ? ` ${indentBlock(spec.characterName, 0)}` : ' as they appear in <Video 1>'}.
         <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ' as it appears in <Video 1>'}.${spec.pinned === false ? '' : `
-        <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`}
+        <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`}${spec.characterAnchorUrl ? `
+        <Picture 4> is the character sheet again. Everything else here was made by
+        the model; this was not. Where <Video 1> and <Picture 4> disagree about her
+        face, her hair or her build, <Picture 4> is right.` : ''}
 
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
         shorten, expand, reorder or comment on it.
