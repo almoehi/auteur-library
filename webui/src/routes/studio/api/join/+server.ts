@@ -49,6 +49,12 @@ function ffmpegPath(): string {
 	throw error(500, 'ffmpeg is not installed — a scene cannot be assembled without it');
 }
 
+/** EBU R128, the broadcast target — and the number that took a pair measured 10
+ *  dB apart down to 3. */
+const TARGET_LUFS = -16;
+/** True peak ceiling. Gain is refused past this rather than clipped. */
+const PEAK_CEILING = -1.5;
+
 interface Shape {
 	width: number;
 	height: number;
@@ -132,12 +138,92 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const dir = mkdtempSync(join(tmpdir(), 'auteur-scene-'));
 	try {
+		// Level the clips, but measure them one at a time and re-encode once.
+		//
+		// The model does not control how loud a clip comes out. Measured across ten
+		// of them: 21 dB between the quietest and the loudest, and 10 dB between two
+		// takes of ONE brief that differed only in the camera sentence. Cut those
+		// together and the volume jumps at every seam, which is the most audible
+		// thing wrong with a finished film.
+		//
+		// The obvious build — normalise each clip to its own file, then concatenate
+		// those — is the one to avoid, and it was written first. Every AAC encode
+		// adds priming samples at the head of its stream, and stream-copying N of
+		// them together buries N of those inside the track. Measured on this pair:
+		// video 9.61s against audio 9.70s where the untouched join is 9.55s against
+		// 9.55s. Ninety milliseconds over two clips, accumulating — a second of lip
+		// sync gone by the far end of a twenty-clip film.
+		//
+		// So: analysis only per clip, the concatenation stays a stream copy, and the
+		// audio is encoded exactly once over the finished scene with a gain per
+		// segment. One priming offset, at the very start, where the container's edit
+		// list accounts for it.
+		const gains: number[] = [];
+		for (const p of paths) {
+			let text = '';
+			try {
+				const r = await run(bin, ['-hide_banner', '-i', p, '-af', 'loudnorm=print_format=json', '-f', 'null', '-']);
+				text = r.stderr;
+			} catch (e) {
+				text = (e as { stderr?: string }).stderr ?? '';
+			}
+			// input_i is the integrated loudness in LUFS, input_tp the true peak.
+			const i = Number(/"input_i"\s*:\s*"(-?[\d.]+)"/.exec(text)?.[1]);
+			const tp = Number(/"input_tp"\s*:\s*"(-?[\d.]+)"/.exec(text)?.[1]);
+			// A silent or absent track measures -inf and must not be amplified into
+			// a hiss; leave anything unreadable exactly as it is.
+			if (!Number.isFinite(i) || i < -70) {
+				gains.push(0);
+				continue;
+			}
+			// Held under the ceiling rather than pushed to the target regardless: a
+			// clip whose peaks are already near full scale cannot take the gain its
+			// average asks for without clipping, and a clipped moan is worse than a
+			// quiet one.
+			const wanted = TARGET_LUFS - i;
+			const headroom = Number.isFinite(tp) ? PEAK_CEILING - tp : wanted;
+			gains.push(Math.round(Math.max(-24, Math.min(wanted, headroom, 24)) * 10) / 10);
+		}
+
 		// Absolute paths and `-safe 0`: the list is written by us and points into
 		// the library, which the concat demuxer refuses to trust by default.
 		const list = join(dir, 'parts.txt');
 		writeFileSync(list, paths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join('\n') + '\n', 'utf8');
-		const out = join(dir, 'scene.mp4');
-		await run(bin, ['-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', out]);
+		const cut = join(dir, 'cut.mp4');
+		await run(bin, ['-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', cut]);
+
+		// One gain per stretch of the finished scene, applied in a single pass.
+		// `enable` switches a filter on for a span of the timeline, so a chain of
+		// them is one gain envelope with a step at every seam. The picture is
+		// copied — nothing here is a picture problem.
+		//
+		// Skipped entirely when every clip already sits where it should: the scene
+		// is then exactly what it was before this existed, stream copy and all.
+		let out = cut;
+		if (gains.some((g) => Math.abs(g) >= 0.5)) {
+			const steps: string[] = [];
+			let at = 0;
+			for (const [i, sh] of shapes.entries()) {
+				const to = at + sh.seconds;
+				if (Math.abs(gains[i]) >= 0.1) {
+					steps.push(`volume=${gains[i]}dB:enable='between(t,${at.toFixed(3)},${to.toFixed(3)})'`);
+				}
+				at = to;
+			}
+			// A limiter after the steps, not instead of them: the per-clip ceiling
+			// already keeps each stretch under the true peak, and this only catches
+			// what a seam or a rounding leaves over.
+			steps.push('alimiter=limit=0.95');
+			const levelled = join(dir, 'scene.mp4');
+			await run(bin, [
+				'-y', '-v', 'error', '-i', cut,
+				'-c:v', 'copy',
+				'-af', steps.join(','),
+				'-c:a', 'aac', '-b:a', '160k', '-ar', '32000', '-ac', '2',
+				levelled
+			]);
+			out = levelled;
+		}
 
 		const bytes = new Uint8Array(readFileSync(out));
 		const joined = await shapeOf(bin, out);
