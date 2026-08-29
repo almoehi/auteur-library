@@ -1777,11 +1777,6 @@
 	const chosenLocation = $derived(locations.find((l) => l.id === wantLocation));
 	let sheetBusy = $state<Record<string, boolean>>({});
 
-	/** Which clips have their render settings open, by workspace.
-	 *
-	 *  Per clip rather than one flag for the page: a transcript holds a dozen of
-	 *  these and opening the settings on one is not a statement about the rest. */
-	let specsOpen = $state<Record<string, boolean>>({});
 
 	/** Three voices worth having without writing one.
 	 *
@@ -6346,19 +6341,19 @@
 												disabled={!ci.ok}
 												onclick={() => startContinue(item)}
 												class="min-h-8 cursor-pointer rounded-full bg-[var(--st-text)] px-4 text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-30 disabled:hover:bg-[var(--st-text)]"
-												>continue</button
+												>Continue</button
 											>
 											{#if filmPart(item.artifact)}
 												{#if inFilm(item.artifact)}
 													<span class="flex items-center gap-1.5 px-1 text-xs text-[var(--st-muted)]">
-														<span aria-hidden="true">✓</span><span>in the film</span>
+														<span aria-hidden="true">✓</span><span>In the film</span>
 													</span>
 												{:else}
 													<button
 														type="button"
 														onclick={() => addToFilm(item)}
 														class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
-														>add to film</button
+														>Add to film</button
 													>
 												{/if}
 											{/if}
@@ -6368,7 +6363,7 @@
 													disabled={joining[ws]}
 													onclick={() => joinScene(ws)}
 													class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40"
-													>{joining[ws] ? 'joining…' : `the whole scene · ${chain.length}`}</button
+													>{joining[ws] ? 'Joining…' : `The whole scene · ${chain.length}`}</button
 												>
 											{/if}
 											{#if others.length}
@@ -6376,7 +6371,7 @@
 													type="button"
 													onclick={(e) => openTake(item.id, others[0].index, e.currentTarget)}
 													class="min-h-8 cursor-pointer px-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-													>{others.length === 1 ? 'the other take' : `${others.length} other takes`}</button
+													>{others.length === 1 ? 'Other take' : `${others.length} other takes`}</button
 												>
 											{/if}
 
@@ -6388,28 +6383,28 @@
 														type="button"
 														onclick={() => rate(ws, 'kept')}
 														class="min-h-8 cursor-pointer px-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-														>good</button
+														>Good</button
 													>
 													<button
 														type="button"
 														onclick={() => rate(ws, 'rejected')}
 														class="min-h-8 cursor-pointer px-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-														>not good</button
+														>Not good</button
 													>
 												{:else if v === 'kept'}
-													<span class="px-2 text-xs text-[var(--st-faint)]">noted as good</span>
+													<span class="px-2 text-xs text-[var(--st-faint)]">Noted as good</span>
 												{:else if diagnosing[ws]}
 													<span class="flex items-center gap-2 px-2 text-xs text-[var(--st-faint)]">
 														<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
 														></span>
-														<span>working out the fix</span>
+														<span>Working out the fix</span>
 													</span>
 												{:else if !fix[ws]}
 													<button
 														type="button"
 														onclick={() => diagnose(ws)}
 														class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
-														>work out why</button
+														>Work out why</button
 													>
 												{/if}
 											</span>
@@ -6419,46 +6414,6 @@
 											<p class="text-xs leading-relaxed text-[var(--st-faint)]">{ci.why}</p>
 										{:else if !ci.exact}
 											<p class="text-xs text-[var(--st-faint)]">Continues from a frame of this clip.</p>
-										{/if}
-
-										{#if row}
-											<div class="mt-0.5 border-t border-[var(--st-line)] pt-2">
-												<button
-													type="button"
-													aria-expanded={specsOpen[ws] ?? false}
-													onclick={() => (specsOpen[ws] = !specsOpen[ws])}
-													class="flex min-h-8 cursor-pointer items-center gap-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-												>
-													<span>details</span>
-													<svg
-														viewBox="0 0 10 10"
-														class="size-2.5 shrink-0 transition-transform {specsOpen[ws]
-															? 'rotate-180'
-															: ''}"
-														fill="none"
-														aria-hidden="true"
-													>
-														<path
-															d="M2 4l3 3 3-3"
-															stroke="currentColor"
-															stroke-width="1.4"
-															stroke-linecap="round"
-														/>
-													</svg>
-												</button>
-												{#if specsOpen[ws]}
-													<p class="pt-1 pb-1 text-xs leading-relaxed text-[var(--st-faint)] tabular-nums">
-														{row.seconds}s · {row.width}×{row.height} · {row.fps}fps · {row.steps} steps{row.wallSeconds
-															? ` · ${Math.floor(row.wallSeconds / 60)}m ${row.wallSeconds % 60}s`
-															: ''}
-														<br />
-														{#if row.launched?.length}
-															{row.launched.map((l) => `${loraFor(l.key)?.label ?? l.key} ${l.strength}`).join(' · ')} ·
-														{/if}
-														seed {row.seed}
-													</p>
-												{/if}
-											</div>
 										{/if}
 									</div>
 
