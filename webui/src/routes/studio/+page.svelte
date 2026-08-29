@@ -4901,7 +4901,11 @@
 {/snippet}
 
 {#snippet videoCard(name: string, url: string, caption: string, clipKey = '')}
-	<figure class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
+	<!-- No surface and no rounding of its own. The caller wraps this together with
+	     the action band in one rounded card: the picture and what you can do with
+	     it are one object, and drawing them as two blocks with the page's black
+	     between them said they were not. -->
+	<figure class="contents">
 		<!-- The app-wide CSS in layout.css hides every native media control on
 		     <video> unless the element opts in with .video-with-controls. -->
 		<!-- svelte-ignore a11y_media_has_caption -->
@@ -4915,7 +4919,7 @@
 			onerror={(e) => recoverVideo(e.currentTarget as HTMLVideoElement, url)}
 			class="video-with-controls block aspect-video w-full bg-black"
 		></video>
-		<figcaption class="px-4 py-3 text-sm text-[var(--st-muted)]">{caption || name}</figcaption>
+		<figcaption class="px-4 pt-3 text-sm text-[var(--st-muted)]">{caption || name}</figcaption>
 	</figure>
 {/snippet}
 
@@ -6306,6 +6310,7 @@
 							{@const ws = item.artifact.workspace ?? ''}
 							{@const v = verdict[ws]}
 							<div class="enter">
+								<div class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
 								{#each item.artifact.files as f (f.name)}
 									{@render videoCard(f.name, f.url, item.text ?? item.artifact.title, ws)}
 								{/each}
@@ -6326,7 +6331,6 @@
 								     seed and the adapters are exactly what is needed, so they are one
 								     tap away rather than gone. -->
 								{#if ws}
-									{@const row = logRow[ws]}
 									{@const ci = contInfo(ws)}
 									{@const chain = chainOf(ws)}
 									{@const others =
@@ -6334,7 +6338,7 @@
 											? readyTakes(item.id).filter((r) => r.index !== item.takes?.kept)
 											: []}
 									{@const v = verdict[ws]}
-									<div class="mt-3 flex flex-col gap-2">
+									<div class="flex flex-col gap-2 px-4 pt-3 pb-4">
 										<div class="flex flex-wrap items-center gap-2">
 											<button
 												type="button"
@@ -6416,7 +6420,10 @@
 											<p class="text-xs text-[var(--st-faint)]">Continues from a frame of this clip.</p>
 										{/if}
 									</div>
+								{/if}
+								</div>
 
+								{#if ws}
 									{#if fix[ws]}
 										{@const f = fix[ws]}
 										<div class="mt-2.5 rounded-2xl bg-[var(--st-surface)] p-4">
