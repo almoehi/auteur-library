@@ -1509,15 +1509,6 @@
 	 *  With one axis raised the beat is named; with both, only the total is —
 	 *  "2 camera angles, 2 versions each" on a chip is a recipe, and the chip's
 	 *  job is the size of the commitment. The breakdown is one tap away. */
-	const batchLabel = $derived(
-		atOnce === 1
-			? 'one clip'
-			: angles === 1
-				? `${takes} versions`
-				: takes === 1
-					? `${angles} camera angles`
-					: `${atOnce} clips`
-	);
 
 	function shutMenus() {
 		addOpen = false;
@@ -3151,6 +3142,25 @@
 			fixed: true
 		};
 	});
+
+	const batchLabel = $derived(
+		// A continuation is one clip whatever the chip was left on, and the chip has
+		// to say so. Both branches of the render button already knew this — the card
+		// forces the count to 1 and renderBatch refuses outright — but the composer
+		// went on advertising "2 camera angles" while a single clip was made, which
+		// is the same lie the length and the size chip used to tell before
+		// composerShape. A control that reports a setting the run will ignore is
+		// worse than no control.
+		continuing
+			? 'one clip'
+			: atOnce === 1
+				? 'one clip'
+				: angles === 1
+					? `${takes} versions`
+					: takes === 1
+						? `${angles} camera angles`
+						: `${atOnce} clips`
+	);
 	/** Pinned to the prior clip's last frame, or a free start. On by default: the
 	 *  join is the reason the feature exists, and the looser setting is the one
 	 *  you reach for deliberately. */
@@ -7170,14 +7180,17 @@
 											class="w-3.5 shrink-0 text-xs {mode === 'simple' && mine > 1 ? '' : 'invisible'}"
 											>&#10003;</span
 										>
-										<span class="min-w-0 flex-1 whitespace-nowrap">{axis.label}</span>
+										<span
+											class="min-w-0 flex-1 whitespace-nowrap {continuing ? 'text-[var(--st-faint)]' : ''}"
+											>{axis.label}</span
+										>
 										<span class="flex shrink-0 gap-0.5">
 											{#each [1, 2, 3, 4] as n (n)}
-												{@const over = n * other > MAX_AT_ONCE}
+												{@const over = n * other > MAX_AT_ONCE || !!continuing}
 												<button
 													type="button"
 													role="menuitemradio"
-													aria-checked={mode === 'simple' && mine === n}
+													aria-checked={mode === 'simple' && !continuing && mine === n}
 													aria-disabled={over}
 													onclick={() => {
 														if (over) return;
@@ -7199,7 +7212,16 @@
 									</div>
 								{/each}
 
-								{#if mode === 'simple' && takes > 1 && angles > 1}
+								{#if continuing}
+									<!-- Said once, under both rows, rather than greying two controls
+										 and leaving the reason to be guessed at. The limit is real and
+										 it is not arbitrary: a second angle on a shot whose whole job
+										 is to join onto another one is a cut. -->
+									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs leading-relaxed text-[var(--st-faint)]">
+										A continuation is one clip — a second camera angle would cut the join it
+										exists to make.
+									</p>
+								{:else if mode === 'simple' && takes > 1 && angles > 1}
 									<!-- Only when they actually multiply. Saying "3 clips" under a
 										 row that already reads "3" is noise. -->
 									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs tabular-nums text-[var(--st-faint)]">
