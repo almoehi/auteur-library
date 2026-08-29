@@ -2672,6 +2672,21 @@
 		}
 	}
 
+	/** Send a brief to the GPU again, after a render died on the way.
+	 *
+	 *  The same prompt, a new seed and a new workspace — nothing about the brief
+	 *  is at fault when the harness reports its own infrastructure, so rewriting
+	 *  it would throw away a good one and cost another writer call. `launched` is
+	 *  cleared first because renderShot refuses a card that has already been sent,
+	 *  which is the guard that stops a double-spend and has to be stood down
+	 *  deliberately rather than worked around. */
+	async function retryShot(shotItemId: string) {
+		const item = chat.find((c) => c.id === shotItemId);
+		if (!item?.shot || shotBusy[shotItemId]) return;
+		item.shot.launched = false;
+		await renderShot(shotItemId);
+	}
+
 	/** Moving the duration or the frame rewrites the prompt rather than relabelling
 	 *  it. Both are structural: timestamps are derived from the duration, and the
 	 *  camera language from the shape of the frame. A card that said 6 seconds over
@@ -4057,6 +4072,13 @@
 		for (const t of tasks) {
 			if (DEAD.includes(t.status) && !failedNoted.has(t.id)) {
 				failedNoted.add(t.id);
+				// The card itself offers the retry — see the error branch in the
+				// markup, which looks back for the brief rather than being told about
+				// it here. A render dies on the harness's side more often than on
+				// ours: "render-infra-fatal: invalid-output: timed out" at 340s against
+				// a 2400s budget, on a chain whose previous clip took 657s and was
+				// fine. The answer to that is the same button again, and it used to be
+				// three scrolls up on a card that says "launched".
 				pushError(`A shooting step stalled: ${t.title || t.key}.`);
 			}
 		}
@@ -5284,7 +5306,7 @@
 						? 'flex flex-col justify-center'
 						: ''}"
 				>
-					{#each chat as item (item.id)}
+					{#each chat as item, itemAt (item.id)}
 						{#if superseded[item.id]}
 							<p class="text-xs text-[var(--st-faint)]">
 								earlier version
@@ -5570,11 +5592,30 @@
 								</div>
 							</div>
 						{:else if item.kind === 'error'}
+							<!-- The card that launched the render this error is about, found by
+								 looking back rather than read off the item.
+							     Stored at push time it would only ever appear on errors raised
+							     after this shipped, and the one on screen when it was asked for was
+							     already saved. A rule about what is displayed has to hold for what
+							     is on disk — the same lesson the caption taught an hour earlier. -->
+							{@const stalled = /^A shooting step stalled/.test(item.text ?? '')}
+							{@const src = stalled
+								? [...chat.slice(0, itemAt)].reverse().find((c) => c.kind === 'shot' && c.shot?.launched)
+								: undefined}
 							<div class="enter rounded-2xl bg-[var(--st-surface)] p-4">
 								<p class="text-xs font-semibold text-[#f2d7cd]">
 									<span class="mr-2 rounded-md bg-[#5c2f24] px-2 py-0.5">error</span>
 								</p>
 								<p class="doc mt-2 text-sm leading-relaxed text-[var(--st-muted)]">{item.text}</p>
+								{#if src}
+									<button
+										type="button"
+										disabled={shotBusy[src.id]}
+										class="btn btn-secondary btn-sm mt-3"
+										onclick={() => retryShot(src.id)}
+										>{shotBusy[src.id] ? 'starting…' : 'try it again'}</button
+									>
+								{/if}
 							</div>
 						{:else if item.kind === 'sheet' && item.sheet}
 							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
