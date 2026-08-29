@@ -2835,7 +2835,10 @@
 		if (!item?.takes || !run?.clip) return;
 		const c = run.clip;
 		item.takes.kept = index;
-		item.text = `Take ${index}, kept.`;
+		// No caption. "Take 3, kept." said what the card already showed: the strip
+		// collapses to the one you pressed, so the only picture on screen IS the
+		// one you kept, and a line naming it is a label on a thing with no
+		// alternatives left to distinguish it from.
 		item.artifact = {
 			id: c.artifact,
 			key: run.slug,
@@ -4919,7 +4922,9 @@
 			onerror={(e) => recoverVideo(e.currentTarget as HTMLVideoElement, url)}
 			class="video-with-controls block aspect-video w-full bg-black"
 		></video>
-		<figcaption class="px-4 pt-3 text-sm text-[var(--st-muted)]">{caption || name}</figcaption>
+		{#if caption}
+			<figcaption class="px-4 pt-3 text-sm text-[var(--st-muted)]">{caption}</figcaption>
+		{/if}
 	</figure>
 {/snippet}
 
@@ -6309,10 +6314,19 @@
 						{:else if (item.kind === 'clips' || item.kind === 'takes') && item.artifact}
 							{@const ws = item.artifact.workspace ?? ''}
 							{@const v = verdict[ws]}
+							<!-- A caption only where it says more than the title does. An assembled
+							     thing has a length and a part count worth reading — "The film — 3
+							     clips, 23s." — and a single clip has a name that repeats what the
+							     card already is. Those two used to look the same.
+
+							     Up here with the other consts because {@const} must be a block's
+							     immediate child — this file's own rule, and I had just put it inside
+							     a div. -->
+							{@const said = item.text && item.text !== item.artifact.title ? item.text : ''}
 							<div class="enter">
 								<div class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
 								{#each item.artifact.files as f (f.name)}
-									{@render videoCard(f.name, f.url, item.text ?? item.artifact.title, ws)}
+									{@render videoCard(f.name, f.url, said, ws)}
 								{/each}
 
 								<!-- Everything you can do with a finished clip, in one band.
