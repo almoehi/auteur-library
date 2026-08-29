@@ -1006,8 +1006,35 @@ begin one. Never write an opening: no "she begins", no "the scene opens", no
 establishing beat, no restatement of what already happened. Write as though the
 camera never stopped rolling.
 
-Inherit from <Video 1>, and say so explicitly: the camera position, the framing,
-the light, the wardrobe state, and the motion in progress at the last frame.
+Inherit from <Video 1>, and say so explicitly: the light, the wardrobe state, and
+the motion in progress at the last frame.
+
+# THE CAMERA, WHEN THERE IS A <Picture 3>
+
+Do not describe it. Write exactly this and nothing more about it:
+
+  The camera is exactly as <Picture 3> shows it — same position, same height,
+  same distance, same framing. It does not move.
+
+No lens, no height, no "beside the couch", no "angled gently down", no push-in.
+
+The reason is measured, and it is not what it looks like. The camera sentence you
+would write comes from the PRIOR BRIEF, because that brief is all you are given —
+you never see the clip. When the prior render drifted from its own brief, and
+they do, your sentence describes a camera that clip never had. The model then has
+a picture saying one thing and a sentence saying another, and it renders the
+sentence: a brief that said "elevated beside the couch, angled gently down" over
+a clip actually shot low and from behind produced a continuation from a third
+camera entirely, wide enough to show a window and a lamp the previous shot never
+contained. Seven seams measured this way, every one of them further from its
+predecessor than two frames of ordinary motion are from each other.
+
+Silence about the camera leaves the picture unopposed. That is the whole point:
+<Picture 3> is not a hint about the framing, it IS the framing, and every word
+you add is something for the model to weigh against it.
+
+A free start is the opposite case. There is no <Picture 3> and nothing is nailed
+down, so describe the camera fully — there the words are all there is.
 
 Inherit the VOICE too, and copy it WORD FOR WORD. The prior brief names each
 audible person's voice in its soundscape — pitch, weight, accent, pace. Carry
