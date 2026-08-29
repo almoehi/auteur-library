@@ -1777,6 +1777,12 @@
 	const chosenLocation = $derived(locations.find((l) => l.id === wantLocation));
 	let sheetBusy = $state<Record<string, boolean>>({});
 
+	/** Which clips have their render settings open, by workspace.
+	 *
+	 *  Per clip rather than one flag for the page: a transcript holds a dozen of
+	 *  these and opening the settings on one is not a statement about the rest. */
+	let specsOpen = $state<Record<string, boolean>>({});
+
 	/** Three voices worth having without writing one.
 	 *
 	 *  Physical description only — pitch, weight, accent, pace. Not a mood and
@@ -6309,107 +6315,49 @@
 									{@render videoCard(f.name, f.url, item.text ?? item.artifact.title, ws)}
 								{/each}
 
-								<!-- The only quality signal in the app that a person has to give
-									 on purpose. Everything else is inferred; this is asked. -->
+								<!-- Everything you can do with a finished clip, in one band.
+								     It used to be five: a caption, a line of render settings, "how
+								     was it?", the buttons, and a paragraph. Five stacked rows are a
+								     list, not a hierarchy, and the eye had nowhere to land.
+
+								     One row now. What carries the work forward is filled and first;
+								     the verdict sits at the far end, quiet, because it is asked
+								     rather than inferred and should not stand between you and the
+								     next clip. It is still a real action — "not good" is what starts
+								     the diagnosis, not a survey answer.
+
+								     The render settings go behind a disclosure. Nine times in ten
+								     nobody wants them; the tenth time a clip came back wrong and the
+								     seed and the adapters are exactly what is needed, so they are one
+								     tap away rather than gone. -->
 								{#if ws}
 									{@const row = logRow[ws]}
-									<!-- What it was actually made with. Until this line existed the
-										 answer lived in a Docker log, which is where it was read from
-										 the first time anyone asked. -->
-									{#if row}
-										<div
-											class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--st-faint)]"
-										>
-											{#if row.launched?.length}
-												<span class="text-[var(--st-muted)]">
-													{row.launched
-														.map((p) => `${loraFor(p.key)?.label ?? p.key} ${p.strength}`)
-														.join(' · ')}
-												</span>
-											{:else}
-												<span>no adapters beyond the standard pair</span>
-											{/if}
-											<span class="tabular-nums"
-												>{row.steps} steps · {row.width}×{row.height} · {row.fps}fps · {row.seconds}s</span
-											>
-											{#if row.wallSeconds}
-												<span class="tabular-nums"
-													>{Math.floor(row.wallSeconds / 60)}m {row.wallSeconds % 60}s</span
-												>
-											{/if}
-											<span class="tabular-nums opacity-60">seed {row.seed}</span>
-										</div>
-									{/if}
-
-									<div class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-										{#if !v}
-											<span class="text-xs text-[var(--st-faint)]">how was it?</span>
-											<button
-												type="button"
-												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-												onclick={() => rate(ws, 'kept')}>good</button
-											>
-											<button
-												type="button"
-												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-												onclick={() => rate(ws, 'rejected')}>not good</button
-											>
-										{:else if v === 'kept'}
-											<span class="text-xs text-[var(--st-faint)]">noted as good.</span>
-										{:else if diagnosing[ws]}
-											<span class="flex items-center gap-2 text-xs text-[var(--st-faint)]">
-												<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
-												></span>
-												<span>looking at the clip and working out the fix</span>
-											</span>
-										{:else if !fix[ws]}
-											<span class="text-xs text-[var(--st-faint)]">noted.</span>
-											<button
-												type="button"
-												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-												onclick={() => diagnose(ws)}>work out why</button
-											>
-										{/if}
-									</div>
-
-									<!-- What you can do with a finished clip.
-									     One action carries the work forward and the rest are asides,
-									     so they are not four identical pills any more: continuing is
-									     filled and first, the others sit quiet beside it. The old row
-									     gave equal weight to "continue this" and "the other one", and
-									     the second of those did not even say what it was — it opens the
-									     takes you passed over.
-
-									     The note underneath appears only when it is true, and states a
-									     fact rather than warning about one: a continuation built from a
-									     frame of this clip works, and a kept character and location
-									     hold it more exactly. -->
 									{@const ci = contInfo(ws)}
 									{@const chain = chainOf(ws)}
 									{@const others =
 										item.kind === 'takes' && item.takes
 											? readyTakes(item.id).filter((r) => r.index !== item.takes?.kept)
 											: []}
+									{@const v = verdict[ws]}
 									<div class="mt-3 flex flex-col gap-2">
 										<div class="flex flex-wrap items-center gap-2">
 											<button
 												type="button"
 												disabled={!ci.ok}
 												onclick={() => startContinue(item)}
-												class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-1.5 text-xs font-medium text-[var(--st-text)] transition-colors hover:bg-[var(--st-line)] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-surface-2)]"
+												class="min-h-8 cursor-pointer rounded-full bg-[var(--st-text)] px-4 text-xs font-semibold text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:opacity-30 disabled:hover:bg-[var(--st-text)]"
 												>continue</button
 											>
 											{#if filmPart(item.artifact)}
 												{#if inFilm(item.artifact)}
 													<span class="flex items-center gap-1.5 px-1 text-xs text-[var(--st-muted)]">
-														<span aria-hidden="true">✓</span>
-														<span>in the film</span>
+														<span aria-hidden="true">✓</span><span>in the film</span>
 													</span>
 												{:else}
 													<button
 														type="button"
 														onclick={() => addToFilm(item)}
-														class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+														class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
 														>add to film</button
 													>
 												{/if}
@@ -6419,26 +6367,98 @@
 													type="button"
 													disabled={joining[ws]}
 													onclick={() => joinScene(ws)}
-													class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40"
-													>{joining[ws] ? 'joining…' : `join the scene · ${chain.length} clips`}</button
+													class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40"
+													>{joining[ws] ? 'joining…' : `the whole scene · ${chain.length}`}</button
 												>
 											{/if}
 											{#if others.length}
 												<button
 													type="button"
 													onclick={(e) => openTake(item.id, others[0].index, e.currentTarget)}
-													class="cursor-pointer px-1 py-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-													>{others.length === 1 ? 'the take you passed over' : `${others.length} takes you passed over`}</button
+													class="min-h-8 cursor-pointer px-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+													>{others.length === 1 ? 'the other take' : `${others.length} other takes`}</button
 												>
 											{/if}
+
+											<!-- Pushed to the far end. Asked, not inferred, and not on the
+											     path to the next clip. -->
+											<span class="ml-auto flex items-center gap-0.5">
+												{#if !v}
+													<button
+														type="button"
+														onclick={() => rate(ws, 'kept')}
+														class="min-h-8 cursor-pointer px-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+														>good</button
+													>
+													<button
+														type="button"
+														onclick={() => rate(ws, 'rejected')}
+														class="min-h-8 cursor-pointer px-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+														>not good</button
+													>
+												{:else if v === 'kept'}
+													<span class="px-2 text-xs text-[var(--st-faint)]">noted as good</span>
+												{:else if diagnosing[ws]}
+													<span class="flex items-center gap-2 px-2 text-xs text-[var(--st-faint)]">
+														<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+														></span>
+														<span>working out the fix</span>
+													</span>
+												{:else if !fix[ws]}
+													<button
+														type="button"
+														onclick={() => diagnose(ws)}
+														class="min-h-8 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
+														>work out why</button
+													>
+												{/if}
+											</span>
 										</div>
+
 										{#if !ci.ok}
 											<p class="text-xs leading-relaxed text-[var(--st-faint)]">{ci.why}</p>
 										{:else if !ci.exact}
-											<p class="text-xs leading-relaxed text-[var(--st-faint)]">
-												Continues from a frame of this clip. Shot with a character and a location,
-												it holds the face and the room more exactly.
-											</p>
+											<p class="text-xs text-[var(--st-faint)]">Continues from a frame of this clip.</p>
+										{/if}
+
+										{#if row}
+											<div class="mt-0.5 border-t border-[var(--st-line)] pt-2">
+												<button
+													type="button"
+													aria-expanded={specsOpen[ws] ?? false}
+													onclick={() => (specsOpen[ws] = !specsOpen[ws])}
+													class="flex min-h-8 cursor-pointer items-center gap-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+												>
+													<span>details</span>
+													<svg
+														viewBox="0 0 10 10"
+														class="size-2.5 shrink-0 transition-transform {specsOpen[ws]
+															? 'rotate-180'
+															: ''}"
+														fill="none"
+														aria-hidden="true"
+													>
+														<path
+															d="M2 4l3 3 3-3"
+															stroke="currentColor"
+															stroke-width="1.4"
+															stroke-linecap="round"
+														/>
+													</svg>
+												</button>
+												{#if specsOpen[ws]}
+													<p class="pt-1 pb-1 text-xs leading-relaxed text-[var(--st-faint)] tabular-nums">
+														{row.seconds}s · {row.width}×{row.height} · {row.fps}fps · {row.steps} steps{row.wallSeconds
+															? ` · ${Math.floor(row.wallSeconds / 60)}m ${row.wallSeconds % 60}s`
+															: ''}
+														<br />
+														{#if row.launched?.length}
+															{row.launched.map((l) => `${loraFor(l.key)?.label ?? l.key} ${l.strength}`).join(' · ')} ·
+														{/if}
+														seed {row.seed}
+													</p>
+												{/if}
+											</div>
 										{/if}
 									</div>
 
