@@ -100,13 +100,22 @@ export const GET: RequestHandler = async () => {
 };
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
-	let body: { direct?: Record<string, unknown>; takes?: unknown; variants?: unknown };
+	let body: {
+		direct?: Record<string, unknown>;
+		/** A continuation batch. Same two axes, a different stage and a different
+		 *  shape of spec — the continuation workflow takes one `prompt` where a
+		 *  direct render takes `prompts[]`, and its own set of reference inputs. */
+		continuation?: Record<string, unknown>;
+		takes?: unknown;
+		variants?: unknown;
+	};
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
 		throw error(400, 'Body must be JSON');
 	}
-	const spec = body.direct;
+	const cont = body.continuation && typeof body.continuation === 'object' ? body.continuation : null;
+	const spec = cont ?? body.direct;
 	if (!spec || typeof spec !== 'object') throw error(400, 'Missing direct spec');
 	const asked = Math.round(Number(body.takes));
 	const takes = Number.isFinite(asked) ? Math.min(MAX_TAKES, Math.max(1, asked)) : 2;
@@ -146,10 +155,17 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			const res = await fetch('/studio/api/launch', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({
-					stage: 'direct',
-					direct: { ...spec, slug, seed, ...(angle ? { prompts: [angle] } : {}) }
-				})
+				body: JSON.stringify(
+					cont
+						? {
+								stage: 'continue',
+								continuation: { ...spec, slug, seed, ...(angle ? { prompt: angle } : {}) }
+							}
+						: {
+								stage: 'direct',
+								direct: { ...spec, slug, seed, ...(angle ? { prompts: [angle] } : {}) }
+							}
+				)
 			});
 			const r = (await res.json()) as { ok?: boolean; workspaceId?: string; error?: string };
 			if (!r.ok || !r.workspaceId) {

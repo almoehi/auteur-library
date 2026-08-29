@@ -1504,7 +1504,6 @@
 	 *  thing this app promises about speed quietly stops being true. */
 	let angles = $state(1);
 	const MAX_AT_ONCE = 4;
-	const atOnce = $derived(takes * angles);
 	/** What the next message will make, in the fewest words that are still true.
 	 *  With one axis raised the beat is named; with both, only the total is —
 	 *  "2 camera angles, 2 versions each" on a chip is a recipe, and the chip's
@@ -2457,7 +2456,7 @@
 	 *  takes of it already running is how somebody pays for a fifth by accident. */
 	async function renderBatch(itemId: string, takes: number, angles: number) {
 		const item = chat.find((c) => c.id === itemId);
-		if (!item?.shot || item.shot.launched || shotBusy[itemId] || item.shot.continues) return;
+		if (!item?.shot || item.shot.launched || shotBusy[itemId]) return;
 		shotBusy[itemId] = true;
 		try {
 			const shot = item.shot;
@@ -2481,26 +2480,53 @@
 				}
 				variants = ar.angles;
 			}
+			// A continuation batch is the same two axes against a different stage.
+			// Every take continues the SAME prior clip — not the take before it —
+			// which is what makes versions coherent here at all: they are
+			// alternative next stretches of one film, and you keep the one you like.
+			const c = shot.continues;
+			const payload = c
+				? {
+						takes,
+						...(variants.length ? { variants } : {}),
+						continuation: {
+							title: (lastRequest || 'Continuation').slice(0, 60),
+							prompt: shot.prompt,
+							seconds: shot.seconds,
+							...frameFor((shot.resolution as ResKey) ?? wantRes, shot.orientation),
+							loras: shot.loras ?? [],
+							baseLoras: shot.baseLoras ?? {},
+							request: lastRequest,
+							priorWorkspace: c.workspace,
+							priorArtifact: c.artifact,
+							priorFile: c.file,
+							characterId: c.characterId,
+							locationId: c.locationId,
+							pinned: c.pinned !== false,
+							...(sessionSlug ? { sessionSlug } : {})
+						}
+					}
+				: {
+						takes,
+						...(variants.length ? { variants } : {}),
+						direct: {
+							title: (lastRequest || 'Take').slice(0, 60),
+							prompts: [shot.prompt],
+							seconds: shot.seconds,
+							...frameFor((shot.resolution as ResKey) ?? wantRes, shot.orientation),
+							loras: shot.loras ?? [],
+							baseLoras: shot.baseLoras ?? {},
+							wroteLoras: shot.wroteLoras ?? shot.loras ?? [],
+							request: lastRequest,
+							...(sessionSlug ? { sessionSlug } : {}),
+							...(shot.characterId ? { characterId: shot.characterId } : {}),
+							...(shot.locationId ? { locationId: shot.locationId } : {})
+						}
+					};
 			const res = await fetch('/studio/api/batch', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({
-					takes,
-					...(variants.length ? { variants } : {}),
-					direct: {
-						title: (lastRequest || 'Take').slice(0, 60),
-						prompts: [shot.prompt],
-						seconds: shot.seconds,
-						...frameFor((shot.resolution as ResKey) ?? wantRes, shot.orientation),
-						loras: shot.loras ?? [],
-						baseLoras: shot.baseLoras ?? {},
-						wroteLoras: shot.wroteLoras ?? shot.loras ?? [],
-						request: lastRequest,
-						...(sessionSlug ? { sessionSlug } : {}),
-						...(shot.characterId ? { characterId: shot.characterId } : {}),
-						...(shot.locationId ? { locationId: shot.locationId } : {})
-					}
-				})
+				body: JSON.stringify(payload)
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -3114,6 +3140,14 @@
 	 *  cancelling clears it. */
 	let continuing = $state<NonNullable<ChatItem['shot']>['continues'] | null>(null);
 
+	/** Whether the seam is pinned to the prior clip's final frame.
+	 *
+	 *  Up here with `continuing` rather than down by the banner that sets it,
+	 *  because the composer's own chip reads it: a pinned seam rules camera angles
+	 *  out, and a derived declared above the state it reads is the dead zone this
+	 *  file documents at composerShape. */
+	let pinSeam = $state(true);
+
 	/** What the composer is actually about to send, which is not always what the
 	 *  composer is set to.
 	 *
@@ -3143,28 +3177,30 @@
 		};
 	});
 
-	const batchLabel = $derived(
-		// A continuation is one clip whatever the chip was left on, and the chip has
-		// to say so. Both branches of the render button already knew this — the card
-		// forces the count to 1 and renderBatch refuses outright — but the composer
-		// went on advertising "2 camera angles" while a single clip was made, which
-		// is the same lie the length and the size chip used to tell before
-		// composerShape. A control that reports a setting the run will ignore is
-		// worse than no control.
-		continuing
-			? 'one clip'
-			: atOnce === 1
-				? 'one clip'
-				: angles === 1
-					? `${takes} versions`
-					: takes === 1
-						? `${angles} camera angles`
-						: `${atOnce} clips`
-	);
-	/** Pinned to the prior clip's last frame, or a free start. On by default: the
-	 *  join is the reason the feature exists, and the looser setting is the one
-	 *  you reach for deliberately. */
-	let pinSeam = $state(true);
+	/** What a given pair of counts makes, in the fewest words that are still true. */
+	function countLabel(t: number, a: number): string {
+		const n = t * a;
+		if (n === 1) return 'one clip';
+		if (a === 1) return `${t} versions`;
+		if (t === 1) return `${a} camera angles`;
+		return `${n} clips`;
+	}
+
+	/** Camera angles cannot apply to a continuation whose seam is pinned.
+	 *
+	 *  Versions can, and do: every take continues the SAME prior clip, so they are
+	 *  alternative next stretches and you keep one. An angle is different in kind —
+	 *  the pinned seam nails the first instant to the frame the last clip ended on,
+	 *  and a second camera cannot start from that frame. On a free start it is
+	 *  coherent again, which is why this is a condition rather than a ban. */
+	const anglesApply = $derived(!(continuing && pinSeam));
+	const effAngles = $derived(anglesApply ? angles : 1);
+	const effAtOnce = $derived(takes * effAngles);
+	/** What the next message will make. It reports the run, not the setting: the
+	 *  chip used to read "2 camera angles" with a pinned continuation in flight
+	 *  while one clip came back, which is the same lie composerShape was written
+	 *  to stop the length and the size telling. */
+	const batchLabel = $derived(countLabel(takes, effAngles));
 	let joining = $state<Record<string, boolean>>({});
 	/** The character or location the delete button is armed on.
 	 *
@@ -5943,21 +5979,27 @@
 										 version would need the first one's clip as its reference, and a
 										 second camera angle on a shot that continues another would
 										 break the join it exists to make. -->
-									{@const n = item.shot.continues ? 1 : atOnce}
+									<!-- The counts this card will actually spend. Versions apply to a
+										 continuation like any other shot — each take continues the same
+										 prior clip, so they are alternatives you choose between. Angles
+										 do not, when the seam is pinned: the first instant is nailed to
+										 the frame the last clip ended on and a second camera cannot
+										 start there. On a free start they apply again. -->
+									{@const cardAngles =
+										item.shot.continues && item.shot.continues.pinned !== false ? 1 : angles}
+									{@const n = takes * cardAngles}
 									<div class="mt-5 flex flex-wrap items-center gap-2.5">
 										<button
 											type="button"
 											disabled={shotBusy[item.id]}
 											class="btn btn-primary"
 											onclick={() =>
-												n > 1
-													? renderBatch(item.id, item.shot?.continues ? 1 : takes, item.shot?.continues ? 1 : angles)
-													: renderShot(item.id)}
+												n > 1 ? renderBatch(item.id, takes, cardAngles) : renderShot(item.id)}
 										>
 											{shotBusy[item.id]
 												? 'starting…'
 												: n > 1
-													? `render ${batchLabel}`
+													? `render ${countLabel(takes, cardAngles)}`
 													: 'render this'}
 										</button>
 										<button
@@ -7154,7 +7196,7 @@
 								<button
 									type="button"
 									role="menuitemradio"
-									aria-checked={mode === 'simple' && atOnce === 1}
+									aria-checked={mode === 'simple' && effAtOnce === 1}
 									onclick={() => {
 										setMode('simple');
 										takes = 1;
@@ -7164,7 +7206,7 @@
 									}}
 									class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
 								>
-									<span class="w-3.5 shrink-0 text-xs {mode === 'simple' && atOnce === 1 ? '' : 'invisible'}"
+									<span class="w-3.5 shrink-0 text-xs {mode === 'simple' && effAtOnce === 1 ? '' : 'invisible'}"
 										>&#10003;</span
 									>
 									<span class="min-w-0">one clip</span>
@@ -7181,16 +7223,18 @@
 											>&#10003;</span
 										>
 										<span
-											class="min-w-0 flex-1 whitespace-nowrap {continuing ? 'text-[var(--st-faint)]' : ''}"
-											>{axis.label}</span
+											class="min-w-0 flex-1 whitespace-nowrap {axis.id === 'angles' && !anglesApply
+												? 'text-[var(--st-faint)]'
+												: ''}">{axis.label}</span
 										>
 										<span class="flex shrink-0 gap-0.5">
 											{#each [1, 2, 3, 4] as n (n)}
-												{@const over = n * other > MAX_AT_ONCE || !!continuing}
+												{@const off = axis.id === 'angles' && !anglesApply}
+												{@const over = n * other > MAX_AT_ONCE || off}
 												<button
 													type="button"
 													role="menuitemradio"
-													aria-checked={mode === 'simple' && !continuing && mine === n}
+													aria-checked={mode === 'simple' && !off && mine === n}
 													aria-disabled={over}
 													onclick={() => {
 														if (over) return;
@@ -7212,20 +7256,20 @@
 									</div>
 								{/each}
 
-								{#if continuing}
-									<!-- Said once, under both rows, rather than greying two controls
-										 and leaving the reason to be guessed at. The limit is real and
-										 it is not arbitrary: a second angle on a shot whose whole job
-										 is to join onto another one is a cut. -->
+								{#if !anglesApply}
+									<!-- Said once, under the row it applies to, rather than grey
+										 controls with the reason left to be guessed at. And it names
+										 the way out: the same continuation on a free start can have
+										 angles, because nothing is nailed to the last frame then. -->
 									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs leading-relaxed text-[var(--st-faint)]">
-										A continuation is one clip — a second camera angle would cut the join it
-										exists to make.
+										A continuation from the last frame starts on that frame, so it can only be
+										shot from that camera. Switch it to a free start for angles.
 									</p>
-								{:else if mode === 'simple' && takes > 1 && angles > 1}
+								{:else if mode === 'simple' && takes > 1 && effAngles > 1}
 									<!-- Only when they actually multiply. Saying "3 clips" under a
 										 row that already reads "3" is noise. -->
 									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs tabular-nums text-[var(--st-faint)]">
-										{atOnce} clips — {angles} angles, {takes} versions of each
+										{effAtOnce} clips — {effAngles} angles, {takes} versions of each
 									</p>
 								{/if}
 								<div class="my-1 h-px bg-[var(--st-line)]"></div>
