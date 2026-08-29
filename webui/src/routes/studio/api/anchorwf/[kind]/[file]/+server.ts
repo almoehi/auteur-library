@@ -87,9 +87,18 @@ type Kind = keyof typeof KINDS;
  */
 const KEEP = ['10', '20', '21', '22', '25', '26', '27', '28', '29', '75', '80'];
 
-/** Same tier as the sheet, and for the same reason: measured, the card makes no
- *  difference to a render that is almost entirely file reading. */
-const PIN = 'l40s';
+/** Same tier as the sheet.
+ *
+ *  h100 by request, and the measurement says it buys nothing. Six warm previews
+ *  of one description on 2026-08-29, three per card: h100 9.31 / 9.63 / 9.52s,
+ *  l40s 9.48 / 9.55 / 9.21s. Identical inside the noise, because this render is
+ *  almost entirely file reading and the card only matters to the part that is
+ *  not. The cold number is the one that moves — 25.4s on the first h100 run,
+ *  while the models were fetched onto that card's volume.
+ *
+ *  So this line is a cost decision, not a speed one. Put it back to l40s to
+ *  spend less for the same 9.5 seconds. */
+const PIN = 'h100';
 
 const CACHE = new Map<string, { at: number; body: string }>();
 const CACHE_MS = 10 * 60 * 1000;

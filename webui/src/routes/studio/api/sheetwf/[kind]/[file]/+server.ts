@@ -105,7 +105,7 @@ function patchLocation(json: string, outdoor: boolean): string {
  *  something cheaper — it fails at submit with a retryable error and starts a
  *  GPU downgrade ladder. A wrong value here is a slow confusing failure, not a
  *  silent demotion. */
-const PIN = 'l40s';
+const PIN = 'h100';
 
 /** A measurement knob, and nothing else. Set to a number to force the H3 orbit
  *  video's frame count; leave `null` to serve the workflow's own default of 124.
