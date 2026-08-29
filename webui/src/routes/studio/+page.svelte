@@ -1337,7 +1337,13 @@
 			 *  names it rather than inventing a new one for this clip. */
 			voice?: string;
 			location?: string;
-			continues?: { priorPrompt?: string; priorLoras?: Pick[]; pinned?: boolean };
+			continues?: {
+				priorPrompt?: string;
+				priorLoras?: Pick[];
+				pinned?: boolean;
+				/** The two plates are frames of the prior clip, not kept sheets. */
+				platesFromClip?: boolean;
+			};
 		}
 	): Promise<ChatItem['shot'] | null> {
 		const askedAt = Date.now();
@@ -1618,10 +1624,15 @@
 			workspace: ws,
 			artifact: part.artifact,
 			file: part.file,
-			characterId: info.row.characterId!,
-			locationId: info.row.locationId!,
+			// Either may be absent, and that is no longer a refusal: the launch
+			// cuts the missing plate out of the clip. Passed through as undefined
+			// rather than coerced, so the server can tell "none was kept" from
+			// "this one".
+			characterId: info.row.characterId,
+			locationId: info.row.locationId,
 			characterName: info.row.characterName,
-			locationName: info.row.locationName
+			locationName: info.row.locationName,
+			exact: info.exact
 		};
 		pinSeam = true;
 		wantTarget = 'clip';
@@ -1655,7 +1666,15 @@
 			// brief predates the rule and names none.
 			voice: characters.find((x) => x.id === c.characterId)?.voice,
 			location: c.locationName,
-			continues: { priorPrompt: prior?.prompt, priorLoras: prior?.launched, pinned: pinSeam }
+			continues: {
+				priorPrompt: prior?.prompt,
+				priorLoras: prior?.launched,
+				pinned: pinSeam,
+				// So the writer knows what the two plates are. A frame of the scene
+				// and a sheet on a grey backdrop want opposite retention rules, and
+				// getting that backwards throws away the room.
+				platesFromClip: c.exact === false
+			}
 		});
 		if (!shot) return;
 		lastRequest = request;
@@ -3159,39 +3178,32 @@
 		}
 	}
 
-	/** Whether a clip can be continued, and if not, what to do about it.
+	/** Whether a clip can be continued, how exactly, and why not when it cannot.
 	 *
-	 *  The button is shown either way — a control that silently disappears teaches
-	 *  nobody why. The workflow requires a character and a location, so a clip
-	 *  shot without them cannot be extended and the answer has to say so in terms
-	 *  of the next action rather than the missing field. */
-	function contInfo(ws: string): { ok: boolean; why: string; row?: LogRow } {
+	 *  It used to demand a kept character AND a kept location, because the
+	 *  workflow declares a picture in each of its two plate slots as required. But
+	 *  the workflow requires a *picture*, not a *sheet* — and the person and the
+	 *  room are both already in the clip. So a missing plate is cut out of the
+	 *  clip at launch, and the only clip that cannot be continued now is one whose
+	 *  bytes are gone.
+	 *
+	 *  `exact` is the difference that remains and it is worth stating rather than
+	 *  hiding: with both sheets the continuation is anchored to a face the
+	 *  operator approved and a room they chose, and can hold across many clips.
+	 *  From frames it is anchored to one moment of one clip, so whatever drifted
+	 *  there is inherited. */
+	function contInfo(ws: string): { ok: boolean; why: string; exact: boolean; row?: LogRow } {
 		const row = logRow[ws];
 		if (!row) {
 			return {
 				ok: false,
-				why: 'this clip was made before the studio started recording who was in it — shoot a new one with a character and a location to continue it'
+				exact: false,
+				why: 'this clip was made before the studio started recording what it was shot with — it cannot be extended'
 			};
 		}
-		const c = row.characterId && sheets.some((x) => x.id === row.characterId);
-		const l = row.locationId && sheets.some((x) => x.id === row.locationId);
-		if (!row.characterId || !row.locationId) {
-			// Two different histories arrive here and the row cannot tell them apart:
-			// a clip genuinely shot without a character, and a clip shot with one
-			// before the log recorded it. So the wording blames neither — saying
-			// "you should have picked one" to someone who did is worse than vague.
-			return {
-				ok: false,
-				why: 'a continuation needs the character and the location the clip was shot with, and this one does not have them on record — any clip shot with both from now on can be extended'
-			};
-		}
-		if (!c || !l) {
-			return {
-				ok: false,
-				why: 'the character or the location this was shot with has been deleted — a continuation needs both'
-			};
-		}
-		return { ok: true, why: '', row };
+		const c = !!row.characterId && sheets.some((x) => x.id === row.characterId);
+		const l = !!row.locationId && sheets.some((x) => x.id === row.locationId);
+		return { ok: true, why: '', exact: c && l, row };
 	}
 
 	/** The chain this clip belongs to, oldest first.
@@ -6302,69 +6314,73 @@
 										{/if}
 									</div>
 
-									<!-- Continue, and — once there is a chain — the whole scene.
-									     The continue button is shown even where it cannot work: a
-									     control that quietly disappears teaches nobody why, and the
-									     reason is a thing you can act on next time. -->
+									<!-- What you can do with a finished clip.
+									     One action carries the work forward and the rest are asides,
+									     so they are not four identical pills any more: continuing is
+									     filled and first, the others sit quiet beside it. The old row
+									     gave equal weight to "continue this" and "the other one", and
+									     the second of those did not even say what it was — it opens the
+									     takes you passed over.
+
+									     The note underneath appears only when it is true, and states a
+									     fact rather than warning about one: a continuation built from a
+									     frame of this clip works, and a kept character and location
+									     hold it more exactly. -->
 									{@const ci = contInfo(ws)}
 									{@const chain = chainOf(ws)}
-									<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-										<!-- Any clip with its three ids can go into the film, whichever
-											 run made it and however long ago — the card has carried
-											 them all along, which is why this works backwards through
-											 conversations that existed before the film did. -->
-										{#if filmPart(item.artifact)}
-											{#if inFilm(item.artifact)}
-												<span class="flex items-center gap-1.5 text-xs text-[var(--st-muted)]">
-													<span aria-hidden="true">✓</span>
-													<span>in the film</span>
-												</span>
-											{:else}
-												<button
-													type="button"
-													onclick={() => addToFilm(item)}
-													class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-													>add to film</button
-												>
-											{/if}
-										{/if}
-										<button
-											type="button"
-											disabled={!ci.ok}
-											onclick={() => startContinue(item)}
-											class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-surface)] disabled:hover:text-[var(--st-muted)]"
-											>continue this</button
-										>
-										{#if chain.length > 1}
+									{@const others =
+										item.kind === 'takes' && item.takes
+											? readyTakes(item.id).filter((r) => r.index !== item.takes?.kept)
+											: []}
+									<div class="mt-3 flex flex-col gap-2">
+										<div class="flex flex-wrap items-center gap-2">
 											<button
 												type="button"
-												disabled={joining[ws]}
-												onclick={() => joinScene(ws)}
-												class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40"
-												>{joining[ws]
-													? 'joining…'
-													: `the whole scene · ${chain.length} clips`}</button
+												disabled={!ci.ok}
+												onclick={() => startContinue(item)}
+												class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-1.5 text-xs font-medium text-[var(--st-text)] transition-colors hover:bg-[var(--st-line)] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-surface-2)]"
+												>continue</button
 											>
-										{/if}
-										<!-- The takes you passed over. They were rendered and paid for,
-											 and a choice you can walk back is the only kind worth making
-											 quickly — so they stay reachable rather than being cleared
-											 away the moment one is kept. -->
-										{#if item.kind === 'takes' && item.takes}
-											{@const others = readyTakes(item.id).filter(
-												(r) => r.index !== item.takes?.kept
-											)}
+											{#if filmPart(item.artifact)}
+												{#if inFilm(item.artifact)}
+													<span class="flex items-center gap-1.5 px-1 text-xs text-[var(--st-muted)]">
+														<span aria-hidden="true">✓</span>
+														<span>in the film</span>
+													</span>
+												{:else}
+													<button
+														type="button"
+														onclick={() => addToFilm(item)}
+														class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+														>add to film</button
+													>
+												{/if}
+											{/if}
+											{#if chain.length > 1}
+												<button
+													type="button"
+													disabled={joining[ws]}
+													onclick={() => joinScene(ws)}
+													class="cursor-pointer rounded-full bg-[var(--st-surface)] px-3.5 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-40"
+													>{joining[ws] ? 'joining…' : `join the scene · ${chain.length} clips`}</button
+												>
+											{/if}
 											{#if others.length}
 												<button
 													type="button"
 													onclick={(e) => openTake(item.id, others[0].index, e.currentTarget)}
-													class="cursor-pointer py-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-													>the other {others.length === 1 ? 'one' : others.length}</button
+													class="cursor-pointer px-1 py-1.5 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+													>{others.length === 1 ? 'the take you passed over' : `${others.length} takes you passed over`}</button
 												>
 											{/if}
-										{/if}
+										</div>
 										{#if !ci.ok}
-											<span class="text-xs leading-relaxed text-[var(--st-faint)]">{ci.why}</span>
+											<p class="text-xs leading-relaxed text-[var(--st-faint)]">{ci.why}</p>
+										{:else if !ci.exact}
+											<p class="text-xs leading-relaxed text-[var(--st-faint)]">
+												Continues from a frame of this clip. Shot with a character and a location,
+												it holds the face and the room more exactly.
+											</p>
 										{/if}
 									</div>
 

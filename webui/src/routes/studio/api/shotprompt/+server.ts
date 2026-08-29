@@ -214,7 +214,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// different writer — but the same gate, the same catalogue and the same
 	// plumbing, because everything except the instructions is identical.
 	const cont = (payload.continues ?? null) as
-		| { priorPrompt?: string; priorLoras?: Pick[]; pinned?: boolean }
+		| { priorPrompt?: string; priorLoras?: Pick[]; pinned?: boolean; platesFromClip?: boolean }
 		| null;
 	const writerId = cont ? 'continuation_writer' : 'shot_writer';
 	if (cont) {
@@ -236,8 +236,20 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (Number.isFinite(askedSeconds) && askedSeconds >= 4 && askedSeconds <= 15) {
 			pinned.push(`The target duration is ${askedSeconds} seconds.`);
 		}
+		// What the two plates actually are. Without this the writer assumes a
+		// character sheet — a person on a grey backdrop — and writes the retention
+		// rule that goes with one: identity kept, backdrop discarded. Handed a
+		// frame of the scene instead, that instruction throws away the room the
+		// continuation is supposed to stay in.
+		const platePreamble = cont.platesFromClip
+			? ` <Picture 1> and <Picture 2> are FRAMES TAKEN FROM <Video 1> itself, not reference sheets:` +
+				` <Picture 1> shows the person mid-clip and <Picture 2> shows the setting.` +
+				` Retain both fully — the person's identity AND the room, the materials, the light.` +
+				` There is no backdrop to discard, because these are the scene.`
+			: '';
 		pinned.push(
 			`<Video 1> is the clip being continued.` +
+				platePreamble +
 				(character ? ` <Picture 1> is the character ${character}.` : '') +
 				(location ? ` <Picture 2> is the location ${location}.` : '') +
 				(cont.pinned === false

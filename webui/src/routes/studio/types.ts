@@ -186,10 +186,16 @@ export interface ChatItem {
 			workspace: string;
 			artifact: string;
 			file: string;
-			characterId: string;
-			locationId: string;
+			/** Absent where the clip was shot without a kept sheet. The launch then
+			 *  cuts that plate out of the clip itself — the workflow wants a picture
+			 *  in the slot, not specifically a sheet. */
+			characterId?: string;
+			locationId?: string;
 			characterName?: string;
 			locationName?: string;
+			/** Both plates come from kept sheets. False means at least one is a
+			 *  frame of the clip, which still works and holds less precisely. */
+			exact?: boolean;
 			/** Whether the seam is pinned to the prior clip's final frame. Default
 			 *  true. Chosen before the brief is written, so the writer and the
 			 *  render always agree about whether <Picture 3> exists. */

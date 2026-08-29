@@ -72,6 +72,53 @@ export async function lastFrame(clipPath: string): Promise<Uint8Array> {
 	}
 }
 
+/** One frame from inside a clip, as PNG bytes.
+ *
+ *  For continuing a clip that was shot without a kept character or a kept
+ *  location. The continuation workflow declares `character_sheet` and
+ *  `environment_plate` as required inputs, so a clip made with neither could not
+ *  be extended at all — the button sat greyed out on a finished render, which is
+ *  a wall placed exactly where somebody wants to carry on.
+ *
+ *  The person is in the clip and so is the room. A frame of it satisfies the
+ *  port and, for a continuation specifically, may serve better than a sheet
+ *  would: a character sheet is somebody standing on a grey backdrop, while this
+ *  is that person, in that room, in that light, moments before the new clip
+ *  starts.
+ *
+ *  `at` is a fraction of the way through, not a timestamp, because the caller
+ *  knows the shape of the clip and not its duration. Fractions rather than fixed
+ *  seconds so a 5-second clip and a 15-second one are both sampled sensibly.
+ */
+export async function frameAt(clipPath: string, at: number): Promise<Uint8Array> {
+	const dir = mkdtempSync(join(tmpdir(), 'auteur-frame-'));
+	try {
+		const out = join(dir, 'frame.png');
+		// Duration from ffmpeg's own report — the same trick shapeOf uses, since
+		// ffprobe is not installed on this machine.
+		let text = '';
+		try {
+			text = (await ffmpeg(['-hide_banner', '-i', clipPath])).stderr;
+		} catch (e) {
+			text = (e as { stderr?: string }).stderr ?? '';
+		}
+		const d = /Duration:\s(\d+):(\d\d):(\d\d\.\d+)/.exec(text);
+		const seconds = d ? Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]) : 0;
+		// Held off both ends: the first frames of a generated clip are often the
+		// model settling, and the last one belongs to the seam.
+		const t = seconds > 0 ? Math.max(0.1, Math.min(seconds - 0.2, seconds * at)) : 0.5;
+		await ffmpeg(['-y', '-v', 'error', '-ss', t.toFixed(2), '-i', clipPath, '-frames:v', '1', out]);
+		if (!existsSync(out)) throw error(422, 'a frame of that clip could not be read');
+		const bytes = new Uint8Array(readFileSync(out));
+		if (!(bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50)) {
+			throw error(422, 'the extracted frame is not a readable image');
+		}
+		return bytes;
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
 /** Six views of the same person, cut out of a turnaround clip and tiled.
  *
  *  This is how an uploaded photograph gets a character sheet. The sheet

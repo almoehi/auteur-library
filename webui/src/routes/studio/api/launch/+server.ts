@@ -31,7 +31,7 @@ import { listRefs, readRef } from '../../refs.server';
 import { getSheet, readSheet } from '../../sheets.server';
 import { pruneStashes, readStashed, stashRefs } from '../../refstash.server';
 import { cached } from '../../../clips.server';
-import { lastFrame } from '../../ffmpeg.server';
+import { frameAt, lastFrame } from '../../ffmpeg.server';
 import { readFileSync } from 'node:fs';
 import { putObject, s3FromEnv } from '../../s3presign.server';
 import { recordRender } from '../../renders.server';
@@ -340,21 +340,39 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 
 		const character = spec.characterId ? getSheet(spec.characterId) : null;
 		const location = spec.locationId ? getSheet(spec.locationId) : null;
-		const characterBytes = character ? readSheet(character.id) : null;
-		const locationBytes = location ? readSheet(location.id) : null;
-		if (!character || !characterBytes || !location || !locationBytes) {
-			// Both are required inputs. Rendering without one would either refuse at
-			// the tool or, worse, produce a stranger in the wrong room.
-			return json(
-				{
-					ok: false,
-					error: 'a continuation needs both the character and the location it was shot with — one of them is gone'
-				},
-				{ status: 200 }
-			);
+		let characterBytes = character ? readSheet(character.id) : null;
+		let locationBytes = location ? readSheet(location.id) : null;
+
+		// Missing plates come out of the clip being continued.
+		//
+		// The workflow declares character_sheet and environment_plate as required
+		// inputs, so a clip shot without a kept character or a kept location could
+		// not be extended at all — and most quick clips are shot without one. That
+		// made the commonest way to work a dead end, discovered only after the
+		// render was paid for.
+		//
+		// The person is in the clip and so is the room, so a frame of it satisfies
+		// the port with the truth. Two different moments rather than one image
+		// twice: two views of the same scene say more than one repeated, and the
+		// fractions keep both away from the ends — the first frames are the model
+		// settling and the last belongs to the seam.
+		//
+		// It is not as good as a sheet and the card says so. A sheet is a face the
+		// operator approved and can reuse across a whole production; this is one
+		// frame of one clip, so whatever the model got wrong there is what the
+		// continuation inherits.
+		const fromFrame = { character: false, location: false };
+		if (!characterBytes) {
+			characterBytes = Buffer.from(await frameAt(clipPath, 0.45));
+			fromFrame.character = true;
 		}
-		spec.characterName = character.name;
-		spec.locationName = location.name;
+		if (!locationBytes) {
+			locationBytes = Buffer.from(await frameAt(clipPath, 0.15));
+			fromFrame.location = true;
+		}
+		spec.characterName = character?.name;
+		spec.locationName = location?.name;
+		spec.platesFromClip = fromFrame.character || fromFrame.location;
 
 		const s3 = s3FromEnv();
 		if (!s3) {

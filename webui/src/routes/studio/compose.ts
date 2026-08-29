@@ -1782,12 +1782,20 @@ export interface ContinuationSpec {
 	priorArtifact: string;
 	priorFile: string;
 
-	/** The character and the location it was shot with. Both are required by the
-	 *  workflow, and both are ids into the sheet store. */
+	/** The character and the location it was shot with, as ids into the sheet
+	 *  store. The workflow requires a picture in each slot; it does not require
+	 *  that the picture be a sheet. Where one of these is absent the launch cuts
+	 *  a frame out of the clip being continued and sends that instead — see
+	 *  `platesFromClip`. */
 	characterId?: string;
 	locationId?: string;
 	characterName?: string;
 	locationName?: string;
+	/** Set when either plate is a frame of the prior clip rather than a kept
+	 *  sheet. The writer is told, because it changes what the pictures mean: a
+	 *  sheet is identity on a grey backdrop with the backdrop explicitly not
+	 *  retained, while a frame is the scene itself and retaining it is the point. */
+	platesFromClip?: boolean;
 	/** The working session this continuation belongs to — see DirectSpec. */
 	sessionSlug?: string;
 
@@ -1947,8 +1955,8 @@ ${modelsBlock(grokKey)}
         ref_picture_3 = ${spec.lastFrameUrl}`}
 
         <Video 1> is the clip being continued.
-        <Picture 1> is the character${spec.characterName ? ` ${indentBlock(spec.characterName, 0)}` : ''}.
-        <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ''}.${spec.pinned === false ? '' : `
+        <Picture 1> is the character${spec.characterName ? ` ${indentBlock(spec.characterName, 0)}` : ' as they appear in <Video 1>'}.
+        <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ' as it appears in <Video 1>'}.${spec.pinned === false ? '' : `
         <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`}
 
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
