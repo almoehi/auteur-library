@@ -208,6 +208,10 @@ export interface ChatItem {
 		/** The kept location this clip is shot in. */
 		locationId?: string;
 		locationName?: string;
+		/** Structural faults the brief still has after the writer was given one
+		 *  chance to fix them. Never a refusal — the brief renders and this is the
+		 *  line that says what to look at if the clip comes back wrong. */
+		warn?: string[];
 	};
 	/** a planning document or rendered clip presented in the transcript
 	 *  (kind=artifact, clips). `taskId` is what reset-task needs for a revision;

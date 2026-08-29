@@ -1363,13 +1363,17 @@
 			pushError(m?.message || `The prompt could not be written (${res.status}).`);
 			return null;
 		}
-		let r: { ok: boolean; shot?: ChatItem['shot']; error?: string };
+		let r: { ok: boolean; shot?: ChatItem['shot']; warn?: string[]; error?: string };
 		try {
 			r = (await res.json()) as typeof r;
 		} catch {
 			pushError('The prompt writer answered with something this page could not read.');
 			return null;
 		}
+		// Carried onto the shot so the card can say it. The server has already given
+		// the writer one chance to clear these; what is left is worth reading before
+		// pressing render, and worth nothing at all after.
+		if (r.shot && r.warn?.length) r.shot.warn = r.warn;
 		// Snapshot the writer's own choice the moment it arrives. Everything after
 		// this can be edited on the card; this copy is what the edit is measured
 		// against, so it is taken before anyone can touch it.
@@ -6004,6 +6008,16 @@
 									{@const cardAngles =
 										item.shot.continues && item.shot.continues.pinned !== false ? 1 : angles}
 									{@const n = takes * cardAngles}
+									<!-- Anything the check could not get the writer to fix, said once,
+										 directly above the button that spends the money. Not a warning
+										 dialog and not a block: the brief renders, and this is what to
+										 look at if the clip comes back wrong. The way out is already
+										 here — "write it again" is the next control along. -->
+									{#if item.shot.warn?.length}
+										<p class="mt-4 text-xs leading-relaxed text-[var(--st-faint)]">
+											{item.shot.warn.join(' · ')}
+										</p>
+									{/if}
 									<div class="mt-5 flex flex-wrap items-center gap-2.5">
 										<button
 											type="button"
@@ -6021,7 +6035,7 @@
 										<button
 											type="button"
 											disabled={shotBusy[item.id]}
-											class="cursor-pointer rounded-full px-3 py-2 text-sm text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)] disabled:opacity-40"
+											class="btn btn-quiet"
 											onclick={() => rewriteShot(item.id)}>write it again</button
 										>
 

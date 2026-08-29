@@ -25,6 +25,7 @@ import { MODEL_API_NAME, modelFor, textFor } from '../../tunables';
 import { MAX_PICKS, catalogueForWriter, loraFor, type Pick } from '../../loras';
 import { checkRequest } from '../../minors.server';
 import { xaiPost } from '../../xai.server';
+import { checkPrompt } from '../../promptcheck';
 
 
 /** grok-4.5 for the same reason the crew runs on it: 4.6 refuses this material
@@ -302,54 +303,88 @@ export const POST: RequestHandler = async ({ request }) => {
 	const system = parts.join('\n\n---\n\n');
 	const user = pinned.length ? `${want}\n\n---\n\n${pinned.join('\n')}` : want;
 
-	let res: Response;
-	try {
-		res = await xaiPost({
-				model,
-				response_format: { type: 'json_object' },
-				messages: [
-					{ role: 'system', content: system },
-					{ role: 'user', content: user }
-				]
-			}, key, TIMEOUT_MS);
-	} catch (e) {
-		const timedOut = e instanceof Error && e.name === 'TimeoutError';
-		return json({
-			ok: false,
-			error: timedOut
-				? `the prompt writer did not answer within ${TIMEOUT_MS / 1000}s`
-				: `could not reach the prompt writer — ${e}`
-		});
-	}
-
-	const text = await res.text();
-	if (!res.ok) {
-		return json({ ok: false, error: `the prompt writer returned ${res.status}: ${text.slice(0, 300)}` });
-	}
-
-	let content = '';
-	try {
-		content = (JSON.parse(text) as { choices?: { message?: { content?: string } }[] }).choices?.[0]
-			?.message?.content ?? '';
-	} catch {
-		return json({ ok: false, error: 'the prompt writer sent something that was not JSON' });
-	}
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(content);
-	} catch {
-		return json({ ok: false, error: 'the prompt writer sent a reply that was not JSON' });
-	}
-
-	const shot = readReply(parsed);
-	if (!shot) {
+	/** One trip to the writer. Lifted out of the flow it used to sit in so it can
+	 *  be made twice: once for the brief, and once more if the brief comes back
+	 *  with a fault the check can name. */
+	async function ask(extra: string[]): Promise<{ shot: ShotPrompt } | { error: string }> {
+		const all = [...pinned, ...extra];
+		const body = all.length ? `${want}\n\n---\n\n${all.join('\n')}` : want;
+		let res: Response;
+		try {
+			res = await xaiPost({
+					model,
+					response_format: { type: 'json_object' },
+					messages: [
+						{ role: 'system', content: system },
+						{ role: 'user', content: body }
+					]
+				}, key, TIMEOUT_MS);
+		} catch (e) {
+			const timedOut = e instanceof Error && e.name === 'TimeoutError';
+			return {
+				error: timedOut
+					? `the prompt writer did not answer within ${TIMEOUT_MS / 1000}s`
+					: `could not reach the prompt writer — ${e}`
+			};
+		}
+		const text = await res.text();
+		if (!res.ok) return { error: `the prompt writer returned ${res.status}: ${text.slice(0, 300)}` };
+		let content = '';
+		try {
+			content = (JSON.parse(text) as { choices?: { message?: { content?: string } }[] }).choices?.[0]
+				?.message?.content ?? '';
+		} catch {
+			return { error: 'the prompt writer sent something that was not JSON' };
+		}
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(content);
+		} catch {
+			return { error: 'the prompt writer sent a reply that was not JSON' };
+		}
+		const got = readReply(parsed);
 		// The one shape worth naming separately: a refusal comes back as prose in
 		// the prompt field, and "no [Shot 1]" is how it reads from here.
-		return json({
-			ok: false,
-			error: 'the prompt writer did not produce a usable brief — try rephrasing the request'
-		});
+		if (!got) {
+			return { error: 'the prompt writer did not produce a usable brief — try rephrasing the request' };
+		}
+		return { shot: got };
+	}
+
+	let attempt = await ask([]);
+	if ('error' in attempt) return json({ ok: false, error: attempt.error });
+	let shot = attempt.shot;
+
+	// The check, and one retry.
+	//
+	// Structural faults only — a person named but never described, a room given a
+	// subject number, an arrival at a pinned seam — and every one of them has
+	// shipped a wrong clip. They are visible in the text, so finding them costs
+	// nothing and happens before the render is paid for rather than after.
+	//
+	// It sends the brief back rather than warning: the fault is the writer's and
+	// the writer can fix it, so the person waiting does not need to know it
+	// happened. Once, though. A second failure returns the brief anyway with the
+	// fault named on the card — a loop would spend somebody's afternoon proving a
+	// point, and a brief with a flaw in it is still worth more than nothing.
+	const checkOpts = { continuation: !!cont, pinned: cont ? cont.pinned !== false : false };
+	let faults = checkPrompt(shot.prompt ?? '', checkOpts);
+	if (faults.length) {
+		const retry = await ask([
+			`The brief you just wrote has a fault in it. Write it again, fixing this and ` +
+				`changing nothing else about what happens:\n` +
+				faults.map((f) => `- ${f.says}`).join('\n')
+		]);
+		if (!('error' in retry)) {
+			const after = checkPrompt(retry.shot.prompt ?? '', checkOpts);
+			// Kept only if it is actually better. A retry that trades one fault for
+			// two is not a fix, and the first brief was at least the one the writer
+			// meant.
+			if (after.length < faults.length) {
+				shot = retry.shot;
+				faults = after;
+			}
+		}
 	}
 
 	// The pins are settings, not suggestions.
@@ -369,5 +404,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		shot.orientation = payload.orientation;
 	}
 
-	return json({ ok: true, shot });
+	// Anything the retry could not clear travels to the card. Not an error — the
+	// brief is usable and the render is the person's to start; this is the line
+	// that says what to look at if the clip comes back wrong.
+	return json({ ok: true, shot, ...(faults.length ? { warn: faults.map((f) => f.human) } : {}) });
 };
