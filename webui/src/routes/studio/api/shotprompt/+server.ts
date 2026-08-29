@@ -133,6 +133,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		seconds?: unknown;
 		orientation?: unknown;
 		character?: unknown;
+		voice?: unknown;
 		location?: unknown;
 		/** Set when this clip continues another one. Carries what the prior clip
 		 *  was rendered from, so the seam inherits rather than restarts. */
@@ -186,6 +187,18 @@ export const POST: RequestHandler = async ({ request }) => {
 	// same way in the task, so the brief and the graph agree.
 	const character = typeof payload.character === 'string' ? payload.character.trim() : '';
 	const location = typeof payload.location === 'string' ? payload.location.trim() : '';
+	// The kept character's voice, when they have one. Pinned rather than left to
+	// the writer's own invention: the writer is told to name a voice on every
+	// clip, and this is the sentence it must name when the person is somebody the
+	// operator has already heard. Verbatim, because a paraphrase is a different
+	// woman — the model reads the words, not a recording.
+	const voice = typeof payload.voice === 'string' ? payload.voice.trim().slice(0, 240) : '';
+	if (voice) {
+		pinned.push(
+			`The voice is already decided for this person and is not yours to change. ` +
+				`Put this sentence in the soundscape, word for word: "${voice.replace(/"/g, "'")}"`
+		);
+	}
 	const attached: string[] = [];
 	if (character) attached.push(`the character ${character}`);
 	if (location) attached.push(`the location ${location}`);
@@ -210,6 +223,16 @@ export const POST: RequestHandler = async ({ request }) => {
 		// graph binds the character to ref_image_0 and the location to ref_image_1
 		// whatever else is passed.
 		pinned.length = 0;
+		// Re-pinned after the reset above, which exists to drop the clip-shaped
+		// picture numbering. The voice is not picture numbering: a continuation is
+		// the one place where a changed voice is most audible, because the two
+		// clips are meant to play as one unbroken stretch.
+		if (voice) {
+			pinned.push(
+				`The voice is already decided for this person and is not yours to change. ` +
+					`Put this sentence in the soundscape, word for word: "${voice.replace(/"/g, "'")}"`
+			);
+		}
 		if (Number.isFinite(askedSeconds) && askedSeconds >= 4 && askedSeconds <= 15) {
 			pinned.push(`The target duration is ${askedSeconds} seconds.`);
 		}

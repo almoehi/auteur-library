@@ -21,6 +21,7 @@ import {
 	orphanCount,
 	removeSheet,
 	renameSheet,
+	setSheetVoice,
 	type SheetKind
 } from '../../sheets.server';
 
@@ -213,11 +214,19 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 };
 
 export const PATCH: RequestHandler = async ({ request }) => {
-	let body: { id?: unknown; name?: unknown; description?: unknown };
+	let body: { id?: unknown; name?: unknown; description?: unknown; voice?: unknown };
 	try {
 		body = await request.json();
 	} catch {
 		throw error(400, 'Body must be JSON');
+	}
+	// The voice is edited on its own — the control for it sits next to the
+	// character and has nothing to do with renaming, so requiring a name here
+	// would mean every voice edit had to re-send one and could clobber it.
+	if (typeof body.id === 'string' && typeof body.voice === 'string' && body.name === undefined) {
+		const row = setSheetVoice(body.id, body.voice);
+		if (!row) return json({ ok: false, error: 'no such sheet' }, { status: 200 });
+		return json({ ok: true, sheet: row, sheets: listSheets() });
 	}
 	if (typeof body.id !== 'string' || typeof body.name !== 'string') {
 		throw error(400, 'id and name are required');

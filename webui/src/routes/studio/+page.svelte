@@ -1333,6 +1333,9 @@
 			seconds?: number;
 			orientation?: 'portrait' | 'landscape';
 			character?: string;
+			/** The kept character's voice, when they have one. Sent so the writer
+			 *  names it rather than inventing a new one for this clip. */
+			voice?: string;
 			location?: string;
 			continues?: { priorPrompt?: string; priorLoras?: Pick[]; pinned?: boolean };
 		}
@@ -1551,6 +1554,10 @@
 			seconds: wantSeconds,
 			orientation: wantOrientation,
 			character: chosenCharacter?.name,
+			// Carried so the writer names this person's voice rather than inventing
+			// one. Without it every clip is an independent roll and the same woman
+			// comes back sounding like somebody else two shots later.
+			voice: chosenCharacter?.voice,
 			// The description, not the label.
 			//
 			// The writer's only knowledge of the place is this string, and a plate
@@ -1641,6 +1648,12 @@
 			seconds: wantSeconds,
 			orientation: wantOrientation,
 			character: c.characterName,
+			// From the character the clip was shot with, not the composer's current
+			// pick — a continuation is of a particular clip, and the person in it is
+			// whoever was in it. The continuation writer is told to carry the prior
+			// brief's voice sentence across; this pins it for the case where that
+			// brief predates the rule and names none.
+			voice: characters.find((x) => x.id === c.characterId)?.voice,
 			location: c.locationName,
 			continues: { priorPrompt: prior?.prompt, priorLoras: prior?.launched, pinned: pinSeam }
 		});
@@ -1742,6 +1755,47 @@
 	const chosenCharacter = $derived(characters.find((c) => c.id === wantCharacter));
 	const chosenLocation = $derived(locations.find((l) => l.id === wantLocation));
 	let sheetBusy = $state<Record<string, boolean>>({});
+
+	/** Three voices worth having without writing one.
+	 *
+	 *  Physical description only — pitch, weight, accent, pace. Not a mood and
+	 *  not a character trait: the model renders what a microphone would pick up,
+	 *  and "confident" is not a sound. */
+	const VOICE_PRESETS = [
+		{ label: 'low and husky', text: 'a low, warm, slightly husky adult female voice, neutral American accent, unhurried' },
+		{ label: 'bright and young', text: 'a bright, light adult female voice, neutral American accent, quick and forward' },
+		{ label: 'soft and breathy', text: 'a soft, breathy adult female voice, neutral American accent, close and unhurried' }
+	];
+
+	/** The voice being edited.
+	 *
+	 *  A writable derived, not a $state seeded once: a local copy of a derived
+	 *  value stays frozen when the source changes, so switching characters would
+	 *  leave the previous one's sentence in the box and save it onto the wrong
+	 *  person at the next blur. This tracks whoever is chosen and still takes
+	 *  typing. */
+	let voiceDraft = $derived(chosenCharacter?.voice ?? '');
+
+	/** Written on blur, not behind a Save button. There is one field and it is
+	 *  one sentence; a button to confirm a sentence is a button nobody needs. */
+	async function saveVoice() {
+		const c = chosenCharacter;
+		if (!c) return;
+		const next = voiceDraft.trim().slice(0, 240);
+		if (next === (c.voice ?? '')) return;
+		try {
+			const res = await fetch('/studio/api/sheet', {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id: c.id, voice: next })
+			});
+			const r = (await res.json()) as { ok?: boolean; sheets?: StoredSheet[]; error?: string };
+			if (r.ok && r.sheets) sheets = r.sheets;
+			else pushError(r.error || 'the voice could not be saved');
+		} catch (e) {
+			pushError(`the voice could not be saved — ${e}`);
+		}
+	}
 
 	async function loadSheets() {
 		try {
@@ -6969,6 +7023,57 @@
 										{/each}
 									</div>
 								</div>
+
+								<!-- ── how they sound ──────────────────────────────────────
+									 Here rather than on a screen of its own, because the voice
+									 is part of who somebody is and this is where you say who is
+									 in the clip. Only for a character: a room does not speak.
+
+									 It is a description, not a recording — the model reads the
+									 words. The same sentence pulls the same voice back, which is
+									 what makes a two-clip scene sound like one woman instead of
+									 two. Empty is a real answer: each clip then picks its own,
+									 which is what every clip did before this existed. -->
+								{#if pickKind === 'character' && chosenCharacter}
+									<div class="flex flex-col gap-2 border-t border-[var(--st-line)] px-3 py-3">
+										<!-- One line whatever the name is. A character named from its own
+											 description can be sixty characters long, and a label that wraps
+											 to two lines pushes the field it belongs to off the bottom. -->
+										<label class="flex min-w-0 items-baseline gap-1 text-xs text-[var(--st-muted)]" for="voice-field">
+											<span class="shrink-0">How</span>
+											<span class="min-w-0 truncate font-medium text-[var(--st-text)]">{chosenCharacter.name}</span>
+											<span class="shrink-0">sounds</span>
+										</label>
+										<input
+											id="voice-field"
+											type="text"
+											bind:value={voiceDraft}
+											onblur={saveVoice}
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													(e.currentTarget as HTMLInputElement).blur();
+												}
+											}}
+											maxlength="240"
+											placeholder="a low, warm, slightly husky voice, unhurried"
+											class="min-h-9 w-full rounded-lg bg-[var(--st-surface-2)] px-3 text-sm text-[var(--st-text)] ring-1 ring-[var(--st-line)] outline-none placeholder:text-[var(--st-faint)] focus-visible:ring-2 focus-visible:ring-[var(--st-text)]"
+										/>
+										<div class="flex flex-wrap gap-1.5">
+											{#each VOICE_PRESETS as v (v.label)}
+												<button
+													type="button"
+													onclick={() => {
+														voiceDraft = v.text;
+														void saveVoice();
+													}}
+													class="min-h-7 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-2.5 text-[0.7rem] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
+													>{v.label}</button
+												>
+											{/each}
+										</div>
+									</div>
+								{/if}
 							</div>
 						{/if}
 

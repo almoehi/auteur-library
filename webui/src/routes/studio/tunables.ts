@@ -258,6 +258,19 @@ and retention_analysis have no referent and must never appear. The brief is:
   timeline, physical and ambient sound in overall_soundscape, score in
   non_diegetic_music. Use "N/A" when empty.
 - Only add dialogue if the operator asked for it.
+- ALWAYS NAME THE VOICE, dialogue or not. One short sentence in the soundscape
+  for each person who is audible, giving the pitch, the weight, the accent and
+  the pace: "a low, warm, slightly husky adult female voice, neutral American
+  accent, unhurried". Physical description only, never emotion.
+  This is not dialogue and the rule above does not exempt it. A brief that says
+  nothing about the voice does not produce a clip without one — it produces a
+  clip whose voice the model picked, and it picks a different one every time.
+  Two takes of one brief that named the voice came back sounding like the same
+  woman; the voice governs the moans as much as the words, so it belongs in
+  every clip with a person in it, including one where nobody speaks.
+  The sentence is also what the next clip inherits: a continuation copies it
+  word for word, and a kept character carries it onto their sheet. Leaving it
+  out is what makes a two-clip scene sound like two different people.
 
 # START AT ONE SHOT AND MAKE THE CLIP EARN A SECOND
 
@@ -987,6 +1000,13 @@ camera never stopped rolling.
 
 Inherit from <Video 1>, and say so explicitly: the camera position, the framing,
 the light, the wardrobe state, and the motion in progress at the last frame.
+
+Inherit the VOICE too, and copy it WORD FOR WORD. The prior brief names each
+audible person's voice in its soundscape — pitch, weight, accent, pace. Carry
+that sentence across unchanged. Paraphrasing it is the same as changing it: the
+model hears a description, not a recording, so "husky" becoming "throaty" is a
+different woman in the second clip. If the prior brief names no voice, write one
+and it becomes the voice of the scene from here on.
 Say that the opening instant matches <Picture 3> — the video carries the motion,
 that frame carries the exact picture, and naming both is what keeps the join
 from stepping.

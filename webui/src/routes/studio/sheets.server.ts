@@ -85,6 +85,23 @@ export interface Sheet {
 	 *  photograph — and it changes what the library says while that is happening,
 	 *  which is nothing. You attached a picture; you did not ask for a render. */
 	uploaded?: boolean;
+	/** How this person sounds, in one sentence, carried into every clip they are
+	 *  in.
+	 *
+	 *  The face has a sheet; without this the voice had nothing. Each clip is an
+	 *  independent roll, so a brief that says nothing about the voice does not
+	 *  produce a clip without one — it produces a clip whose voice the model
+	 *  chose, and it chooses a different one every time. Two clips, one scene,
+	 *  two women.
+	 *
+	 *  A description rather than a recording, because that is what the model
+	 *  reads: the same sentence pulls the same voice back, measured on one pair
+	 *  and worth re-checking across different scenes. Only meaningful on a
+	 *  character; a room does not speak.
+	 *
+	 *  Nobody types this. It is filled in from the clip the character was kept
+	 *  from, and the field exists for changing it afterwards. */
+	voice?: string;
 	/** The turnaround, absent until one has been asked for. */
 	sheet?: SheetRender;
 }
@@ -284,6 +301,20 @@ export function renameSheet(id: string, name: string, description?: string): She
 	if (typeof description === 'string' && description.trim()) {
 		row.description = description.trim().slice(0, 600);
 	}
+	writeManifest(rows);
+	return row;
+}
+
+/** Set or clear the voice. An empty string clears it, which is a real choice —
+ *  it puts the character back to letting each clip pick, and there has to be a
+ *  way back from a voice you did not mean to keep. */
+export function setSheetVoice(id: string, voice: string): Sheet | null {
+	const rows = listSheets();
+	const row = rows.find((s) => s.id === id);
+	if (!row) return null;
+	const v = voice.trim().slice(0, 240);
+	if (v) row.voice = v;
+	else delete row.voice;
 	writeManifest(rows);
 	return row;
 }

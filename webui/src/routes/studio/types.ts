@@ -347,6 +347,9 @@ export interface StoredSheet {
 	addedAt: string;
 	workspace?: string;
 	seed?: number;
+	/** How this person sounds, one sentence, carried into every clip they are in.
+	 *  Characters only — a room does not speak. See sheets.server.ts. */
+	voice?: string;
 	/** The six-view turnaround, which arrives minutes after the character does —
 	 *  absent until one has been asked for. */
 	sheet?: {
