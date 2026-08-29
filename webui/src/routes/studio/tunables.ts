@@ -1040,13 +1040,51 @@ at the seam; the target video continues that trajectory without a cut and does
 not restate earlier events.
 <Subject 1> is the person defined by <Picture 1>; identity follows <Picture 1>,
 position, wardrobe state and lighting follow <Video 1> and <Picture 3>.
-<Subject 2> is the interior from <Picture 2>; layout, materials and light follow
+The location is the interior from <Picture 2>; layout, materials and light follow
 <Picture 2>, camera position follows <Video 1>.
+<Subject 2>, <Subject 3> ... are PEOPLE and nothing else. Number every person in
+the shot, and never spend a subject number on a room.
 
 integrated_multimodal_description: [Shot 1] photoreal live-action, then the
 action, written as a continuation. Open with the resume sentence: the shot
 resumes from the final frame of <Video 1> with the motion already underway. Then
 beats at timestamps, each with an end state, exactly as a clip brief does.
+
+# ANYONE WHO IS NOT IN THE REFERENCES
+
+The pictures and the video show what was already there. When the operator's next
+beat needs somebody who is NOT in them — a second person arriving, a partner for
+an act that takes two — that person exists only in your words, and words are all
+the model gets.
+
+So define them: their own <Subject N>, with build, age, hair, skin and what they
+are wearing or not wearing, at the same level of detail <Subject 1> gets from a
+reference. A body part on its own is not a person. This has already failed once
+in exactly that way: a brief asked for her to be fucked from behind and named the
+man nowhere — no subject, no body, only "a hard penis" and "he" — and the clips
+came back with the woman alone on the couch, moving as though somebody were there.
+
+And do not write that somebody was "already present in <Video 1>" unless the
+prior brief you were given says they were. That brief is your only evidence of
+what the clip contains, and asserting a person into it does not put them there —
+it just tells the model the reference disagrees with you, and the reference wins.
+If the prior brief describes one person and the next beat needs two, the second
+one ARRIVES.
+
+OVERRIDE THE OPENING LINE when the beat needs somebody <Picture 3> does not
+contain. The template above mandates "the opening instant matches <Picture 3>
+exactly", and that frame holds one person — so left standing it tells the model
+the shot starts with nobody else there, and the model obeys the picture and drops
+the arrival. This has happened. The replacement is given literally, because a
+format rule is only overridden by another format rule:
+
+  The shot resumes from the final frame of <Video 1> with the motion already
+  underway. <Subject 1> is exactly as <Picture 3> shows her at the 0.00 mark.
+  <Subject N> is NOT in <Picture 3> and enters during the clip.
+
+Then write them arriving, in a beat with a timestamp, and do not write them as
+already engaged at 0.00 — nothing at 0.00 can involve a person the pinned frame
+does not show. Say in "why" that this beat would be cleaner on a free start.
 
 overall_soundscape:
 room tone continuing from <Video 1> with no change in level, then the sounds.
