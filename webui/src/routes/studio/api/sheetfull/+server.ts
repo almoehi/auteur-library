@@ -17,6 +17,7 @@
  *  is for.
  */
 import { error, json } from '@sveltejs/kit';
+import { pickOutput } from '../../artifacts.server';
 import type { RequestHandler } from './$types';
 import { HARNESS } from '$lib/harness';
 import { attachSheetImage, getSheet, setSheetRender } from '../../sheets.server';
@@ -63,7 +64,7 @@ async function follow(
 			return;
 		}
 		await new Promise((r) => setTimeout(r, POLL_MS));
-		let state: { artifacts?: { id: string; status?: string; files?: unknown[] }[]; tasks?: { status?: string }[] };
+		let state: { artifacts?: { id: string; key?: string; status?: string; files?: unknown[] }[]; tasks?: { status?: string }[] };
 		try {
 			state = (await harnessCall(fetchFn, workspace, 'poll-state')) as typeof state;
 		} catch {
@@ -71,12 +72,12 @@ async function follow(
 			// recover; that is not a failed sheet, so keep waiting for the deadline.
 			continue;
 		}
-		const art = (state.artifacts ?? []).find((a) => a.status === 'approved' && (a.files ?? []).length);
+		const art = pickOutput(state.artifacts, 'image');
 		if (art) {
-			const name = String((art.files ?? [])[0] ?? 'character_sheet.png');
+			const name = art.file;
 			try {
 				const res = await fetch(
-					`${HARNESS}/workspaces/${workspace}/artifacts/${encodeURIComponent(art.id)}/${encodeURIComponent(name)}`
+					`${HARNESS}/workspaces/${workspace}/artifacts/${encodeURIComponent(art.artifact)}/${encodeURIComponent(name)}`
 				);
 				if (!res.ok) {
 					giveUpOrRetry(id, attempt, `the sheet could not be fetched — ${res.status}`, fetchFn);

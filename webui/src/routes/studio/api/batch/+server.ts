@@ -20,6 +20,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { HARNESS } from '$lib/harness';
+import { pickOutput } from '../../artifacts.server';
 import { store } from '../../../clips.server';
 import { addRuns, listRuns, updateRun, type BatchRun } from '../../batches.server';
 
@@ -50,13 +51,11 @@ async function poll(workspace: string): Promise<{ artifact: string; file: string
 				continue;
 			}
 			const state = d as {
-				artifacts?: { id: string; status?: string; files?: string[] }[];
+				artifacts?: { id: string; key?: string; status?: string; files?: string[] }[];
 				tasks?: { status?: string }[];
 			};
-			const art = (state.artifacts ?? []).find(
-				(a) => a.status === 'approved' && (a.files ?? []).length
-			);
-			if (art) return { artifact: art.id, file: String((art.files ?? [])[0]) };
+			const art = pickOutput(state.artifacts, 'video');
+			if (art) return art;
 			if ((state.tasks ?? []).some((t) => t.status === 'permanently-failed')) return null;
 		} catch {
 			// A workspace agent can go quiet mid-render and come back. Keep waiting

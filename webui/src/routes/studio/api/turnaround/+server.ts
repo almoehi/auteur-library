@@ -16,6 +16,7 @@
  *  nobody asked for is noise.
  */
 import { error, json } from '@sveltejs/kit';
+import { pickOutput } from '../../artifacts.server';
 import type { RequestHandler } from './$types';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -170,13 +171,11 @@ async function poll(workspace: string): Promise<{ artifact: string; file: string
 				continue;
 			}
 			const state = d as {
-				artifacts?: { id: string; status?: string; files?: string[] }[];
+				artifacts?: { id: string; key?: string; status?: string; files?: string[] }[];
 				tasks?: { status?: string }[];
 			};
-			const art = (state.artifacts ?? []).find(
-				(a) => a.status === 'approved' && (a.files ?? []).length
-			);
-			if (art) return { artifact: art.id, file: String((art.files ?? [])[0]) };
+			const art = pickOutput(state.artifacts, 'video');
+			if (art) return art;
 			if ((state.tasks ?? []).some((t) => t.status === 'permanently-failed')) return null;
 		} catch {
 			// A workspace agent can go quiet mid-render and come back. Keep waiting
