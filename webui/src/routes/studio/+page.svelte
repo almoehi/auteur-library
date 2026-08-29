@@ -6319,10 +6319,19 @@
 							     clips, 23s." — and a single clip has a name that repeats what the
 							     card already is. Those two used to look the same.
 
+							     A takes card never gets one. Not writing the caption at keep time
+							     was not enough: the text lives in the saved transcript, so every
+							     card kept before that change went on showing "Take 1, kept." after
+							     it. The rule has to hold for what is already on disk, not only for
+							     what is written next.
+
 							     Up here with the other consts because {@const} must be a block's
 							     immediate child — this file's own rule, and I had just put it inside
 							     a div. -->
-							{@const said = item.text && item.text !== item.artifact.title ? item.text : ''}
+							{@const said =
+								item.kind !== 'takes' && item.text && item.text !== item.artifact.title
+									? item.text
+									: ''}
 							<div class="enter">
 								<div class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
 								{#each item.artifact.files as f (f.name)}
