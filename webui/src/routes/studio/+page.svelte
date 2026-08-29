@@ -1308,6 +1308,14 @@
 			else if (!brief) await planFromIdea(text);
 			else if (!planningWs) await refinePlan(text);
 			else await managerChat(text);
+		} catch (e) {
+			// A throw here used to be invisible: the try had a finally and no catch,
+			// so an exception after the response arrived — a body that would not
+			// parse, most likely — cleared the spinner and put nothing in the
+			// transcript. No card, no error, no clue. That happened, and the only
+			// way to tell it apart from "the writer is still thinking" was to read
+			// the source. Whatever breaks, say so on screen.
+			pushError(`Something went wrong sending that: ${e instanceof Error ? e.message : e}`);
 		} finally {
 			sending = false;
 		}
@@ -1346,7 +1354,13 @@
 			pushError(m?.message || `The prompt could not be written (${res.status}).`);
 			return null;
 		}
-		const r = (await res.json()) as { ok: boolean; shot?: ChatItem['shot']; error?: string };
+		let r: { ok: boolean; shot?: ChatItem['shot']; error?: string };
+		try {
+			r = (await res.json()) as typeof r;
+		} catch {
+			pushError('The prompt writer answered with something this page could not read.');
+			return null;
+		}
 		// Snapshot the writer's own choice the moment it arrives. Everything after
 		// this can be edited on the card; this copy is what the edit is measured
 		// against, so it is taken before anyone can touch it.
@@ -3551,6 +3565,13 @@
 
 	function startPolling() {
 		stopPolling();
+		// Nothing to watch is not the same as watching nothing happen. `tick` bails
+		// out when there is no workspace, but it bailed out *after* the flag was
+		// already true — so the live status line sat under the composer with its
+		// dot pulsing and its clock climbing, announcing a render that had never
+		// been launched. A session restored before its first render did exactly
+		// this, and read as hung. Refuse the run instead of narrating it.
+		if (!activeWs) return;
 		// The one choke point where a run becomes live again: a resumed shoot, a
 		// new clip, a continuation. Whatever it was, it is not a leftover now.
 		staleRun = false;
@@ -3566,7 +3587,13 @@
 		// The target is captured up front: a launch mid-tick retargets the loop
 		// through startPolling (which bumps runId), so a stale tick simply exits.
 		const target = activeWs;
-		if (!target || id !== runId) return;
+		if (id !== runId) return;
+		// The workspace can also go away under a live loop — a reset, a session
+		// swap. Same rule as above: stop claiming to poll.
+		if (!target) {
+			pollingActive = false;
+			return;
+		}
 
 		// The board carries the documents AND the button that starts the shoot, so
 		// a production without one cannot be approved at all — there is nothing to
