@@ -1734,6 +1734,12 @@
 	function firstWords(description: string, kind: 'character' | 'location'): string {
 		const words = description
 			.replace(/[\n\r]+/g, ' ')
+			// A character description is required to open with the workflow's own
+			// framing — the sheet writer is told to begin exactly "A photography of
+			// full body of" — so the first six words are that formula every single
+			// time, and every character was offered the same name. Drop it and the
+			// six words that follow are the person.
+			.replace(/^\s*a\s+photograph(?:y|)\s+of\s+(?:a\s+)?full\s+body\s+of\s+/i, '')
 			.split(/\s+/)
 			.filter(Boolean)
 			.slice(0, 6)
@@ -2073,14 +2079,17 @@
 	async function saveSubject(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.sheet || item.sheet.id || sheetBusy[itemId]) return;
-		const { job, description, name, seed, kind } = item.sheet;
+		const { job, description, name, seed, kind, voice } = item.sheet;
 		if (!job) return;
 		sheetBusy[itemId] = true;
 		try {
 			const res = await fetch('/studio/api/sheet', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ kind, name, description, job, seed })
+				// The voice as it stands on the card, not as the writer first wrote
+				// it: the field above the name is editable, and a save that ignored
+				// an edit would keep a voice the operator had just changed.
+				body: JSON.stringify({ kind, name, description, job, seed, ...(voice ? { voice } : {}) })
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -5581,6 +5590,24 @@
 													: '.'}
 										</p>
 									{:else}
+										<!-- The voice, where the decision to keep them is made.
+											 It was written by the same call that wrote the description and
+											 it travels onto the sheet on save, but it was doing that
+											 invisibly: the first question asked of this card was "where
+											 would I see it?", which is the answer to whether it belongs
+											 here. Editable, so what is on screen is what gets kept. -->
+										{#if item.sheet.kind === 'character' && item.sheet.voice !== undefined}
+											<label class="block text-xs text-[var(--st-faint)]" for="char-voice-{item.id}">
+												How they sound — carried into every clip they are in
+											</label>
+											<input
+												id="char-voice-{item.id}"
+												bind:value={item.sheet.voice}
+												spellcheck="false"
+												maxlength="240"
+												class="mt-2 mb-4 w-full rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+											/>
+										{/if}
 										<label class="block text-xs text-[var(--st-faint)]" for="char-name-{item.id}">
 											{item.sheet.kind === 'character' ? 'Name them' : 'Name it'} — this is what the
 											picker will show
