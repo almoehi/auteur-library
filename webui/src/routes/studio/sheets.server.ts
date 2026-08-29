@@ -197,6 +197,10 @@ export function addSheet(row: {
 	workspace?: string;
 	seed?: number;
 	uploaded?: boolean;
+	/** Written alongside the description by the same call, so a character has a
+	 *  voice from the moment they exist rather than an empty field somebody has
+	 *  to notice. Characters only. */
+	voice?: string;
 }): Sheet {
 	ensure();
 	const id = mkId();
@@ -210,6 +214,9 @@ export function addSheet(row: {
 		kind: row.kind,
 		name: row.name.trim() || nameFromDescription(row.description, row.kind),
 		description: row.description.trim(),
+		...(row.kind === 'character' && row.voice?.trim()
+			? { voice: row.voice.trim().slice(0, 240) }
+			: {}),
 		file,
 		size: row.bytes.byteLength,
 		addedAt: new Date().toISOString(),

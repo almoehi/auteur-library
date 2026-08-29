@@ -125,6 +125,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		kind?: unknown;
 		name?: unknown;
 		description?: unknown;
+		voice?: unknown;
 		workspace?: unknown;
 		artifact?: unknown;
 		file?: unknown;
@@ -141,6 +142,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	if (!isKind(kind)) throw error(400, "kind must be 'character' or 'location'");
 	const description = typeof body.description === 'string' ? body.description : '';
 	const name = typeof body.name === 'string' ? body.name : '';
+	const voice = typeof body.voice === 'string' ? body.voice : '';
 
 	// Two kinds of source, because there are now two kinds of render. A sheet
 	// comes back through the harness and is identified by a workspace triple; a
@@ -157,6 +159,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			description,
 			bytes: local,
 			ext: '.png',
+			...(voice ? { voice } : {}),
 			...(seed !== undefined ? { seed } : {})
 		});
 		return json({ ok: true, sheet, sheets: listSheets() });
@@ -208,6 +211,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		description,
 		bytes,
 		ext: looksJpeg ? '.jpg' : '.png',
+		...(voice ? { voice } : {}),
 		workspace
 	});
 	return json({ ok: true, sheet, sheets: listSheets() });

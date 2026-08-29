@@ -176,11 +176,18 @@ ${want}`
 		});
 	}
 
+	// Characters only. A location that came back with a voice is the writer
+	// answering a question nobody asked, and storing it would put a speaking room
+	// in the picker.
+	const voice =
+		kind === 'character' && typeof o.voice === 'string' ? o.voice.trim().slice(0, 240) : '';
+
 	return json({
 		ok: true,
 		sheet: {
 			kind,
 			description: description.slice(0, DESCRIPTION_MAX),
+			...(voice ? { voice } : {}),
 			why: typeof o.why === 'string' ? o.why.trim() : ''
 		}
 	});

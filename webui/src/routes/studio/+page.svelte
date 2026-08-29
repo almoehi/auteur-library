@@ -1851,7 +1851,7 @@
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
-				sheet?: { kind: 'character' | 'location'; description: string; why?: string };
+				sheet?: { kind: 'character' | 'location'; description: string; voice?: string; why?: string };
 				error?: string;
 			};
 			if (!r.ok || !r.sheet) {
@@ -1864,7 +1864,7 @@
 			// what to change.
 			const seed = currentCharacter?.seed ?? Math.floor(Math.random() * 1_000_000_000);
 			currentCharacter = { description: r.sheet.description, seed };
-			await previewSubject(kind, r.sheet.description, seed, r.sheet.why);
+			await previewSubject(kind, r.sheet.description, seed, r.sheet.why, r.sheet.voice);
 		} catch (e) {
 			pushError(String(e));
 		}
@@ -1886,14 +1886,19 @@
 		kind: 'character' | 'location',
 		description: string,
 		seed: number,
-		why?: string
+		why?: string,
+		/** Written by the same call that wrote the description, and carried here so
+		 *  it is on the card before the picture is — keeping the character then
+		 *  files the voice with the face rather than leaving the field empty for
+		 *  somebody to fill in by hand. */
+		voice?: string
 	) {
 		if (previewBusy) return;
 		previewBusy = true;
 		const card = pushItem({
 			who: 'studio',
 			kind: 'sheet',
-			sheet: { kind, stage: 'anchor', description, why, seed, launched: true }
+			sheet: { kind, stage: 'anchor', description, why, seed, voice, launched: true }
 		});
 		try {
 			const res = await fetch('/studio/api/anchor', {
@@ -2243,6 +2248,7 @@
 					kind: item.sheet.kind,
 					name: item.sheet.name,
 					description: item.sheet.description,
+					...(item.sheet.voice ? { voice: item.sheet.voice } : {}),
 					...(job ? { job } : { workspace, artifact, file })
 				})
 			});

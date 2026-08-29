@@ -112,13 +112,21 @@ turnaround, or a location contact sheet.
 # OUTPUT
 
 A single JSON object, no fences:
-{ "description": "...", "why": "..." }
+{ "description": "...", "voice": "...", "why": "..." }
 
 "description" is ONE sentence, 30 words or fewer. Not a prompt, not a paragraph —
 a subject line. Going long is the most common way to get this wrong.
+"voice" is how this person sounds, for a CHARACTER only — an empty string for a
+location, which does not speak. One clause, under fifteen words, physical only:
+pitch, weight, accent, pace. "a low, warm, slightly husky adult female voice,
+neutral American accent, unhurried". Never a mood and never a personality — a
+microphone does not record "confident". Give one to every character, including
+one who will never say a word, because the same sentence governs how they moan.
+Match it to the person the description just made; do not make everyone husky.
 "why" is at most 12 words, in English, naming only what you added — and
 exactly "Nothing added." when you added nothing, since a bare "nothing" reads
-like a fault on the card rather than an answer.
+like a fault on the card rather than an answer. The voice does not count as
+something added: every character gets one, so saying so every time is noise.
 
 # THE SENTENCE
 

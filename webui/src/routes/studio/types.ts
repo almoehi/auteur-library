@@ -269,6 +269,9 @@ export interface ChatItem {
 		/** What you typed, kept so a rewrite asks for the same subject again
 		 *  rather than editing the writer's English. */
 		request?: string;
+		/** How this person sounds, invented alongside their look and carried onto
+		 *  their sheet when the character is kept. Characters only. */
+		voice?: string;
 		/** One line from the writer saying what it changed, or that it only
 		 *  translated. */
 		why?: string;
