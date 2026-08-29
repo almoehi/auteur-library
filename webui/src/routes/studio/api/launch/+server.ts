@@ -373,10 +373,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		spec.characterName = character?.name;
 		spec.locationName = location?.name;
 		spec.platesFromClip = fromFrame.character || fromFrame.location;
-		// The sheet a second time, in a slot the workflow leaves empty. Only when
-		// it IS a sheet — doubling a frame cut from the clip would just be the
-		// same generated picture twice, which votes for nothing.
-		spec.characterAnchorUrl = undefined;
 
 		const s3 = s3FromEnv();
 		if (!s3) {
@@ -422,7 +418,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			// The same sheet, in a spare slot, when the character plate really is a
 			// sheet. Same bytes and the same URL — the file is already up there, so
 			// this costs a line in the task and no upload.
-			if (!fromFrame.character) spec.characterAnchorUrl = spec.characterUrl;
 		} catch (e) {
 			return json({ ok: false, error: `the references could not be uploaded — ${e}` }, { status: 200 });
 		}
