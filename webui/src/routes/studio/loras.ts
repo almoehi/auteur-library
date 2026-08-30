@@ -36,6 +36,18 @@ export interface Lora {
 	sha256: string;
 	/** The author's recommendation. Overridable per clip. */
 	strength: number;
+	/** The viewpoint this adapter was trained on, where it has one.
+	 *
+	 *  Most adapters draw a thing and leave the camera alone. A few were trained
+	 *  on one framing and put it back whatever the brief says, and the brief
+	 *  loses: a missionary shot written as "high angle looking down at the sofa,
+	 *  his shoulders in the lower centre" came back as POV from his own eyeline,
+	 *  with him out of frame entirely and her body stretched by the
+	 *  foreshortening that viewpoint forces.
+	 *
+	 *  Named here so the writer is told before it picks, rather than finding out
+	 *  in the render. */
+	camera?: string;
 	/** The range the author themselves gave, where they gave one. The writer may
 	 *  place the strength anywhere inside it and nowhere outside it.
 	 *
@@ -174,6 +186,9 @@ export const CATALOGUE: Lora[] = [
 		sha256: '8d1ed16cdae02e25308063053f7f459b88fb4c50d7e6ea4d05ebc4950a992584',
 		strength: 0.8,
 		use: 'vaginal penetration seen from above, missionary',
+		camera:
+			'POV from the penetrating partner\'s own eyeline, looking down her body. ' +
+			'They are behind the lens and will not be in frame.',
 		kind: 'act'
 	},
 	{
@@ -409,7 +424,8 @@ export function catalogueForWriter(): string {
 	const line = (l: Lora) => {
 		const w = l.band ? `${l.strength} (${l.band[0]}-${l.band[1]})` : `${l.strength} fixed`;
 		return `  ${l.key.padEnd(8)}${w.padEnd(16)}${l.use}` +
-			(l.trigger ? `  [trigger: ${l.trigger}]` : '');
+			(l.trigger ? `  [trigger: ${l.trigger}]` : '') +
+			(l.camera ? `\n${' '.repeat(26)}CAMERA: ${l.camera}` : '');
 	};
 	const acts = CATALOGUE.filter((l) => l.kind === 'act').map(line).join('\n');
 	const details = CATALOGUE.filter((l) => l.kind === 'detail').map(line).join('\n');
@@ -431,6 +447,24 @@ Prefer the act alone. A detail earns its place only when the request turns on
 it — a shot that ends in a cumshot needs the cumshot adapter, a shot where the
 moaning is the point needs the moaning one. A detail that is merely true of the
 frame is not worth an adapter slot, and adding it costs something real.
+
+AN ADAPTER MARKED "CAMERA" DECIDES THE VIEWPOINT, NOT YOU. Most of these draw a
+thing and leave the framing alone. The ones with a CAMERA line were trained on a
+single viewpoint and put it back whatever the description says — and the
+description loses. A missionary brief written as "elevated high angle looking
+down at the sofa, his shoulders and upper back in the lower centre of frame"
+came back as POV from his own eyeline: he was not in the shot at all, and her
+body was stretched long by the foreshortening that viewpoint forces on it.
+
+So the choice and the camera are one decision, not two:
+
+  - Picking one of these means writing ITS camera. Describe the shot from that
+    viewpoint, and do not place the person behind the lens in the frame — say
+    what is visible of them instead: their hands, their hips entering frame.
+  - If the shot needs both bodies visible, or the operator asked for a framing
+    of their own, choose a different act. A shot that shows both people and one
+    that is shot from inside one of them are different shots, and no wording
+    gets you both.
 
 The two anatomy detailers are the ones to be most careful with. They draw a
 small region of the frame very hard, and on a penetration shot that is enough to

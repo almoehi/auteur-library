@@ -33,6 +33,13 @@ export interface CheckOpts {
 	continuation: boolean;
 	/** The seam is nailed to the prior clip's final frame. */
 	pinned: boolean;
+	/** The key of a chosen adapter that was trained on one viewpoint and puts it
+	 *  back whatever the brief says, where one was chosen.
+	 *
+	 *  Passed in rather than looked up: this file deliberately knows nothing
+	 *  about the catalogue, so the caller reads the `camera` field and hands over
+	 *  the key. */
+	cameraAdapter?: string;
 }
 
 /** Over this and the model starts losing the end of the brief.
@@ -227,6 +234,32 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 				`rate dropping, the body coming to rest, and say the contact is kept so nobody ` +
 				`leaves the frame. A camera easing off is not the body slowing.`,
 			human: 'the motion stops in this shot without anything describing how it slows down'
+		});
+	}
+
+	// 5b. A viewpoint-locked adapter, and a brief that writes a different camera.
+	//
+	// One adapter in the catalogue was trained on POV and reinstates it whatever
+	// the description asks for. A missionary brief written as "elevated high
+	// angle looking down at the sofa, his shoulders and upper back in the lower
+	// centre of frame" came back shot from his own eyeline: he was not in the
+	// picture at all, and her body was stretched long by the foreshortening that
+	// viewpoint forces. Both complaints — the missing partner and the distorted
+	// anatomy — were the same cause.
+	//
+	// The test is whether the brief acknowledges the viewpoint at all. A POV
+	// brief says so; a brief that never mentions it is describing a shot the
+	// adapter is not going to render.
+	if (opts.cameraAdapter && !/\bPOV\b|point of view|own eyeline|behind the lens|from inside/i.test(prompt)) {
+		faults.push({
+			code: 'camera-fights-adapter',
+			says:
+				`This shot is rendered with the ${opts.cameraAdapter} adapter, which was trained on ` +
+				`one viewpoint and reinstates it whatever the description says. Write the shot from ` +
+				`that viewpoint — say it is POV, describe what is visible from behind the lens, and ` +
+				`keep the person the camera belongs to out of the frame except for the parts that ` +
+				`enter it. If the shot needs both bodies visible, this is the wrong adapter for it.`,
+			human: 'this shot uses a POV adapter but is written for a different camera'
 		});
 	}
 

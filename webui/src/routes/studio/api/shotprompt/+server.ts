@@ -367,7 +367,16 @@ export const POST: RequestHandler = async ({ request }) => {
 	// happened. Once, though. A second failure returns the brief anyway with the
 	// fault named on the card — a loop would spend somebody's afternoon proving a
 	// point, and a brief with a flaw in it is still worth more than nothing.
-	const checkOpts = { continuation: !!cont, pinned: cont ? cont.pinned !== false : false };
+	// The adapter the writer chose, if it is one that decides the camera. The
+	// check knows nothing about the catalogue, so the lookup happens here.
+	const cameraAdapter = (shot.loras ?? [])
+		.map((l) => loraFor(l.key))
+		.find((l) => l?.camera)?.key;
+	const checkOpts = {
+		continuation: !!cont,
+		pinned: cont ? cont.pinned !== false : false,
+		...(cameraAdapter ? { cameraAdapter } : {})
+	};
 	let faults = checkPrompt(shot.prompt ?? '', checkOpts);
 	// What the first pass got wrong, kept so the card can say a second pass
 	// happened. Silence here reads as "the writer is slow" when what is actually
