@@ -1870,7 +1870,7 @@ export const CONT_TIMEOUT_SEC = 2400;
  *  MiniMaxH3AddGuide. Flip this to true after the compute image moves past it
  *  and measure again; the expectation is the floor, not a small improvement.
  */
-const SEAM_ANCHOR = false;
+const SEAM_ANCHOR = true;
 
 
 export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = ''): string {

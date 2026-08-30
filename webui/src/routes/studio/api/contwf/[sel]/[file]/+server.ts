@@ -70,7 +70,7 @@ const N = {
 	resolution: '157',
 	videoVae: '144',
 	frames: '156',
-	seamRef: '187'
+	priorVideo: '177'
 } as const;
 
 /** Ids we add. Named rather than numbered so a reader can tell at a glance which
@@ -96,7 +96,8 @@ const OUR = {
 	height: 'wh_height',
 	seed: 'our_seed',
 	rife: 'our_rife',
-	seam: 'our_seam'
+	seam: 'our_seam',
+	seamFrame: 'our_seam_frame'
 } as const;
 
 type Node = { class_type?: string; inputs?: Record<string, unknown> };
@@ -371,10 +372,24 @@ function fitOurOutputShape(graph: Graph): void {
  *  the one way this could make a clip strictly worse.
  *
  *  Everything it needs is already in the graph and taken from the graph rather
- *  than restated: the frame from the loader the seam reference is on, the frame
- *  count from the same expression node the reference node's `length` reads, so
- *  the anchor cannot land on a clip of a different length than the one being
- *  sampled.
+ *  than restated: the frame count comes from the same expression node the
+ *  reference node's `length` reads, so the anchor cannot land on a clip of a
+ *  different length than the one being sampled, and the frame itself is cut
+ *  from the prior clip where it is already loaded.
+ *
+ *  That last part is the second version. The first took the frame from the
+ *  loader ref_picture_3 sits on, which is the same picture and looked obvious.
+ *  It failed two renders in four: that port is optional, the operator agent
+ *  drops a line from the reference list every so often, and when it does the
+ *  harness leaves the loader out of the graph — so the anchor's input pointed
+ *  at nothing and ComfyUI rejected the whole prompt. An intermittent omission
+ *  that used to cost a pin now killed the render.
+ *
+ *  The prior clip is a REQUIRED port and is already decoded in the graph, so
+ *  its final frame is the same picture with nothing optional in the way. It is
+ *  also the better frame: it is the exact one the model reads as the end of
+ *  <Video 1>, rather than a separately uploaded PNG that took its own trip
+ *  through an encoder.
  */
 function pinSeamAnchor(graph: Graph): void {
 	const guider = graph[N.guider];
@@ -389,7 +404,7 @@ function pinSeamAnchor(graph: Graph): void {
 	// that still answers to the old id would otherwise anchor the clip to
 	// whatever image happened to land on 187.
 	for (const [id, cls] of [
-		[N.seamRef, 'LoadImage'],
+		[N.priorVideo, 'VHS_LoadVideoFFmpeg'],
 		[N.frames, 'ComfyMathExpression'],
 		[N.videoVae, 'VAELoader']
 	] as const) {
@@ -401,12 +416,19 @@ function pinSeamAnchor(graph: Graph): void {
 		}
 	}
 
+	// The last frame of the clip being continued, taken off the loader that is
+	// already reading it for <Video 1>.
+	graph[OUR.seamFrame] = {
+		class_type: 'H3LastFrame',
+		inputs: { images: [N.priorVideo, 0] }
+	};
+
 	graph[OUR.seam] = {
 		class_type: 'H3KeyframeInject',
 		inputs: {
 			conditioning: [N.refToVideo, 0],
 			vae: [N.videoVae, 0],
-			start_image: [N.seamRef, 0],
+			start_image: [OUR.seamFrame, 0],
 			width: [OUR.width, 0],
 			height: [OUR.height, 0],
 			// Slot 1 of the expression node, which is the aligned frame count the
