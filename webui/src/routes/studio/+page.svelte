@@ -1363,7 +1363,7 @@
 			pushError(m?.message || `The prompt could not be written (${res.status}).`);
 			return null;
 		}
-		let r: { ok: boolean; shot?: ChatItem['shot']; warn?: string[]; error?: string };
+		let r: { ok: boolean; shot?: ChatItem['shot']; warn?: string[]; fixed?: string[]; error?: string };
 		try {
 			r = (await res.json()) as typeof r;
 		} catch {
@@ -1374,6 +1374,7 @@
 		// the writer one chance to clear these; what is left is worth reading before
 		// pressing render, and worth nothing at all after.
 		if (r.shot && r.warn?.length) r.shot.warn = r.warn;
+		if (r.shot && r.fixed?.length) r.shot.fixed = r.fixed;
 		// Snapshot the writer's own choice the moment it arrives. Everything after
 		// this can be edited on the card; this copy is what the edit is measured
 		// against, so it is taken before anyone can touch it.
@@ -6084,6 +6085,15 @@
 									{#if item.shot.warn?.length}
 										<p class="mt-4 text-xs leading-relaxed text-[var(--st-faint)]">
 											{item.shot.warn.join(' · ')}
+										</p>
+									{/if}
+									<!-- A fault the check caught and the writer then fixed. Said in the
+										 past tense because there is nothing to do about it — it is here
+										 because the brief took twice as long to arrive and the wait
+										 otherwise looks like the writer being slow. -->
+									{#if item.shot.fixed?.length}
+										<p class="mt-4 text-xs leading-relaxed text-[var(--st-faint)]">
+											újraírva — {item.shot.fixed.join(' · ')}
 										</p>
 									{/if}
 									<div class="mt-5 flex flex-wrap items-center gap-2.5">

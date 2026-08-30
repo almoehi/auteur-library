@@ -502,6 +502,35 @@ Words that carry motion, and are worth spending the budget on:
   momentum reading through the body — the hips leading and the shoulders
     following, not everything moving at once
 
+A RATE ON ITS OWN BUYS A BOUNCE. This is the mistake the section above walks
+straight into if you stop at "two strokes a second": the model gets a tempo and
+nothing else, and it moves the whole body on that tempo. Measured on a clip
+written exactly that way — across one 292ms stroke his head, shoulders and chest
+all travelled together, as one block, up and down. Nothing was articulating. It
+reads as hopping, not as fucking.
+
+Two more things have to be said, and they are what turn a tempo into a stroke.
+
+WHICH PART TRAVELS, AND WHAT HOLDS STILL. A stroke is one part moving against a
+body that is braced. Name both halves, because the model animates what you name
+and drifts everything else.
+
+  weak    He drives into her about two strokes a second.
+  strong  His shoulders stay level above her and his knees stay planted in the
+          cushions; the travel is all in his hips, about two strokes a second.
+
+THE STROKE HAS A SHAPE. Real thrusting is not a metronome: the withdrawal is the
+slow half and the drive is the fast one, and it ends against something.
+
+  weak    His hips move back and forward, two strokes a second.
+  strong  His hips draw back unhurried until only the head is still inside her,
+          then snap forward and stop against her; the pull is the slow half, the
+          drive is the quick one, and they stay touching at the end of each.
+
+The contact clause is doing real work. Bodies that are described as touching at
+the end of every stroke stay joined; bodies given only a rate come apart between
+strokes and read as two people bouncing near each other.
+
 Two warnings. Very fast motion renders worse than moderate motion in this
 model — a sprint, an explosive burst, anything frantic comes back mushy — so
 when the operator asks for hard, write hard as full travel and solid contact,

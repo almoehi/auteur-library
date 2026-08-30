@@ -212,6 +212,9 @@ export interface ChatItem {
 		 *  chance to fix them. Never a refusal — the brief renders and this is the
 		 *  line that says what to look at if the clip comes back wrong. */
 		warn?: string[];
+		/** Faults the check caught and the retry then cleared. Shown in the past
+		 *  tense: nothing to act on, but it is why the brief took two passes. */
+		fixed?: string[];
 	};
 	/** This error's retry has been pressed. On the item so it survives a reload —
 	 *  a flag beside the transcript emptied on every refresh and handed the button

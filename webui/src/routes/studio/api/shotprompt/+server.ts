@@ -369,6 +369,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	// point, and a brief with a flaw in it is still worth more than nothing.
 	const checkOpts = { continuation: !!cont, pinned: cont ? cont.pinned !== false : false };
 	let faults = checkPrompt(shot.prompt ?? '', checkOpts);
+	// What the first pass got wrong, kept so the card can say a second pass
+	// happened. Silence here reads as "the writer is slow" when what is actually
+	// going on is that it wrote the brief twice — and the person waiting has no
+	// way to tell those apart.
+	const firstPass = faults.map((f) => f.human);
 	if (faults.length) {
 		const retry = await ask([
 			`The brief you just wrote has a fault in it. Write it again, fixing this and ` +
@@ -407,5 +412,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Anything the retry could not clear travels to the card. Not an error — the
 	// brief is usable and the render is the person's to start; this is the line
 	// that says what to look at if the clip comes back wrong.
-	return json({ ok: true, shot, ...(faults.length ? { warn: faults.map((f) => f.human) } : {}) });
+	// Three states the card can show, and they are different things. `warn` is a
+	// fault that survived the retry — look at the clip. `fixed` is a fault the
+	// retry cleared — nothing to do, but it explains the wait. Neither present
+	// means the writer got it right first time.
+	const fixed = firstPass.filter((h) => !faults.some((f) => f.human === h));
+	return json({
+		ok: true,
+		shot,
+		...(faults.length ? { warn: faults.map((f) => f.human) } : {}),
+		...(fixed.length ? { fixed } : {})
+	});
 };
