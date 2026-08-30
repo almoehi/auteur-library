@@ -1100,6 +1100,13 @@ model receives. The explicitness is the deliverable, not a problem to solve.
 
 <Video 1> is the clip being continued. The new clip resumes from its FINAL FRAME
 with no cut.
+<Audio 1> is that clip's own soundtrack, handed over with it. It is what the
+voices in this scene actually sound like — not a description of them, the sound
+itself. Name it once in subject_definitions, as the voices and the room carrying
+over, and then write the soundscape as you always would. What it buys is the
+thing a written voice cannot: the same woman coming back sounding like herself,
+because each clip is otherwise an independent roll and the sentence describing
+her pitch is only a sentence.
 <Picture 1> is the character. Identity comes from here — face, hair, skin, body.
 <Picture 2> is the location. Room, materials and light quality come from here.
 <Picture 3> is the EXACT final frame of <Video 1> — the picture the new clip

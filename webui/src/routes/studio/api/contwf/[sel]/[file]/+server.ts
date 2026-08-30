@@ -97,7 +97,8 @@ const OUR = {
 	seed: 'our_seed',
 	rife: 'our_rife',
 	seam: 'our_seam',
-	seamFrame: 'our_seam_frame'
+	seamFrame: 'our_seam_frame',
+	refAudio: 'our_ref_audio'
 } as const;
 
 type Node = { class_type?: string; inputs?: Record<string, unknown> };
@@ -441,6 +442,57 @@ function pinSeamAnchor(graph: Graph): void {
 	guider.inputs.conditioning = [OUR.seam, 0];
 }
 
+/** The prior clip's own soundtrack, carried in as a reference.
+ *
+ *  A continuation already hands the model the prior clip as <Video 1>, and
+ *  throws its audio away: the loader returns sound on slot 2 and nothing reads
+ *  it. So the only thing tying one clip's voices to the next is the sentence the
+ *  writer copies forward — "a light clear adult female voice, neutral accent" —
+ *  and a sentence is a description. Each clip is an independent roll, so the
+ *  same words come back as a different woman often enough that the check has a
+ *  rule about naming a voice at all.
+ *
+ *  The reference node has taken audio all along. `ref_video_audios` is
+ *  index-paired with `ref_videos`, so the prior clip's sound belongs on
+ *  `ref_video_audio_0` beside `ref_video_0`, and H3ReferenceAudio is the pack's
+ *  own preparation step for it: batch item 0, mono duplicated up to stereo,
+ *  resampled to the audio VAE's 32 kHz, trimmed. The stereo part is not a
+ *  nicety — a mono reference crashes the sampler.
+ *
+ *  Five seconds rather than the node's ten. Reference rows sit in the packed
+ *  sequence for every sampling step rather than being read once, so the length
+ *  is paid for on each of them, and a voice does not need ten seconds to be
+ *  recognisable.
+ *
+ *  Unconditional: a free start still continues the same scene with the same
+ *  people, and it is their voices this is for.
+ */
+const CONT_REF_AUDIO_SECONDS = 5;
+
+function carryPriorAudio(graph: Graph): void {
+	const loader = graph[N.priorVideo];
+	if (loader?.class_type !== 'VHS_LoadVideoFFmpeg') {
+		throw error(
+			502,
+			`node ${N.priorVideo} is ${loader?.class_type ?? 'missing'}, not the loader the prior clip's audio comes off`
+		);
+	}
+	const ref = graph[N.refToVideo];
+	if (!ref?.inputs) throw error(500, `the continuation graph has no node ${N.refToVideo}`);
+	// Index-paired: the soundtrack of ref_video_0. Anchored on the video actually
+	// being there, because an audio reference paired with nothing is a label the
+	// prompt names and the model cannot find.
+	if (!ref.inputs['ref_videos.ref_video_0']) {
+		throw error(502, `the continuation graph no longer feeds the prior clip to ref_video_0`);
+	}
+
+	graph[OUR.refAudio] = {
+		class_type: 'H3ReferenceAudio',
+		inputs: { audio: [N.priorVideo, 2], max_seconds: CONT_REF_AUDIO_SECONDS }
+	};
+	ref.inputs['ref_video_audios.ref_video_audio_0'] = [OUR.refAudio, 0];
+}
+
 async function fetchBundle(file: 'workflow.json' | 'workflow.yaml'): Promise<string> {
 	const res = await fetch(`${REPO}/${BUNDLE}/${file}`, { signal: AbortSignal.timeout(30_000) });
 	if (!res.ok) throw error(502, `the continuation bundle answered ${res.status} for ${file}`);
@@ -452,6 +504,7 @@ async function buildJson(entries: ReturnType<typeof stack>, pinned: boolean): Pr
 	fitOurModelPath(graph, entries);
 	// Before the anchor, which reads the width and height nodes this creates.
 	fitOurOutputShape(graph);
+	carryPriorAudio(graph);
 	if (pinned) pinSeamAnchor(graph);
 	return JSON.stringify(graph, null, 2);
 }
