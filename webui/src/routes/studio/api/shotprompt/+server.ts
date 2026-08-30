@@ -299,7 +299,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	// that changes: adapters are added and dropped as they are found, and the
 	// block is generated from the list rather than written into the tunable so
 	// the two can never disagree about what exists.
-	const parts = [writer, skill, catalogueForWriter()].filter(Boolean);
+	// The motion doctrine is its own block, appended to whichever writer is
+	// running. It used to live inside shot_writer, which meant continuations —
+	// half the renders, and the ones where drift matters most — were written
+	// without a stroke rate, a braced limb or a deceleration. The check caught
+	// that on the first continuation after it shipped: two faults the retry could
+	// not clear, because the writer had never been told the rule.
+	const parts = [writer, textFor('motion_doctrine', overrides), skill, catalogueForWriter()].filter(
+		Boolean
+	);
 	const system = parts.join('\n\n---\n\n');
 	const user = pinned.length ? `${want}\n\n---\n\n${pinned.join('\n')}` : want;
 

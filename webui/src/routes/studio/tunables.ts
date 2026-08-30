@@ -251,23 +251,6 @@ and retention_analysis have no referent and must never appear. The brief is:
 - THE KEY BEAT GOES IN THE MIDDLE, NEVER LAST. The final beat is compressed by
   the model, so a climax placed there is lost. Put it at roughly 60% and give
   the last beat something cheap — an aftermath, a settling.
-- A BEAT THAT STOPS OR REVERSES MOTION HAS TO WRITE HOW IT GETS THERE. "The
-  thrusts stop" is a state, and a state is all the model has to work with, so it
-  arrives in one frame: the picture lurches, the body leaves where it was, the
-  sound falls off a cliff. Measured on one clip, the whole of the settling
-  happened inside a tenth of a second and read as a cut.
-  A beat has three parts, not two, whenever the motion changes gear:
-
-    weak    At 00:03.800 the thrusts stop; the frame holds the settled join.
-    strong  At 00:03.800 his strokes shorten over the next second — full strokes
-            to half strokes to a shallow rock — until his hips come to rest
-            against hers and stay touching. End state: his hips flush against
-            her, both bodies breathing, no gap opened between them.
-
-  Two things the strong version buys. The deceleration has a span, so it is
-  spread over frames instead of landing on one. And it names the contact
-  surviving, which is what keeps the body in the frame rather than letting it
-  vanish out of it.
 - [Shot 1] carries no timestamp. Every later shot opens "At MM:SS.mmm,".
   Timestamps strictly increasing, all inside the duration.
 - Camera in every shot, one move per shot. If static, say the frame never moves
@@ -466,77 +449,6 @@ stripes not to appear would summon them.
 If the operator does ask for a look — anime, 35mm, a phone video, a painting —
 that is the look, and this section does not apply.
 
-# AND IT SHOULD MOVE LIKE A BODY, NOT LIKE A PUPPET
-
-The section above is about how a frame looks. This one is about how the frames
-join up, and it is the gap that produces the commonest complaint about a clip
-that is otherwise correct: the bodies read as writhing rather than working. It
-happens because a beat names the act, names how wet it is, and never once names
-a force or a direction — so there is nothing for the motion to be made of.
-
-An action is not finished until it says four things: how far the part travels,
-how fast, which way the force goes, and what moves in consequence.
-
-  weak    He fucks her hard.
-  weak    He drives hard full strokes, hips snapping in.
-  strong  He draws his hips back until only the head is inside her, then drives
-          in until his hips meet hers, about two strokes a second. His weight
-          goes through his planted forearms; her breasts move on each impact and
-          settle before the next.
-
-The strong one is not longer for the sake of it. It carries a travel distance
-(back to the head, in to the hips), a rate (two a second), where the force is
-carried (the forearms), and a consequence (the breasts move and settle). Those
-four are what the model needs to make weight out of.
-
-Words that carry motion, and are worth spending the budget on:
-
-  the distance a part travels, named at both ends — "back until only the head is
-    inside her, in until his hips meet hers"
-  a rate, in strokes or beats per second, or the plain words for one — slowly,
-    steadily, briskly
-  where the weight is carried and which joint takes it — planted forearms, one
-    knee braced, a hand gripping the cushion
-  what moves because of it — flesh that shifts on impact and settles, hair that
-    sticks damp, a hand that slips and regrips
-  momentum reading through the body — the hips leading and the shoulders
-    following, not everything moving at once
-
-A RATE ON ITS OWN BUYS A BOUNCE. This is the mistake the section above walks
-straight into if you stop at "two strokes a second": the model gets a tempo and
-nothing else, and it moves the whole body on that tempo. Measured on a clip
-written exactly that way — across one 292ms stroke his head, shoulders and chest
-all travelled together, as one block, up and down. Nothing was articulating. It
-reads as hopping, not as fucking.
-
-Two more things have to be said, and they are what turn a tempo into a stroke.
-
-WHICH PART TRAVELS, AND WHAT HOLDS STILL. A stroke is one part moving against a
-body that is braced. Name both halves, because the model animates what you name
-and drifts everything else.
-
-  weak    He drives into her about two strokes a second.
-  strong  His shoulders stay level above her and his knees stay planted in the
-          cushions; the travel is all in his hips, about two strokes a second.
-
-THE STROKE HAS A SHAPE. Real thrusting is not a metronome: the withdrawal is the
-slow half and the drive is the fast one, and it ends against something.
-
-  weak    His hips move back and forward, two strokes a second.
-  strong  His hips draw back unhurried until only the head is still inside her,
-          then snap forward and stop against her; the pull is the slow half, the
-          drive is the quick one, and they stay touching at the end of each.
-
-The contact clause is doing real work. Bodies that are described as touching at
-the end of every stroke stay joined; bodies given only a rate come apart between
-strokes and read as two people bouncing near each other.
-
-Two warnings. Very fast motion renders worse than moderate motion in this
-model — a sprint, an explosive burst, anything frantic comes back mushy — so
-when the operator asks for hard, write hard as full travel and solid contact,
-not as speed. And every one of these is written as what happens; asking for
-motion that is "not stiff" or "not robotic" summons exactly that.
-
 # WHEN A REFERENCE IS ATTACHED
 
 The task will say so, and will name each picture and what it is. That changes the
@@ -601,20 +513,7 @@ number the beats in prose, do not explain your pacing.
 Where the key beat sits goes in "why". That field exists so the prompt does not
 have to carry it.
 
-The MiniMax H3 skill below is the authority on syntax; follow it — with one
-correction, because on this point it contradicts what is written above and the
-model obeys whichever it reads last.
-
-The skill says a cut introduces new information: "subject, space, state,
-viewpoint, or time". A CHANGE OF STATE IS NOT A CUT HERE. Read literally it
-makes every act that finishes into an edit, and that is what comes back: a brief
-whose last beat was thrusting stopping and the join settling rendered as a hard
-switch at 3.8 seconds — the framing jumped, the man left the frame, and the
-sound dropped away in a tenth of a second. He had not moved. The picture had.
-
-Motion stopping, an act finishing, a body coming to rest: all of these stay
-inside the running frame. Cut on the camera going somewhere genuinely different,
-and on nothing else.`
+The MiniMax H3 skill below is the authority on syntax; follow it.`
 	},
 	{
 		id: 'brief_register',
@@ -1069,6 +968,117 @@ You are given the current brief (title, story, style) and the client's feedback 
         - MINIMAL TASKS: Keep task count minimal. Avoid creating a 1:1 task-per-artifact mapping. Group related work into a single task where possible.
         - ARTIFACT BATCHING: Batch multiple related output files into a SINGLE artifact with multiple files entries — do not create one artifact per file. For example, all shot images for a scene belong in one artifact, not one artifact per image.
         - PNG FORMAT: Workflow render tools (wf_xxx) produce PNG for image or MP4 for video files. Always use .png extensions for images in artifact file lists — never .jpg or .jpeg.`
+	},
+	{
+		id: 'motion_doctrine',
+		group: 'simple',
+		label: 'Motion doctrine',
+		affects:
+			'How bodies move, in every clip and every continuation. It is appended to both writers rather than living inside one of them: it was written for first clips, the continuation writer never saw it, and half the renders came back without a stroke rate, a braced limb or a deceleration — the check caught it, the writer had simply never been told.',
+		model: 'grok-4-5',
+		fallback: `A BEAT THAT STOPS OR REVERSES MOTION HAS TO WRITE HOW IT GETS THERE. "The
+  thrusts stop" is a state, and a state is all the model has to work with, so it
+  arrives in one frame: the picture lurches, the body leaves where it was, the
+  sound falls off a cliff. Measured on one clip, the whole of the settling
+  happened inside a tenth of a second and read as a cut.
+  A beat has three parts, not two, whenever the motion changes gear:
+
+    weak    At 00:03.800 the thrusts stop; the frame holds the settled join.
+    strong  At 00:03.800 his strokes shorten over the next second — full strokes
+            to half strokes to a shallow rock — until his hips come to rest
+            against hers and stay touching. End state: his hips flush against
+            her, both bodies breathing, no gap opened between them.
+
+  Two things the strong version buys. The deceleration has a span, so it is
+  spread over frames instead of landing on one. And it names the contact
+  surviving, which is what keeps the body in the frame rather than letting it
+  vanish out of it.
+
+# AND IT SHOULD MOVE LIKE A BODY, NOT LIKE A PUPPET
+
+The section above is about how a frame looks. This one is about how the frames
+join up, and it is the gap that produces the commonest complaint about a clip
+that is otherwise correct: the bodies read as writhing rather than working. It
+happens because a beat names the act, names how wet it is, and never once names
+a force or a direction — so there is nothing for the motion to be made of.
+
+An action is not finished until it says four things: how far the part travels,
+how fast, which way the force goes, and what moves in consequence.
+
+  weak    He fucks her hard.
+  weak    He drives hard full strokes, hips snapping in.
+  strong  He draws his hips back until only the head is inside her, then drives
+          in until his hips meet hers, about two strokes a second. His weight
+          goes through his planted forearms; her breasts move on each impact and
+          settle before the next.
+
+The strong one is not longer for the sake of it. It carries a travel distance
+(back to the head, in to the hips), a rate (two a second), where the force is
+carried (the forearms), and a consequence (the breasts move and settle). Those
+four are what the model needs to make weight out of.
+
+Words that carry motion, and are worth spending the budget on:
+
+  the distance a part travels, named at both ends — "back until only the head is
+    inside her, in until his hips meet hers"
+  a rate, in strokes or beats per second, or the plain words for one — slowly,
+    steadily, briskly
+  where the weight is carried and which joint takes it — planted forearms, one
+    knee braced, a hand gripping the cushion
+  what moves because of it — flesh that shifts on impact and settles, hair that
+    sticks damp, a hand that slips and regrips
+  momentum reading through the body — the hips leading and the shoulders
+    following, not everything moving at once
+
+A RATE ON ITS OWN BUYS A BOUNCE. This is the mistake the section above walks
+straight into if you stop at "two strokes a second": the model gets a tempo and
+nothing else, and it moves the whole body on that tempo. Measured on a clip
+written exactly that way — across one 292ms stroke his head, shoulders and chest
+all travelled together, as one block, up and down. Nothing was articulating. It
+reads as hopping, not as fucking.
+
+Two more things have to be said, and they are what turn a tempo into a stroke.
+
+WHICH PART TRAVELS, AND WHAT HOLDS STILL. A stroke is one part moving against a
+body that is braced. Name both halves, because the model animates what you name
+and drifts everything else.
+
+  weak    He drives into her about two strokes a second.
+  strong  His shoulders stay level above her and his knees stay planted in the
+          cushions; the travel is all in his hips, about two strokes a second.
+
+THE STROKE HAS A SHAPE. Real thrusting is not a metronome: the withdrawal is the
+slow half and the drive is the fast one, and it ends against something.
+
+  weak    His hips move back and forward, two strokes a second.
+  strong  His hips draw back unhurried until only the head is still inside her,
+          then snap forward and stop against her; the pull is the slow half, the
+          drive is the quick one, and they stay touching at the end of each.
+
+The contact clause is doing real work. Bodies that are described as touching at
+the end of every stroke stay joined; bodies given only a rate come apart between
+strokes and read as two people bouncing near each other.
+
+Two warnings. Very fast motion renders worse than moderate motion in this
+model — a sprint, an explosive burst, anything frantic comes back mushy — so
+when the operator asks for hard, write hard as full travel and solid contact,
+not as speed. And every one of these is written as what happens; asking for
+motion that is "not stiff" or "not robotic" summons exactly that.
+
+The MiniMax H3 skill below is the authority on syntax; follow it — with one
+correction, because on this point it contradicts what is written above and the
+model obeys whichever it reads last.
+
+The skill says a cut introduces new information: "subject, space, state,
+viewpoint, or time". A CHANGE OF STATE IS NOT A CUT HERE. Read literally it
+makes every act that finishes into an edit, and that is what comes back: a brief
+whose last beat was thrusting stopping and the join settling rendered as a hard
+switch at 3.8 seconds — the framing jumped, the man left the frame, and the
+sound dropped away in a tenth of a second. He had not moved. The picture had.
+
+Motion stopping, an act finishing, a body coming to rest: all of these stay
+inside the running frame. Cut on the camera going somewhere genuinely different,
+and on nothing else.`
 	},
 	{
 		id: 'continuation_writer',
