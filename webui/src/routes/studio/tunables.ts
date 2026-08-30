@@ -251,6 +251,23 @@ and retention_analysis have no referent and must never appear. The brief is:
 - THE KEY BEAT GOES IN THE MIDDLE, NEVER LAST. The final beat is compressed by
   the model, so a climax placed there is lost. Put it at roughly 60% and give
   the last beat something cheap — an aftermath, a settling.
+- A BEAT THAT STOPS OR REVERSES MOTION HAS TO WRITE HOW IT GETS THERE. "The
+  thrusts stop" is a state, and a state is all the model has to work with, so it
+  arrives in one frame: the picture lurches, the body leaves where it was, the
+  sound falls off a cliff. Measured on one clip, the whole of the settling
+  happened inside a tenth of a second and read as a cut.
+  A beat has three parts, not two, whenever the motion changes gear:
+
+    weak    At 00:03.800 the thrusts stop; the frame holds the settled join.
+    strong  At 00:03.800 his strokes shorten over the next second — full strokes
+            to half strokes to a shallow rock — until his hips come to rest
+            against hers and stay touching. End state: his hips flush against
+            her, both bodies breathing, no gap opened between them.
+
+  Two things the strong version buys. The deceleration has a span, so it is
+  spread over frames instead of landing on one. And it names the contact
+  surviving, which is what keeps the body in the frame rather than letting it
+  vanish out of it.
 - [Shot 1] carries no timestamp. Every later shot opens "At MM:SS.mmm,".
   Timestamps strictly increasing, all inside the duration.
 - Camera in every shot, one move per shot. If static, say the frame never moves
@@ -449,6 +466,48 @@ stripes not to appear would summon them.
 If the operator does ask for a look — anime, 35mm, a phone video, a painting —
 that is the look, and this section does not apply.
 
+# AND IT SHOULD MOVE LIKE A BODY, NOT LIKE A PUPPET
+
+The section above is about how a frame looks. This one is about how the frames
+join up, and it is the gap that produces the commonest complaint about a clip
+that is otherwise correct: the bodies read as writhing rather than working. It
+happens because a beat names the act, names how wet it is, and never once names
+a force or a direction — so there is nothing for the motion to be made of.
+
+An action is not finished until it says four things: how far the part travels,
+how fast, which way the force goes, and what moves in consequence.
+
+  weak    He fucks her hard.
+  weak    He drives hard full strokes, hips snapping in.
+  strong  He draws his hips back until only the head is inside her, then drives
+          in until his hips meet hers, about two strokes a second. His weight
+          goes through his planted forearms; her breasts move on each impact and
+          settle before the next.
+
+The strong one is not longer for the sake of it. It carries a travel distance
+(back to the head, in to the hips), a rate (two a second), where the force is
+carried (the forearms), and a consequence (the breasts move and settle). Those
+four are what the model needs to make weight out of.
+
+Words that carry motion, and are worth spending the budget on:
+
+  the distance a part travels, named at both ends — "back until only the head is
+    inside her, in until his hips meet hers"
+  a rate, in strokes or beats per second, or the plain words for one — slowly,
+    steadily, briskly
+  where the weight is carried and which joint takes it — planted forearms, one
+    knee braced, a hand gripping the cushion
+  what moves because of it — flesh that shifts on impact and settles, hair that
+    sticks damp, a hand that slips and regrips
+  momentum reading through the body — the hips leading and the shoulders
+    following, not everything moving at once
+
+Two warnings. Very fast motion renders worse than moderate motion in this
+model — a sprint, an explosive burst, anything frantic comes back mushy — so
+when the operator asks for hard, write hard as full travel and solid contact,
+not as speed. And every one of these is written as what happens; asking for
+motion that is "not stiff" or "not robotic" summons exactly that.
+
 # WHEN A REFERENCE IS ATTACHED
 
 The task will say so, and will name each picture and what it is. That changes the
@@ -513,7 +572,20 @@ number the beats in prose, do not explain your pacing.
 Where the key beat sits goes in "why". That field exists so the prompt does not
 have to carry it.
 
-The MiniMax H3 skill below is the authority on syntax; follow it.`
+The MiniMax H3 skill below is the authority on syntax; follow it — with one
+correction, because on this point it contradicts what is written above and the
+model obeys whichever it reads last.
+
+The skill says a cut introduces new information: "subject, space, state,
+viewpoint, or time". A CHANGE OF STATE IS NOT A CUT HERE. Read literally it
+makes every act that finishes into an edit, and that is what comes back: a brief
+whose last beat was thrusting stopping and the join settling rendered as a hard
+switch at 3.8 seconds — the framing jumped, the man left the frame, and the
+sound dropped away in a tenth of a second. He had not moved. The picture had.
+
+Motion stopping, an act finishing, a body coming to rest: all of these stay
+inside the running frame. Cut on the camera going somewhere genuinely different,
+and on nothing else.`
 	},
 	{
 		id: 'brief_register',

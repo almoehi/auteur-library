@@ -167,7 +167,70 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 		}
 	}
 
-	// 5. A brief that ran away.
+	// 5. Motion that stops, with nothing written about how it slows.
+	//
+	// The beat grammar is a change plus an end state, and both are static, so a
+	// beat that ends the motion gives the model a state and no path into it. It
+	// arrives in one frame. Measured on a clip whose last beat was "the thrusts
+	// stop; the frame holds the settled join": at 3.8 seconds the framing jumped,
+	// the man left the picture and the audio fell from full level to nothing
+	// inside a tenth of a second. Nothing about the body had moved — the shot had.
+	//
+	// The skill made it worse by listing a change of STATE as a reason to cut, so
+	// the model was reading the stop as an edit. That is overruled in the writer
+	// now; this catches the briefs where the ramp is still missing.
+	//
+	// Only fires when nothing anywhere in the brief describes a slowing. One
+	// mention is enough to clear it: the point is that SOME deceleration was
+	// written, not that it was written in a particular place.
+	const MOTION = String.raw`thrusts?|thrusting|strokes?|stroking|driving|drives|pumping|bouncing|bounce|rocking|grinding`;
+	// Two ways a brief ends the motion, and the second is the one that bit: the
+	// first names the stop, the second just stops mentioning it — "he stays buried
+	// without stroking" after a beat of hard thrusting is a body going from full
+	// travel to nothing, written as a place rather than as a change.
+	const stops = new RegExp(
+		String.raw`\b(?:${MOTION})\s+(?:stops?|cease[sd]?|halts?)\b` +
+			String.raw`|\b(?:stays?|remains?|holds?|lies|sits)\b[^.]{0,60}?\bwithout\s+(?:${MOTION}|moving)\b` +
+			String.raw`|\bno longer\s+(?:${MOTION}|moving)\b` +
+			String.raw`|\bboth bodies\s+(?:hold\s+)?still\b|\bthe settled join\b` +
+			String.raw`|\b(?:he|she|they)\s+(?:stops?|halts?|goes still|comes to rest|stills)\b`,
+		'i'
+	);
+	// What clears it is a SPAN — the deceleration given a length in time.
+	//
+	// This started as an attempt to recognise "the body is slowing" in general, and
+	// that is a judgement, not a pattern: four rewrites each fixed one brief and
+	// broke another. "The push slows to a hold" is the camera, not the hips, and no
+	// window or clause rule separated them reliably — "toward the join of hips" puts
+	// a body word inside the camera's own sentence.
+	//
+	// So this checks the one thing the writer is now actually told to write: a span.
+	// "over the next second", "across the next half second". Narrow on purpose. It
+	// will miss a ramp phrased another way, and the cost of that is one retry on a
+	// brief that was already fine — while the writer rule, which is the real fix,
+	// stops the fault being written in the first place.
+	const span = /\b(?:over|across|through)\s+(?:the\s+)?(?:next\s+)?(?:a\s+|half\s+a\s+|one\s+|two\s+|\d+(?:\.\d+)?\s*)?(?:second|seconds|beat|beats)\b/i;
+
+	// Speech ending is not this fault. "She stops speaking, closes her mouth" is a
+	// mouth coming to rest, and closing the lips IS the deceleration — three of the
+	// four briefs this first matched were that, and none of them had the problem.
+	const speech = /\b(?:speaking|speech|talking|lips|mouth|words|line)\b/i;
+	const m = stops.exec(prompt);
+	const aboutSpeech = m ? speech.test(prompt.slice(Math.max(0, m.index - 90), m.index + 90)) : false;
+	if (m && !aboutSpeech && !span.test(prompt)) {
+		faults.push({
+			code: 'stop-without-ramp',
+			says:
+				`A beat ends the motion and nothing says how the BODY slows into it, so the model ` +
+				`has a state and no path to it — it lands in one frame and reads as a cut. Write ` +
+				`the deceleration as physics over a stated span: the stroke getting shorter, the ` +
+				`rate dropping, the body coming to rest, and say the contact is kept so nobody ` +
+				`leaves the frame. A camera easing off is not the body slowing.`,
+			human: 'the motion stops in this shot without anything describing how it slows down'
+		});
+	}
+
+	// 6. A brief that ran away.
 	const words = (prompt.match(/\S+/g) ?? []).length;
 	if (words > WORD_CEILING) {
 		faults.push({
@@ -179,7 +242,7 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 		});
 	}
 
-	// 6. Nobody's voice named.
+	// 7. Nobody's voice named.
 	//
 	// Silent until two clips later, which is what makes it worth catching here:
 	// each clip is an independent roll, so a brief that says nothing about the
