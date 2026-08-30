@@ -82,6 +82,7 @@ function readLoras(raw: unknown): Pick[] {
 	if (!Array.isArray(raw)) return [];
 	const out: Pick[] = [];
 	let act = false;
+	let detail = false;
 	for (const item of raw) {
 		if (!item || typeof item !== 'object') continue;
 		const { key, strength } = item as { key?: unknown; strength?: unknown };
@@ -92,6 +93,18 @@ function readLoras(raw: unknown): Pick[] {
 		if (lora.kind === 'act') {
 			if (act) continue;
 			act = true;
+		}
+		// One detail, the same way. The act used to be mandatory, so two slots
+		// meant one of each and the cap on details never had to exist. Making the
+		// act optional — right, because a withdrawal is not an act and a thrusting
+		// adapter in that clip thrusts anyway — freed both slots for detailers,
+		// and the catalogue's own history says where that goes: four stacked
+		// detailers came back with the penetration anatomy incoherent, and the
+		// cock detailer alone wrecked a POV missionary shot. The text said at most
+		// one; now the code does too.
+		if (lora.kind === 'detail') {
+			if (detail) continue;
+			detail = true;
 		}
 		// Clamped to the author's published range, or pinned to their number where
 		// they published none. The writer is allowed to place a strength; it is not

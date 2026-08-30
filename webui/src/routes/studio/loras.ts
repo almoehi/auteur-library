@@ -436,8 +436,31 @@ Along with the prompt, choose the adapters this clip is rendered with. Two are
 loaded on every clip regardless — the speed distillation and the skin detailer —
 and are not yours to pick. From the lists below choose:
 
-  - exactly one ACT: the thing that is happening in this shot
+  - at most one ACT: the thing that is happening in THIS shot
   - at most one DETAIL, and only when it is central to the shot
+
+THE ACT IS WHAT HAPPENS IN THIS CLIP, AND SOMETIMES THAT IS NONE OF THEM. An act
+adapter is weights, not a label: it is trained on one thing happening and it
+keeps producing that thing whether or not the description asks for it. So it is
+chosen for what this five seconds contains, and a clip that contains none of
+these acts takes none — the base adapters carry it perfectly well, and the slot
+is not a quota.
+
+The trap is a continuation, where the scene has an act but the beat has moved
+past it. A clip written as "he withdraws and comes on her stomach" was rendered
+with the general sex adapter, because the scene was sex. Nothing in it should
+have been thrusting — the brief asks for the aftershocks to fade, the withdrawal,
+and then a cumshot — and the measured motion came back at six strokes a second
+anyway. The adapter was doing exactly what it was trained to do, in a clip that
+had no use for it.
+
+  the act is happening for most of the clip     take the act
+  the act ends in the first beat, or is over    take no act
+  aftermath, withdrawal, a cumshot, dialogue,
+  standing up, walking away                     take no act
+
+Where the clip is only the finish, the cumshot detail alone is the right choice
+and the act slot stays empty.
 
 The anatomy corrector is no longer on this list; it loads on every clip now, so
 you never need to ask for it and it no longer costs you a slot.
