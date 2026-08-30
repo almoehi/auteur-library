@@ -160,7 +160,16 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 	// frame is telling the model two things, and the picture wins.
 	if (opts.continuation && opts.pinned) {
 		const people = subs.filter((s) => !(ROOM.test(s.said) && !BODY.test(s.said)));
-		const arrival = people.some((s) => !/<Picture \d+>/.test(s.said));
+		// Somebody is arriving only if nothing places them here already. A picture
+		// does that, and so does being named as already in the prior clip — which
+		// is how every continuation now declares the second person, since they
+		// have no sheet of their own and the video is where they come from.
+		//
+		// Without the second half this fired on half of today's continuations: the
+		// rule that made the man a <Subject> at all is what started declaring him
+		// from <Video 1>, and this read every one of those as an arrival.
+		const settled = /\b(?:already (?:established|present|there|in)|from|seen|shown)\b[^.]{0,40}<Video \d+>|<Video \d+>[^.]{0,40}\b(?:establishes|shows|contains)\b/i;
+		const arrival = people.some((s) => !/<Picture \d+>/.test(s.said) && !settled.test(s.said));
 		if (people.length > 1 && arrival && !/NOT in <Picture 3>/.test(prompt)) {
 			faults.push({
 				code: 'arrival-at-pinned-seam',
