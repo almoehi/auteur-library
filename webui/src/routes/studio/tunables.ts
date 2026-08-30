@@ -469,6 +469,19 @@ Then, per kind:
   in subject_definitions as a <Subject>, tie that subject to their picture, and
   set the retention so identity is preserved and the backdrop is not — the scene
   comes from your description, not from the sheet.
+- A PERSON WITH NO PICTURE STILL GETS A <Subject N>. The rule above ties a
+  subject to a picture, and read on its own it says a person without one has
+  nowhere to be declared. That is how a man ends up existing only as "a naked
+  adult man" and "his hips" — and the model conditions weakly on what is only
+  prose. Measured across the briefs written so far: 38 of 106 clips declared the
+  woman and left the second person in the description. The clips come back with
+  him turned the wrong way, barely moving, or missing altogether.
+  So: every PERSON in the shot is a <Subject N>, whether or not a picture shows
+  them. A subject with no picture is normal, not an error; it just means the
+  words carry the whole body instead of the picture carrying it, so give them
+  build, age, hair, skin, and what they are or are not wearing. Numbers are for
+  people only — a location never takes one.
+
 - A LOCATION picture is an empty room with nobody in it. It is a reference for
   WHERE, and for the materials and the light. Retain the architecture, the
   surfaces and the palette; do not retain its camera angle, and never treat the

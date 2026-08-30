@@ -109,16 +109,24 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 	// existed as "he", "his hips" and "a hard penis" — a body part is not a
 	// person, and the clips came back with the woman alone.
 	//
-	// Continuations only, and only when <Subject 1> is declared. A clip brief
-	// without references legitimately defines nobody and puts both people in the
-	// description, which is how the two-person clips that worked were written; a
-	// continuation always declares <Subject 1>, so a second party with no subject
-	// of their own is a real omission rather than a style.
+	// Any brief that declares somebody, not just a continuation.
+	//
+	// A clip brief with NO subjects at all legitimately puts both people in the
+	// description, which is how the two-person clips that worked were written —
+	// `subs.length` below is what excludes those. What is never a style is
+	// declaring one person and leaving the other in prose: the asymmetry is the
+	// fault, and it does not become one only because the clip is a continuation.
+	//
+	// This was continuations-only for a while, and a direct clip walked straight
+	// through it: the woman was <Subject 1>, the man was "a naked adult man" and
+	// "his hips", and he came back facing the wrong way and barely moving.
+	// Re-scanned over every brief written so far, the extension names 38 more
+	// clips out of 106 — all of them the same shape, none of them a style.
 	//
 	// POV is exempt. There the second person's body is deliberately out of frame
 	// and only their hands or cock are in it, which is the shot rather than a
 	// mistake.
-	if (opts.continuation && subs.length) {
+	if (subs.length) {
 		const people = subs.filter((s) => !(ROOM.test(s.said) && !BODY.test(s.said)));
 		const secondParty =
 			/\b(the man|a man|another (man|woman|person)|his (hips|hands?|cock|penis|thighs|chest))\b/i.test(
