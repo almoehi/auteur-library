@@ -61,6 +61,48 @@ the old one wrote — `failed to deserialize oplog chunk`, endlessly. The fix is
 to move `~/auteur/data/kv-store` aside; nothing of yours is in there. Clips,
 sheets and the render log live in `~/auteur/studio-library` and survive.
 
+## Setting up a second machine
+
+Three things have to match, and three cannot.
+
+**Must match — otherwise you get different clips from the same brief:**
+
+| | value | why |
+| --- | --- | --- |
+| branch | `dszabo` | the writer rules and the anchor live here |
+| harness image | `almoehi/auteur@sha256:701a36ff…` | the newer build renders on the GPU and never collects the artifact |
+| `COMFY_VERSION` | `0.34.0` | on 0.32.0 the seam anchor lands at the wrong frame |
+
+**Cannot match, and should not:** `MODAL_WORKSPACE`, the Modal token pair, and
+the AWS keys are per account. Each machine deploys its own compute endpoints and
+writes to its own bucket. What has to be the same is the *version* of the
+endpoints, not the account they live in.
+
+The image is pinned by digest rather than by tag because `almoehi/auteur:latest`
+moved on 2026-08-30 and a tag pointing at the old build exists only on the
+machine that made it — `docker pull almoehi/auteur:known-good` finds nothing.
+
+```bash
+docker pull almoehi/auteur@sha256:701a36ff5e843b9bd20471e0faeb44dd0eeb9f79d10599ac3b56af7889032e6a
+docker tag  almoehi/auteur@sha256:701a36ff5e843b9bd20471e0faeb44dd0eeb9f79d10599ac3b56af7889032e6a \
+            almoehi/auteur:known-good
+
+rm -f ~/.local/share/video-harness/.modal-deploy-sha   # stores the hash of empty
+                                                       # input; without this the
+                                                       # deploy skips in silence
+# deploy 0.34.0 to YOUR OWN Modal account, then:
+echo 'COMFY_VERSION=0.34.0' >> ~/auteur/.env
+
+cd ~/auteur && TAG=known-good ./run.sh --local         # --local: the tag is not
+                                                       # in the registry, only
+                                                       # the digest is
+```
+
+Then run `webui/scripts/parity.sh` on both machines and diff the two outputs.
+Everything above the env block should be identical; in the env block only
+`MODAL_WORKSPACE` and the key lengths are allowed to differ. It prints no secret
+values, so the output is safe to paste to each other.
+
 ## The seam anchor
 
 `SEAM_ANCHOR` in `compose.ts` switches it. Off, the continuation bundle is byte
