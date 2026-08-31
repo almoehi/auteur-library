@@ -20,6 +20,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { extname, join } from 'node:path';
+import { DEFAULT_VOICE } from './types';
 
 const DIR = join(homedir(), 'auteur', 'studio-library', 'sheets');
 const MANIFEST = join(DIR, 'manifest.json');
@@ -233,8 +234,11 @@ export function addSheet(row: {
 		kind: row.kind,
 		name: row.name.trim() || nameFromDescription(row.description, row.kind),
 		description: row.description.trim(),
-		...(row.kind === 'character' && row.voice?.trim()
-			? { voice: row.voice.trim().slice(0, 240) }
+		// A character always gets one. The field was optional and the upload path
+		// never sent it, so every uploaded character was made mute and stayed
+		// that way until somebody happened to open the composer and notice.
+		...(row.kind === 'character'
+			? { voice: (row.voice?.trim() || DEFAULT_VOICE).slice(0, 240) }
 			: {}),
 		file,
 		size: row.bytes.byteLength,

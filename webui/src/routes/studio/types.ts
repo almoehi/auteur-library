@@ -1,3 +1,16 @@
+/** What a character sounds like when nobody has said.
+ *
+ *  A real sentence rather than a placeholder, because a placeholder is not a
+ *  value: it looks filled in and renders as nothing, so a character shipped
+ *  with a grey suggestion in the box and silence in the clip. This is written
+ *  into the character when it is made, and shown as the starting text for the
+ *  ones made before it existed.
+ *
+ *  Deliberately unremarkable — it is a floor, not a characterisation. Anything
+ *  more specific would be a guess about someone the description has not
+ *  described, and would be wrong more often than it was right. */
+export const DEFAULT_VOICE = 'a low, unhurried voice with a slight rasp';
+
 /** The shared contract for the /studio surface.
  *
  *  Three files agree on the shapes in here: the composer (compose.ts), the

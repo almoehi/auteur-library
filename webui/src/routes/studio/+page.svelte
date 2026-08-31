@@ -50,6 +50,7 @@
 	import { recordWait, typicalWait, typicalLabel } from './timings';
 	import { renderDocument, type Block } from './render-doc';
 	import {
+		DEFAULT_VOICE,
 		RUN_CEILING_MS,
 		SCENE_COUNT_MAX,
 		SCENE_COUNT_MIN,
@@ -1805,7 +1806,11 @@
 	 *  leave the previous one's sentence in the box and save it onto the wrong
 	 *  person at the next blur. This tracks whoever is chosen and still takes
 	 *  typing. */
-	let voiceDraft = $derived(chosenCharacter?.voice ?? '');
+	// The stored voice, or the one a character made today would be given. Every
+	// character has one from the moment it exists now; only the ones made before
+	// that fall back, and they fall back to real text rather than to grey
+	// suggestion text that reads as filled in and renders as silence.
+	let voiceDraft = $derived(chosenCharacter?.voice ?? DEFAULT_VOICE);
 
 	/** Written on blur, not behind a Save button. There is one field and it is
 	 *  one sentence; a button to confirm a sentence is a button nobody needs. */
@@ -2313,7 +2318,6 @@
 					pushItem({
 						who: 'studio',
 						kind: 'clips',
-						text: `The turn ${x.name} was built from.`,
 						artifact: {
 							id: c.artifact,
 							key: 'turnaround',
@@ -5909,9 +5913,16 @@
 										{@const drawing = kept?.sheet?.state === 'rendering'}
 										{@const dn =
 											keptEdits[item.id]?.name ?? kept?.name ?? item.sheet.name ?? ''}
-										{@const dv = keptEdits[item.id]?.voice ?? kept?.voice ?? ''}
+										<!-- The stored voice, or the one a character made today would have
+											 been given. Characters made before that was written have none,
+											 and an empty box with grey suggestion text meant the suggestion
+											 was never what got rendered — a placeholder looks filled in and
+											 is worth nothing. Now it is real text you can edit, and Update
+											 is what makes it theirs. -->
+										{@const dv = keptEdits[item.id]?.voice ?? kept?.voice ?? DEFAULT_VOICE}
 										{@const changed =
-											dn.trim() !== (kept?.name ?? '') || dv.trim() !== (kept?.voice ?? '')}
+											dn.trim() !== (kept?.name ?? '') ||
+											dv.trim() !== (kept?.voice ?? DEFAULT_VOICE)}
 										<!-- The character is usable the moment the picture lands — the
 									 turnaround is an improvement to it, not a condition of it. So
 									 the first line is the useful state and the wait is a second,
@@ -5957,8 +5968,7 @@
 													oninput={(e) => editKept(item.id, 'voice', e.currentTarget.value)}
 													spellcheck="false"
 													maxlength="240"
-													placeholder="a low, unhurried voice with a slight rasp"
-													class="mt-2 mb-4 w-full rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+																										class="mt-2 mb-4 w-full rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
 												/>
 											{/if}
 											<label
@@ -6694,16 +6704,25 @@
 							     Up here with the other consts because {@const} must be a block's
 							     immediate child — this file's own rule, and I had just put it inside
 							     a div. -->
-							{@const said =
-								item.kind !== 'takes' && item.text && item.text !== item.artifact.title
-									? item.text
-									: ''}
-								<!-- A turnaround is a reference picture that happens to be a video:
+							<!-- A turnaround is a reference picture that happens to be a video:
 							     there is nothing to continue from it, nothing to put in a film,
 							     and no verdict to give it — it either resembles the character or
 							     it is redrawn from the card. Offering the scene band under it put
 							     four controls on screen that all lead somewhere wrong. -->
-								{@const scenic = item.artifact.key !== 'turnaround'}
+							{@const scenic = item.artifact.key !== 'turnaround'}
+							<!-- No caption on a turnaround either. It sat directly under the
+							     character's own card and said, in a full sentence, what the picture
+							     above it had already said — and with a long descriptive name in the
+							     middle of it, "The turn ultra slim body, flat breast was built
+							     from." reads as broken English rather than a label.
+
+							     Written into the transcript, so cards kept before this change carry
+							     it too; the rule has to hold for what is on disk, not only for what
+							     is written next. -->
+							{@const said =
+								scenic && item.kind !== 'takes' && item.text && item.text !== item.artifact.title
+									? item.text
+									: ''}
 							<div class="enter">
 								<div class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
 								{#each item.artifact.files as f (f.name)}
@@ -7540,7 +7559,6 @@
 												}
 											}}
 											maxlength="240"
-											placeholder="a low, warm, slightly husky voice, unhurried"
 											class="min-h-9 w-full rounded-lg bg-[var(--st-surface-2)] px-3 text-sm text-[var(--st-text)] ring-1 ring-[var(--st-line)] outline-none placeholder:text-[var(--st-faint)] focus-visible:ring-2 focus-visible:ring-[var(--st-text)]"
 										/>
 										<div class="flex flex-wrap gap-1.5">
