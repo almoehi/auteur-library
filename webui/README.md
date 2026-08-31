@@ -16,6 +16,58 @@ Requires a harness already running (`~/auteur/run.sh`). The UI reaches it at
 `host.docker.internal:19006`; override with `AUTEUR_HARNESS_URL` if yours is
 elsewhere.
 
+## Two things that are not in this repo
+
+Checking the branch out is not enough. Two settings live on the machine, and
+without either one the app runs and quietly produces worse clips than the code
+is written for.
+
+**ComfyUI 0.34.0 on the Modal endpoints.** The seam anchor packs a keyframe
+latent at frame 0 of a continuation, and on 0.32.0 the model places it at the
+text origin rather than after the reference span — so it lands displaced by the
+whole reference block. The anchor still grips, at the wrong position: measured,
+the join sits at 13x the clip's own frame-to-frame change instead of 0.9x, which
+is what the visible cut at a continuation looked like for months. Upstream fixed
+it in `e01fb4c56b`, first released in v0.34.0.
+
+```bash
+rm -f ~/.local/share/video-harness/.modal-deploy-sha    # it stores the hash of
+                                                        # empty input, so the
+                                                        # deploy silently skips
+cd ~/auteur && docker run --rm <credentials> almoehi/auteur:latest \
+  deploy-modal.sh --cuda 13 --comfy 0.34.0 --upgrade
+echo 'COMFY_VERSION=0.34.0' >> ~/auteur/.env             # the harness filters
+                                                        # endpoints by name:
+                                                        # comfy-compute-{gpu}-cu13-{vSlug}
+```
+
+The container reads `.env` at `docker run`, not at `docker restart`, so it has
+to be recreated for the variable to take. Rolling back is one line — set it to
+`0.32.0` and recreate; the old endpoints stay deployed under their own names.
+
+**The harness image is pinned.** `run.sh` defaults to `almoehi/auteur:latest`,
+and the build from 2026-08-30 renders and uploads on the GPU but never collects
+the artifact: the task sits at `running`, the event log shows only `dispatch`,
+and the cost stops climbing while nothing arrives. Reason not established.
+
+```bash
+docker tag <the working image id> almoehi/auteur:known-good
+cd ~/auteur && TAG=known-good ./run.sh --local
+```
+
+One more thing worth knowing before an image change: golem's oplog format is not
+compatible across versions, so a new image hits a crash loop on the workspaces
+the old one wrote — `failed to deserialize oplog chunk`, endlessly. The fix is
+to move `~/auteur/data/kv-store` aside; nothing of yours is in there. Clips,
+sheets and the render log live in `~/auteur/studio-library` and survive.
+
+## The seam anchor
+
+`SEAM_ANCHOR` in `compose.ts` switches it. Off, the continuation bundle is byte
+for byte what it was before the anchor existed; on, `H3KeyframeInject` sits
+between the reference node and the guider, taking its frame off the loader the
+prior clip is already on. It is on, and it needs the ComfyUI above.
+
 ## The three surfaces
 
 | route           | what it is                                                     |
