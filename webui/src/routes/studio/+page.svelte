@@ -2173,16 +2173,21 @@
 
 	/** How long the six views take, and how long this one has been going.
 	 *
-	 *  Measured, not guessed: every kept sheet's workspace id carries the moment
-	 *  it was launched and its file carries the moment it landed, and the four on
-	 *  disk took 269, 273, 277 and 350 seconds — start to picture on screen,
-	 *  which is the wait a person actually sits through rather than the GPU's
-	 *  share of it. 270 is the recent three; the outlier is the oldest.
+	 *  Measured, not guessed: a sheet's workspace id carries the moment it was
+	 *  launched and its file carries the moment it landed, so the wait is the
+	 *  difference — start to picture on screen, which is what a person sits
+	 *  through rather than the GPU's share of it.
+	 *
+	 *  Character turnarounds only: 269, 250, 240 seconds. The first version of
+	 *  this number averaged in the location sheets on disk (273, 277, 350) and
+	 *  came out 20 seconds long. Those are a different job on a different
+	 *  endpoint — `sheetwf`, drawing a still — and this line is only ever shown
+	 *  beside a character.
 	 *
 	 *  Stated as an estimate because it is one — a cold endpoint adds most of a
 	 *  minute — and replaced by plain words once it is past, rather than counting
 	 *  down into the negative and calling that information. */
-	const TURN_ETA_SEC = 270;
+	const TURN_ETA_SEC = 250;
 
 	function since(iso?: string): number {
 		if (!iso) return 0;
