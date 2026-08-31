@@ -922,6 +922,10 @@
 			// described only by their filename because of it, and each one looked
 			// like the operator had forgotten to type.
 			fd.append('description', said.trim());
+			// Which conversation this belongs to. The turnaround behind it runs for
+			// minutes server-side, and without this the card announcing it was posted
+			// into whatever chat happened to be open when the poll caught it.
+			if (runSlug) fd.append('sessionSlug', runSlug);
 			const res = await fetch('/studio/api/sheet', { method: 'POST', body: fd });
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -2110,7 +2114,15 @@
 				// The voice as it stands on the card, not as the writer first wrote
 				// it: the field above the name is editable, and a save that ignored
 				// an edit would keep a voice the operator had just changed.
-				body: JSON.stringify({ kind, name, description, job, seed, ...(voice ? { voice } : {}) })
+				body: JSON.stringify({
+					kind,
+					name,
+					description,
+					job,
+					seed,
+					...(voice ? { voice } : {}),
+					...(runSlug ? { sessionSlug: runSlug } : {})
+				})
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -2153,6 +2165,90 @@
 	 *  poller — which is what the sidebar's dot used to key off — sits idle
 	 *  throughout and the row looked asleep while a GPU was busy. */
 	const sheetsWorking = $derived(sheets.some((x) => x.sheet?.state === 'rendering'));
+
+	/** How long the six views take, and how long this one has been going.
+	 *
+	 *  Measured, not guessed: every kept sheet's workspace id carries the moment
+	 *  it was launched and its file carries the moment it landed, and the four on
+	 *  disk took 269, 273, 277 and 350 seconds — start to picture on screen,
+	 *  which is the wait a person actually sits through rather than the GPU's
+	 *  share of it. 270 is the recent three; the outlier is the oldest.
+	 *
+	 *  Stated as an estimate because it is one — a cold endpoint adds most of a
+	 *  minute — and replaced by plain words once it is past, rather than counting
+	 *  down into the negative and calling that information. */
+	const TURN_ETA_SEC = 270;
+
+	function since(iso?: string): number {
+		if (!iso) return 0;
+		const t = Date.parse(iso);
+		return Number.isFinite(t) ? Math.max(0, Math.round((now - t) / 1000)) : 0;
+	}
+
+	function clock(sec: number): string {
+		const m = Math.floor(sec / 60);
+		return `${m}:${String(sec % 60).padStart(2, '0')}`;
+	}
+
+	/** What the card says while a turnaround is drawing. The counter is the proof
+	 *  that something is happening; the estimate is what stops it feeling open
+	 *  ended. Past the estimate it stops guessing rather than guessing wrong. */
+	function turnStatus(sh?: StoredSheet): string {
+		const el = since(sh?.sheet?.startedAt);
+		const left = TURN_ETA_SEC - el;
+		if (left > 15) return `${clock(el)} · about ${Math.ceil(left / 60)} min left`;
+		if (el < TURN_ETA_SEC + 120) return `${clock(el)} · nearly there`;
+		return `${clock(el)} · taking longer than usual`;
+	}
+
+	/** Sessions with six views still being drawn, and sessions where they have
+	 *  landed and nobody has looked yet. Both keyed by the session the subject
+	 *  was made in, which is what stops a mark appearing on a row that has
+	 *  nothing to do with it. */
+	const sessionsDrawing = $derived(
+		new Set(
+			sheets
+				.filter((x) => x.sheet?.state === 'rendering' && x.sessionSlug)
+				.map((x) => x.sessionSlug!)
+		)
+	);
+	const sessionsDone = $derived(
+		new Set(
+			sheets
+				.filter((x) => x.sheet?.state === 'ready' && x.sheet.file && !x.delivered && x.sessionSlug)
+				.map((x) => x.sessionSlug!)
+		)
+	);
+
+	/** Ids this tab has already reported, so the effect below settles after one
+	 *  pass instead of chasing its own write. */
+	const markedSeen = new Set<string>();
+
+	/** Take the mark off this session's finished sheets.
+	 *
+	 *  Tied to the session being open, not to a card being posted. The first
+	 *  version rode along with the card: mark it seen at the moment the six views
+	 *  are pushed into the conversation. But a card is posted once, and the mark
+	 *  outlives it — come back to a session whose card was posted last week and
+	 *  the poller skips it as already shown, so the green never cleared and the
+	 *  sidebar claimed news that had been read for days.
+	 *
+	 *  Opening the session is the whole condition, which is also what it means. */
+	$effect(() => {
+		const slug = runSlug;
+		if (!slug) return;
+		for (const x of sheets) {
+			if (x.sheet?.state !== 'ready' || !x.sheet.file) continue;
+			if (x.sessionSlug !== slug || x.delivered || markedSeen.has(x.id)) continue;
+			markedSeen.add(x.id);
+			x.delivered = true;
+			void fetch('/studio/api/sheet', {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id: x.id, delivered: true })
+			}).catch(() => {});
+		}
+	});
 
 	/** The characters this conversation is still owed a sheet for.
 	 *
@@ -2197,6 +2293,15 @@
 			const awaited = awaitedSheets();
 			for (const x of sheets) {
 				if (x.sheet?.state !== 'ready' || !x.sheet.file) continue;
+				// Its own conversation, and no other.
+				//
+				// `wasRendering` is a purely temporal test — it fires wherever the tab
+				// happens to be when the poll catches the finish. Start a character,
+				// switch sessions, and the six views landed in the middle of unrelated
+				// work. A sheet made before this was recorded has no session, and no
+				// session means any: those keep the old behaviour rather than becoming
+				// undeliverable.
+				if (x.sessionSlug && x.sessionSlug !== runSlug) continue;
 				if (!wasRendering.has(x.id) && !awaited.has(x.id)) continue;
 				if (sheetPosted.has(x.id) || sheetShown(x.id)) continue;
 				sheetPosted.add(x.id);
@@ -3260,6 +3365,54 @@
 	 *  Two clicks, because one is how a face nobody meant to touch disappears —
 	 *  and a sheet is minutes of GPU time, not a row in a list. */
 	let dropArmed = $state('');
+
+	/** What is being typed into a kept subject's card, before it is applied.
+	 *
+	 *  Held here rather than bound to the card's own copy of the subject, because
+	 *  that copy is a snapshot taken when the card was written and the store has
+	 *  moved since — the voice is also editable from the composer, and a rename
+	 *  applied there would be silently undone by a card still showing the old name.
+	 *  Empty means "show what is stored", which is the state a card should be in
+	 *  for all but the few seconds someone is editing it. */
+	let keptEdits = $state<Record<string, { name?: string; voice?: string }>>({});
+
+	function editKept(id: string, field: 'name' | 'voice', v: string) {
+		keptEdits[id] = { ...keptEdits[id], [field]: v };
+	}
+
+	/** Name and voice of a subject that is already kept, edited from its own card.
+	 *
+	 *  Separate from saveSubject, which creates one. This is the case the card had
+	 *  no answer for: an uploaded character is kept the moment the picture lands, so
+	 *  there is nothing to save — but the voice arrives blank and the name arrives
+	 *  as whatever was typed in the box, and both are worth changing once the six
+	 *  views are on screen and you can see who they are.
+	 *
+	 *  An explicit button rather than saving on blur, because the voice is a
+	 *  sentence: leaving the field to re-read the sheet should not commit a half
+	 *  written one, and there is no way back from a save nobody asked for.
+	 */
+	async function updateKept(itemId: string, id: string, name: string, voice: string) {
+		if (!id || sheetBusy[itemId]) return;
+		sheetBusy[itemId] = true;
+		try {
+			const res = await fetch('/studio/api/sheet', {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id, name: name.trim(), voice: voice.trim().slice(0, 240) })
+			});
+			const r = (await res.json()) as { ok?: boolean; sheets?: StoredSheet[]; error?: string };
+			if (r.ok && r.sheets) {
+				sheets = r.sheets;
+				// Back to showing what is stored, which is now what was typed.
+				delete keptEdits[itemId];
+			} else pushError(r.error || 'that could not be updated');
+		} catch (e) {
+			pushError(`that could not be updated — ${e}`);
+		} finally {
+			sheetBusy[itemId] = false;
+		}
+	}
 
 	async function dropSheet(id: string) {
 		try {
@@ -4795,8 +4948,14 @@
 
 		// Elapsed time is shown in whole minutes, so a 15s clock is plenty.
 		const clock = setInterval(() => (now = Date.now()), 15_000);
+		// Except while something is being drawn, where a counter is on screen and a
+		// number that moves once a quarter of a minute reads as a frozen page.
+		const fast = setInterval(() => {
+			if (sheetsWorking) now = Date.now();
+		}, 1_000);
 		return () => {
 			clearInterval(clock);
+			clearInterval(fast);
 			stopPolling();
 		};
 	});
@@ -5154,7 +5313,15 @@
 							 turnaround behind an upload runs server-side, so the render poller
 							 is idle for its whole six minutes and the row sat dark while a GPU
 							 was busy. -->
-						{@const working = current && !staleRun && (pollingActive || sheetsWorking)}
+						{@const working = current && !staleRun && pollingActive}
+						<!-- A character being drawn is knowable for every row, not just this
+							 one: the sheet carries the session it was started in, so the
+							 sidebar can say which conversation the GPU is busy for even while
+							 you are reading a different one. Green rather than the accent,
+							 because it is the only mark here that survives leaving the room —
+							 and it ends on a state worth walking back for. -->
+						{@const drawing = sessionsDrawing.has(p.slug)}
+						{@const finished = sessionsDone.has(p.slug)}
 						<div class="group relative">
 							<button
 								type="button"
@@ -5164,7 +5331,22 @@
 									: 'hover:bg-[var(--st-surface)]'}"
 							>
 								<span class="flex items-center gap-2">
-									{#if working}
+									{#if drawing}
+										<span
+											class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+											title="a character is being drawn here"
+										></span>
+										<span class="sr-only">a character is being drawn here</span>
+									{:else if finished}
+										<!-- Steady, not pulsing. The pulse means "wait"; this means
+											 "it is here" — the same colour arriving at rest, which is
+											 the whole of what changed. -->
+										<span
+											class="size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+											title="a character is ready here"
+										></span>
+										<span class="sr-only">a character is ready here</span>
+									{:else if working}
 										<span
 											class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
 											aria-hidden="true"
@@ -5185,7 +5367,17 @@
 									 rather than progress. The pulsing dot says the same thing
 									 without the running total, and the clip card still carries the
 									 render's own timing where it means something. -->
-								{#if working && railRunning}
+								{#if drawing}
+									{@const sh = sheets.find(
+										(x) => x.sessionSlug === p.slug && x.sheet?.state === 'rendering'
+									)}
+									<!-- Not the name: the row above it is the name, and a session is
+										 usually one subject. What the second line is for is the part the
+										 title cannot say — what is being made and how long is left. -->
+									<span class="mt-0.5 block text-xs text-[var(--st-muted)]">
+										Drawing the six views · {turnStatus(sh)}
+									</span>
+								{:else if working && railRunning}
 									<span class="mt-0.5 block text-xs text-[var(--st-muted)]">
 										{friendly(railRunning.label)}
 									</span>
@@ -5713,14 +5905,96 @@
 								{#if item.sheet.url && item.sheet.stage === 'anchor'}
 								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
 									{#if item.sheet.id && item.sheet.uploaded}
-										<!-- Two facts: it is kept, and where it is. The caveat about the
-											 six-view sheet was true and nobody needed it here — it belongs
-											 on the sheet card, next to the thing that is missing. -->
+										{@const kept = sheets.find((x) => x.id === item.sheet?.id)}
+										{@const drawing = kept?.sheet?.state === 'rendering'}
+										{@const dn =
+											keptEdits[item.id]?.name ?? kept?.name ?? item.sheet.name ?? ''}
+										{@const dv = keptEdits[item.id]?.voice ?? kept?.voice ?? ''}
+										{@const changed =
+											dn.trim() !== (kept?.name ?? '') || dv.trim() !== (kept?.voice ?? '')}
+										<!-- The character is usable the moment the picture lands — the
+									 turnaround is an improvement to it, not a condition of it. So
+									 the first line is the useful state and the wait is a second,
+									 quieter one, rather than the card going silent for three
+									 minutes with a sentence in the past tense above it. -->
 										<p class="text-sm text-[var(--st-muted)]">
-											Kept as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
-											Pick {item.sheet.kind === 'character' ? 'them' : 'it'} from
+											Ready to use — pick
+											<span class="text-[var(--st-text)]">{kept?.name ?? item.sheet.name}</span>
+											from
 											<span class="text-[var(--st-text)]">+</span> in the box below.
 										</p>
+										{#if drawing}
+											<p class="mt-2 flex items-center gap-2 text-xs text-[var(--st-faint)]">
+												<span
+													class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+													aria-hidden="true"
+												></span>
+												<span>Building the six views · {turnStatus(kept)}</span>
+											</p>
+										{:else if kept?.sheet?.state === 'failed'}
+											<p class="mt-2 text-xs text-[var(--st-faint)]">
+												The six views could not be drawn. {item.sheet.kind === 'character'
+													? 'They are'
+													: 'It is'} still usable without them.
+											</p>
+										{/if}
+
+										<!-- What is worth changing once you can see who they are: what
+									 they are called, and how they sound. The voice was reachable
+									 only from the composer, which is not where this decision
+									 happens. -->
+										<div class="mt-4 border-t border-[var(--st-line)] pt-4">
+											{#if item.sheet.kind === 'character'}
+												<label
+													class="block text-xs text-[var(--st-faint)]"
+													for="kept-voice-{item.id}"
+												>
+													How they sound — carried into every clip they are in
+												</label>
+												<input
+													id="kept-voice-{item.id}"
+													value={dv}
+													oninput={(e) => editKept(item.id, 'voice', e.currentTarget.value)}
+													spellcheck="false"
+													maxlength="240"
+													placeholder="a low, unhurried voice with a slight rasp"
+													class="mt-2 mb-4 w-full rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+												/>
+											{/if}
+											<label
+												class="block text-xs text-[var(--st-faint)]"
+												for="kept-name-{item.id}"
+											>
+												{item.sheet.kind === 'character' ? 'Name them' : 'Name it'} — this is what
+												the picker will show
+											</label>
+											<div class="mt-2 flex flex-wrap items-center gap-2">
+												<input
+													id="kept-name-{item.id}"
+													value={dn}
+													oninput={(e) => editKept(item.id, 'name', e.currentTarget.value)}
+													spellcheck="false"
+													class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+												/>
+												<!-- Only when there is something to apply. A button that is
+											 always lit invites a press that does nothing, and then the
+											 one that matters looks the same as the one that did not. -->
+												{#if changed}
+													<button
+														type="button"
+														disabled={sheetBusy[item.id] || !dn.trim()}
+														onclick={() => updateKept(item.id, item.sheet?.id ?? '', dn, dv)}
+														class="btn btn-primary"
+														>{sheetBusy[item.id] ? 'Updating…' : 'Update'}</button
+													>
+												{/if}
+												<button
+													type="button"
+													onclick={() => item.sheet?.id && dropSheet(item.sheet.id)}
+													class="btn btn-secondary">Remove</button
+												>
+											</div>
+										</div>
 									{:else if item.sheet.id}
 										{@const kept = sheets.find((x) => x.id === item.sheet?.id)}
 										<!-- Only claim they are drawing while they are. This said it
@@ -6424,6 +6698,12 @@
 								item.kind !== 'takes' && item.text && item.text !== item.artifact.title
 									? item.text
 									: ''}
+								<!-- A turnaround is a reference picture that happens to be a video:
+							     there is nothing to continue from it, nothing to put in a film,
+							     and no verdict to give it — it either resembles the character or
+							     it is redrawn from the card. Offering the scene band under it put
+							     four controls on screen that all lead somewhere wrong. -->
+								{@const scenic = item.artifact.key !== 'turnaround'}
 							<div class="enter">
 								<div class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
 								{#each item.artifact.files as f (f.name)}
@@ -6445,7 +6725,7 @@
 								     nobody wants them; the tenth time a clip came back wrong and the
 								     seed and the adapters are exactly what is needed, so they are one
 								     tap away rather than gone. -->
-								{#if ws}
+										{#if ws && scenic}
 									{@const ci = contInfo(ws)}
 									{@const chain = chainOf(ws)}
 									{@const others =
@@ -6538,7 +6818,7 @@
 								{/if}
 								</div>
 
-								{#if ws}
+									{#if ws && scenic}
 									{#if fix[ws]}
 										{@const f = fix[ws]}
 										<div class="mt-2.5 rounded-2xl bg-[var(--st-surface)] p-4">
@@ -8106,6 +8386,7 @@
 		--st-muted: var(--color-muted);
 		--st-faint: var(--color-faint);
 		--st-accent: var(--color-coral);
+		--st-green: var(--color-green);
 		--st-accent-strong: var(--color-coral-dark);
 		/* What sits on top of a filled accent surface. The accent is white now, so
 		 * this is the one that had to move with it. */

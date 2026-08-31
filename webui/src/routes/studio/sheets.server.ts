@@ -102,6 +102,24 @@ export interface Sheet {
 	 *  Nobody types this. It is filled in from the clip the character was kept
 	 *  from, and the field exists for changing it afterwards. */
 	voice?: string;
+	/** The working session this subject was made in.
+	 *
+	 *  The turnaround runs for minutes on a server that does not care which tab
+	 *  is open, and the card announcing it used to be posted into whatever
+	 *  conversation happened to be on screen when the poll caught it finishing.
+	 *  Start a character, switch sessions, and the six views landed in the middle
+	 *  of unrelated work.
+	 *
+	 *  Absent on everything made before this existed, and absent means "any" —
+	 *  those keep the old behaviour rather than becoming undeliverable. */
+	sessionSlug?: string;
+	/** Set once the six views have been shown in their session.
+	 *
+	 *  Without it the sidebar cannot tell "finished while you were elsewhere"
+	 *  from "finished and you have seen it", and the dot marking the first would
+	 *  never go out. Server-side rather than in the tab, because the wait
+	 *  outlives the tab and so must the answer. */
+	delivered?: boolean;
 	/** The turnaround, absent until one has been asked for. */
 	sheet?: SheetRender;
 }
@@ -201,6 +219,7 @@ export function addSheet(row: {
 	 *  voice from the moment they exist rather than an empty field somebody has
 	 *  to notice. Characters only. */
 	voice?: string;
+	sessionSlug?: string;
 }): Sheet {
 	ensure();
 	const id = mkId();
@@ -222,10 +241,28 @@ export function addSheet(row: {
 		addedAt: new Date().toISOString(),
 		...(row.workspace ? { workspace: row.workspace } : {}),
 		...(row.seed !== undefined ? { seed: row.seed } : {}),
-		...(row.uploaded ? { uploaded: true } : {})
+		...(row.uploaded ? { uploaded: true } : {}),
+		...(row.sessionSlug ? { sessionSlug: row.sessionSlug } : {})
 	};
 	writeManifest([sheet, ...listSheets()]);
 	return sheet;
+}
+
+/** Mark the six views as shown in their own session.
+ *
+ *  Called when their session is opened, not when their card is written — a
+ *  card is posted once and the mark outlives it, so a session whose six views
+ *  were read last week would go on being marked for ever. Until this is set the
+ *  sidebar treats a finished sheet as something the session is still owed.
+ */
+export function markSheetDelivered(id: string): Sheet | null {
+	const all = listSheets();
+	const row = all.find((s) => s.id === id);
+	if (!row) return null;
+	if (row.delivered) return row;
+	row.delivered = true;
+	writeManifest(all);
+	return row;
 }
 
 export function getSheet(id: string): Sheet | null {

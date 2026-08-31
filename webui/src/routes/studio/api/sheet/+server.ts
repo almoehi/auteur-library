@@ -22,6 +22,8 @@ import {
 	removeSheet,
 	renameSheet,
 	setSheetVoice,
+	markSheetDelivered,
+	type Sheet,
 	type SheetKind
 } from '../../sheets.server';
 
@@ -83,13 +85,17 @@ async function fromUpload(request: Request, fetchFn: typeof globalThis.fetch): P
 	const description = typed || stem;
 	const name = String(form.get('name') ?? '').trim() || nameFromDescription(description, kind);
 
+	// Which conversation this was started in, so the six views can be posted
+	// back into it rather than into whatever is on screen when they land.
+	const sessionSlug = String(form.get('sessionSlug') ?? '').trim();
 	const sheet = addSheet({
 		kind,
 		name,
 		description,
 		bytes,
 		ext: looksJpeg ? '.jpg' : looksWebp ? '.webp' : '.png',
-		uploaded: true
+		uploaded: true,
+		...(sessionSlug ? { sessionSlug } : {})
 	});
 
 	// Characters get a turnaround built from the picture, in the background and
@@ -131,6 +137,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		file?: unknown;
 		job?: unknown;
 		seed?: unknown;
+		sessionSlug?: unknown;
 	};
 	try {
 		body = await request.json();
@@ -160,7 +167,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			bytes: local,
 			ext: '.png',
 			...(voice ? { voice } : {}),
-			...(seed !== undefined ? { seed } : {})
+			...(seed !== undefined ? { seed } : {}),
+			...(typeof body.sessionSlug === 'string' && body.sessionSlug.trim()
+				? { sessionSlug: body.sessionSlug.trim() }
+				: {})
 		});
 		return json({ ok: true, sheet, sheets: listSheets() });
 	}
@@ -218,7 +228,13 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 };
 
 export const PATCH: RequestHandler = async ({ request }) => {
-	let body: { id?: unknown; name?: unknown; description?: unknown; voice?: unknown };
+	let body: {
+		id?: unknown;
+		name?: unknown;
+		description?: unknown;
+		voice?: unknown;
+		delivered?: unknown;
+	};
 	try {
 		body = await request.json();
 	} catch {
@@ -227,19 +243,36 @@ export const PATCH: RequestHandler = async ({ request }) => {
 	// The voice is edited on its own — the control for it sits next to the
 	// character and has nothing to do with renaming, so requiring a name here
 	// would mean every voice edit had to re-send one and could clobber it.
-	if (typeof body.id === 'string' && typeof body.voice === 'string' && body.name === undefined) {
-		const row = setSheetVoice(body.id, body.voice);
+	// Delivered is its own edit for the same reason the voice is: it arrives on
+	// its own, from the card that showed the six views, and folding it into the
+	// rename would mean every delivery had to re-send a name it might clobber.
+	if (typeof body.id === 'string' && body.delivered === true) {
+		const row = markSheetDelivered(body.id);
 		if (!row) return json({ ok: false, error: 'no such sheet' }, { status: 200 });
 		return json({ ok: true, sheet: row, sheets: listSheets() });
 	}
-	if (typeof body.id !== 'string' || typeof body.name !== 'string') {
-		throw error(400, 'id and name are required');
+	// Whichever fields came, in one edit.
+	//
+	// These used to be alternatives: a voice-only branch guarded on the name
+	// being absent, then a rename. That held while the two controls lived on
+	// different screens. The character's own card now carries both, and one
+	// Update button sending both landed in the rename branch — which took the
+	// name, ignored the voice, and answered ok, so the field kept its new text
+	// on screen and lost it on reload.
+	if (typeof body.id !== 'string') throw error(400, 'id is required');
+	if (typeof body.name !== 'string' && typeof body.voice !== 'string') {
+		throw error(400, 'name or voice is required');
 	}
-	const row = renameSheet(
-		body.id,
-		body.name,
-		typeof body.description === 'string' ? body.description : undefined
-	);
+	let row: Sheet | null = null;
+	if (typeof body.voice === 'string') row = setSheetVoice(body.id, body.voice);
+	if (typeof body.name === 'string') {
+		row =
+			renameSheet(
+				body.id,
+				body.name,
+				typeof body.description === 'string' ? body.description : undefined
+			) ?? row;
+	}
 	if (!row) return json({ ok: false, error: 'no such sheet' }, { status: 200 });
 	return json({ ok: true, sheet: row, sheets: listSheets() });
 };

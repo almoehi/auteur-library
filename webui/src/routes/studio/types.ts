@@ -370,10 +370,21 @@ export interface StoredSheet {
 	/** How this person sounds, one sentence, carried into every clip they are in.
 	 *  Characters only — a room does not speak. See sheets.server.ts. */
 	voice?: string;
+	/** The conversation this subject was made in, so its six views are posted
+	 *  back into it. Absent on everything made before this existed, and absent
+	 *  means any. */
+	sessionSlug?: string;
+	/** Whether the six views have already been shown in that conversation. What
+	 *  the sidebar reads to tell "finished while you were elsewhere" from
+	 *  "finished and seen". */
+	delivered?: boolean;
 	/** The six-view turnaround, which arrives minutes after the character does —
 	 *  absent until one has been asked for. */
 	sheet?: {
 		state: 'rendering' | 'ready' | 'failed';
+		/** When the turnaround was started, so the card can say how long it has
+		 *  been going. */
+		startedAt?: string;
 		file?: string;
 		error?: string;
 		/** The turnaround clip the six views were cut from, when there was one. */
