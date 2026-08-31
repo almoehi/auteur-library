@@ -31,6 +31,18 @@ export function ffmpegPath(): string {
 		'/Users/szabodezso/ratemyd/node_modules/.pnpm/ffmpeg-static@5.3.0/node_modules/ffmpeg-static/ffmpeg'
 	];
 	for (const p of candidates) if (existsSync(p)) return p;
+
+	// Then a system ffmpeg. Every candidate above is either repo-local or an
+	// absolute path into one particular developer's home, and ffmpeg-static is
+	// not in package.json, so on any other machine the list resolves to nothing
+	// and a finished render dies at the six-view cut with the binary sitting in
+	// /opt/homebrew/bin all along.
+	for (const dir of (process.env.PATH ?? '').split(':')) {
+		if (!dir) continue;
+		const p = join(dir, 'ffmpeg');
+		if (existsSync(p)) return p;
+	}
+
 	throw error(500, 'ffmpeg is not installed — this needs it');
 }
 
