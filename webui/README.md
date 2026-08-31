@@ -9,12 +9,19 @@ it — the two are separate processes that only share a port number.
 ```bash
 cp .env.example .env       # then paste OLLAMA_API_KEY from ~/auteur/.env
 pnpm install
-pnpm dev                   # http://127.0.0.1:5174
+pnpm dev --port 5290       # http://127.0.0.1:5290
 ```
 
 Requires a harness already running (`~/auteur/run.sh`). The UI reaches it at
 `host.docker.internal:19006`; override with `AUTEUR_HARNESS_URL` if yours is
 elsewhere.
+
+The port is not cosmetic. A render's workspace YAML tells the harness to fetch
+its workflow bundle back from this server — the studio rewrites the LoRA stack
+into the bundle per render, so the bundle only exists here — and the address it
+writes defaults to `host.docker.internal:5290`. On any other port every render
+fails at the fetch. Serve on 5290, or set `AUTEUR_STUDIO_URL` to wherever you
+actually serve.
 
 ## Two things that are not in this repo
 
