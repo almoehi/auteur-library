@@ -2217,6 +2217,14 @@
 				.map((x) => x.sessionSlug!)
 		)
 	);
+	/** The characters this session is drawing right now, for the strip above the
+	 *  box. Scoped to this session for the same reason the six views are: a
+	 *  turnaround started in another conversation is that conversation's news,
+	 *  and the sidebar is where it belongs. */
+	const drawingHere = $derived(
+		sheets.filter((x) => x.sheet?.state === 'rendering' && x.sessionSlug === runSlug)
+	);
+
 	const sessionsDone = $derived(
 		new Set(
 			sheets
@@ -5910,7 +5918,6 @@
 								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
 									{#if item.sheet.id && item.sheet.uploaded}
 										{@const kept = sheets.find((x) => x.id === item.sheet?.id)}
-										{@const drawing = kept?.sheet?.state === 'rendering'}
 										{@const dn =
 											keptEdits[item.id]?.name ?? kept?.name ?? item.sheet.name ?? ''}
 										<!-- The stored voice, or the one a character made today would have
@@ -5934,15 +5941,12 @@
 											from
 											<span class="text-[var(--st-text)]">+</span> in the box below.
 										</p>
-										{#if drawing}
-											<p class="mt-2 flex items-center gap-2 text-xs text-[var(--st-faint)]">
-												<span
-													class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
-													aria-hidden="true"
-												></span>
-												<span>Building the six views · {turnStatus(kept)}</span>
-											</p>
-										{:else if kept?.sheet?.state === 'failed'}
+												<!-- No progress line here. It is in the strip above the box now,
+											 where it stays on screen; a card scrolls away in a minute and
+											 took the only sign of a running GPU with it. What stays is the
+											 outcome, which the strip cannot report because by then it is
+											 gone. -->
+												{#if kept?.sheet?.state === 'failed'}
 											<p class="mt-2 text-xs text-[var(--st-faint)]">
 												The six views could not be drawn. {item.sheet.kind === 'character'
 													? 'They are'
@@ -6936,7 +6940,7 @@
 							 how long, and the label says what — the three things a reader
 							 waiting twenty minutes actually wants. Opacity-only pulse: the
 							 house rules forbid glows. -->
-						<p class="mb-2 flex items-center gap-2.5 px-2 text-xs text-[var(--st-muted)]">
+							<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
 							<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
 							<span class="tabular-nums">{elapsedLabel(now - startedAt)}</span>
 							{#if simpleRun && typicalClip}
@@ -6954,17 +6958,32 @@
 								<span class="min-w-0 truncate">{friendly(railRunning.label)}</span>
 							{/if}
 						</p>
-					{:else if staleRun && startedAt}
-						<!-- The same slot, saying the opposite. Counting up from a
-							 `startedAt` that is days old produced "2053m 43s" — a number no
-							 production has ever taken — sitting next to "usually about 4m".
-							 The honest reading of that timestamp is a date, not a stopwatch.
-							 Static dot, faint text: nothing here is happening. -->
-						<p class="mb-2 flex items-center gap-2.5 px-2 text-xs text-[var(--st-faint)]">
-							<span class="size-1.5 shrink-0 rounded-full bg-[var(--st-line)]"></span>
-							<span>not running · started {whenLabel(startedAt)}</span>
-						</p>
 					{/if}
+						<!-- A character being drawn belongs in the same slot as everything else
+					     that is happening, which is here: pinned above the box, the way a
+					     chat client reports its own work. It was inside the character's
+					     card, where it scrolls out of sight in a minute and then there is
+					     nothing on screen saying a GPU is busy.
+
+					     Not an {:else} of the render line above. They are different work and
+					     both can be running — a clip shooting while a character draws — and
+					     hiding one behind the other would make the quieter one a mystery.
+
+					     What used to be here was "not running · started yesterday", which is
+					     a line saying nothing is happening. Silence already says that, and
+					     it said it about a `startedAt` days old, next to a box you were
+					     about to type in. -->
+						{#each drawingHere as sh (sh.id)}
+							<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
+								<span
+									class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+									aria-hidden="true"
+								></span>
+								<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
+								<span class="text-[var(--st-faint)]">·</span>
+								<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
+							</p>
+						{/each}
 					{#if refFiles.length}
 						<div class="mb-2 space-y-1.5">
 							{#each refFiles as f (f.id)}
@@ -6991,32 +7010,39 @@
 						</div>
 					{/if}
 					{#if refError}
-						<p class="mb-2 px-2 text-xs text-[var(--st-muted)]">{refError}</p>
+						<p class="mb-2 text-xs text-[var(--st-muted)]">{refError}</p>
 					{/if}
 					<!-- The hint line was a full-width row with an empty right half, so the
 						 film costs no height at all. It belongs in this band and not among
 						 the composer's setting chips: there it read as a parameter, which
 						 is not what it is, and nobody looked for it. -->
-					<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3 px-2">
-						<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
-						<span class="flex-1"></span>
-						{#if film.length}
-							<button
-								type="button"
-								aria-expanded={filmOpen}
-								onclick={() => (filmOpen = !filmOpen)}
-								class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs tabular-nums text-[var(--st-text)] transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
-									? 'bg-[var(--st-surface-2)]'
-									: ''}"
-							>
-								<span class="reelmark" aria-hidden="true"></span>
-								<span>{film.length} {film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span>
-								<span class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
-									>⌄</span
+					<!-- Only when it has something in it. The reserved 1.6rem stopped the
+						 composer jumping when a hint appeared and went away, which was worth
+						 it when this row was usually full. It is not: with no hint and no
+						 film it is an empty band holding the status line a centimetre clear
+						 of the box it is reporting on. -->
+					{#if composerHint || film.length}
+						<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
+							<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
+							<span class="flex-1"></span>
+							{#if film.length}
+								<button
+									type="button"
+									aria-expanded={filmOpen}
+									onclick={() => (filmOpen = !filmOpen)}
+									class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs tabular-nums text-[var(--st-text)] transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
+										? 'bg-[var(--st-surface-2)]'
+										: ''}"
 								>
-							</button>
-						{/if}
-					</div>
+									<span class="reelmark" aria-hidden="true"></span>
+									<span>{film.length} {film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span>
+									<span class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
+										>⌄</span
+									>
+								</button>
+							{/if}
+						</div>
+					{/if}
 
 					{#if film.length && filmOpen}
 						<!-- The reel. Whole clips only — that is the line between a strip and
