@@ -23,8 +23,14 @@ export function unwrap(text: string): unknown {
 	}
 }
 
+/** One library or reference call. None of these should take a minute; one
+ *  that does is a wedged harness, and without this it held the launch endpoint
+ *  — and the button above it — for ever. */
+const CALL_TIMEOUT_MS = 60_000;
+
 async function call(workspaceId: string, op: string, req: unknown) {
 	const res = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/${op}`, {
+		signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ req })

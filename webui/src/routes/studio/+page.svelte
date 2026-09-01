@@ -1762,6 +1762,7 @@
 		const c = item?.confirm;
 		if (!c || shotBusy[itemId]) return;
 		shotBusy[itemId] = true;
+		c.busySince = Date.now();
 		c.error = undefined;
 		try {
 			// Second press: the brief already exists and was shown, changes and all.
@@ -1770,6 +1771,7 @@
 			const already = c.cardId ? chat.find((x) => x.id === c.cardId) : undefined;
 			if (already?.shot && !already.shot.launched) {
 				c.fixed = undefined;
+				c.phase = 'starting';
 				await startFromCard(already);
 				return;
 			}
@@ -1787,6 +1789,7 @@
 			const rounds = chat.filter((x) => x.kind === 'confirm' && x.confirm && !x.confirm.sent);
 			const raw = rounds.map((x) => x.confirm!.said.trim()).filter(Boolean).join('\n');
 			const request = agreed ? `${raw || c.said}\n\n---\n\n${agreed}` : raw || c.said;
+			c.phase = 'writing';
 			const card = await shotFromRequest(request);
 			if (!card?.shot) return;
 
@@ -1803,11 +1806,14 @@
 				c.fixed = card.shot.fixed;
 				return;
 			}
+			c.phase = 'starting';
 			await startFromCard(card);
 		} catch (e) {
 			c.error = `that could not be started — ${e instanceof Error ? e.message : e}`;
 		} finally {
 			shotBusy[itemId] = false;
+			c.phase = undefined;
+			c.busySince = undefined;
 			persist();
 		}
 	}
@@ -5244,7 +5250,7 @@
 		// Except while something is being drawn, where a counter is on screen and a
 		// number that moves once a quarter of a minute reads as a frozen page.
 		const fast = setInterval(() => {
-			if (sheetsWorking) now = Date.now();
+			if (sheetsWorking || Object.values(shotBusy).some(Boolean)) now = Date.now();
 		}, 1_000);
 		return () => {
 			clearInterval(clock);
@@ -6176,7 +6182,15 @@
 											onclick={() => acceptConfirm(item.id)}
 										>
 											{#if shotBusy[item.id]}
-												indul…
+												{@const el = Math.max(
+													0,
+													Math.round((now - (item.confirm.busySince ?? now)) / 1000)
+												)}
+												{item.confirm.phase === 'writing'
+													? 'brief írása'
+													: item.confirm.phase === 'starting'
+														? 'indítás'
+														: 'indul'} · {clock(el)}
 											{:else if item.confirm.fixed?.length}
 												mehet így
 											{:else}

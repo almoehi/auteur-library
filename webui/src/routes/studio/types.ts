@@ -191,6 +191,15 @@ export interface ChatItem {
 		 *  writer, which is a minute of waiting for a DIFFERENT brief — so the
 		 *  operator would have been shown one set of changes and shot another. */
 		cardId?: string;
+		/** Which wait the button is on, and since when.
+		 *
+		 *  "indul…" stood alone for two and a half minutes on a real launch — two
+		 *  for the brief, thirty seconds for the harness to open the workspace —
+		 *  and the operator asked whether it had hung. A word alone reads as
+		 *  frozen after ten seconds; the clock is the proof something is
+		 *  happening, and the phase says what. */
+		phase?: 'writing' | 'starting';
+		busySince?: number;
 		error?: string;
 	};
 

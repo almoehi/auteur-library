@@ -77,6 +77,10 @@ import { HARNESS } from '$lib/harness';
  *  the local library in. Shared because direct mode needs all of it and none of
  *  the brief handling around it — and because the one thing this file cannot
  *  afford is two copies of the open sequence drifting apart. */
+/** Prefetch on a real launch answered in under thirty seconds. Three minutes
+ *  is far enough above that to cover a cold workflow and still be finite. */
+const PREFETCH_TIMEOUT_MS = 180_000;
+
 async function openWorkspace(
 	workspaceId: string,
 	yaml: string,
@@ -107,6 +111,11 @@ async function openWorkspace(
 	let pre: Response;
 	try {
 		pre = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/prefetch-workspace`, {
+			// Bounded, and only this one. Prefetch is idempotent and fails closed, so
+			// a timeout here costs a retry. open-workspace is left unbounded on
+			// purpose: abort that fetch after the harness has opened the workspace
+			// and you get one that is rendering and that nobody polls.
+			signal: AbortSignal.timeout(PREFETCH_TIMEOUT_MS),
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ req: { yaml } })
@@ -114,7 +123,17 @@ async function openWorkspace(
 	} catch (e) {
 		// Nobody started the container: a normal state, not an exception. The
 		// caller renders this as a banner.
-		return json({ ok: false, offline: true, error: String(e) }, { status: 200 });
+		const timedOut = e instanceof Error && e.name === 'TimeoutError';
+		return json(
+			{
+				ok: false,
+				offline: !timedOut,
+				error: timedOut
+					? `the harness did not finish prefetching within ${PREFETCH_TIMEOUT_MS / 1000}s`
+					: String(e)
+			},
+			{ status: 200 }
+		);
 	}
 
 	const preText = await pre.text();
