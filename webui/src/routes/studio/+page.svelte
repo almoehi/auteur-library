@@ -6034,6 +6034,18 @@
 								: false}
 							{@const parts = splitConfirm(item.confirm.line)}
 							<div class="enter">
+								<!-- What this paragraph is, and what to do with it.
+								     Without it the studio answers a request with three sentences of
+								     prose and no frame: it could be a plan, a summary, or something
+								     that already happened, and the only clue that a decision is owed
+								     is a button below the fold. One line, and only on the round that
+								     can still be acted on — repeated over every earlier round it
+								     stops being orientation and becomes wallpaper. -->
+								{#if newest && !started}
+									<p class="mb-1.5 text-xs text-[var(--st-faint)]">
+										Ezt fogjuk leforgatni — indítsd el, vagy írj, ha változtatnál.
+									</p>
+								{/if}
 								<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
 									{parts.said}{#if item.confirm.streaming && !parts.added}<span
 											class="caret"
