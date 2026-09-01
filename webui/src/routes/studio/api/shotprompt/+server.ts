@@ -328,6 +328,16 @@ export const POST: RequestHandler = async ({ request }) => {
 	 *  be made twice: once for the brief, and once more if the brief comes back
 	 *  with a fault the check can name. */
 	async function ask(extra: string[]): Promise<{ shot: ShotPrompt } | { error: string }> {
+		// Beside the request, not only in the system prompt. The rule lives there
+		// too, thirty kilobytes up, and the first pass kept walking past it: one
+		// <Subject> declared, the partner left as "a man" and "his cock", the
+		// check firing, and a second full pass — a minute on a reasoning model —
+		// to fix what one line at the point of use fixes for free.
+		pinned.push(
+			'every person in this shot gets a <Subject N> of their own, picture or not — ' +
+				'a partner the request only calls "a man" or "his cock" is <Subject 2>, ' +
+				'declared in subject_definitions, never left in prose'
+		);
 		const all = [...pinned, ...extra];
 		const body = all.length ? `${want}\n\n---\n\n${all.join('\n')}` : want;
 		let res: Response;
