@@ -1307,7 +1307,10 @@
 			if (mode === 'simple') {
 				if (pendingPhoto && wantTarget !== 'clip') await uploadSubject(pendingPhoto, text);
 				else if (continuing) await continueFromRequest(text);
-				else if (wantTarget === 'clip') await shotFromRequest(text);
+				// Read it back first, in a sentence, before spending anything on it.
+				// The brief and the render follow from the button on that card —
+				// see confirmFromRequest and acceptConfirm.
+				else if (wantTarget === 'clip') await confirmFromRequest(text);
 				else await sheetFromRequest(text, wantTarget);
 			}
 			else if (!brief) await planFromIdea(text);
@@ -1553,7 +1556,144 @@
 	 *  than editing the prompt the model last produced. */
 	let lastRequest = $state('');
 
-	async function shotFromRequest(request: string) {
+/** The rounds already agreed in this session, oldest first.
+ *
+ *  Read out of the chat rather than kept in a variable, for the same reason the
+ *  awaited sheets are: the conversation is the record and a variable is not. It
+ *  survives a reload; a variable does not, and a refinement that has forgotten
+ *  what it is refining silently drops everything said before it. */
+	function confirmHistory(): string[] {
+		const out: string[] = [];
+		for (const c of chat) {
+			if (c.kind === 'confirm' && c.confirm?.line && !c.confirm.sent) out.push(c.confirm.line);
+		}
+		return out;
+	}
+
+	/** Read back what is about to be shot, streamed, before anything is written.
+	 *
+	 *  The card is pushed empty and filled in as the text arrives. pushItem hands
+	 *  back the state proxy for exactly this. */
+	async function confirmFromRequest(said: string) {
+		const item = pushItem({
+			who: 'studio',
+			kind: 'confirm',
+			confirm: { said, line: '', streaming: true }
+		});
+		const askedAt = Date.now();
+		try {
+			const res = await fetch('/studio/api/shotconfirm', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					request: said,
+					seconds: composerShape.seconds,
+					res: composerShape.res,
+					aspect: composerShape.portrait ? '9:16' : '16:9',
+					makes: batchLabel,
+					character: chosenCharacter?.name,
+					location: chosenLocation?.description || chosenLocation?.name,
+					refs: refFiles.map((f) => f.description || f.name).filter(Boolean),
+					history: confirmHistory()
+				})
+			});
+
+			// One endpoint, two shapes: a stream when it worked, our house JSON
+			// error when it did not. Content-type tells them apart, so neither has
+			// to lie about its status code.
+			if (!res.ok || !res.body || (res.headers.get('content-type') ?? '').includes('json')) {
+				const r = (await res.json().catch(() => null)) as { error?: string } | null;
+				item.confirm!.error = r?.error || `that could not be read back (${res.status})`;
+				return;
+			}
+
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+			for (;;) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				item.confirm!.line += decoder.decode(value, { stream: true });
+			}
+			if (!item.confirm!.line.trim()) {
+				item.confirm!.error = 'nothing came back — try sending that again';
+			}
+		} catch (e) {
+			item.confirm!.error = `that could not be read back — ${e instanceof Error ? e.message : e}`;
+		} finally {
+			item.confirm!.streaming = false;
+			recordWait('confirm', Date.now() - askedAt);
+			persist();
+		}
+	}
+
+	/** The operator pressed the button: write the brief, check it, and shoot.
+	 *
+	 *  What goes to the writer is BOTH texts, the raw one first. The writer is
+	 *  told to use the operator's own plain words and it can only do that if it
+	 *  has them — a read-back is a restatement, and a restatement that has been
+	 *  through a model is not a safe place to keep the only copy of what somebody
+	 *  actually asked for. The accepted line follows it as the agreed reading.
+	 *
+	 *  It renders on its own from here. That is the whole point: the brief is not
+	 *  a thing to approve twice. The one exception is a brief the checker had to
+	 *  change — then it stops and says what changed, because that is a different
+	 *  clip from the one that was agreed to.
+	 */
+/** Start a brief the way its own card would.
+ *
+ *  The composer can be set to several takes or several camera angles, and the
+ *  card offers renderBatch for those — calling renderShot from here regardless
+ *  would quietly deliver one clip where two were asked for and read back. */
+	async function startFromCard(card: ChatItem): Promise<void> {
+		if (!card.shot) return;
+		const cardAngles = card.shot.continues && card.shot.continues.pinned !== false ? 1 : angles;
+		const n = takes * cardAngles;
+		if (n > 1) await renderBatch(card.id, takes, cardAngles);
+		else await renderShot(card.id);
+	}
+
+		async function acceptConfirm(itemId: string) {
+		const item = chat.find((c) => c.id === itemId);
+		const c = item?.confirm;
+		if (!c || shotBusy[itemId]) return;
+		shotBusy[itemId] = true;
+		c.error = undefined;
+		try {
+			// Second press: the brief already exists and was shown, changes and all.
+			// Write it again and the operator is shown one set of changes and shoots
+			// another — and pays a minute for the privilege.
+			const already = c.cardId ? chat.find((x) => x.id === c.cardId) : undefined;
+			if (already?.shot && !already.shot.launched) {
+				c.fixed = undefined;
+				await startFromCard(already);
+				return;
+			}
+
+			c.fixed = undefined;
+			const request = c.line.trim() ? `${c.said}\n\n---\n\n${c.line.trim()}` : c.said;
+			const card = await shotFromRequest(request);
+			if (!card?.shot) return;
+
+			c.sent = true;
+			c.cardId = card.id;
+			// Stop and say so. A brief the checker rewrote is not the brief that was
+			// read back, and letting it shoot anyway would mean the sentence they
+			// approved was not the order — which is the one thing this whole layer
+			// exists to prevent.
+			if (card.shot.fixed?.length) {
+				c.fixed = card.shot.fixed;
+				return;
+			}
+			await startFromCard(card);
+		} catch (e) {
+			c.error = `that could not be started — ${e instanceof Error ? e.message : e}`;
+		} finally {
+			shotBusy[itemId] = false;
+			persist();
+		}
+	}
+
+	async function shotFromRequest(request: string): Promise<ChatItem | null> {
 		// Pinned from the composer, so the brief arrives written for this length
 		// and this frame rather than being rewritten into them afterwards.
 		const shot = await callShotPrompt(request, {
@@ -1573,7 +1713,7 @@
 			// a surface gets a mattress conjured into a dining room.
 			location: chosenLocation?.description || chosenLocation?.name
 		});
-		if (!shot) return;
+		if (!shot) return null;
 		lastRequest = request;
 		shot.resolution = wantRes;
 		// Stamped onto the card rather than read at launch: the brief was written
@@ -1588,7 +1728,7 @@
 			shot.locationId = chosenLocation.id;
 			shot.locationName = chosenLocation.name;
 		}
-		pushItem({ who: 'studio', kind: 'shot', shot });
+		return pushItem({ who: 'studio', kind: 'shot', shot });
 	}
 
 	/** Put the composer into continuation mode for one clip.
@@ -5824,6 +5964,72 @@
 									{/if}
 								</div>
 							</div>
+						{:else if item.kind === 'confirm' && item.confirm}
+							<!-- What is about to be shot, in the operator's own language.
+							     Deliberately plain: no card chrome, no heading, no label saying
+							     what it is. It reads as the studio answering, because that is
+							     what it is — and a box around it would make it look like a form
+							     to fill in rather than a sentence to agree with.
+
+							     The button only appears on the newest one. An older round is a
+							     step in the conversation, not an order you can still place, and
+							     two live buttons is two ways to shoot the wrong version. -->
+							{@const newest =
+								chat.filter((c) => c.kind === 'confirm').at(-1)?.id === item.id}
+							<!-- Gone once its clip is on a GPU. It came back reading "start the
+							     render" over a render that was already running, and pressing it
+							     again wrote a second brief and paid for the same eight seconds
+							     twice. A started clip lives on the card below. -->
+							{@const started = item.confirm.cardId
+								? !!chat.find((x) => x.id === item.confirm?.cardId)?.shot?.launched
+								: false}
+							<div class="enter">
+								<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
+									{item.confirm.line}{#if item.confirm.streaming}<span
+											class="caret"
+											aria-hidden="true"></span>{/if}
+								</p>
+
+								{#if item.confirm.error}
+									<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
+										{item.confirm.error}
+									</p>
+								{/if}
+
+								<!-- The checker had to change the brief, so this is no longer the
+								     clip that was agreed to. It says what moved and waits: sending
+								     it anyway is a decision, and it is not ours. -->
+								{#if item.confirm.fixed?.length}
+									<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
+										Írás közben ezt igazítottuk rajta: {item.confirm.fixed.join(' · ')}
+									</p>
+								{/if}
+
+								{#if newest && !started && !item.confirm.streaming && item.confirm.line.trim()}
+									<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+										<button
+											type="button"
+											disabled={shotBusy[item.id]}
+											class="btn btn-primary"
+											onclick={() => acceptConfirm(item.id)}
+										>
+											{#if shotBusy[item.id]}
+												indul…
+											{:else if item.confirm.fixed?.length}
+												mehet így
+											{:else}
+												Videó generálás indítása
+											{/if}
+										</button>
+										<!-- The cost, next to the thing that spends it. Not a warning —
+										     just the two numbers a person wants before they commit. -->
+										<span class="text-xs text-[var(--st-faint)]">
+											{composerShape.seconds}s{#if typicalClip}
+												· {typicalLabel(typicalClip)}{/if}
+										</span>
+									</div>
+								{/if}
+							</div>
 						{:else if item.kind === 'error'}
 							<!-- The card that launched the render this error is about, found by
 								 looking back rather than read off the item.
@@ -6141,16 +6347,35 @@
 
 								<!-- The literal text the workflow will receive. Editable, because the
 									 planning chain's render prompts were invisible and that is how it
-									 shipped briefs describing a face instead of a scene. -->
-								<label class="sr-only" for="shot-{item.id}">Render prompt</label>
-								<textarea
-									id="shot-{item.id}"
-									bind:value={item.shot.prompt}
-									rows="10"
-									spellcheck="false"
-									readonly={item.shot.launched}
-									class="block w-full resize-y rounded-xl bg-[var(--st-bg)] p-3 font-mono text-[13px] leading-relaxed text-[var(--st-text)] outline-none read-only:text-[var(--st-muted)]"
-								></textarea>
+									 shipped briefs describing a face instead of a scene.
+
+									 Closed by default now. Seven hundred words is not something a
+									 person reads on the way past — it was ten rows of monospace
+									 standing between the operator and the button, and it got clicked
+									 past rather than read, which is worse than not showing it: it
+									 looks like it was checked. What they approved is the sentence
+									 above; this is the machine's version of it, one tap away for the
+									 one time in ten that something came back wrong. -->
+								<details class="group">
+									<summary
+										class="flex cursor-pointer list-none items-center gap-2 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+									>
+										<span
+											class="text-[0.6rem] transition-transform group-open:rotate-90"
+											aria-hidden="true">›</span
+										>
+										<span>The words the crew gets</span>
+									</summary>
+									<label class="sr-only" for="shot-{item.id}">Render prompt</label>
+									<textarea
+										id="shot-{item.id}"
+										bind:value={item.shot.prompt}
+										rows="10"
+										spellcheck="false"
+										readonly={item.shot.launched}
+										class="mt-2 block w-full resize-y rounded-xl bg-[var(--st-bg)] p-3 font-mono text-[13px] leading-relaxed text-[var(--st-text)] outline-none read-only:text-[var(--st-muted)]"
+									></textarea>
+								</details>
 
 								{#if item.shot.why}
 									<p class="mt-2.5 text-xs text-[var(--st-faint)]">{item.shot.why}</p>
@@ -8474,6 +8699,35 @@
 	@media (prefers-reduced-motion: reduce) {
 		.beacon {
 			animation: none;
+		}
+	}
+
+	/* The cursor at the end of a sentence that is still arriving. Opacity only,
+	   same rule as the beacon — and a blinking block is the oldest signal there
+	   is for "there is more of this coming". */
+	.caret {
+		display: inline-block;
+		width: 0.45em;
+		height: 1em;
+		margin-left: 0.12em;
+		vertical-align: -0.14em;
+		background: var(--st-muted);
+		animation: caret 1.1s steps(1, end) infinite;
+	}
+	@keyframes caret {
+		0%,
+		55% {
+			opacity: 1;
+		}
+		56%,
+		100% {
+			opacity: 0;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.caret {
+			animation: none;
+			opacity: 0.6;
 		}
 	}
 

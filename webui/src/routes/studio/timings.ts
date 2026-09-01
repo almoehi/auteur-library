@@ -24,7 +24,7 @@ const KEY = 'auteur-studio-timings';
  *  the shot; `clip` is a single direct render. Full productions are deliberately
  *  not recorded: they are a different order of magnitude and a couple of them
  *  would make the clip estimate useless. */
-export type WaitKind = 'prompt' | 'clip';
+export type WaitKind = 'prompt' | 'clip' | 'confirm';
 
 /** Enough to be a median rather than an anecdote, few enough that a change in
  *  the machine or the model shows up within a session's worth of runs. */

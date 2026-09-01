@@ -159,7 +159,39 @@ export interface ChatItem {
 		| 'board'
 		| 'shootboard'
 		| 'sheet'
-		| 'takes';
+		| 'takes'
+		| 'confirm';
+	/** What is about to be shot, in the operator's own language, awaiting their
+	 *  yes (kind=confirm).
+	 *
+	 *  This is the contract, not a summary: it is written before the brief and the
+	 *  brief is made from it, so a fact missing here is a fact the clip will not
+	 *  have. `said` is what they typed verbatim, kept because it is the only place
+	 *  their exact words survive — the writer is told to use the operator's plain
+	 *  terms, and it can only do that if it is given them.
+	 */
+	confirm?: {
+		/** Verbatim, this round. */
+		said: string;
+		/** The read-back, filled in as it streams. */
+		line: string;
+		/** Still arriving. */
+		streaming?: boolean;
+		/** Accepted — the writer has it, or has had it. */
+		sent?: boolean;
+		/** What the checker changed on the way, in plain words. Present means the
+		 *  render did not start on its own and is waiting to be sent again. */
+		fixed?: string[];
+		/** The brief this produced.
+		 *
+		 *  Held so that pressing the button a second time renders that brief
+		 *  rather than writing a new one. Without it "send it anyway" re-ran the
+		 *  writer, which is a minute of waiting for a DIFFERENT brief — so the
+		 *  operator would have been shown one set of changes and shot another. */
+		cardId?: string;
+		error?: string;
+	};
+
 	/** plain text content (kind=text, error, approval) */
 	text?: string;
 	/** the expanded brief awaiting the user's yes (kind=plan) */
