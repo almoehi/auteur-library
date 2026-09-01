@@ -1584,16 +1584,14 @@
  *  wrong split here would attribute their own words to us. No marker means
  *  there was nothing to add, which is a normal and good answer. */
 	function splitConfirm(line: string): { said: string; added: string } {
-		const at = line.search(/(^|[.!?…]\s+)(Hozzáteszem|Adding)\s*:/i);
+		const at = line.search(/(^|[.!?…]\s+)(Hozzátettük|We added)\s*:/i);
 		if (at === -1) return { said: line, added: '' };
-		const marker = line.slice(at).search(/(Hozzáteszem|Adding)\s*:/i);
-		return {
-			said: line.slice(0, at + marker).trim(),
-			added: line
-				.slice(at + marker)
-				.replace(/^(Hozzáteszem|Adding)\s*:\s*/i, '')
-				.trim()
-		};
+		const marker = line.slice(at).search(/(Hozzátettük|We added)\s*:/i);
+		// The marker stays. It used to be stripped, back when the second half was
+		// the proposal itself and "Hozzáteszem:" was just a seam. It is an
+		// attribution now — take the word off and the line opens lower-case in the
+		// middle of a thought, and stops saying whose the list is.
+		return { said: line.slice(0, at + marker).trim(), added: line.slice(at + marker).trim() };
 	}
 
 		function confirmHistory(): string[] {
