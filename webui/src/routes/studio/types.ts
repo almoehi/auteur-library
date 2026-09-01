@@ -200,6 +200,10 @@ export interface ChatItem {
 		 *  happening, and the phase says what. */
 		phase?: 'writing' | 'starting';
 		busySince?: number;
+		/** The continuation this round was written for, fixed at creation so that
+		 *  toggling the seam afterwards changes the NEXT round, not the meaning of
+		 *  this one. Absent on an ordinary clip. */
+		continues?: { workspace: string; pinned: boolean; characterName?: string; locationName?: string };
 		error?: string;
 	};
 

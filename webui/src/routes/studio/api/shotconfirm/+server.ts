@@ -55,6 +55,10 @@ interface Ctx {
 	location?: unknown;
 	refs?: unknown;
 	history?: unknown;
+	/** The clip being continued, when this round is a continuation: which seam,
+	 *  who and where (locked), and the prior brief so the end state can be read
+	 *  off it. */
+	continuing?: unknown;
 	/** A setting the operator changed instead of typing — "length 5 -> 15
 	 *  seconds". Stands in for the request on that round. */
 	changed?: unknown;
@@ -82,6 +86,22 @@ function facts(c: Ctx, said: string): string {
 
 	const where = str(c.location, 200);
 	if (where) out.push(`location: ${where}`);
+
+	// A continuation. The mode is said outright, and the previous clip's last
+	// "End state:" line is read off its brief — a regex, not a model call — so
+	// a pinned seam can start from the frame it actually starts from.
+	const cont = c.continuing && typeof c.continuing === 'object' ? (c.continuing as Record<string, unknown>) : null;
+	if (cont) {
+		const free = str(cont.seam, 12) === 'free';
+		out.push(
+			free
+				? 'continuing the previous clip as a new take in the same scene — same people and place, first frame free'
+				: 'continuing the previous clip from its last frame — seamless; the people and the place are locked'
+		);
+		const prior = str(cont.priorPrompt, 20_000);
+		const end = [...prior.matchAll(/End state:\s*([^\n]+)/g)].pop();
+		if (end) out.push(`the previous clip ended with: ${end[1].trim().slice(0, 300)}`);
+	}
 
 	const makes = str(c.makes, 60);
 	if (makes && makes !== 'one clip') out.push(`making: ${makes}`);

@@ -1316,7 +1316,10 @@
 			// it costs anything.
 			if (mode === 'simple') {
 				if (pendingPhoto && wantTarget !== 'clip') await uploadSubject(pendingPhoto, text);
-				else if (continuing) await continueFromRequest(text);
+				// A continuation is read back too. The round remembers which clip and
+				// which seam it was written for; the button then writes through
+				// continueFromRequest — see acceptConfirm.
+				else if (continuing) await confirmFromRequest(text);
 				// Read it back first, in a sentence, before spending anything on it.
 				// The brief and the render follow from the button on that card —
 				// see confirmFromRequest and acceptConfirm.
@@ -1613,13 +1616,16 @@
 	}
 
 	/** The composer's settings as the confirmation sees them. */
-	type ConfirmSettings = { seconds: number; who: string; where: string; angles: number };
+	type ConfirmSettings = { seconds: number; who: string; where: string; angles: number; mode: string };
 	function settingsNow(): ConfirmSettings {
 		return {
 			seconds: composerShape.seconds,
 			who: chosenCharacter?.name ?? '',
 			where: chosenLocation?.name ?? '',
-			angles: effAngles
+			angles: effAngles,
+			// Entering or leaving a continuation, or toggling its seam, is a setting
+			// like the others: it gets a round that names the change.
+			mode: continuing ? (pinSeam ? 'last frame' : 'same scene, new take') : 'none'
 		};
 	}
 	/** What the newest live round was written for. Null until there is one. */
@@ -1632,6 +1638,7 @@
 		if (a.who !== b.who) out.push(`character ${a.who || 'none'} -> ${b.who || 'none'}`);
 		if (a.where !== b.where) out.push(`location ${a.where || 'none'} -> ${b.where || 'none'}`);
 		if (a.angles !== b.angles) out.push(`camera angles ${a.angles} -> ${b.angles}`);
+		if (a.mode !== b.mode) out.push(`continuation ${a.mode} -> ${b.mode}`);
 		return out;
 	}
 
@@ -1653,6 +1660,16 @@
 		const now = settingsNow();
 		if (!settingsWritten) return;
 		if (!settingsDiff(settingsWritten, now).length) return;
+		// Entering or leaving a continuation is not a change to the shot being
+		// described — it is a different shot. Re-describing the old one under the
+		// new mode produced a "new clip" that was still the continuation, and a
+		// continuation that inherited an unrelated clip's agreed lines. The chain
+		// closes; the next typed message starts clean. Only a seam toggle inside a
+		// continuation is answered with a round.
+		if ((settingsWritten.mode === 'none') !== (now.mode === 'none')) {
+			untrack(() => spendConfirmChain());
+			return;
+		}
 		const live = untrack(() => chat.filter((c) => c.kind === 'confirm').at(-1));
 		if (!live?.confirm || live.confirm.sent || live.confirm.streaming) return;
 		if (settingsTimer) clearTimeout(settingsTimer);
@@ -1663,6 +1680,21 @@
 			if (diffs.length) void confirmFromRequest('', diffs.join(', '));
 		}, 700);
 	});
+
+	/** Close the current read-back chain: every unsent round is spent.
+ *
+ *  The rounds of a shot are its "agreed so far"; a round that outlives its
+ *  shot leaks into the next one as agreement nobody made. Called on launch,
+ *  and on entering or leaving a continuation — a continuation is a different
+ *  order from the new clip that was being described before it, and vice
+ *  versa, so neither may inherit the other's history. */
+	function spendConfirmChain() {
+		for (const x of chat) if (x.kind === 'confirm' && x.confirm && !x.confirm.sent) x.confirm.sent = true;
+		settingsWritten = null;
+		// Written down. In memory the chain was closed; on disk it was not, so a
+		// reload after "new clip" brought the old rounds back unsent.
+		persist();
+	}
 
 		function confirmHistory(): string[] {
 		const out: string[] = [];
@@ -1679,10 +1711,25 @@
 	async function confirmFromRequest(said: string, changed = '') {
 		// What this round is written for. The settings watcher diffs against it.
 		settingsWritten = settingsNow();
+		const cont = continuing;
+		const snap = cont
+			? {
+					workspace: cont.workspace,
+					pinned: pinSeam,
+					characterName: cont.characterName,
+					locationName: cont.locationName
+				}
+			: undefined;
 		const item = pushItem({
 			who: 'studio',
 			kind: 'confirm',
-			confirm: { said, line: '', streaming: true, ...(changed ? { changed } : {}) }
+			confirm: {
+				said,
+				line: '',
+				streaming: true,
+				...(changed ? { changed } : {}),
+				...(snap ? { continues: snap } : {})
+			}
 		});
 		const askedAt = Date.now();
 		try {
@@ -1696,8 +1743,21 @@
 					res: composerShape.res,
 					aspect: composerShape.portrait ? '9:16' : '16:9',
 					makes: batchLabel,
-					character: chosenCharacter?.name,
-					location: chosenLocation?.description || chosenLocation?.name,
+					// Continuing: the people and the place are the prior clip's, whatever
+					// the chips say; and the prior brief goes along so the end state can
+					// be read off it.
+					character: cont ? cont.characterName : chosenCharacter?.name,
+					location: cont ? cont.locationName : chosenLocation?.description || chosenLocation?.name,
+					...(cont
+						? {
+								continuing: {
+									seam: pinSeam ? 'pinned' : 'free',
+									who: cont.characterName,
+									where: cont.locationName,
+									priorPrompt: logRow[cont.workspace]?.prompt
+								}
+							}
+						: {}),
 					refs: refFiles.map((f) => f.description || f.name).filter(Boolean),
 					history: confirmHistory()
 				})
@@ -1790,13 +1850,24 @@
 			const raw = rounds.map((x) => x.confirm!.said.trim()).filter(Boolean).join('\n');
 			const request = agreed ? `${raw || c.said}\n\n---\n\n${agreed}` : raw || c.said;
 			c.phase = 'writing';
-			const card = await shotFromRequest(request);
+			// A continuation writes through its own path, against the clip the round
+			// was started from — not whatever the composer points at now.
+			if (c.continues) {
+				if (continuing?.workspace !== c.continues.workspace) {
+					c.error = 'that clip is no longer being continued — press Continue on it again';
+					return;
+				}
+				pinSeam = c.continues.pinned;
+			}
+			const card = c.continues
+				? await continueFromRequest(request)
+				: await shotFromRequest(request);
 			if (!card?.shot) return;
 
 			// The whole chain is spent, not just the round with the button. Left
 			// unsent, the earlier rounds of this shot were being read back as
 			// "agreed so far" into the NEXT shot's first round.
-			for (const x of rounds) x.confirm!.sent = true;
+			spendConfirmChain();
 			c.cardId = card.id;
 			// Stop and say so. A brief the checker rewrote is not the brief that was
 			// read back, and letting it shoot anyway would mean the sentence they
@@ -1900,6 +1971,9 @@
 			exact: info.exact
 		};
 		pinSeam = true;
+		// A continuation is a new order; whatever was being read back before it is
+		// not its history.
+		spendConfirmChain();
 		// Angles cannot apply to a pinned seam, and a chip left reading "2 camera
 		// angles" with the row inert is a control the user cannot put down. Reset it
 		// here: a continuation starts as one clip per version, and raising it again
@@ -1911,9 +1985,9 @@
 	}
 
 	/** Write the continuation brief and offer it, exactly as a clip is offered. */
-	async function continueFromRequest(request: string) {
+	async function continueFromRequest(request: string): Promise<ChatItem | null> {
 		const c = continuing;
-		if (!c) return;
+		if (!c) return null;
 		const prior = logRow[c.workspace];
 		// The length is yours, and only the length.
 		//
@@ -1947,7 +2021,7 @@
 				platesFromClip: c.exact === false
 			}
 		});
-		if (!shot) return;
+		if (!shot) return null;
 		lastRequest = request;
 		// The frame follows the clip being continued, not the composer: two pieces
 		// at different sizes cannot be joined, and joining is the whole point.
@@ -1970,7 +2044,7 @@
 		shot.locationId = c.locationId;
 		shot.locationName = c.locationName;
 		continuing = null;
-		pushItem({ who: 'studio', kind: 'shot', shot });
+		return pushItem({ who: 'studio', kind: 'shot', shot });
 	}
 
 	/** Glue every clip in this one's chain into a single scene. */
@@ -6194,7 +6268,7 @@
 											{:else if item.confirm.fixed?.length}
 												mehet így
 											{:else}
-												Videó generálás indítása
+												{item.confirm.continues ? 'Folytatás indítása' : 'Videó generálás indítása'}
 											{/if}
 										</button>
 										<!-- The cost, next to the thing that spends it. Not a warning —
@@ -7549,7 +7623,7 @@
 									     decides whether the FIRST INSTANT is nailed to the frame the
 									     last clip ended on. -->
 									<div class="mt-2 flex flex-wrap items-center gap-1.5">
-										{#each [[true, 'from the last frame'], [false, 'free start']] as [on, label] (label)}
+										{#each [[true, 'from the last frame'], [false, 'same scene, new take']] as [on, label] (label)}
 											<button
 												type="button"
 												aria-pressed={pinSeam === on}
@@ -7560,18 +7634,25 @@
 													: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}">{label}</button
 											>
 										{/each}
+										<!-- The way out, as the third state rather than a separate button:
+										     leaving a continuation is what "new clip" means, and one row of
+										     three reads better than two options plus an escape hatch. -->
+										<button
+											type="button"
+											onclick={() => {
+												continuing = null;
+												spendConfirmChain();
+											}}
+											class="cursor-pointer rounded-full px-3 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-muted)]"
+											>new clip</button
+										>
 									</div>
 									<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
 										{pinSeam
 											? 'Seamless — the first instant is the frame the clip ended on.'
-											: 'The scene carries over, but the action can begin somewhere else. The join may step.'}
+											: 'Same people, same place, a fresh take — the action can begin anywhere. The join may step.'}
 									</p>
 								</div>
-								<button
-									type="button"
-									class="btn btn-secondary btn-sm shrink-0"
-									onclick={() => (continuing = null)}>never mind</button
-								>
 							</div>
 						{/if}
 						{#if mode === 'simple' && !continuing && wantTarget !== 'clip'}
