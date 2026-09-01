@@ -1033,6 +1033,16 @@
 	let quiet = 0;
 	let lastSig = '';
 	let sawAllDone = false;
+	/** Whether this tab ever saw this run mid-flight.
+	 *
+	 *  The clip estimate is measured from the run's start to the moment the
+	 *  poller notices it finished — which is the render's length only if somebody
+	 *  was watching. Reopen a session whose clip landed while the tab was closed
+	 *  and the poll concludes on its first tick, recording "yesterday until now".
+	 *  That is how the stored sample set came to read 6746, 2557, 5428 and 5486
+	 *  seconds against real renders of four to eleven minutes, and how the button
+	 *  came to promise twenty-four. */
+	let sawRunning = false;
 
 	// --- proxy ------------------------------------------------------------------
 
@@ -1562,7 +1572,31 @@
  *  awaited sheets are: the conversation is the record and a variable is not. It
  *  survives a reload; a variable does not, and a refinement that has forgotten
  *  what it is refining silently drops everything said before it. */
-	function confirmHistory(): string[] {
+/** The operator's half and ours, told apart.
+ *
+ *  The read-back is what they said; anything after the marker is what the
+ *  studio is filling in for them. Rendered at the same weight they read as one
+ *  paragraph, and then a room nobody asked for looks like a room they asked
+ *  for — which is precisely the agreement this layer exists to make honest.
+ *
+ *  Split on the marker the writer is told to emit rather than on sentence
+ *  punctuation: a full stop is in every abbreviation and half the prose, and a
+ *  wrong split here would attribute their own words to us. No marker means
+ *  there was nothing to add, which is a normal and good answer. */
+	function splitConfirm(line: string): { said: string; added: string } {
+		const at = line.search(/(^|[.!?…]\s+)(Hozzáteszem|Adding)\s*:/i);
+		if (at === -1) return { said: line, added: '' };
+		const marker = line.slice(at).search(/(Hozzáteszem|Adding)\s*:/i);
+		return {
+			said: line.slice(0, at + marker).trim(),
+			added: line
+				.slice(at + marker)
+				.replace(/^(Hozzáteszem|Adding)\s*:\s*/i, '')
+				.trim()
+		};
+	}
+
+		function confirmHistory(): string[] {
 		const out: string[] = [];
 		for (const c of chat) {
 			if (c.kind === 'confirm' && c.confirm?.line && !c.confirm.sent) out.push(c.confirm.line);
@@ -4069,6 +4103,7 @@
 		quiet = 0;
 		lastSig = '';
 		sawAllDone = false;
+		sawRunning = false;
 		pollingActive = true;
 		tick(runId);
 	}
@@ -4164,6 +4199,9 @@
 			const ts = fresh.tasks ?? [];
 			const terminal =
 				ts.length > 0 && ts.every((t) => DONE.includes(t.status) || DEAD.includes(t.status));
+			// One poll that saw work still in flight is what makes the elapsed time
+			// a render's length rather than the gap since somebody last looked.
+			if (!terminal && ts.length > 0) sawRunning = true;
 			let finished = false;
 			if (renderWs) {
 				const anyDead = ts.some((t) => DEAD.includes(t.status));
@@ -4190,7 +4228,13 @@
 					// One clip only, and only one that worked. A full production is an
 					// order of magnitude longer, and a couple of them in the sample
 					// would make the clip estimate useless.
-					if (simpleRun && startedAt && !ts.some((t) => DEAD.includes(t.status))) {
+					// Only a render this tab actually watched. See sawRunning.
+					if (
+						sawRunning &&
+						simpleRun &&
+						startedAt &&
+						!ts.some((t) => DEAD.includes(t.status))
+					) {
 						recordWait('clip', Date.now() - startedAt);
 						refreshClipEstimate();
 					}
@@ -5011,6 +5055,13 @@
 		// cards, and by definition nothing is rendering by the time you come back.
 		// One poll, four seconds in; it stops itself if there is nothing to wait for.
 		void loadSheets().then(() => watchSheets());
+		// How long a clip takes, read now rather than when one starts.
+		//
+		// It used to be read only from startPolling, which is fine for the line
+		// that appears during a render — but the button that spends the money is
+		// on screen long before that, and it was offering a wait with no number
+		// beside it. Reading it here costs one localStorage lookup on mount.
+		refreshClipEstimate();
 		try {
 			const raw = localStorage.getItem(SETUP_KEY);
 			if (raw) {
@@ -5983,12 +6034,24 @@
 							{@const started = item.confirm.cardId
 								? !!chat.find((x) => x.id === item.confirm?.cardId)?.shot?.launched
 								: false}
+							{@const parts = splitConfirm(item.confirm.line)}
 							<div class="enter">
 								<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
-									{item.confirm.line}{#if item.confirm.streaming}<span
+									{parts.said}{#if item.confirm.streaming && !parts.added}<span
 											class="caret"
 											aria-hidden="true"></span>{/if}
 								</p>
+								{#if parts.added}
+									<!-- Ours, and it has to look it. Same size, quieter colour: it is
+									     not a footnote — it is half of what starts if the button is
+									     pressed — but it is an offer, and an offer that looks like a
+									     statement is not one. -->
+									<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
+										{parts.added}{#if item.confirm.streaming}<span
+												class="caret"
+												aria-hidden="true"></span>{/if}
+									</p>
+								{/if}
 
 								{#if item.confirm.error}
 									<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
@@ -6024,8 +6087,8 @@
 										<!-- The cost, next to the thing that spends it. Not a warning —
 										     just the two numbers a person wants before they commit. -->
 										<span class="text-xs text-[var(--st-faint)]">
-											{composerShape.seconds}s{#if typicalClip}
-												· {typicalLabel(typicalClip)}{/if}
+											{composerShape.seconds}s{#if typicalClip}&nbsp;·
+												{typicalLabel(typicalClip)}{/if}
 										</span>
 									</div>
 								{/if}

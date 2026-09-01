@@ -36,6 +36,23 @@ const MIN_SAMPLES = 3;
 const FLOOR_MS = 1_000;
 const CEIL_MS = 2 * 60 * 60 * 1_000;
 
+/** What a single clip can plausibly take, measured rather than guessed: the
+ *  harness's own log for the last dozen renders reads 246, 254, 285, 305, 395,
+ *  426, 426, 436, 458, 686 seconds, with one 3402 outlier. Twenty minutes is
+ *  well clear of every real one, including a cold 40GB model load.
+ *
+ *  Enforced on READ as well as write, which is the part that matters. The
+ *  samples already on disk are the poisoned ones — 6746, 2557, 5428, 5486
+ *  seconds, a median of ninety minutes — and they were not going to age out on
+ *  their own for another twenty runs. A rule about what is shown has to hold
+ *  for what is already stored, or the fix only helps people who have never
+ *  used the app. */
+const PLAUSIBLE_MS: Partial<Record<WaitKind, number>> = {
+	clip: 20 * 60 * 1_000,
+	prompt: 5 * 60 * 1_000,
+	confirm: 30 * 1_000
+};
+
 type Store = Partial<Record<WaitKind, number[]>>;
 
 function read(): Store {
@@ -53,7 +70,7 @@ function read(): Store {
 /** Remember one completed wait. Called on the success path only — a failed run
  *  tells you how long the failure took, which is not what the line promises. */
 export function recordWait(kind: WaitKind, ms: number): void {
-	if (!Number.isFinite(ms) || ms < FLOOR_MS || ms > CEIL_MS) return;
+	if (!Number.isFinite(ms) || ms < FLOOR_MS || ms > (PLAUSIBLE_MS[kind] ?? CEIL_MS)) return;
 	try {
 		const store = read();
 		const list = [...(store[kind] ?? []), Math.round(ms)].slice(-KEEP);
@@ -63,12 +80,28 @@ export function recordWait(kind: WaitKind, ms: number): void {
 	}
 }
 
-/** The median of what has been seen, or null while there is not enough to be
- *  worth showing. Null is the important half of the contract: a wrong estimate
- *  on run two would teach the reader to distrust the right one on run ten. */
+/** What ships before this machine has said anything.
+ *
+ *  The original argument for showing nothing was that a wrong estimate on run
+ *  two teaches the reader to distrust the right one on run ten. That held when
+ *  there was no measured basis for a number. There is one now: 35 real renders
+ *  in the harness log over the last week, 246 to 1194 seconds, and the last
+ *  day's three at 246, 305 and 426. So the first two runs get four minutes,
+ *  which is the fast end of a real distribution rather than a guess — and the
+ *  reader's own median takes over the moment there are three of them.
+ *
+ *  Nothing for the other two kinds. The prompt writer and the read-back are
+ *  fast enough that a number beside them is noise, and they have their own
+ *  wording for being slower than usual. */
+const SHIPPED_MS: Partial<Record<WaitKind, number>> = {
+	clip: 4 * 60 * 1_000
+};
+
+/** The median of what has been seen, falling back to what shipped. */
 export function typicalWait(kind: WaitKind): number | null {
-	const list = read()[kind];
-	if (!list || list.length < MIN_SAMPLES) return null;
+	const cap = PLAUSIBLE_MS[kind] ?? CEIL_MS;
+	const list = read()[kind]?.filter((ms) => ms <= cap);
+	if (!list || list.length < MIN_SAMPLES) return SHIPPED_MS[kind] ?? null;
 	const sorted = [...list].sort((a, b) => a - b);
 	const mid = Math.floor(sorted.length / 2);
 	return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
