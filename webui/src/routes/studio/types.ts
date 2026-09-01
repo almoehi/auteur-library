@@ -171,8 +171,10 @@ export interface ChatItem {
 	 *  terms, and it can only do that if it is given them.
 	 */
 	confirm?: {
-		/** Verbatim, this round. */
+		/** Verbatim, this round. Empty on a round that answers a setting change. */
 		said: string;
+		/** The setting that moved, when that is what this round answers. */
+		changed?: string;
 		/** The read-back, filled in as it streams. */
 		line: string;
 		/** Still arriving. */

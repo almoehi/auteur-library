@@ -55,6 +55,9 @@ interface Ctx {
 	location?: unknown;
 	refs?: unknown;
 	history?: unknown;
+	/** A setting the operator changed instead of typing — "length 5 -> 15
+	 *  seconds". Stands in for the request on that round. */
+	changed?: unknown;
 }
 
 function str(v: unknown, max = 400): string {
@@ -97,15 +100,24 @@ function facts(c: Ctx, said: string): string {
 		out.push('', 'agreed so far:', ...history.map((h) => `  ${h}`));
 	}
 
-	out.push('', `the operator now says: ${said}`);
-	// Last line, after their words, because that is where it holds.
-	//
-	// The rule is in the system prompt too and the system prompt lost: every
-	// label here is English and so are the character and location names, so the
-	// model read the room and answered in English to a Hungarian operator. What
-	// language to answer in is decided by one line in the whole payload, and it
-	// works when it sits directly under that line.
-	out.push('', 'Answer in the same language as that last line, whatever it is.');
+	const changed = str(c.changed, 200);
+	if (said) {
+		out.push('', `the operator now says: ${said}`);
+		// Last line, after their words, because that is where it holds.
+		//
+		// The rule is in the system prompt too and the system prompt lost: every
+		// label here is English and so are the character and location names, so
+		// the model read the room and answered in English to a Hungarian operator.
+		// What language to answer in is decided by one line in the whole payload,
+		// and it works when it sits directly under that line.
+		out.push('', 'Answer in the same language as that last line, whatever it is.');
+	} else {
+		// A setting moved and nobody typed. There is no last line to take the
+		// language from, so it comes from what was agreed — which is the only
+		// text on this round that a person wrote, or approved.
+		out.push('', `the operator changed a setting instead of writing: ${changed}`);
+		out.push('', 'Answer in the language of the "agreed so far" text above.');
+	}
 	return out.join('\n');
 }
 
@@ -162,16 +174,26 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const said = str(body.request, REQUEST_MAX + 1);
-	if (!said) throw error(400, 'Missing request');
+	const changed = str(body.changed, 200);
+	// One or the other: words, or a setting that moved. A round with neither has
+	// nothing to answer.
+	if (!said && !changed) throw error(400, 'Missing request');
 	if (said.length > REQUEST_MAX) {
 		throw error(400, `That is longer than ${REQUEST_MAX} characters`);
+	}
+	// A setting change has to be answering something that was said. Without a
+	// prior round there is nothing to re-shape.
+	if (!said && !(Array.isArray(body.history) && body.history.length)) {
+		throw error(400, 'Nothing to re-shape');
 	}
 
 	// The same gate as the writer, in front of the same words. It has to be here
 	// too and not only downstream: this endpoint would otherwise stream a
 	// readable restatement of something the writer is about to refuse.
-	const gate = checkRequest(said);
-	if (gate.refuse) return json({ ok: false, error: gate.refuse });
+	if (said) {
+		const gate = checkRequest(said);
+		if (gate.refuse) return json({ ok: false, error: gate.refuse });
+	}
 
 	const key = env.GROK_API_KEY;
 	if (!key) {

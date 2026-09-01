@@ -45,7 +45,7 @@
 	 *                          itself sends no CORS headers)
 	 */
 	// Aliased: this file already has a tick(id) of its own for the poll loop.
-	import { onMount, tick as flush } from 'svelte';
+	import { onMount, tick as flush, untrack } from 'svelte';
 	import { friendly, parseEventLog, type ActivityRow } from './activity';
 	import { recordWait, typicalWait, typicalLabel } from './timings';
 	import { renderDocument, type Block } from './render-doc';
@@ -1612,6 +1612,58 @@
 		return { lead, said, added };
 	}
 
+	/** The composer's settings as the confirmation sees them. */
+	type ConfirmSettings = { seconds: number; who: string; where: string; angles: number };
+	function settingsNow(): ConfirmSettings {
+		return {
+			seconds: composerShape.seconds,
+			who: chosenCharacter?.name ?? '',
+			where: chosenLocation?.name ?? '',
+			angles: effAngles
+		};
+	}
+	/** What the newest live round was written for. Null until there is one. */
+	let settingsWritten: ConfirmSettings | null = null;
+	let settingsTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function settingsDiff(a: ConfirmSettings, b: ConfirmSettings): string[] {
+		const out: string[] = [];
+		if (a.seconds !== b.seconds) out.push(`length ${a.seconds} -> ${b.seconds} seconds`);
+		if (a.who !== b.who) out.push(`character ${a.who || 'none'} -> ${b.who || 'none'}`);
+		if (a.where !== b.where) out.push(`location ${a.where || 'none'} -> ${b.where || 'none'}`);
+		if (a.angles !== b.angles) out.push(`camera angles ${a.angles} -> ${b.angles}`);
+		return out;
+	}
+
+	/** A setting moved under a live proposal: say so, and re-shape it.
+	 *
+	 *  The description on screen was written for the length, character and room
+	 *  the composer had at the time. Turn the length from five seconds to fifteen
+	 *  and nothing used to happen until the next message — so the paragraph a
+	 *  person was reading, and the button they were about to press, described a
+	 *  five second clip over a fifteen second setting. The render itself was
+	 *  fine (the writer is pinned to the composer), but the contract on screen
+	 *  was stale, and a stale contract is the one thing this layer must not be.
+	 *
+	 *  Only while a round is live. After the button, a changed chip is for the
+	 *  NEXT shot, and re-describing a clip already on a GPU would be noise.
+	 *  Debounced, because a person clicking through 5, 8, 15 wants one answer
+	 *  about 15, not three. */
+	$effect(() => {
+		const now = settingsNow();
+		if (!settingsWritten) return;
+		if (!settingsDiff(settingsWritten, now).length) return;
+		const live = untrack(() => chat.filter((c) => c.kind === 'confirm').at(-1));
+		if (!live?.confirm || live.confirm.sent || live.confirm.streaming) return;
+		if (settingsTimer) clearTimeout(settingsTimer);
+		settingsTimer = setTimeout(() => {
+			settingsTimer = null;
+			if (!settingsWritten) return;
+			const diffs = settingsDiff(settingsWritten, settingsNow());
+			if (diffs.length) void confirmFromRequest('', diffs.join(', '));
+		}, 700);
+	});
+
 		function confirmHistory(): string[] {
 		const out: string[] = [];
 		for (const c of chat) {
@@ -1624,11 +1676,13 @@
 	 *
 	 *  The card is pushed empty and filled in as the text arrives. pushItem hands
 	 *  back the state proxy for exactly this. */
-	async function confirmFromRequest(said: string) {
+	async function confirmFromRequest(said: string, changed = '') {
+		// What this round is written for. The settings watcher diffs against it.
+		settingsWritten = settingsNow();
 		const item = pushItem({
 			who: 'studio',
 			kind: 'confirm',
-			confirm: { said, line: '', streaming: true }
+			confirm: { said, line: '', streaming: true, ...(changed ? { changed } : {}) }
 		});
 		const askedAt = Date.now();
 		try {
@@ -1637,6 +1691,7 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					request: said,
+					...(changed ? { changed } : {}),
 					seconds: composerShape.seconds,
 					res: composerShape.res,
 					aspect: composerShape.portrait ? '9:16' : '16:9',
@@ -1724,11 +1779,21 @@
 			// studio talking to a person — "írd át, ha más kell" is an offer, and
 			// in a brief it reads as an instruction to the crew.
 			const agreed = splitConfirm(c.line).said.trim();
-			const request = agreed ? `${c.said}\n\n---\n\n${agreed}` : c.said;
+			// Their own words from EVERY round of this shot, not only the last.
+			// Round one said "nagy faszt" and round two said "tedd bele hogy
+			// remeg"; the writer is told to keep the operator's plain terms, and
+			// it can only keep the ones it is given. A round that answered a
+			// setting change said nothing and contributes nothing here.
+			const rounds = chat.filter((x) => x.kind === 'confirm' && x.confirm && !x.confirm.sent);
+			const raw = rounds.map((x) => x.confirm!.said.trim()).filter(Boolean).join('\n');
+			const request = agreed ? `${raw || c.said}\n\n---\n\n${agreed}` : raw || c.said;
 			const card = await shotFromRequest(request);
 			if (!card?.shot) return;
 
-			c.sent = true;
+			// The whole chain is spent, not just the round with the button. Left
+			// unsent, the earlier rounds of this shot were being read back as
+			// "agreed so far" into the NEXT shot's first round.
+			for (const x of rounds) x.confirm!.sent = true;
 			c.cardId = card.id;
 			// Stop and say so. A brief the checker rewrote is not the brief that was
 			// read back, and letting it shoot anyway would mean the sentence they
