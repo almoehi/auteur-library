@@ -403,8 +403,18 @@ export const POST: RequestHandler = async ({ request }) => {
 	// happened. Silence here reads as "the writer is slow" when what is actually
 	// going on is that it wrote the brief twice — and the person waiting has no
 	// way to tell those apart.
-	const firstPass = faults.map((f) => f.human);
-	if (faults.length) {
+	// Length is advisory. It used to send the whole brief back for a second full
+	// pass — a minute or more on a reasoning model, longer on a continuation —
+	// to bring 780 words under 760, and once the read-back layer started
+	// feeding the writer a richer request it fired on nearly every brief. Three
+	// minutes for one brief, measured on a live continuation. The fault still
+	// travels to the card as a warning; nobody waits for it. Structural faults —
+	// an undescribed second person, a pinned seam somebody arrives into, a stop
+	// without a ramp, a camera fighting the adapter — still earn the retry,
+	// because those are the ones that come back as a broken clip.
+	const structural = faults.filter((f) => !f.human.startsWith('this brief is long enough'));
+	const firstPass = structural.map((f) => f.human);
+	if (structural.length) {
 		const retry = await ask([
 			`The brief you just wrote has a fault in it. Write it again, fixing this and ` +
 				`changing nothing else about what happens:\n` +
