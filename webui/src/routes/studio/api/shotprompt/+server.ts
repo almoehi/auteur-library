@@ -336,7 +336,12 @@ export const POST: RequestHandler = async ({ request }) => {
 		pinned.push(
 			'every person in this shot gets a <Subject N> of their own, picture or not — ' +
 				'a partner the request only calls "a man" or "his cock" is <Subject 2>, ' +
-				'declared in subject_definitions, never left in prose'
+				'declared in subject_definitions, never left in prose. ' +
+				// The one exception the check itself makes: in POV the partner is the
+				// camera, and a declared full body for them is exactly what the POV
+				// adapter then drags back into frame.
+				'The exception is a POV shot: there the partner is the camera and stays ' +
+				'hands and cock, not a declared subject'
 		);
 		const all = [...pinned, ...extra];
 		const body = all.length ? `${want}\n\n---\n\n${all.join('\n')}` : want;
