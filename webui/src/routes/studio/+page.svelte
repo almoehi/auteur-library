@@ -1583,15 +1583,33 @@
  *  punctuation: a full stop is in every abbreviation and half the prose, and a
  *  wrong split here would attribute their own words to us. No marker means
  *  there was nothing to add, which is a normal and good answer. */
-	function splitConfirm(line: string): { said: string; added: string } {
-		const at = line.search(/(^|[.!?…]\s+)(Hozzátettük|We added)\s*:/i);
-		if (at === -1) return { said: line, added: '' };
-		const marker = line.slice(at).search(/(Hozzátettük|We added)\s*:/i);
-		// The marker stays. It used to be stripped, back when the second half was
-		// the proposal itself and "Hozzáteszem:" was just a seam. It is an
-		// attribution now — take the word off and the line opens lower-case in the
-		// middle of a thought, and stops saying whose the list is.
-		return { said: line.slice(0, at + marker).trim(), added: line.slice(at + marker).trim() };
+	function splitConfirm(line: string): { lead: string; said: string; added: string } {
+		let rest = line;
+		let added = '';
+		// The attribution, off the end. The marker stays: it used to be stripped,
+		// back when this half was the proposal itself and the word was just a
+		// seam. It is an attribution now — take it off and the line opens
+		// lower-case in the middle of a thought, and stops saying whose list it is.
+		const at = rest.search(/(^|[.!?…]\s+)(Hozzátettük|We added)\s*:/i);
+		if (at !== -1) {
+			const marker = rest.slice(at).search(/(Hozzátettük|We added)\s*:/i);
+			added = rest.slice(at + marker).trim();
+			rest = rest.slice(0, at + marker);
+		}
+		// The opening line, off the front, at the first blank line. Mid-stream
+		// there is no blank line yet, so everything is still the lead — which is
+		// what it looks like anyway, because the lead is what arrives first.
+		//
+		// A model that skips the blank line loses its lead rather than leaking a
+		// greeting into the description, and from there into the brief. Wrong in
+		// the safe direction.
+		const brk = rest.indexOf('\n\n');
+		const lead = brk === -1 ? rest.trim() : rest.slice(0, brk).trim();
+		const said = brk === -1 ? '' : rest.slice(brk).trim();
+		// A lead that ran long is not a lead. Prose that happens to start with a
+		// short line would otherwise be filed as a greeting and dropped.
+		if (lead.length > 90 && !said) return { lead: '', said: lead, added };
+		return { lead, said, added };
 	}
 
 		function confirmHistory(): string[] {
@@ -1702,7 +1720,11 @@
 			}
 
 			c.fixed = undefined;
-			const request = c.line.trim() ? `${c.said}\n\n---\n\n${c.line.trim()}` : c.said;
+			// The description only. The opening line and the attribution are the
+			// studio talking to a person — "írd át, ha más kell" is an offer, and
+			// in a brief it reads as an instruction to the crew.
+			const agreed = splitConfirm(c.line).said.trim();
+			const request = agreed ? `${c.said}\n\n---\n\n${agreed}` : c.said;
 			const card = await shotFromRequest(request);
 			if (!card?.shot) return;
 
@@ -6034,17 +6056,19 @@
 								: false}
 							{@const parts = splitConfirm(item.confirm.line)}
 							<div class="enter">
-								<!-- What this paragraph is, and what to do with it.
-								     Without it the studio answers a request with three sentences of
-								     prose and no frame: it could be a plan, a summary, or something
-								     that already happened, and the only clue that a decision is owed
-								     is a button below the fold. One line, and only on the round that
-								     can still be acted on — repeated over every earlier round it
-								     stops being orientation and becomes wallpaper. -->
-								{#if newest && !started}
-									<p class="mb-1.5 text-xs text-[var(--st-faint)]">
-										Ezt fogjuk leforgatni — indítsd el, vagy írj, ha változtatnál.
-									</p>
+								<!-- What this paragraph is, and what to do with it. Without it the
+								     studio answers a request with three sentences of prose and no
+								     frame: it could be a plan, a summary, or something that already
+								     happened, and the only clue that a decision is owed is a button
+								     below the fold.
+
+								     Written by the model, not by us. A fixed label says the same
+								     eleven words to the fortieth clip as to the first, and a room
+								     that says the same thing every time is a room with nobody in
+								     it. It costs nothing to be different each time — this is the
+								     one part of the answer allowed to sound like a person. -->
+								{#if parts.lead}
+									<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
 								{/if}
 								<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
 									{parts.said}{#if item.confirm.streaming && !parts.added}<span
