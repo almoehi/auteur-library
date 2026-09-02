@@ -10,6 +10,7 @@
  *  which graph, which nodes, which ports — stays with the bundle that owns it,
  *  because those are exactly the parts that differ.
  */
+import { env } from '$env/dynamic/private';
 import { BASE, loraFor, type Lora, type Pick } from './loras';
 
 export interface StackEntry {
@@ -108,6 +109,14 @@ export function writeLoraStack(
  *  that fetched the YAML, which is by construction one the caller can reach.
  */
 export function absoluteGraphUrl(yaml: string, reqUrl: URL): string {
+	// Only when a hosted harness is the target. The local harness — the pinned
+	// known-good image — does the opposite of the hosted one: it joins the url:
+	// onto the YAML's directory even when it is absolute, and a render died on
+	// "…/contwf/<sel>/http://host.docker.internal:5290/…/workflow.json → 404".
+	// Two loaders, two behaviours; the studio serves the one the target reads.
+	// AUTEUR_STUDIO_URL is set exactly when the studio is being reached from
+	// outside, which is the hosted case.
+	if (!env.AUTEUR_STUDIO_URL) return yaml;
 	const sibling = new URL(reqUrl.href);
 	sibling.pathname = sibling.pathname.replace(/workflow\.ya?ml$/, 'workflow.json');
 	sibling.search = '';
