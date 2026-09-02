@@ -31,6 +31,7 @@
  *  the sheet reach the preview too and the two cannot drift apart.
  */
 import { error, text } from '@sveltejs/kit';
+import { absoluteGraphUrl } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
 
 const REPO = 'https://raw.githubusercontent.com/almoehi/auteur-library/refs/heads/main/workflows';
@@ -222,7 +223,7 @@ function buildJson(kind: Kind, src: string): string {
 	return JSON.stringify(out, null, 2);
 }
 
-export const GET: RequestHandler = async ({ params, fetch }) => {
+export const GET: RequestHandler = async ({ params, fetch, url }) => {
 	const kind = params.kind as Kind;
 	if (!KINDS[kind]) throw error(404, 'an anchor is either a character or a location');
 	if (params.file === 'workflow.json') {
@@ -231,7 +232,7 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 		});
 	}
 	if (params.file === 'workflow.yaml' || params.file === 'workflow.yml') {
-		return text(buildYaml(kind, await upstream(kind, 'workflow.yaml', fetch)), {
+		return text(absoluteGraphUrl(buildYaml(kind, await upstream(kind, 'workflow.yaml', fetch)), url), {
 			headers: { 'content-type': 'text/yaml' }
 		});
 	}

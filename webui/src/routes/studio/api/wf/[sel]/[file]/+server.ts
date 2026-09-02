@@ -21,7 +21,7 @@
  */
 import { error, text } from '@sveltejs/kit';
 import { contentTypeFor, readStashed, stashedNames } from '../../../../refstash.server';
-import { modelBlock, stack, writeLoraStack } from '../../../../bundle.server';
+import { absoluteGraphUrl, modelBlock, stack, writeLoraStack } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -304,7 +304,7 @@ function buildYaml(entries: { lora: Lora; strength: number }[], refs: string[] =
 	return withPorts.replace('\n  outputs:', `\n${sagePort}  outputs:`);
 }
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	const sel = params.sel ?? '';
 	const slug = parseRunSlug(sel);
 	const refs = slug ? stashedNames(slug) : [];
@@ -329,7 +329,9 @@ export const GET: RequestHandler = async ({ params }) => {
 		return text(buildJson(entries, refs), { headers: { 'content-type': 'application/json' } });
 	}
 	if (file === 'workflow.yaml' || file === 'workflow.yml') {
-		return text(buildYaml(entries, refs), { headers: { 'content-type': 'text/yaml' } });
+		return text(absoluteGraphUrl(buildYaml(entries, refs), url), {
+			headers: { 'content-type': 'text/yaml' }
+		});
 	}
 	throw error(404, 'a bundle is workflow.yaml, workflow.json and its reference images');
 };

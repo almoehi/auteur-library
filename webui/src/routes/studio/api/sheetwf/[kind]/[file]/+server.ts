@@ -26,6 +26,7 @@
  *  unmodified, byte for byte.
  */
 import { error, text } from '@sveltejs/kit';
+import { absoluteGraphUrl } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
 
 const REPO = 'https://raw.githubusercontent.com/almoehi/auteur-library/refs/heads/main/workflows';
@@ -157,7 +158,7 @@ async function upstream(
 	return body;
 }
 
-export const GET: RequestHandler = async ({ params, fetch }) => {
+export const GET: RequestHandler = async ({ params, fetch, url }) => {
 	const name = SHEETS[params.kind ?? ''];
 	if (!name) throw error(404, 'a sheet is either a character or a location');
 	if (params.file === 'workflow.json') {
@@ -194,7 +195,7 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 		out = out.replace(block, `$1${FRAMES_OVERRIDE}`);
 	}
 
-	// `url: workflow.json` is left exactly as upstream wrote it — the harness
-	// resolves it against this directory, which is where the graph is served.
-	return text(out, { headers: { 'content-type': 'text/yaml' } });
+	// The graph reference made absolute — see absoluteGraphUrl. Relative worked
+	// on the local harness and not on the hosted one.
+	return text(absoluteGraphUrl(out, url), { headers: { 'content-type': 'text/yaml' } });
 };

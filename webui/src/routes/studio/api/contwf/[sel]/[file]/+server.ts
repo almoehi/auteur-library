@@ -27,6 +27,7 @@
  *  than a broken build.
  */
 import { error, text } from '@sveltejs/kit';
+import { absoluteGraphUrl } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -858,7 +859,7 @@ async function buildYaml(entries: ReturnType<typeof stack>): Promise<string> {
 	return out;
 }
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	const entries = stack(parsePicks(params.sel ?? ''), parseBaseOverrides(params.sel ?? ''));
 	const file = params.file ?? '';
 
@@ -871,7 +872,9 @@ export const GET: RequestHandler = async ({ params }) => {
 		);
 	}
 	if (file === 'workflow.yaml' || file === 'workflow.yml') {
-		return text(await buildYaml(entries), { headers: { 'content-type': 'text/yaml' } });
+		return text(absoluteGraphUrl(await buildYaml(entries), url), {
+			headers: { 'content-type': 'text/yaml' }
+		});
 	}
 	throw error(404, 'a continuation bundle is workflow.yaml and workflow.json');
 };

@@ -190,7 +190,13 @@ cumshot adapter pointed at a female squirt produces a dribble.
 **A second copy of the character sheet does not counteract chain drift.** 44.5%
 against 43.9%, where the sheet itself is 29.6%.
 
-**Full-URL workflow bundles do not load on the hosted harness** as of
-2026-08-31 — not with `lazy: false`, not from a CDN serving correct content
-types. Only the `name@ref` library form works. The failure surfaces as
-"workspace is not open" from the status poll, which points at the wrong thing.
+**Full-URL bundles load on the hosted harness only with an absolute `url:`.**
+The library form `name@ref` works everywhere. A bundle served from a plain URL
+failed on the hosted harness — raw GitHub, jsDelivr, `lazy: false`, all the
+same — until the one relative line inside it, `url: workflow.json`, was made
+absolute; then it rendered (5677401). The local harness resolves the relative
+form against the YAML's address, the hosted one does not. The studio now
+writes the absolute sibling address into every YAML it serves
+(`absoluteGraphUrl`), taken from the request that fetched it. The failure
+surfaces as "workspace is not open" from the status poll, which points at the
+wrong thing.

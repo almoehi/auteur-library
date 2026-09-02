@@ -96,3 +96,20 @@ export function writeLoraStack(
 		};
 	});
 }
+
+/** The bundle's own reference to its graph, made absolute.
+ *
+ *  A bundle is two files, and the YAML points at the JSON with a relative
+ *  `url: workflow.json`. The local harness resolves that against the YAML's
+ *  address and comes back here for the graph; the hosted harness does not —
+ *  the same bundle from the same public path failed there until that one line
+ *  was made absolute, and then it rendered (5677401). So every served YAML
+ *  says the full address of its sibling. The address is taken from the request
+ *  that fetched the YAML, which is by construction one the caller can reach.
+ */
+export function absoluteGraphUrl(yaml: string, reqUrl: URL): string {
+	const sibling = new URL(reqUrl.href);
+	sibling.pathname = sibling.pathname.replace(/workflow\.ya?ml$/, 'workflow.json');
+	sibling.search = '';
+	return yaml.replace(/^url:\s*workflow\.json\s*$/m, `url: ${sibling.href}`);
+}
