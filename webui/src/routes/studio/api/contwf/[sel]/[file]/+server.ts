@@ -27,6 +27,7 @@
  *  than a broken build.
  */
 import { error, text } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { absoluteGraphUrl } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
@@ -126,7 +127,11 @@ const AUDIO_SHIFT = 1.5;
 
 const QUANT_ATTN = true;
 
-const CARD = 'h100';
+/** AUTEUR_GPU_CARD overrides the card — the hosted harness's fleet is not ours,
+ *  and a bundle that names a card the target has no endpoint for never binds
+ *  (the workflow sits with endpoint_id null and the task at `running`). The
+ *  Sage handling below follows the card, so the override is safe to flip. */
+const CARD = (env.AUTEUR_GPU_CARD || 'h100').trim();
 const SAGE_BLIND = ['h100', 'l40s'];
 
 const OUR = {
