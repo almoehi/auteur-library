@@ -506,7 +506,7 @@ export interface EventLine {
 	[k: string]: unknown;
 }
 
-/** The envelope every /api/harness call comes back in. Also always 200 —
+/** The envelope every /studio/api/harness call comes back in. Also always 200 —
  *  `ok` is the harness's status, not the proxy's. */
 export interface ProxyResult<T = unknown> {
 	ok: boolean;

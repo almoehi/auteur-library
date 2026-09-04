@@ -1,7 +1,7 @@
 /** The one place that knows how to talk to the harness from the server.
  *
  *  Every call it exposes is workspace-scoped and side-effecting, which is why
- *  none of them are reachable through the read-only proxy at /api/harness.
+ *  none of them are reachable through the read-only proxy at /studio/api/harness.
  */
 import { HARNESS } from '$lib/harness';
 import { listSkills, listWorkflows } from './library.server';

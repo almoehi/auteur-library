@@ -232,7 +232,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		return json({
 			ok: true,
-			url: `/api/file?workspace=${encodeURIComponent(last.workspace ?? '')}&artifact=${encodeURIComponent(
+			url: `/studio/api/file?workspace=${encodeURIComponent(last.workspace ?? '')}&artifact=${encodeURIComponent(
 				last.artifact ?? ''
 			)}&file=${encodeURIComponent(name)}`,
 			parts: parts.length,

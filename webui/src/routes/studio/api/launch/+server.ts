@@ -12,7 +12,7 @@
  *    artifact contents inline, and its shoot tasks burn real GPU time.
  *
  *  This is the one place in the app that ever holds a workspace YAML. The
- *  read-only proxy at /api/harness deliberately does not accept
+ *  read-only proxy at /studio/api/harness deliberately does not accept
  *  `open-workspace`, so a bad or hand-crafted YAML cannot be posted through the
  *  generic pipe — everything that gets opened is composed here, from a Brief.
  *

@@ -19,7 +19,7 @@ import type { RequestHandler } from './$types';
 /** Same host as the proxy uses: the golem router matches on the Host header and
  *  only answers to this name (127.0.0.1 returns DOMAIN_NOT_REGISTERED). */
 import { HARNESS } from '$lib/harness';
-import { cached, serve, store, typeFor } from '../../clips.server';
+import { cached, serve, store, typeFor } from '../../../clips.server';
 
 /** Identical to the grammar the /api/harness proxy enforces: a bare name
  *  plus the version the workspace was opened at, e.g. `smoke-test@1.1`. */

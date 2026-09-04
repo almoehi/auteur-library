@@ -40,8 +40,8 @@
 	 *  Same-origin routes back it:
 	 *    /studio/api/plan    — idea (or prior plan + feedback) -> Brief
 	 *    /studio/api/launch  — {stage:'planning'|'render'} -> workspace
-	 *    /api/harness        — POST proxy (poll-state, chat, reset-task…)
-	 *    /api/file           — raw artifact bytes, same-origin (the harness
+	 *    /studio/api/harness        — POST proxy (poll-state, chat, reset-task…)
+	 *    /studio/api/file           — raw artifact bytes, same-origin (the harness
 	 *                          itself sends no CORS headers)
 	 */
 	// Aliased: this file already has a tick(id) of its own for the poll loop.
@@ -1047,7 +1047,7 @@
 	// --- proxy ------------------------------------------------------------------
 
 	async function call(op: string, body: unknown = {}, ws: string = activeWs) {
-		const res = await fetch('/api/harness', {
+		const res = await fetch('/studio/api/harness', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ workspace: ws, op, body })
@@ -1096,7 +1096,7 @@
 	function fileUrl(ws: string, artifactId: string, fileKey: string, bust = false): string {
 		const q = new URLSearchParams({ workspace: ws, artifact: artifactId, file: fileKey });
 		if (bust) q.set('t', String(Date.now()));
-		return `/api/file?${q.toString()}`;
+		return `/studio/api/file?${q.toString()}`;
 	}
 
 	/** Take a copy of a clip on the server, now, while the workspace agent is
@@ -1117,7 +1117,7 @@
 			file: fileKey,
 			warm: '1'
 		});
-		void fetch(`/api/file?${q.toString()}`).catch(() => {});
+		void fetch(`/studio/api/file?${q.toString()}`).catch(() => {});
 	}
 
 	/** Give a video element that failed a second chance.

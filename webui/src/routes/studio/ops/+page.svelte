@@ -6,7 +6,7 @@
 	 *  to look at. This surface exists mainly so rendered artifacts render, with
 	 *  the task list, failure reasons and the manager chat alongside them.
 	 *
-	 *  Everything goes through /api/harness, which 404s outside dev.
+	 *  Everything goes through /studio/api/harness, which 404s outside dev.
 	 */
 	import { onMount } from 'svelte';
 
@@ -83,7 +83,7 @@
 	let retryNote = $state('');
 
 	async function call(op: string, body: unknown = {}) {
-		const res = await fetch('/api/harness', {
+		const res = await fetch('/studio/api/harness', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ workspace, op, body })
