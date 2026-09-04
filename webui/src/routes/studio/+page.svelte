@@ -1299,17 +1299,38 @@
 
 	async function submit() {
 		const text = input.trim();
-		// The row appears now, not when a GPU starts. Idempotent, so the second
-		// message of a session does nothing here.
-		if (text || pendingPhoto) void startSession(text || pendingPhoto?.name || 'New session');
 		// A held photograph is a message on its own: the picture is the character,
 		// and the description is optional. Without this the send button stays dead
 		// until you type something, which reads as the attachment not having worked.
-		if ((!text && !pendingPhoto) || sending) return;
+		if (!text && !pendingPhoto) return;
+		// Already sending: say so, and change nothing.
+		//
+		// This returned in silence, and the row below was created BEFORE the check —
+		// so a press that did nothing still left a production in the sidebar with
+		// no render behind it. Two of those appeared while a stuck send held this
+		// flag, and from the outside it looked as though the studio had accepted
+		// two orders and lost both.
+		if (sending) {
+			pushError('one is already being made — wait for it, or reload if it has stalled');
+			return;
+		}
+		// The row appears now, not when a GPU starts. Idempotent, so the second
+		// message of a session does nothing here. AFTER the guards: a row for a
+		// message that was never sent is a lie the sidebar keeps.
+		void startSession(text || pendingPhoto?.name || 'New session');
 		input = '';
 		shrink(composer);
 		pushItem({ who: 'user', kind: 'text', text });
 		sending = true;
+		// The stage starts waiting on the press, not on the dispatch. Everything
+		// between the two — the read-back, the brief, the workspace — is machinery
+		// the operator asked not to be shown, and a surface that stays empty while
+		// it runs reads as a button that did nothing.
+		if (STAGE_UI) {
+			stageStartedAt = Date.now();
+			stageWaitFrom = stageNewest?.id ?? '';
+			stageWaitBlurUrl = continuing ? (stageNewest?.artifact?.files?.[0]?.url ?? '') : '';
+		}
 		try {
 			// Simple mode never plans. Every message is a scene to render, and the
 			// answer is the prompt itself — offered for reading and editing before
@@ -1319,11 +1340,11 @@
 				// A continuation is read back too. The round remembers which clip and
 				// which seam it was written for; the button then writes through
 				// continueFromRequest — see acceptConfirm.
-				else if (continuing) await confirmFromRequest(text);
+				else if (continuing) await confirmFromRequest(text, '', STAGE_UI);
 				// Read it back first, in a sentence, before spending anything on it.
 				// The brief and the render follow from the button on that card —
 				// see confirmFromRequest and acceptConfirm.
-				else if (wantTarget === 'clip') await confirmFromRequest(text);
+				else if (wantTarget === 'clip') await confirmFromRequest(text, '', STAGE_UI);
 				else await sheetFromRequest(text, wantTarget);
 			}
 			else if (!brief) await planFromIdea(text);
@@ -1370,13 +1391,23 @@
 		const askedAt = Date.now();
 		let res: Response;
 		try {
+			// The same deadline the read-back got, and for the same reason: a call
+			// with no clock can only be ended by closing the tab. Five minutes,
+			// because this one genuinely is slow — 42, 44 and 59 seconds measured on
+			// three ordinary runs — and a cap that cuts a working writer short would
+			// be a worse bug than the one it fixes.
 			res = await fetch('/studio/api/shotprompt', {
 				method: 'POST',
+				signal: AbortSignal.timeout(5 * 60_000),
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ request, ...pin })
 			});
 		} catch (e) {
-			pushError(`Could not reach the prompt writer: ${e}`);
+			pushError(
+				e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')
+					? 'the brief writer did not answer in five minutes — send it again'
+					: `Could not reach the prompt writer: ${e}`
+			);
 			return null;
 		}
 		if (!res.ok) {
@@ -1708,7 +1739,14 @@
 	 *
 	 *  The card is pushed empty and filled in as the text arrives. pushItem hands
 	 *  back the state proxy for exactly this. */
-	async function confirmFromRequest(said: string, changed = '') {
+	/** `auto` presses the button this card exists to offer.
+	 *
+	 *  The read-back is a cost gate: it restates the order in a sentence so a
+	 *  misread costs a glance rather than a GPU. The stage does not show it, so on
+	 *  the stage the gate is gone by design — the operator asked for one press
+	 *  from typing to clip, and this is the half of that they are paying for. The
+	 *  card is still written and still kept; only nobody is asked about it. */
+	async function confirmFromRequest(said: string, changed = '', auto = false) {
 		// What this round is written for. The settings watcher diffs against it.
 		settingsWritten = settingsNow();
 		const cont = continuing;
@@ -1732,9 +1770,22 @@
 			}
 		});
 		const askedAt = Date.now();
+		// A deadline on the whole read-back, stream included.
+		//
+		// There was none, and the read loop below waits on `reader.read()` with no
+		// clock: a stream that stops arriving without closing parks that await
+		// forever. Nothing throws, so nothing is caught, so nothing is said — the
+		// send stays "in flight", the loader counts to its cap and sits there, and
+		// the render is never launched. Ninety-seven per cent, no message, no clip.
+		//
+		// Sixty seconds is far past any real one — the read-back measures under
+		// three — and the point is not to be tight, it is to end.
+		const ctl = new AbortController();
+		const deadline = setTimeout(() => ctl.abort(), 60_000);
 		try {
 			const res = await fetch('/studio/api/shotconfirm', {
 				method: 'POST',
+				signal: ctl.signal,
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					request: said,
@@ -1783,12 +1834,25 @@
 				item.confirm!.error = 'nothing came back — try sending that again';
 			}
 		} catch (e) {
-			item.confirm!.error = `that could not be read back — ${e instanceof Error ? e.message : e}`;
+			// An abort is this deadline firing, and it deserves its own words: the
+			// generic "could not be read back" reads like the model refused.
+			item.confirm!.error =
+				e instanceof Error && e.name === 'AbortError'
+					? 'the read-back stopped part way — send it again'
+					: `that could not be read back — ${e instanceof Error ? e.message : e}`;
 		} finally {
+			clearTimeout(deadline);
 			item.confirm!.streaming = false;
 			recordWait('confirm', Date.now() - askedAt);
 			persist();
 		}
+		// Nothing to accept if the read-back itself failed: the error is what the
+		// stage should show, and shooting from a line that could not be written is
+		// how a misread becomes a render.
+		if (auto && !item.confirm!.error) await acceptConfirm(item.id);
+		// And when it did fail, the stage has to hear about it: the read-back's
+		// error lives on the card, which is exactly what the stage does not draw.
+		else if (auto && item.confirm!.error) pushError(item.confirm!.error);
 	}
 
 	/** The operator pressed the button: write the brief, check it, and shoot.
@@ -1855,6 +1919,7 @@
 			if (c.continues) {
 				if (continuing?.workspace !== c.continues.workspace) {
 					c.error = 'that clip is no longer being continued — press Continue on it again';
+					if (STAGE_UI) pushError(c.error);
 					return;
 				}
 				pinSeam = c.continues.pinned;
@@ -1862,7 +1927,12 @@
 			const card = c.continues
 				? await continueFromRequest(request)
 				: await shotFromRequest(request);
-			if (!card?.shot) return;
+			if (!card?.shot) {
+				// The writer came back with nothing. It says so on the card, and on
+				// the stage there is no card — so say it where the loader is.
+				if (STAGE_UI) pushError('the brief could not be written — try sending that again');
+				return;
+			}
 
 			// The whole chain is spent, not just the round with the button. Left
 			// unsent, the earlier rounds of this shot were being read back as
@@ -1873,7 +1943,18 @@
 			// read back, and letting it shoot anyway would mean the sentence they
 			// approved was not the order — which is the one thing this whole layer
 			// exists to prevent.
-			if (card.shot.fixed?.length) {
+			//
+			// The stage does not stop here, because it has nowhere to stop TO. This
+			// gate guards a promise the stage never made: there, the read-back is
+			// accepted for you and never shown, so there is no approved sentence
+			// for a rewritten brief to differ from. Stopping anyway left the loader
+			// sitting at 97% with no card, no message and no way forward — a render
+			// that looks like it is running and is not.
+			//
+			// The checker's changes are already IN the brief either way; what is
+			// lost is being told about them, and that is the trade the stage was
+			// asked for.
+			if (card.shot.fixed?.length && !STAGE_UI) {
 				c.fixed = card.shot.fixed;
 				return;
 			}
@@ -1881,6 +1962,10 @@
 			await startFromCard(card);
 		} catch (e) {
 			c.error = `that could not be started — ${e instanceof Error ? e.message : e}`;
+			// Onto the stage as well. The card carries this in the transcript, and
+			// the stage does not draw cards — so without this the failure was
+			// written somewhere nobody was looking while the loader kept counting.
+			if (STAGE_UI) pushError(c.error);
 		} finally {
 			shotBusy[itemId] = false;
 			c.phase = undefined;
@@ -2065,12 +2150,14 @@
 			const r = (await res.json()) as {
 				ok?: boolean;
 				error?: string;
+				/** What a SvelteKit error() puts the reason in. */
+				message?: string;
 				url?: string;
 				parts?: number;
 				seconds?: number;
 			};
 			if (!r.ok || !r.url) {
-				pushError(r.error || 'the scene could not be assembled');
+				pushError(r.error || r.message || 'the scene could not be assembled');
 				return;
 			}
 			pushItem({
@@ -2822,6 +2909,61 @@
 	 *  Both the writer's card and the fix a diagnosis produced go through here.
 	 *  They were about to be two copies of the same forty lines, and the copy the
 	 *  fix used would have been the one that quietly stopped matching. */
+	/** Keep the person in the clip you are continuing as a character.
+	 *
+	 *  Offered only when the clip has none. Without it the launch cuts a plate out
+	 *  of the prior clip every generation, so each continuation is measured against
+	 *  the last render rather than against a face anybody approved — and the drift
+	 *  compounds down the chain.
+	 *
+	 *  The character is usable the moment this returns: a render reads the picture,
+	 *  not the six views, and those arrive later on the card by themselves.
+	 */
+	async function makeCharacterFromClip() {
+		const c = continuing;
+		if (!c || charFromClipBusy) return;
+		charFromClipBusy = true;
+		charFromClipError = '';
+		try {
+			const res = await fetch('/studio/api/charfromclip', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					workspace: c.workspace,
+					artifact: c.artifact,
+					file: c.file,
+					...(sessionSlug ? { sessionSlug } : {})
+				})
+			});
+			const r = (await res.json()) as {
+				ok?: boolean;
+				error?: string;
+				sheet?: StoredSheet;
+				sheets?: StoredSheet[];
+			};
+			if (!r.ok || !r.sheet) {
+				charFromClipError = r.error || 'the character could not be made';
+				return;
+			}
+			if (r.sheets) sheets = r.sheets;
+			// Onto the continuation itself, which is what launchShot reads. Replaced
+			// rather than mutated so the panel re-renders with the name on it.
+			continuing = { ...c, characterId: r.sheet.id, characterName: r.sheet.name };
+			// And onto the composer, so the chip stops saying "anyone".
+			//
+			// It is the same person by every measure that matters — the clip it was
+			// cut from is the one being continued — and leaving the chip on "anyone"
+			// said the opposite in the one place that answers "who is in this". The
+			// next shot, continuation or not, is now cast.
+			wantCharacter = r.sheet.id;
+			saveSetup();
+		} catch (e) {
+			charFromClipError = `the character could not be made: ${e}`;
+		} finally {
+			charFromClipBusy = false;
+		}
+	}
+
 	async function launchShot(
 		shot: NonNullable<ChatItem['shot']>,
 		announce = true
@@ -3384,6 +3526,34 @@
 
 	const filmKey = (c: { workspace: string; artifact: string; file: string }) =>
 		`${c.workspace} ${c.artifact} ${c.file}`;
+	/** Every film ever assembled, newest first, from the log beside the renders.
+	 *
+	 *  The shelf at the foot of the sidebar and the all-media grid both read this.
+	 *  Loaded once and refreshed by Export, which is the only thing that adds to
+	 *  it. */
+	type FilmRow = {
+		workspace: string;
+		artifact: string;
+		file: string;
+		parts: number;
+		seconds: number;
+		at: number;
+	};
+	let films = $state<FilmRow[]>([]);
+	/** The finished film, shown the moment it is made. Closing it does not lose
+	 *  it — that is what the shelf is for. */
+	let filmPopup = $state<FilmRow | null>(null);
+	/** The all-media grid, opened from the shelf's last tile. */
+	let mediaOpen = $state(false);
+	async function loadFilms() {
+		try {
+			const r = (await (await fetch('/studio/api/films')).json()) as { films?: FilmRow[] };
+			if (r.films) films = r.films;
+		} catch {
+			/* the shelf is a convenience; a failed list is not worth a message */
+		}
+	}
+
 	const filmSeconds = $derived(film.reduce((n, c) => n + (logRow[c.workspace]?.seconds || 5), 0));
 
 	function inFilm(a: NonNullable<ChatItem['artifact']> | undefined): boolean {
@@ -3441,6 +3611,29 @@
 		addClipToFilm(part, item.artifact?.title || item.text || '');
 	}
 
+	/** A clip dragged out of the strip and into the film.
+	 *
+	 *  Its own MIME type, not the plain text the reel already uses for
+	 *  reordering: that payload is an index into the film, and a stray index
+	 *  arriving from outside would move a clip nobody touched. Two kinds of drag
+	 *  land on the same row, so they have to be told apart by what they carry. */
+	const CLIP_DRAG = 'application/x-auteur-clip';
+	function dropClipIntoFilm(e: DragEvent) {
+		const raw = e.dataTransfer?.getData(CLIP_DRAG);
+		if (!raw) return false;
+		e.preventDefault();
+		try {
+			const c = JSON.parse(raw) as { workspace?: string; artifact?: string; file?: string };
+			if (!c.workspace || !c.artifact || !c.file) return true;
+			addClipToFilm({ workspace: c.workspace, artifact: c.artifact, file: c.file }, '');
+			filmOpen = true;
+		} catch {
+			/* something else was dropped — the film is unchanged, which is the
+			   right answer to a payload we cannot read */
+		}
+		return true;
+	}
+
 	function dropFromFilm(i: number) {
 		film.splice(i, 1);
 		if (!film.length) filmOpen = false;
@@ -3477,13 +3670,63 @@
 			const r = (await res.json()) as {
 				ok?: boolean;
 				error?: string;
+				/** What a SvelteKit error() puts the reason in. */
+				message?: string;
 				url?: string;
 				parts?: number;
 				seconds?: number;
 			};
 			if (!r.ok || !r.url) {
-				pushError(r.error || 'the film could not be assembled');
+				// `message` too: a SvelteKit error() answers with that field, not
+				// `error`, so every server-side refusal arrived as the generic line and
+				// the actual reason — "ffmpeg is not installed" — never reached the
+				// screen. The one thing that would have told you what to do.
+				pushError(r.error || r.message || 'the film could not be assembled');
 				return;
+			}
+			// Written down before anything else. A film nobody recorded is a file
+			// nobody can find again, which is the whole reason this log exists.
+			try {
+				const rec = (await (
+					await fetch('/studio/api/films', {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({
+							workspace: film[film.length - 1]?.workspace,
+							artifact: film[film.length - 1]?.artifact,
+							file: 'scene.mp4',
+							parts: r.parts,
+							seconds: r.seconds,
+							shots: film.map((c) => c.workspace)
+						})
+					})
+				).json()) as { films?: FilmRow[] };
+				if (rec.films) films = rec.films;
+				filmPopup = films[0] ?? null;
+			} catch {
+				/* the file exists either way */
+			}
+			// Straight to disk as well as onto the stage. Export is the word for
+			// getting the thing OUT — watching it here is what the stage was
+			// already for, and a button called Export that only plays something
+			// leaves you hunting for a save.
+			//
+			// Same origin, so `download` is honoured and names the file; a
+			// cross-origin url would ignore it and navigate instead.
+			try {
+				// `globalThis.document`, because this component has a `document` of its
+				// own — a snippet by that name — and the bare identifier resolves to
+				// it here rather than to the page.
+				const doc = globalThis.document;
+				const a = doc.createElement('a');
+				a.href = r.url;
+				a.download = `auteur-film-${r.parts}-clips-${Math.round(r.seconds ?? 0)}s.mp4`;
+				doc.body.appendChild(a);
+				a.click();
+				a.remove();
+			} catch {
+				/* the clip is on the stage either way — a blocked download is not a
+				   reason to lose the assembly */
 			}
 			pushItem({
 				who: 'studio',
@@ -3643,6 +3886,10 @@
 		locationId?: string;
 		locationName?: string;
 		continuesWorkspace?: string;
+		/** Where this run's clip is, written down when it landed. Absent on rows
+		 *  from before the log carried it — every reader falls back. */
+		clipArtifact?: string;
+		clipFile?: string;
 	}
 	let logRow = $state<Record<string, LogRow>>({});
 
@@ -3653,6 +3900,11 @@
 	 *  exists. Setting it puts the composer into continuation mode; sending or
 	 *  cancelling clears it. */
 	let continuing = $state<NonNullable<ChatItem['shot']>['continues'] | null>(null);
+	/** Set while a character is being cut out of the clip being continued. The
+	 *  composer is held for it: sending first would launch the continuation with
+	 *  the plate this is replacing, which is the whole thing it is here to fix. */
+	let charFromClipBusy = $state(false);
+	let charFromClipError = $state('');
 
 	/** Whether the seam is pinned to the prior clip's final frame.
 	 *
@@ -3835,8 +4087,17 @@
 			const it = chat.find(
 				(c) => c.kind === 'clips' && c.artifact?.workspace === w && c.artifact?.id && c.artifact.files?.length
 			);
-			if (!it?.artifact?.id) return [];
-			out.push({ workspace: w, artifact: it.artifact.id, file: it.artifact.files[0].name });
+			if (it?.artifact?.id) {
+				out.push({ workspace: w, artifact: it.artifact.id, file: it.artifact.files[0].name });
+				continue;
+			}
+			// Not in this transcript, which is the normal case for a session
+			// reopened from the library: the cards were never rebuilt, only the
+			// log rows. The row now carries the address, so the chain survives a
+			// reload. A row from before it did returns nothing, as before.
+			const row = logRow[w];
+			if (!row?.clipArtifact || !row.clipFile) return [];
+			out.push({ workspace: w, artifact: row.clipArtifact, file: row.clipFile });
 		}
 		return out;
 	}
@@ -4408,12 +4669,26 @@
 					// because the bookkeeping call did.
 					if (renderWs) {
 						const dead = ts.some((t) => DEAD.includes(t.status));
+						// Where the clip landed, written down while it is in front of us.
+						// A session rebuilt from this log later has no other way to find
+						// it: the harness resolves an artifact only while the workspace
+						// agent is alive, and that is the thing that dies.
+						const made = chat.find(
+							(c) =>
+								c.artifact?.workspace === renderWs &&
+								c.artifact?.id &&
+								c.artifact.files?.some((f) => /\.mp4$/i.test(f.name))
+						);
+						const madeFile = made?.artifact?.files?.find((f) => /\.mp4$/i.test(f.name));
 						void fetch('/studio/api/renders', {
 							method: 'POST',
 							headers: { 'content-type': 'application/json' },
 							body: JSON.stringify({
 								workspace: renderWs,
 								finished: true,
+								...(made?.artifact?.id && madeFile
+									? { clipArtifact: made.artifact.id, clipFile: madeFile.name }
+									: {}),
 								...(dead ? { outcome: 'failed' } : {})
 							})
 						})
@@ -5013,14 +5288,55 @@
 		renderLaunchAttempts = 0;
 		welcomeId = '';
 		showWelcome();
+		// Every "busy" flag, because a new production is not busy.
+		//
+		// `sending` was left set, and it is the one that guards the send: a hung
+		// round leaves it true, and from then on "New clip" hands you a page that
+		// looks completely fresh — empty stage, welcome, examples — with a dead
+		// send button behind it. Nothing on screen says why, because everything on
+		// screen was reset except the one flag that mattered. The others are here
+		// for the same reason rather than because they were seen to stick.
+		sending = false;
+		filmBusy = false;
+		launchingPlanning = false;
+		joining = {};
+
+		// The stage, which had no state to clear when this was written.
+		//
+		// A new production opened with the continuation bar still on it, offering
+		// to continue a clip from the session that had just been thrown away —
+		// there was nothing to continue, and the one control that says what the
+		// next message does was lying about it.
+		continuing = null;
+		contOffFor = '';
+		pinSeam = true;
+		stageSel = '';
+		stageStartedAt = 0;
+		stageWaitFrom = '';
+		stageWaitBlurUrl = '';
+		stageAutoplayId = '';
 	}
 
 	// --- small UI helpers ------------------------------------------------------------------
 
+	/** How tall the box may get before it starts scrolling instead.
+	 *
+	 *  Five lines. Long orders are normal here — a shot description runs to a
+	 *  paragraph — and a box that stays one line makes you write blind. Growing
+	 *  without a limit is the other failure: paste a brief and the composer eats
+	 *  the clip it was written for. Measured in lines rather than pixels so it
+	 *  holds at any text size. */
+	const COMPOSER_MAX_LINES = 5;
 	function grow(el: HTMLTextAreaElement | null) {
 		if (!el) return;
 		el.style.height = 'auto';
-		el.style.height = `${el.scrollHeight}px`;
+		const line = parseFloat(getComputedStyle(el).lineHeight);
+		// A line-height of `normal` parses to NaN; 24px is this composer's own.
+		const max = (Number.isFinite(line) ? line : 24) * COMPOSER_MAX_LINES;
+		const want = el.scrollHeight;
+		el.style.height = `${Math.min(want, max)}px`;
+		// Only when it is actually capped, so a short message has no scrollbar.
+		el.style.overflowY = want > max ? 'auto' : 'hidden';
 	}
 
 	/** Back to one row.
@@ -5033,6 +5349,7 @@
 	function shrink(el: HTMLTextAreaElement | null) {
 		if (!el) return;
 		el.style.height = '';
+		el.style.overflowY = '';
 	}
 
 	async function useExample(text: string) {
@@ -5055,6 +5372,294 @@
 	let bottomEl = $state<HTMLElement | null>(null);
 	/** The transcript element — the page's only scroll container. */
 	let scrollEl = $state<HTMLElement | null>(null);
+
+	// ── the stage ────────────────────────────────────────────────────────────
+	//
+	// One fixed surface where the transcript used to scroll. The clip being made
+	// is the only thing on screen, and the machinery that makes it — the read-back,
+	// the brief, the launch — runs behind it without a card.
+	//
+	// Built beside the transcript rather than in place of it: the engine is the
+	// same functions either way, and a flag that can be turned off is the
+	// difference between trying a new surface and betting the working one on it.
+	const STAGE_UI = true;
+
+	/** Every clip in this session, oldest first, read off the transcript the
+	 *  engine already keeps. The stage renders this rather than the cards. */
+	let stageClips = $derived(
+		chat.filter((c) => c.artifact?.files?.some((f) => /\.mp4$/i.test(f.name)))
+	);
+	/** The newest clip, which is what the stage follows on its own. */
+	let stageNewest = $derived(stageClips[stageClips.length - 1] ?? null);
+	/** Which clip the operator clicked back to, by workspace. Cleared whenever a
+	 *  new one lands: a strip that keeps showing an old take while a fresh one
+	 *  arrives is hiding the thing the wait was for. */
+	let stageSel = $state('');
+	$effect(() => {
+		if (stageNewest) stageSel = '';
+	});
+	/** The transcript card for what is on the stage, when there is one. The action
+	 *  row needs it — rating and adding to the film both work on a card — and a
+	 *  clip recovered from the log alone has none, so the row hides itself. */
+	let stageClip = $derived(
+		(stageSel && stageClips.find((c) => c.artifact?.workspace === stageSel)) || stageNewest
+	);
+	/** What is down the left edge: the last four of THE CHAIN, newest first, the
+	 *  one on the stage among them. Including it is what makes the strip a place
+	 *  rather than a leftovers pile — you can see where you are.
+	 *
+	 *  The chain rather than the transcript, because a session reopened from the
+	 *  library has one and not the other: the log knows what continues what, and
+	 *  now also where each clip is. Falls back to the transcript for a session that
+	 *  has clips the log cannot place — an older run, or one still in flight. */
+	let stageThumbs = $derived(
+		(() => {
+			const ws = stageNewest?.artifact?.workspace ?? '';
+			const chain = ws ? chainOf(ws) : [];
+			if (chain.length > 1) {
+				return chain
+					.slice(-4)
+					.reverse()
+					.map((c) => ({
+						key: c.workspace,
+						url: fileUrl(c.workspace, c.artifact, c.file),
+						workspace: c.workspace,
+						artifact: c.artifact,
+						file: c.file
+					}));
+			}
+			return stageClips
+				.slice(-4)
+				.reverse()
+				.map((c) => ({
+					// The transcript id, not the workspace. An assembled film carries the
+					// last clip's workspace, so keying by workspace put two entries under
+					// one key and Svelte tore the whole page down with
+					// `each_key_duplicate`. Ids are unique by construction.
+					key: c.id,
+					url: c.artifact?.files?.[0]?.url ?? '',
+					workspace: c.artifact?.workspace ?? '',
+					artifact: c.artifact?.id ?? '',
+					file: c.artifact?.files?.[0]?.name ?? ''
+				}));
+		})()
+	);
+	/** Which strip entry is on the stage, by workspace. */
+	let stageShownWs = $derived(stageSel || (stageNewest?.artifact?.workspace ?? ''));
+	/** The picture to play: the selected entry's, or the newest clip's. */
+	/** The strip entry on the stage, with the three ids the film needs. Every clip
+	 *  in the chain has them now — the log carries the address — so the actions
+	 *  work on whichever one is being looked at, not only on the newest. */
+	let stageShown = $derived(stageThumbs.find((t) => t.workspace === stageShownWs) ?? null);
+	/** The picture to play: the clicked entry's, or the newest thing's OWN file.
+	 *
+	 *  Its own file, not the strip entry that shares its workspace. An assembled
+	 *  film carries the last clip's workspace — that is how continuing a film
+	 *  continues where it ends — so looking the url up by workspace found the
+	 *  clip and played that instead. Export ran, ffmpeg wrote 27 MB, and the
+	 *  stage went on showing the same six seconds: "nothing happened", from the
+	 *  only place anybody was looking. */
+	let stageShownUrl = $derived(
+		stageSel
+			? (stageThumbs.find((t) => t.workspace === stageSel)?.url ?? '')
+			: (stageNewest?.artifact?.files?.[0]?.url ?? '')
+	);
+
+	/** Each clip's length, read off the <video> element once its metadata lands.
+	 *  Nothing upstream carries it: the artifact is a filename and a url. */
+	let clipSecs = $state<Record<string, number>>({});
+	function clipClock(sec?: number): string {
+		if (!sec || !Number.isFinite(sec)) return '';
+		const s = Math.round(sec);
+		return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+	}
+	/** An error that arrived after the last clip — anything older has been
+	 *  answered by a clip landing and is not what the operator is looking at. */
+	let stageError = $derived(
+		(() => {
+			const after = stageNewest ? chat.indexOf(stageNewest) : -1;
+			const errs = chat.filter((c, i) => i > after && c.kind === 'error');
+			const last = errs[errs.length - 1] ?? null;
+			// Not while looking at an older clip: the error belongs to the end of the
+			// chain, and stepping back through the strip is not the moment to be told
+			// about it again.
+			return stageSel ? null : last;
+		})()
+	);
+
+	/** When the current wait began. Set on send, cleared when a clip lands.
+	 *
+	 *  Its own clock rather than a reading of the render machinery: the stage only
+	 *  needs to know that something is being made and for how long, and every other
+	 *  answer to that question is spread across the launch, the poll and the chain. */
+	let stageStartedAt = $state(0);
+	let stageNow = $state(Date.now());
+	$effect(() => {
+		if (!stageClockFrom) return;
+		const t = setInterval(() => (stageNow = Date.now()), 500);
+		return () => clearInterval(t);
+	});
+	/** The clip that arrived while this page was watching for it.
+	 *
+	 *  Only that one plays by itself. Autoplay on every load meant opening the app
+	 *  started making noise in a tab nobody was looking at — and the clips have
+	 *  sound, which is the whole point of them. A finished render is different: the
+	 *  operator has been waiting for it and pressing play is a step they did not
+	 *  ask for. */
+	let stageAutoplayId = $state('');
+	/** Which clip was newest when the current wait began.
+	 *
+	 *  Without it the wait ended the instant it started: the effect below cleared
+	 *  the clock as soon as it saw a clip on the stage, and there is always a clip
+	 *  on the stage — the one being continued. So the phase never reached
+	 *  'working', the loader never appeared, and the previous take sat there
+	 *  looking finished for the whole six minutes. */
+	let stageWaitFrom = $state('');
+	/** The clip this wait continues, blurred behind the loader.
+	 *
+	 *  Only for a continuation: the picture behind it is then genuinely where the
+	 *  new one starts, so it says something true about what is coming. For a fresh
+	 *  clip there is nothing honest to show — the last take is a different scene —
+	 *  and a picture that has nothing to do with the render would read as progress
+	 *  on it. That case gets the dot field instead. */
+	let stageWaitBlurUrl = $state('');
+	/** The clip's rendered width, measured rather than assumed. The composer under
+	 *  it is set to match: the two read as one object when their edges line up, and
+	 *  the width depends on the clip's aspect ratio and the height it was given, so
+	 *  no fixed number could follow it. */
+	let stageVideoW = $state(0);
+	/** Teardown for the audio rules installed on mount. */
+	let cleanupAudio: (() => void) | null = null;
+	/** What you asked for, in your words.
+	 *
+	 *  From this session when it has it, and from the render log when it does not
+	 *  — a production reopened from the library keeps no transcript, but the log
+	 *  stores the request verbatim, uncut. That is the whole point of the field:
+	 *  the row's title is the same text trimmed to sixty characters, this one is
+	 *  not. */
+	let askedFor = $derived(
+		(() => {
+			const raw = lastRequest.trim() || (stageShownWs ? (logRow[stageShownWs]?.request ?? '') : '');
+			// Everything before the first `---`, which is where your words end.
+			//
+			// What gets stored as the request is not only what you typed: the rounds
+			// are joined, and the read-back line the model wrote is appended after a
+			// separator so the writer has the agreed reading too. Useful there,
+			// wrong here — putting the model's sentence back in your box makes it
+			// look like something you said, and the next brief is written from it.
+			return raw.split(/\n\s*---\s*\n/)[0].trim();
+		})()
+	);
+	/** The brief behind what is on the stage.
+	 *
+	 *  The stage deliberately shows no prompt — that was the point of it. But the
+	 *  brief is still what decides how a clip comes back, and when one misses,
+	 *  editing the words and sending again is the shortest fix there is. The
+	 *  button beside Continue puts it back in the composer, where the send arrow
+	 *  already lives. */
+	// A NEW clip landing is what ends the wait — not the presence of an old one.
+	$effect(() => {
+		if (!stageStartedAt || !stageNewest) return;
+		if (stageNewest.id === stageWaitFrom) return;
+		stageAutoplayId = stageNewest.id;
+		stageStartedAt = 0;
+	});
+
+	/** Both halves of the wait, from this machine's own finished runs: the model
+	 *  round trip that writes the shot, then the render. Falls back to a flat guess
+	 *  until there are enough samples to have a median at all. */
+	const STAGE_ETA_FALLBACK_MS = 6 * 60 * 1000;
+	let stageEtaMs = $derived(
+		(typicalWait('prompt') ?? 0) + (typicalWait('clip') ?? 0) || STAGE_ETA_FALLBACK_MS
+	);
+	/** A render this page did not start, or started before a reload.
+	 *
+	 *  `stageStartedAt` is memory and dies with the tab; `startedAt` is written
+	 *  into the session and comes back with it. Reload during a six-minute render
+	 *  and the stage went blank — welcome screen, examples, no loader — while the
+	 *  GPU was still working and the old one-line counter below carried on
+	 *  ticking. The clip is in flight until its own workspace is the newest thing
+	 *  on the stage. */
+	let renderInFlight = $derived(
+		!!renderWs && startedAt > 0 && stageNewest?.artifact?.workspace !== renderWs
+	);
+	/** Whichever clock is running. */
+	let stageClockFrom = $derived(stageStartedAt || (renderInFlight ? startedAt : 0));
+	let stageElapsedMs = $derived(stageClockFrom ? stageNow - stageClockFrom : 0);
+	/** Capped just short of full: a bar that sits at 100% while nothing happens is
+	 *  a worse lie than one that sits at 97%. */
+	let stagePercent = $derived(
+		Math.min(97, Math.floor((stageElapsedMs / Math.max(1, stageEtaMs)) * 100))
+	);
+
+	/** The clip the composer would continue if asked: the newest one, when the
+	 *  chain can actually take a continuation from it. */
+	let stageContinuable = $derived(
+		(() => {
+			const ws = stageNewest?.artifact?.workspace ?? '';
+			return ws && contInfo(ws).ok ? stageNewest : null;
+		})()
+	);
+	/** The clip the operator switched continuation OFF for. Without it the effect
+	 *  below would switch it straight back on, which is a tick box that cannot be
+	 *  unticked. */
+	let contOffFor = $state('');
+	// Ticked by default: a clip that just landed is nearly always the thing the
+	// next message continues, and making that the standing answer is the whole
+	// point of moving the button down here.
+	$effect(() => {
+		if (!STAGE_UI || !stageContinuable) return;
+		if (contOffFor === stageContinuable.id) return;
+		if (continuing?.workspace === stageContinuable.artifact?.workspace) return;
+		startContinue(stageContinuable);
+	});
+
+	/** A round that stopped and is waiting to be sent again.
+	 *
+	 *  The confirm card carries this — the checker's changes, or an error — and
+	 *  the stage does not draw cards, so a session that stopped here came back
+	 *  looking brand new: welcome screen, no clip, no message, nothing to press.
+	 *  The work was not lost, only unreachable. This is the way back to it.
+	 *
+	 *  Only when nothing else is happening: a round left behind by a shot that
+	 *  went on to render anyway is history, not a prompt for action. */
+	let stageStuck = $derived(
+		(() => {
+			if (stageClockFrom || sending) return null;
+			for (let i = chat.length - 1; i >= 0; i--) {
+				const c = chat[i].confirm;
+				if (!c) continue;
+				const card = c.cardId ? chat.find((x) => x.id === c.cardId) : null;
+				if (card?.shot?.launched) return null;
+				if (c.fixed?.length || c.error) return chat[i];
+				return null;
+			}
+			return null;
+		})()
+	);
+
+	/** Whether the strip is on screen at all.
+	 *
+	 *  Named because two places need the same answer and they had drifted: the
+	 *  column rendered whenever a clip was being made, but the margin that keeps
+	 *  it clear of the picture was only applied when there was more than one
+	 *  thumbnail. One clip plus one pending tile satisfied the first and not the
+	 *  second, so the strip sat on top of the video. */
+	let stagePhaseIsWorking = $derived(!stageError && (stageClockFrom || sending));
+	let showStrip = $derived(stageThumbs.length > 1 || !!stagePhaseIsWorking);
+
+	let stagePhase = $derived(
+		stageError
+			? 'error'
+			: stageClockFrom || sending
+				? 'working'
+				: stageStuck
+					? 'stuck'
+					: stageClip
+						? 'ready'
+						: 'empty'
+	);
+
 	/** Whether the reader is parked at the latest message. Drives both the
 	 *  follow-the-tail behaviour and the "latest ↓" button. */
 	let atBottom = $state(true);
@@ -5199,6 +5804,33 @@
 	}
 
 	onMount(() => {
+		// The shelf's contents, which outlive every session.
+		void loadFilms();
+
+		// One voice at a time, and none of it behind your back.
+		//
+		// Several clips are on screen at once — the stage, the strip, the reel, the
+		// popup — and any of them starting means the last one should stop. Muted
+		// ones are decoration and are left alone; it is the audible ones that
+		// collide. Without this a clip carried on talking from a closed panel or a
+		// production you had already left, and the only way to find it was to hunt
+		// through the page for the element still playing.
+		//
+		// `play` does not bubble, so the listener captures.
+		const audible = () =>
+			[...globalThis.document.querySelectorAll('video')].filter((v) => !v.muted);
+		const onPlay = (e: Event) => {
+			for (const v of audible()) if (v !== e.target) v.pause();
+		};
+		const onHidden = () => {
+			if (globalThis.document.hidden) for (const v of audible()) v.pause();
+		};
+		globalThis.document.addEventListener('play', onPlay, true);
+		globalThis.document.addEventListener('visibilitychange', onHidden);
+		cleanupAudio = () => {
+			globalThis.document.removeEventListener('play', onPlay, true);
+			globalThis.document.removeEventListener('visibilitychange', onHidden);
+		};
 		try {
 			const saved = localStorage.getItem(NAV_KEY);
 			// Open on a desktop by default, shut on a phone, where the transcript
@@ -5330,6 +5962,7 @@
 			clearInterval(clock);
 			clearInterval(fast);
 			stopPolling();
+			cleanupAudio?.();
 		};
 	});
 </script>
@@ -5645,20 +6278,52 @@
 			<h1 class="font-display truncate text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
 		</div>
 
+		<!-- The two doors, named apart.
+			 They were one radio pair inside the composer's format menu, which put a
+			 choice about WHAT KIND OF WORK this is next to a choice about how many
+			 takes of it to shoot. They are not the same size of decision: one clip
+			 is a shot you carry forward by hand, a full production writes a
+			 screenplay and shoots a scene list from it, and the second one keeps the
+			 chat surface because a plan is a conversation.
+			 The names are the ones the menu already used. -->
 		<div class="px-3 pt-2 pb-2">
-			<button
-				type="button"
-				onclick={() => {
-					reset();
-					if (window.innerWidth < 1024) setNavOpen(false);
-				}}
-				class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm text-[var(--st-text)] transition-colors hover:bg-[var(--st-surface)]"
-			>
-				<svg viewBox="0 0 16 16" class="size-4 shrink-0 text-[var(--st-muted)]" fill="none" aria-hidden="true">
-					<path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-				</svg>
-				<span>New production</span>
-			</button>
+			{#each [{ id: 'simple', label: 'New clip', hint: 'shots, chained by hand' }, { id: 'advanced', label: 'New full production', hint: 'screenplay first, then a scene list' }] as door (door.id)}
+				<button
+					type="button"
+					onclick={() => {
+						// `New` in both names, so both start one. The row above them used to
+						// be the only way to begin again, and with it gone these have to do
+						// what they say — clicking "New clip" while already making clips
+						// otherwise did nothing at all, which is the worst answer a button
+						// with that name can give.
+						reset();
+						setMode(door.id as 'simple' | 'advanced');
+						if (window.innerWidth < 1024) setNavOpen(false);
+					}}
+					aria-current={mode === door.id ? 'page' : undefined}
+					class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors {mode ===
+					door.id
+						? 'bg-[var(--st-surface)] font-semibold text-[var(--st-text)]'
+						: 'text-[var(--st-muted)] hover:bg-[var(--st-surface)]'}"
+					title={door.hint}
+				>
+					<svg
+						viewBox="0 0 16 16"
+						class="size-4 shrink-0 {mode === door.id ? '' : 'text-[var(--st-faint)]'}"
+						fill="none"
+						aria-hidden="true"
+					>
+						{#if door.id === 'simple'}
+							<rect x="2.5" y="4" width="11" height="8" rx="1.6" stroke="currentColor" stroke-width="1.5" />
+							<path d="M6.8 6.9v2.2l2.4-1.1z" fill="currentColor" />
+						{:else}
+							<rect x="2.5" y="3" width="11" height="10" rx="1.6" stroke="currentColor" stroke-width="1.5" />
+							<path d="M5.2 6h5.6M5.2 8.4h5.6M5.2 10.6h3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+						{/if}
+					</svg>
+					<span class="min-w-0 truncate">{door.label}</span>
+				</button>
+			{/each}
 		</div>
 
 		<nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
@@ -5725,7 +6390,14 @@
 											aria-hidden="true"
 										></span>
 									{/if}
-									<span class="min-w-0 flex-1 truncate text-sm text-[var(--st-text)]">{p.title}</span>
+									<!-- The full title on hover, because the row truncates it. The
+										 native tooltip rather than a built one: it appears only while
+										 the pointer is on the row, it cannot cover the row below it,
+										 and it costs nothing. -->
+									<span
+										title={p.title}
+										class="min-w-0 flex-1 truncate text-sm text-[var(--st-text)]">{p.title}</span
+									>
 								</span>
 								<!-- Only what is true and only where it adds something. A clip's
 									 title is the prompt, so a second line under it would be filler;
@@ -5786,7 +6458,50 @@
 
 		     Tuning stays at the bottom because it is a settings surface rather
 		     than a destination — the same place every app of this shape puts one. -->
-		<div class="px-3 pt-1 pb-3 {sheets.length ? '' : 'border-t border-[var(--st-line)]'}">
+		<!-- The shelf: what has actually been finished.
+			 Everything above this line is work in progress — a production, a chain,
+			 a take. A film is the thing that leaves, so it lives at the foot of the
+			 rail where it is always reachable and never in the way, and the last
+			 tile opens all of them. -->
+		{#if films.length}
+			<div class="border-t border-[var(--st-line)] px-3 pt-2.5 pb-1">
+				<div class="flex items-center gap-1.5">
+					{#each films.slice(0, 5) as f (f.workspace + f.artifact + f.file)}
+						<button
+							type="button"
+							title="{f.parts} shots · {Math.round(f.seconds)}s"
+							onclick={() => (filmPopup = f)}
+							class="size-9 shrink-0 cursor-pointer overflow-hidden rounded-lg bg-[var(--st-surface)] ring-1 ring-transparent transition hover:ring-[var(--st-line-control)]"
+						>
+							<!-- svelte-ignore a11y_media_has_caption -->
+							<video
+								src={fileUrl(f.workspace, f.artifact, f.file)}
+								muted
+								playsinline
+								preload="metadata"
+								class="h-full w-full object-cover"
+							></video>
+						</button>
+					{/each}
+					<button
+						type="button"
+						aria-label="all media"
+						title="all media"
+						onclick={() => (mediaOpen = true)}
+						class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-[var(--st-surface)] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+					>
+						<svg viewBox="0 0 16 16" class="size-4" fill="none" aria-hidden="true">
+							<rect x="2.5" y="2.5" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
+							<rect x="8.9" y="2.5" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
+							<rect x="2.5" y="8.9" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
+							<rect x="8.9" y="8.9" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
+						</svg>
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		<div class="px-3 pt-1 pb-3 {sheets.length || films.length ? '' : 'border-t border-[var(--st-line)]'}">
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a
 				href="/studio/admin"
@@ -5842,9 +6557,11 @@
 			 composer became a thousand pixels of single line and the eye had to
 			 travel the width of the screen to find the send button. -->
 		<div
-			class="mx-auto flex min-h-0 w-full flex-1 flex-col px-5 pt-1 {brief
-				? 'max-w-[66rem]'
-				: 'max-w-[48rem]'}"
+			class="mx-auto flex min-h-0 w-full flex-1 flex-col px-5 pt-1 {STAGE_UI
+				? 'max-w-[76rem]'
+				: brief
+					? 'max-w-[66rem]'
+					: 'max-w-[48rem]'}"
 		>
 
 		<!-- Two columns only when there is a second column to put something in.
@@ -5888,6 +6605,280 @@
 					 top of a tall blank column reads as a page that failed to load.
 					 Once the transcript has real messages it goes back to flowing from
 					 the top, which is what a conversation wants. -->
+				<!-- The stage is the CLIP surface, and only that.
+					 It replaced the transcript in every mode at first, which quietly
+					 swallowed the full-production flow: the plan, the screenplay, the
+					 scene board and the crew’s replies are all cards, and a full
+					 production is a conversation with them. What was left was a loader
+					 counting to 97% over a planning run that renders no clip at all,
+					 with the work sitting in cards nobody could see. -->
+				{#if STAGE_UI && mode === 'simple'}
+				<!-- ── the stage ──────────────────────────────────────────────────
+					 A clip is made in one place and watched in the same place. The
+					 transcript below is the same engine with its cards drawn; this is
+					 what the operator asked to see instead — no read-back, no brief, no
+					 announcement of a launch, and nothing to scroll. -->
+				<!-- The strip floats rather than sits in the row.
+					 In the row it took its width off the stage, so the clip centred in
+					 what was left while the composer below centred in the whole column —
+					 same width, forty-nine pixels apart, which reads as a mistake because
+					 it is one. Floated, the clip has the column to itself and the two line
+					 up; the strip lives in the margin the picture leaves beside it. -->
+				<div
+					class="relative flex min-h-0 flex-1 {showStrip ? 'pl-[6.2rem]' : ''}"
+				>
+					<!-- the chain, newest first. Four, because a strip that grows past
+						 the stage's own height starts scrolling, which is the thing this
+						 surface exists not to do. -->
+					{#if showStrip}
+						<div class="absolute top-0 left-0 z-10 flex w-[5.4rem] flex-col gap-2">
+							<!-- The one being made takes its place in the strip the moment it is
+								 asked for, at the top where it will land. The chain is what this
+								 column shows and the next link is already real — it is being paid
+								 for — so leaving the row out until it arrives makes the strip
+								 disagree with the stage beside it. -->
+							{#if stagePhase === 'working'}
+								<div
+									class="flex aspect-video w-full items-center justify-center rounded-lg bg-[var(--st-surface)] ring-2 ring-[var(--st-text)]"
+								>
+									<span
+										class="spin size-4 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"
+									></span>
+								</div>
+							{/if}
+							{#each stageThumbs as t (t.key)}
+								{#if t.url}
+									<!-- Nothing in the strip is lit while a new one is being made:
+										 the pending row is where the attention belongs. -->
+									{@const here =
+										stagePhase !== 'working' &&
+										t.workspace === stageShownWs &&
+										(!!stageSel || stageNewest?.artifact?.key !== 'film')}
+									<!-- The one on the stage is lit and the rest are stepped back, so
+										 where you are in the chain is legible without reading
+										 anything. -->
+									<button
+										type="button"
+										draggable={!!t.artifact && !!t.file}
+										ondragstart={(e) => {
+											e.dataTransfer?.setData(
+												CLIP_DRAG,
+												JSON.stringify({ workspace: t.workspace, artifact: t.artifact, file: t.file })
+											);
+											if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+										}}
+										onclick={() => {
+											// Picking a clip is leaving the error behind. Without this the
+											// stage stayed on it: an export that failed once took over the
+											// surface, survived a reload with the transcript, and every
+											// thumbnail answered with the same dead message.
+											if (stageError) chat = chat.filter((c) => c !== stageError);
+											stageSel = t.workspace === (stageNewest?.artifact?.workspace ?? '') ? '' : t.workspace;
+										}}
+										class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-opacity {here
+											? 'opacity-100 ring-2 ring-[var(--st-text)]'
+											: 'opacity-45 hover:opacity-75'}"
+									>
+										<!-- svelte-ignore a11y_media_has_caption -->
+										<video
+											src={t.url}
+											muted
+											playsinline
+											preload="metadata"
+											onloadedmetadata={(e) =>
+												(clipSecs = { ...clipSecs, [t.key]: e.currentTarget.duration })}
+											class="h-full w-full object-cover"
+										></video>
+										{#if clipSecs[t.key]}
+											<span
+												class="pointer-events-none absolute right-1 bottom-1 rounded bg-black/65 px-1 font-mono text-[0.6rem] leading-4 text-white"
+												>{clipClock(clipSecs[t.key])}</span
+											>
+										{/if}
+									</button>
+								{/if}
+							{/each}
+						</div>
+					{/if}
+
+					<div class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2">
+						{#if stagePhase === 'working'}
+							<!-- The percentage is honest about what it is: elapsed against the
+								 median of this machine's own finished runs. Half of all runs are
+								 past a median, so it caps short of full and says so in words
+								 rather than sitting at 100 while nothing happens. -->
+							<!-- The size the clip will be, so nothing jumps when it arrives:
+								 height-bound and 16:9, the same way the video is measured. -->
+							<!-- The size the clip will be, so nothing jumps when it arrives. -->
+							<div
+								class="relative flex aspect-video h-full max-h-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--st-surface)]"
+							>
+								{#if stageWaitBlurUrl}
+									<!-- svelte-ignore a11y_media_has_caption -->
+									<video
+										src={stageWaitBlurUrl}
+										muted
+										autoplay
+										loop
+										playsinline
+										class="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-[0.55]"
+									></video>
+								{:else}
+									<div class="stage-dots absolute inset-0"></div>
+								{/if}
+								<div
+									class="relative flex items-center gap-3 rounded-full bg-black/45 px-4 py-2 backdrop-blur"
+								>
+									<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
+									<span class="font-display text-sm font-semibold text-white">Generating {stagePercent}%</span>
+								</div>
+							</div>
+						{:else if stagePhase === 'stuck' && stageStuck?.confirm}
+							{@const c = stageStuck.confirm}
+							<!-- The round that stopped, and the way on from it.
+								 It says what happened in the checker's own words rather than a
+								 generic line: "the brief was changed" is not a reason, and the
+								 changes are the reason. -->
+							<div
+								class="flex aspect-video h-full max-h-full max-w-full flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
+							>
+								<p class="text-sm leading-relaxed text-[var(--st-muted)]">
+									{c.error ?? 'the brief was checked and changed before it could shoot'}
+								</p>
+								{#if c.fixed?.length}
+									<ul class="max-w-md space-y-1 text-xs leading-relaxed text-[var(--st-faint)]">
+										{#each c.fixed as f (f)}
+											<li>{f}</li>
+										{/each}
+									</ul>
+								{/if}
+								<button
+									type="button"
+									disabled={shotBusy[stageStuck.id]}
+									onclick={() => acceptConfirm(stageStuck!.id)}
+									class="btn btn-primary btn-sm"
+									>{shotBusy[stageStuck.id] ? 'starting…' : 'shoot it'}</button
+								>
+							</div>
+						{:else if stagePhase === 'error'}
+							<div
+								class="flex aspect-video w-full max-w-3xl flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
+							>
+								<p class="text-sm leading-relaxed text-[var(--st-muted)]">{stageError?.text}</p>
+								<button
+									type="button"
+									onclick={() => { if (stageError) chat = chat.filter((c) => c !== stageError); }}
+									class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-1.5 text-xs font-semibold"
+									>try it again</button
+								>
+							</div>
+						{:else if stagePhase === 'empty'}
+							<!-- A new production opens on what it opened on before: the greeting
+								 and three things to try. The stage has nothing to show yet and a
+								 blank rectangle where a clip will be is not an invitation. -->
+							<h2
+								class="font-display enter mx-auto max-w-[26rem] text-center text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
+							>
+								{#each WELCOME_LINES as line, i (line)}
+									{line}{#if i === 0}<br />{/if}
+								{/each}
+							</h2>
+							<div class="grid w-full max-w-3xl gap-2.5 pt-2 sm:grid-cols-3">
+								{#each examples as ex (ex)}
+									<button
+										type="button"
+										class="flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
+										onclick={() => useExample(ex)}
+									>
+										<svg viewBox="0 0 16 16" class="mt-0.5 size-3.5 shrink-0 opacity-45" fill="none" aria-hidden="true">
+											<path d="M4 12L12 4M6 4h6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+										</svg>
+										<span class="min-w-0">{ex}</span>
+									</button>
+								{/each}
+							</div>
+						{:else if stagePhase === 'ready' && stageClip}
+							{@const f = stageShownUrl ? { url: stageShownUrl } : null}
+							{@const sws = stageShownWs}
+						{@const shownPart =
+							stageShown?.artifact && stageShown?.file
+								? { workspace: stageShown.workspace, artifact: stageShown.artifact, file: stageShown.file }
+								: null}
+							{@const sv = verdict[sws]}
+							<!-- The clip takes the room it is given: this is what the operator
+								 came to look at, and a 48rem cap in the middle of a wide screen
+								 left a third of it black. Height-bound rather than width-bound, so
+								 a portrait clip and a 16:9 one both fill what there is.
+								
+								 The actions ride on top of the picture rather than under it. Below
+								 the frame they pushed the clip up and competed with the composer
+								 for the same band of the screen. -->
+							<div class="flex min-h-0 w-full flex-1 items-center justify-center">
+								<!-- Sized to the clip, not to the column: the row of actions anchors
+									 to this box, and anchored to the column it hung off the picture's
+									 edges into the black beside it. -->
+								<div class="relative h-full w-fit max-w-full">
+								{#if f}
+									<!-- svelte-ignore a11y_media_has_caption -->
+									<video
+										src={f.url}
+										controls
+										autoplay={stageClip.id === stageAutoplayId}
+										loop
+										playsinline
+										bind:clientWidth={stageVideoW}
+										class="video-with-controls h-full w-auto max-w-full rounded-2xl bg-black"
+									></video>
+								{/if}
+								<div
+									class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3"
+								>
+									<span class="pointer-events-auto flex items-center gap-2">
+										{#if shownPart}
+											{#if film.some((x) => filmKey(x) === filmKey(shownPart))}
+												<span
+													class="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
+												>
+													<span aria-hidden="true">✓</span><span>In the film</span>
+												</span>
+											{:else}
+												<button
+													type="button"
+													onclick={() => addClipToFilm(shownPart, stageClip?.artifact?.title ?? '')}
+													class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white backdrop-blur transition-colors hover:bg-black/75"
+													>Add to film</button
+												>
+											{/if}
+										{/if}
+									</span>
+									<span class="pointer-events-auto flex items-center gap-1">
+										{#if !sv}
+											<button
+												type="button"
+												onclick={() => rate(sws, 'kept')}
+												class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
+												>Good</button
+											>
+											<button
+												type="button"
+												onclick={() => rate(sws, 'rejected')}
+												class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
+												>Not good</button
+											>
+										{:else}
+											<span
+												class="rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
+												>{sv === 'kept' ? 'Noted as good' : 'Noted'}</span
+											>
+										{/if}
+									</span>
+								</div>
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+				{:else}
 				<div
 					bind:this={scrollEl}
 					onscroll={onTranscriptScroll}
@@ -7401,6 +8392,7 @@
 
 					<div bind:this={bottomEl}></div>
 				</div>
+				{/if}
 
 				<!-- ── the composer — pinned, outside the scrolling region ── -->
 				<div class="relative shrink-0 pt-3 pb-4">
@@ -7415,7 +8407,12 @@
 							latest ↓
 						</button>
 					{/if}
-					{#if pollingActive && startedAt}
+					<!-- Not on the stage, which says this itself and says it right. Two
+						 clocks for one render is one too many, and this one cannot tell that
+						 the clip already arrived — it counts while the poll is alive, so a
+						 session left open reads "116m · longer than usual" over a finished
+						 take. -->
+					{#if pollingActive && startedAt && !STAGE_UI}
 						<!-- Live status: the dot says something is happening, the clock says
 							 how long, and the label says what — the three things a reader
 							 waiting twenty minutes actually wants. Opacity-only pulse: the
@@ -7509,6 +8506,10 @@
 								<button
 									type="button"
 									aria-expanded={filmOpen}
+									ondragover={(e) => {
+										if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
+									}}
+									ondrop={(e) => dropClipIntoFilm(e)}
 									onclick={() => (filmOpen = !filmOpen)}
 									class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs tabular-nums text-[var(--st-text)] transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
 										? 'bg-[var(--st-surface-2)]'
@@ -7537,7 +8538,14 @@
 							>
 								▶
 							</button>
-							<div class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5">
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div
+								class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5"
+								ondragover={(e) => {
+									if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
+								}}
+								ondrop={(e) => dropClipIntoFilm(e)}
+							>
 								{#each film as c, i (filmKey(c))}
 									{#if i}
 										<span
@@ -7553,6 +8561,7 @@
 										ondragstart={(e) => e.dataTransfer?.setData('text/plain', String(i))}
 										ondragover={(e) => e.preventDefault()}
 										ondrop={(e) => {
+											if (e.dataTransfer?.types.includes(CLIP_DRAG)) return;
 											e.preventDefault();
 											moveInFilm(Number(e.dataTransfer?.getData('text/plain')), i);
 										}}
@@ -7592,25 +8601,39 @@
 					{/if}
 					<!-- `relative` is load-bearing: the add and format menus open upward
 						 from inside the composer and anchor to this box, not to the page. -->
+					<!-- The stage above is a picture and takes the whole column; this is
+						 a line of text and keeps the measure it had. The note above is still
+						 true — a composer a thousand pixels wide makes the eye travel the
+						 screen to find the send button — so the width went to the clip and
+						 not to the box under it. -->
+					<!-- The same gutter the stage keeps for the strip. Both boxes centre
+						 in the same reduced width, which is the only way their edges line
+						 up — pad one and not the other and they sit half a strip apart. -->
+					<div class={STAGE_UI && stageThumbs.length > 1 ? 'pl-[6.2rem]' : ''}>
 					<div
-						class="relative rounded-3xl bg-[var(--st-surface)] p-3"
+						class="relative rounded-3xl bg-[var(--st-surface)] p-3 {STAGE_UI
+							? 'mx-auto w-full'
+							: ''}"
+						style={STAGE_UI && stageVideoW > 320 ? `max-width:${stageVideoW}px` : undefined}
 					>
 						<!-- Making a character or a location is a state you are IN, not a tab
 							 sitting beside the clip settings. It was a tab, and that put two
 							 different questions on one row — what this message makes, and who is
 							 in the clip — in identical chips. You enter this from the picker
 							 below, and this band is how you know you are here and how you leave. -->
-						{#if mode === 'simple' && continuing}
+						{#if mode === 'simple' && (continuing || (STAGE_UI && stageContinuable))}
 							<div
 								class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
 							>
 								<div class="min-w-0">
-									<p class="font-display text-sm font-semibold">Continuing that clip</p>
-									<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
-										Say what happens next — with {continuing.characterName ?? 'the same person'} in
-										{continuing.locationName ?? 'the same place'}. The new piece renders on its own
-										and joins onto the end.
-									</p>
+									{#if !STAGE_UI && continuing}
+										<p class="font-display text-sm font-semibold">Continuing that clip</p>
+										<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
+											Say what happens next — with {continuing.characterName ?? 'the same person'} in
+											{continuing.locationName ?? 'the same place'}. The new piece renders on its own
+											and joins onto the end.
+										</p>
+									{/if}
 									<!-- Two options, not one switch.
 									     This was a single button showing its own state, and it was read
 									     as a choice: clicking "starts on the last frame" to ask for that
@@ -7623,12 +8646,73 @@
 									     decides whether the FIRST INSTANT is nailed to the frame the
 									     last clip ended on. -->
 									<div class="mt-2 flex flex-wrap items-center gap-1.5">
+										{#if STAGE_UI && askedFor.trim()}
+											<!-- The brief, one button away from where the next order is
+											     given. Named by its icon and its tooltip rather than a
+											     word, because the row beside it is already four words
+											     long and this is the only round control in it. -->
+											<button
+												type="button"
+												title="put what you asked for back in the box"
+												aria-label="ask again"
+												onclick={() => {
+													// Your words, and nothing else.
+													//
+													// Not the brief: that is the writer's answer to them, five
+													// times longer, and putting it back in a box that feeds the
+													// writer asks it to rewrite its own output. What you typed
+													// is the thing worth changing a word of and sending again.
+													input = askedFor;
+													grow(composer);
+													composer?.focus();
+												}}
+												class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line-control)] hover:text-[var(--st-text)]"
+											>
+												<svg viewBox="0 0 16 16" class="size-[15px]" fill="none" aria-hidden="true">
+													<path
+														d="M13 7.2A5 5 0 0 0 4.2 5M3 8.8A5 5 0 0 0 11.8 11"
+														stroke="currentColor"
+														stroke-width="1.5"
+														stroke-linecap="round"
+													/>
+													<path d="M13 3.6v3.6h-3.6M3 12.4V8.8h3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+												</svg>
+											</button>
+										{/if}
+										{#if STAGE_UI}
+											<!-- The standing answer, in front of the choices it governs.
+											     Ticked, the three modes decide HOW the next message
+											     continues; unticked they step back and the message makes a
+											     clip of its own. -->
+											<button
+												type="button"
+												role="switch"
+												aria-checked={!!continuing}
+												onclick={() => {
+													if (continuing) {
+														contOffFor = stageContinuable?.id ?? '';
+														continuing = null;
+														spendConfirmChain();
+													} else if (stageContinuable) {
+														contOffFor = '';
+														startContinue(stageContinuable);
+													}
+												}}
+												class="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors {continuing
+													? 'bg-[var(--st-text)] text-[var(--st-bg)]'
+													: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}"
+											>
+												<span aria-hidden="true">{continuing ? '✓' : ''}</span>
+												<span>Continue</span>
+											</button>
+										{/if}
 										{#each [[true, 'from the last frame'], [false, 'same scene, new take']] as [on, label] (label)}
 											<button
 												type="button"
 												aria-pressed={pinSeam === on}
+												disabled={STAGE_UI && !continuing}
 												onclick={() => (pinSeam = on as boolean)}
-												class="cursor-pointer rounded-full px-3 py-1 text-xs transition-colors {pinSeam ===
+												class="cursor-pointer rounded-full px-3 py-1 text-xs transition-colors disabled:cursor-default disabled:opacity-35 {pinSeam ===
 												on
 													? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
 													: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}">{label}</button
@@ -7639,19 +8723,78 @@
 										     three reads better than two options plus an escape hatch. -->
 										<button
 											type="button"
+											disabled={STAGE_UI && !continuing}
 											onclick={() => {
+												contOffFor = stageContinuable?.id ?? '';
 												continuing = null;
 												spendConfirmChain();
 											}}
-											class="cursor-pointer rounded-full px-3 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-muted)]"
+											class="cursor-pointer rounded-full px-3 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-muted)] disabled:cursor-default disabled:opacity-35"
 											>new clip</button
 										>
 									</div>
-									<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
-										{pinSeam
-											? 'Seamless — the first instant is the frame the clip ended on.'
-											: 'Same people, same place, a fresh take — the action can begin anywhere. The join may step.'}
-									</p>
+									{#if !STAGE_UI}
+										<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
+											{pinSeam
+												? 'Seamless — the first instant is the frame the clip ended on.'
+												: 'Same people, same place, a fresh take — the action can begin anywhere. The join may step.'}
+										</p>
+									{/if}
+									<!-- Recommended, not required.
+									     With no kept character the launch cuts a plate out of the prior
+									     clip on every generation, so each continuation is measured
+									     against the last render rather than against a face anybody
+									     approved, and the drift compounds down the chain. One frame kept
+									     as a character stops that. The send button stays live: this is
+									     advice on the way past, not a gate. -->
+									{#if continuing && !continuing.characterId}
+										<!-- On the stage the reasoning goes and the button stays: the
+										     drift it prevents is real and measured, and an action nobody
+										     can reach is the same as one that was never built. -->
+										<div class="mt-2 {STAGE_UI ? '' : 'rounded-xl bg-[var(--st-surface-2)] px-3 py-2'}">
+											{#if !STAGE_UI}
+												<p class="text-xs leading-relaxed text-[var(--st-muted)]">
+													No character is kept for this clip, so each continuation copies the
+													one before it and the likeness drifts. Keeping one now holds it.
+												</p>
+											{/if}
+											<div class="mt-1.5 flex flex-wrap items-center gap-2">
+												<button
+													type="button"
+													onclick={makeCharacterFromClip}
+													disabled={charFromClipBusy}
+													class="flex cursor-pointer items-center gap-2 rounded-full bg-[var(--st-text)] px-3 py-1 text-xs font-semibold text-[var(--st-bg)] transition-opacity disabled:cursor-default disabled:opacity-60"
+												>
+													<!-- Fifteen seconds of five frames and a vision call. Long enough
+													     that a button which only changes its words reads as a button
+													     that did nothing. -->
+													{#if charFromClipBusy}
+														<span
+															class="spin size-3 shrink-0 rounded-full border-2 border-[var(--st-bg)]/30 border-t-[var(--st-bg)]"
+														></span>
+													{/if}
+													<span
+														>{charFromClipBusy
+															? 'Reading the clip…'
+															: 'Keep the person as a character'}</span
+													>
+												</button>
+												{#if !STAGE_UI}
+													<span class="text-xs text-[var(--st-faint)]">or send without one</span>
+												{/if}
+											</div>
+											{#if charFromClipError}
+												<p class="mt-1.5 text-xs leading-relaxed text-[var(--st-warn,#e06c6c)]">
+													{charFromClipError}
+												</p>
+											{/if}
+										</div>
+									{:else if continuing && !STAGE_UI}
+										<p class="mt-2 text-xs leading-relaxed text-[var(--st-muted)]">
+											Kept as <span class="font-semibold">{continuing.characterName}</span> — every
+											continuation from here is measured against that picture.
+										</p>
+									{/if}
 								</div>
 							</div>
 						{/if}
@@ -7690,6 +8833,14 @@
 							<div class="mb-1 flex flex-wrap items-center gap-1.5 px-1">
 								{#if chosenCharacter}
 									<span class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs">
+										<!-- The name opens the picker, the × clears it. Two things you
+											 might want from a chip that names a choice — change it, or
+											 stop making it — and only the second had a control. -->
+										<button
+											type="button"
+											onclick={() => (pickKind = 'character')}
+											class="flex cursor-pointer items-center gap-2"
+										>
 										<img
 											src="/studio/api/sheet/img/{chosenCharacter.id}"
 											alt=""
@@ -7703,6 +8854,7 @@
 											 name anyone actually types: the longest measured, "Neon alley",
 											 needs 57px. -->
 										<span class="max-w-[4rem] truncate">{chosenCharacter.name}</span>
+										</button>
 										<button
 											type="button"
 											aria-label="shoot with anyone instead"
@@ -7714,6 +8866,29 @@
 											>×</button
 										>
 									</span>
+								{:else}
+									<!-- The chip stays whether or not anyone is cast.
+										 With no character the row simply vanished, so the one place
+										 that answers "who is in this" was missing exactly when the
+										 answer was "nobody in particular" — which is a real answer and
+										 the default one. Saying it out loud also puts the picker one
+										 click from where the question is asked, instead of two menus
+										 away behind the +. -->
+									<button
+										type="button"
+										onclick={() => (pickKind = 'character')}
+										class="flex cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-2.5 pl-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+									>
+										<span
+											class="flex size-5 shrink-0 items-center justify-center rounded-full ring-1 ring-[var(--st-line)]"
+										>
+											<svg viewBox="0 0 16 16" class="size-[11px]" fill="none" aria-hidden="true">
+												<circle cx="8" cy="5.6" r="2.7" stroke="currentColor" stroke-width="1.4" />
+												<path d="M3.2 13c.7-2.4 2.5-3.6 4.8-3.6S12.1 10.6 12.8 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+											</svg>
+										</span>
+										<span>anyone</span>
+									</button>
 								{/if}
 								{#if chosenLocation}
 									<span class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs">
@@ -8436,7 +9611,7 @@
 							<button
 								type="button"
 								aria-label="send"
-								disabled={sending || (!input.trim() && !pendingPhoto)}
+								disabled={sending || charFromClipBusy || (!input.trim() && !pendingPhoto)}
 								onclick={submit}
 								class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
 							>
@@ -8457,6 +9632,7 @@
 						</div>
 					</div>
 
+				</div>
 				</div>
 			</div>
 
@@ -8752,12 +9928,124 @@
 	{/if}
 </div>
 
+<!-- The film, the moment it exists.
+	 Export used to end with a file on disk and a card somewhere below the fold,
+	 which is a strange way to hand somebody the thing they have been assembling
+	 all afternoon. Closing this loses nothing: it is on the shelf. -->
+{#if filmPopup}
+	<div
+		class="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-black/92 px-6 py-12 backdrop-blur-[28px]"
+		role="dialog"
+		aria-modal="true"
+		aria-label="the finished film"
+	>
+		<button
+			type="button"
+			aria-label="close"
+			onclick={() => (filmPopup = null)}
+			class="absolute top-5 right-5 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/10 text-sm text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20"
+		>
+			✕
+		</button>
+		<!-- svelte-ignore a11y_media_has_caption -->
+		<video
+			src={fileUrl(filmPopup.workspace, filmPopup.artifact, filmPopup.file)}
+			controls
+			autoplay
+			playsinline
+			class="video-with-controls max-h-[70vh] max-w-full rounded-2xl bg-black shadow-[0_24px_70px_rgba(0,0,0,.6)]"
+		></video>
+		<p class="text-xs tabular-nums text-[var(--st-faint)]">
+			{filmPopup.parts} shots · {Math.round(filmPopup.seconds)}s
+		</p>
+	</div>
+{/if}
+
+<!-- Everything that has been finished, at once. -->
+{#if mediaOpen}
+	<div
+		class="fixed inset-0 z-[60] overflow-y-auto bg-black/94 px-6 py-14 backdrop-blur-[28px]"
+		role="dialog"
+		aria-modal="true"
+		aria-label="all media"
+	>
+		<button
+			type="button"
+			aria-label="close"
+			onclick={() => (mediaOpen = false)}
+			class="fixed top-5 right-5 z-10 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/10 text-sm text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20"
+		>
+			✕
+		</button>
+		<h2 class="font-display mb-5 text-center text-lg font-semibold">
+			{films.length} {films.length === 1 ? 'film' : 'films'}
+		</h2>
+		<div class="mx-auto grid max-w-6xl grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+			{#each films as f (f.workspace + f.artifact + f.file)}
+				<button
+					type="button"
+					onclick={() => {
+						filmPopup = f;
+						mediaOpen = false;
+					}}
+					class="group relative aspect-video cursor-pointer overflow-hidden rounded-xl bg-[var(--st-surface)]"
+				>
+					<!-- svelte-ignore a11y_media_has_caption -->
+					<video
+						src={fileUrl(f.workspace, f.artifact, f.file)}
+						muted
+						playsinline
+						preload="metadata"
+						class="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
+					></video>
+					<span
+						class="pointer-events-none absolute right-1.5 bottom-1.5 rounded bg-black/65 px-1.5 font-mono text-[0.65rem] leading-5 text-white"
+						>{clipClock(f.seconds)}</span
+					>
+					<span
+						class="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 text-[0.65rem] leading-5 text-white"
+						>{f.parts} shots</span
+					>
+				</button>
+			{/each}
+		</div>
+	</div>
+{/if}
+
+
 
 <style>
 	/* The one moving thing on the page, and it earns it: during a render nothing
 	   else changes for minutes, so stillness would read as a hang. Anyone who has
 	   asked the system to stop animating gets a static ring instead — the state
 	   is already carried by the shape and the word beside it. */
+	/* The waiting ground for a clip that continues nothing.
+	 *
+	 * A field of dots that breathes rather than a spinner filling the frame: the
+	 * pill already says how far along it is, and this is only meant to keep the
+	 * rectangle from reading as a picture that failed to load. */
+	.stage-dots {
+		background-image: radial-gradient(currentColor 1px, transparent 1px);
+		background-size: 22px 22px;
+		color: var(--st-surface-2);
+		animation: stage-dots 3.2s ease-in-out infinite;
+	}
+	@keyframes stage-dots {
+		0%,
+		100% {
+			opacity: 0.5;
+			background-position: 0 0;
+		}
+		50% {
+			opacity: 1;
+			background-position: 11px 11px;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.stage-dots {
+			animation: none;
+		}
+	}
 	.spin {
 		animation: st-spin 0.9s linear infinite;
 	}

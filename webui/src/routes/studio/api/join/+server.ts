@@ -13,6 +13,15 @@
  *  than a refused one, so a mismatch is refused with the numbers that differ.
  */
 import { error, json } from '@sveltejs/kit';
+// The shared lookup, not a private copy.
+//
+// This route had its own, and its list was repo-local paths plus one absolute
+// path into another developer's home — no PATH search at all. So Export died
+// with "ffmpeg is not installed" on a machine that has had it in
+// /opt/homebrew/bin the whole time. The shared one already learned this lesson
+// and carries the comment about it; two copies of the same question is how one
+// of them stays wrong.
+import { ffmpegPath } from '../../ffmpeg.server';
 import type { RequestHandler } from './$types';
 import { execFile } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -22,32 +31,6 @@ import { promisify } from 'node:util';
 import { cached, store } from '../../../clips.server';
 
 const run = promisify(execFile);
-
-/** Where ffmpeg is.
- *
- *  There is no system ffmpeg on this machine and the harness's copy lives in a
- *  container, so the binary the repo already installs is the one used. Looked up
- *  rather than hard-coded because the studio runs from a worktree whose
- *  node_modules is not always its own. */
-function ffmpegPath(): string {
-	const candidates = [
-		join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg'),
-		join(process.cwd(), '..', 'node_modules', 'ffmpeg-static', 'ffmpeg'),
-		join(
-			process.cwd(),
-			'..',
-			'node_modules',
-			'.pnpm',
-			'ffmpeg-static@5.3.0',
-			'node_modules',
-			'ffmpeg-static',
-			'ffmpeg'
-		),
-		'/Users/szabodezso/ratemyd/node_modules/.pnpm/ffmpeg-static@5.3.0/node_modules/ffmpeg-static/ffmpeg'
-	];
-	for (const p of candidates) if (existsSync(p)) return p;
-	throw error(500, 'ffmpeg is not installed — a scene cannot be assembled without it');
-}
 
 /** EBU R128, the broadcast target — and the number that took a pair measured 10
  *  dB apart down to 3. */

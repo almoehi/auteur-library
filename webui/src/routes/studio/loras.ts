@@ -526,3 +526,21 @@ ${acts}
 DETAILS — choose any that are true of this shot
 ${details}`;
 }
+
+/** How far into the prior clip the reference video starts reading.
+ *
+ *  Carried as `st-<seconds>`, in the same segment as `pin-1` and for the same
+ *  reason: the bundle is built per workspace and this value belongs to the clip
+ *  being continued, which the bundle route never sees. Absent means read from
+ *  the start, which is what the bundle does on its own.
+ */
+export function parseRefStart(seg: string): number | null {
+	for (const raw of decodeURIComponent(seg).split(',')) {
+		const m = /^st-(\d+(?:\.\d+)?)$/.exec(raw.trim());
+		if (m) {
+			const v = Number(m[1]);
+			if (Number.isFinite(v) && v >= 0) return v;
+		}
+	}
+	return null;
+}

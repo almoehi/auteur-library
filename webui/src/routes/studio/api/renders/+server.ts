@@ -27,7 +27,14 @@ export const GET: RequestHandler = async ({ url }) => {
  *  is a caller confused about which row it is looking at, and silently accepting
  *  it would corrupt the one record we have. */
 export const POST: RequestHandler = async ({ request }) => {
-	let body: { workspace?: unknown; finished?: unknown; outcome?: unknown; note?: unknown };
+	let body: {
+		workspace?: unknown;
+		finished?: unknown;
+		outcome?: unknown;
+		note?: unknown;
+		clipArtifact?: unknown;
+		clipFile?: unknown;
+	};
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -40,7 +47,20 @@ export const POST: RequestHandler = async ({ request }) => {
 		wallSeconds?: number;
 		outcome?: 'kept' | 'rejected' | 'failed';
 		note?: string;
+		clipArtifact?: string;
+		clipFile?: string;
 	} = {};
+	// Where the clip is, recorded once when it lands. Both or neither: half an
+	// address is not an address, and a row carrying one of the two would look
+	// answerable and fail at the fetch.
+	if (typeof body.clipArtifact === 'string' && typeof body.clipFile === 'string') {
+		const a = body.clipArtifact.trim();
+		const f = body.clipFile.trim();
+		if (a && f) {
+			patch.clipArtifact = a;
+			patch.clipFile = f;
+		}
+	}
 	// The elapsed time is worked out here from the launch already on the row,
 	// rather than sent by the caller. The page would have to keep a clock across
 	// reloads to send it, and a clock that survives a reload is a thing to get
@@ -63,7 +83,19 @@ export const POST: RequestHandler = async ({ request }) => {
 	// doing the app a favour, and losing the whole note to a length rule they
 	// were never shown is a good way to stop them doing it again.
 	if (typeof body.note === 'string') patch.note = body.note.trim().slice(0, 2000);
-	if (!Object.keys(patch).length) throw error(400, 'nothing to update');
+	// A close with nothing left to write is not a fault.
+	//
+	// The page reports `finished` from its poll, fire and forget, and a run whose
+	// row already carries its wall clock has nothing to add — a reload
+	// re-attaching to a finished render, a second tab, a poll that overlapped the
+	// close. That answered 400 and filled the console with failures for a call
+	// that did exactly what it should. It matters more now that the clip's
+	// address rides on the same call: a rejected no-op would have taken the
+	// address with it.
+	if (!Object.keys(patch).length) {
+		if (body.finished === true) return json({ ok: true, changed: false });
+		throw error(400, 'nothing to update');
+	}
 
 	// A miss means the row was never written — an older run, or a launch from
 	// before this log existed. Not an error, and not worth inventing a row for:

@@ -31,8 +31,8 @@ import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { modelBlock, stack, writeLoraStack } from '../../../../bundle.server';
-import { parseBaseOverrides, parsePicks, parsePinSeam } from '../../../../loras';
-import { CONT_FPS } from '../../../../compose';
+import { parseBaseOverrides, parsePicks, parsePinSeam, parseRefStart } from '../../../../loras';
+import { CONT_FPS, DROP_SLOTS, OWN_AUDIO_LOADER } from '../../../../compose';
 
 const REPO =
 	'https://raw.githubusercontent.com/almoehi/auteur-library/refs/heads/main/workflows';
@@ -70,7 +70,9 @@ const N = {
 	resolution: '157',
 	videoVae: '144',
 	frames: '156',
-	priorVideo: '177'
+	priorVideo: '177',
+	refPic4: '192',
+	refPic5: '193'
 } as const;
 
 /** Ids we add. Named rather than numbered so a reader can tell at a glance which
@@ -83,6 +85,46 @@ const N = {
  *  decisions depend on it locally: whether to add the patch that has no off
  *  switch, and what SolAttn should take its model from. The harness handles the
  *  one that does have a switch, on its own, from the port declared below. */
+/** Three dials turned together against a metallic voice, all of them here so
+ *  they can be turned back one at a time. The step count went from eight to four
+ *  and two things broke at once — hands in the picture, ringing in the voice —
+ *  and putting the steps back is the known fix and the expensive one. These are
+ *  the cheaper things to try first.
+ *
+ *  `AUDIO_SHIFT` is the only dial in the graph that touches the audio alone. Six
+ *  was set with eight sampling steps under it; with four, each step covers twice
+ *  as much schedule and where they fall matters more. Lowered rather than raised
+ *  because metal is a fine-detail failure and a smaller shift spends more of the
+ *  schedule at the low-noise end, which is where fine detail resolves. That is
+ *  reasoning, not measurement — if it comes back no better, raising it above six
+ *  is the obvious other direction and nobody has tried either.
+ *
+ *  `QUANT_ATTN` is the int8 quantisation inside the sparse-attention patch. It
+ *  is the third candidate and the only one of the three that costs render time,
+ *  so it is left ON: the two free dials are being tried first, and turning this
+ *  off is what to try next if they are not enough. Its error would sound like
+ *  exactly what is being complained about, and it lands harder on audio than on
+ *  video because there are far fewer audio rows to average it out over. */
+/** One and a half, found by walking down from six.
+ *
+ *  Six is what the bundle ships with, and it was set under eight sampling steps.
+ *  At four the voice came back metallic, and this is the only dial in the graph
+ *  that touches the audio alone — the video's shift sits beside it, untouched at
+ *  twelve.
+ *
+ *  Three renders off one source clip and one brief, nothing else moving, judged
+ *  by ear: six metallic, three better, one and a half better still, three
+ *  quarters worse again. So it overshoots below 1.5 and this is the best of what
+ *  was tried; the floor is somewhere between 0.75 and 1.5 and nobody has looked
+ *  closer than that.
+ *
+ *  Free, which is why it was worth three renders to find: they came back at
+ *  160.5, 160.8 and 162.9 seconds of GPU. The dial moves where the sampling
+ *  steps fall, not how many of them there are. */
+const AUDIO_SHIFT = 1.5;
+
+const QUANT_ATTN = true;
+
 const CARD = 'h100';
 const SAGE_BLIND = ['h100', 'l40s'];
 
@@ -98,7 +140,8 @@ const OUR = {
 	rife: 'our_rife',
 	seam: 'our_seam',
 	seamFrame: 'our_seam_frame',
-	refAudio: 'our_ref_audio'
+	refAudio: 'our_ref_audio',
+	refAudioSrc: 'our_ref_audio_src'
 } as const;
 
 type Node = { class_type?: string; inputs?: Record<string, unknown> };
@@ -204,11 +247,11 @@ function fitOurModelPath(graph: Graph, entries: ReturnType<typeof stack>): void 
 			start_percent: 0.2,
 			end_percent: 0.9,
 			min_tokens: 4096,
-			int8_qk: true,
+			int8_qk: QUANT_ATTN,
 			sink_conditioning: 'exact_kv_and_rows',
 			morton: false,
 			morton_curve: '2d_frame',
-			int8_pv: true,
+			int8_pv: QUANT_ATTN,
 			verbose: false,
 			use_tma: false,
 			dense_blocks: ''
@@ -216,7 +259,7 @@ function fitOurModelPath(graph: Graph, entries: ReturnType<typeof stack>): void 
 	};
 	graph[OUR.sigma] = {
 		class_type: 'MiniMaxH3SigmaShift',
-		inputs: { model: [OUR.solAttn, 0], shift_video: 12, shift_audio: 6 }
+		inputs: { model: [OUR.solAttn, 0], shift_video: 12, shift_audio: AUDIO_SHIFT }
 	};
 	graph[OUR.loader] = {
 		class_type: 'Power Lora Loader (rgthree)',
@@ -467,6 +510,13 @@ function pinSeamAnchor(graph: Graph): void {
  *  Unconditional: a free start still continues the same scene with the same
  *  people, and it is their voices this is for.
  */
+/** Back to the node's own default.
+ *
+ *  Five was ours, taken for the reason above: reference rows are paid on every
+ *  sampling step. That reasoning still holds and the cost is still real — but it
+ *  was traded against a voice that sounded right, and at four sampling steps it
+ *  no longer does. Audio rows are thin next to a frame of video, so this is the
+ *  cheapest of the three things being tried against the metallic voice. */
 const CONT_REF_AUDIO_SECONDS = 5;
 
 function carryPriorAudio(graph: Graph): void {
@@ -486,11 +536,99 @@ function carryPriorAudio(graph: Graph): void {
 		throw error(502, `the continuation graph no longer feeds the prior clip to ref_video_0`);
 	}
 
+	// Its own loader, reading the clip whole, rather than slot 2 of the video
+	// loader next door.
+	//
+	// The two used to be the same node, and then the video reference was trimmed
+	// to its last second for speed — which silently trimmed the voice reference
+	// with it, from the five seconds asked for below to one. The continuations
+	// came back metallic. The reference is what carries the voice: the same
+	// source clip rendered 352 and 386 Hz written from a description against 262
+	// with the audio attached, and one second is near enough to none.
+	//
+	// Separate rather than conditional on the trim, so the graph always matches
+	// the port the manifest declares. It costs a decode on the worker and no
+	// tokens at all: only slot 2 is wired, and the sequence is billed for
+	// reference IMAGES, which this node's are not — they go nowhere.
+	if (OWN_AUDIO_LOADER) {
+		graph[OUR.refAudioSrc] = {
+			class_type: 'VHS_LoadVideoFFmpeg',
+			inputs: { ...loader.inputs, start_time: 0, frame_load_cap: 0 }
+		};
+	}
 	graph[OUR.refAudio] = {
 		class_type: 'H3ReferenceAudio',
-		inputs: { audio: [N.priorVideo, 2], max_seconds: CONT_REF_AUDIO_SECONDS }
+		inputs: {
+			audio: OWN_AUDIO_LOADER ? [OUR.refAudioSrc, 2] : [N.priorVideo, 2],
+			max_seconds: CONT_REF_AUDIO_SECONDS
+		}
 	};
 	ref.inputs['ref_video_audios.ref_video_audio_0'] = [OUR.refAudio, 0];
+}
+
+/** Read only the tail of the prior clip as the reference video.
+ *
+ *  The same argument as the audio cap above, and a much bigger bill. A reference
+ *  row sits in the packed sequence for every sampling step, so the whole clip
+ *  going in meant paying for all of it eight times over. Measured: a 576p
+ *  continuation took 507s where a direct render of the same size, steps and card
+ *  took 128s — and at 864p the same arithmetic put the render past the harness's
+ *  liveness window, which killed it at thirty minutes with nothing produced.
+ *
+ *  Moved rather than capped. `frame_load_cap` would take the FIRST frames of the
+ *  window, and the end is the half that matters: the new clip picks up the motion
+ *  where the old one stopped, and H3LastFrame takes the pinned seam's frame off
+ *  this same loader. Leaving the cap at zero means the read still runs to the
+ *  true end of the clip, so the anchor frame is the one it has always been.
+ *
+ *  Wired as a literal rather than through the `prior_clip_start_time` port. The
+ *  port stays declared for anyone driving the bundle by hand, but the studio
+ *  computes this from the clip it is continuing, and a port default arriving
+ *  behind us would quietly put the window back to the whole clip.
+ */
+function trimPriorVideo(graph: Graph, startSec: number): void {
+	const loader = graph[N.priorVideo];
+	if (loader?.class_type !== 'VHS_LoadVideoFFmpeg') {
+		throw error(
+			502,
+			`node ${N.priorVideo} is ${loader?.class_type ?? 'missing'}, not the prior clip's loader`
+		);
+	}
+	if (!loader.inputs) throw error(500, `node ${N.priorVideo} has no inputs`);
+	loader.inputs.start_time = startSec;
+	loader.inputs.frame_load_cap = 0;
+}
+
+/** Drop the two reference slots the studio never fills.
+ *
+ *  The bundle wires five reference images and feeds `placeholder.png` to any the
+ *  operator did not supply — the bundle's own comment says why: it "keeps
+ *  ComfyUI validation happy". The prompt then omits <Picture 4> and <Picture 5>
+ *  so the model makes nothing of them. But omitting them from the PROMPT is not
+ *  the same as leaving them out of the SEQUENCE: a reference row is packed into
+ *  the conditioning and paid for on every sampling step whether a word points at
+ *  it or not. Two rows of nothing, eight times over.
+ *
+ *  The studio has never had a way to fill these, so they are removed rather than
+ *  made conditional. Their ports go with them in the yaml — a binding to a node
+ *  that is gone is worse than the slot it replaced.
+ */
+function dropUnusedRefSlots(graph: Graph): void {
+	const ref = graph[N.refToVideo];
+	if (!ref?.inputs) throw error(500, `the continuation graph has no node ${N.refToVideo}`);
+	for (const [node, key] of [
+		[N.refPic4, 'ref_images.ref_image_3'],
+		[N.refPic5, 'ref_images.ref_image_4']
+	] as const) {
+		// Anchored: if the bundle stops wiring these, the shape has changed enough
+		// that quietly doing nothing would be the wrong answer.
+		const wired = ref.inputs[key];
+		if (!Array.isArray(wired) || wired[0] !== node) {
+			throw error(502, `${key} no longer comes from node ${node} — the bundle has been restructured`);
+		}
+		delete ref.inputs[key];
+		delete graph[node];
+	}
 }
 
 async function fetchBundle(file: 'workflow.json' | 'workflow.yaml'): Promise<string> {
@@ -499,12 +637,20 @@ async function fetchBundle(file: 'workflow.json' | 'workflow.yaml'): Promise<str
 	return await res.text();
 }
 
-async function buildJson(entries: ReturnType<typeof stack>, pinned: boolean): Promise<string> {
+async function buildJson(
+	entries: ReturnType<typeof stack>,
+	pinned: boolean,
+	refStart: number | null
+): Promise<string> {
 	const graph = JSON.parse(await fetchBundle('workflow.json')) as Graph;
 	fitOurModelPath(graph, entries);
 	// Before the anchor, which reads the width and height nodes this creates.
 	fitOurOutputShape(graph);
 	carryPriorAudio(graph);
+	// After the audio, which anchors on ref_video_0 still being wired, and before
+	// the seam, which reads its frame off this same loader.
+	if (refStart !== null && refStart > 0) trimPriorVideo(graph, refStart);
+	if (DROP_SLOTS) dropUnusedRefSlots(graph);
 	if (pinned) pinSeamAnchor(graph);
 	return JSON.stringify(graph, null, 2);
 }
@@ -532,6 +678,28 @@ function ourModels(entries: ReturnType<typeof stack>): string {
 		modelBlock(entries) +
 		models.slice(b + CLOSE.length)
 	);
+}
+
+/** Remove one input port block from their yaml, with the node it bound to gone.
+ *
+ *  Line-based rather than a parse: the file is theirs, it is fetched live, and a
+ *  round trip through a YAML library would reformat every line of it and make
+ *  the next upstream diff unreadable. A block runs from its `- name:` to the
+ *  next one, or to the end of the inputs list. */
+function dropPortBlock(yaml: string, port: string): string {
+	const lines = yaml.split('\n');
+	const head = lines.findIndex((l) => l.trim() === `- name: ${port}`);
+	if (head < 0) throw error(502, `the continuation bundle no longer declares a ${port} port`);
+	const indent = lines[head].length - lines[head].trimStart().length;
+	let tail = head + 1;
+	while (tail < lines.length) {
+		const l = lines[tail];
+		const isNext = l.trim().startsWith('- name: ') && l.length - l.trimStart().length === indent;
+		const isOut = l.trim().length > 0 && l.length - l.trimStart().length < indent;
+		if (isNext || isOut) break;
+		tail++;
+	}
+	return [...lines.slice(0, head), ...lines.slice(tail)].join('\n');
 }
 
 async function buildYaml(entries: ReturnType<typeof stack>): Promise<string> {
@@ -660,6 +828,33 @@ async function buildYaml(entries: ReturnType<typeof stack>): Promise<string> {
 		`      default: 576\n`;
 	out = out.replace(outputs, `\n${added}  outputs:`);
 
+	// The audio loader's own file, declared as an INPUT and not a param.
+	//
+	// The distinction is the whole of it: `inputs` are media the harness fetches
+	// and stages onto the worker, `params` are values it passes through. Declared
+	// among the params — which is where the block above lands, since it is spliced
+	// in before `outputs:` — the loader was handed the S3 URL as a string and
+	// rejected it: "Invalid video file: https://…". Twice, because the first
+	// diagnosis blamed the two ports sharing one link and gave them separate
+	// uploads, which changed the url in the error message and nothing else.
+	if (!OWN_AUDIO_LOADER) return out;
+	const params = '\n  params:';
+	if (!out.includes(params)) {
+		throw error(502, 'the continuation bundle has no params: section — it has been restructured');
+	}
+	out = out.replace(
+		params,
+		`\n    - name: prior_clip_audio\n` +
+			`      kind: video\n` +
+			`      description: "The same clip as prior_clip, read whole and used for its soundtrack only. The voice reference wants five seconds; the video reference is deliberately shorter, and the two come off different loaders so one cannot trim the other."\n` +
+			`      binding: video@${OUR.refAudioSrc}\n` +
+			`      required: false\n` +
+			params
+	);
+
+	// The slots dropped from the graph, dropped from the contract too.
+	out = dropPortBlock(dropPortBlock(out, 'ref_picture_4'), 'ref_picture_5');
+
 	return out;
 }
 
@@ -668,9 +863,12 @@ export const GET: RequestHandler = async ({ params }) => {
 	const file = params.file ?? '';
 
 	if (file === 'workflow.json') {
-		return text(await buildJson(entries, parsePinSeam(params.sel ?? '')), {
-			headers: { 'content-type': 'application/json' }
-		});
+		return text(
+			await buildJson(entries, parsePinSeam(params.sel ?? ''), parseRefStart(params.sel ?? '')),
+			{
+				headers: { 'content-type': 'application/json' }
+			}
+		);
 	}
 	if (file === 'workflow.yaml' || file === 'workflow.yml') {
 		return text(await buildYaml(entries), { headers: { 'content-type': 'text/yaml' } });

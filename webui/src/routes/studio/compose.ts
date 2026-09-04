@@ -1803,6 +1803,14 @@ export interface ContinuationSpec {
 	 *  taken from the payload: they end up in the agent's prompt as links to
 	 *  fetch, so the browser does not get a say in where they point. */
 	priorClipUrl?: string;
+	/** The same bytes as priorClipUrl, uploaded again under a second key.
+	 *
+	 *  A second URL rather than the same one twice, because the harness stages a
+	 *  media input per URL: pointing two ports at one link staged it once and
+	 *  handed the raw link to the other node, which rejected it as not a video
+	 *  before a GPU was touched. Cheap to fix and cheap to keep — it is one more
+	 *  upload of a file that is already in memory. */
+	priorClipAudioUrl?: string;
 	characterUrl?: string;
 	locationUrl?: string;
 	/** The prior clip's final frame, as a fourth reference.
@@ -1828,6 +1836,13 @@ export interface ContinuationSpec {
 	 *  a brief naming a picture nobody was given. */
 	pinned?: boolean;
 
+	/** How long the clip being continued runs, in seconds.
+	 *
+	 *  Set at launch from the cached file. It is here only so the reference
+	 *  window below can be worked out — the bundle route builds the graph without
+	 *  ever seeing the clip, so the offset has to be computed on this side. */
+	priorSeconds?: number;
+
 	studioOrigin?: string;
 }
 
@@ -1835,13 +1850,81 @@ export function continuationWorkspaceId(spec: ContinuationSpec): string {
 	return `${spec.slug}-cont@${WORKSPACE_VERSION}`;
 }
 
-/** Steps and frame rate come from the clip being continued, not from a fresh
+/** Four, where a first-pass render uses eight.
+ *
+ *  Against the rule below, deliberately and under measurement. The turbo adapter
+ *  in the stack is a FOUR-step distill, so eight is already double what it was
+ *  trained for, and the sampler is half of what a continuation spends. The
+ *  earlier verdict — stills favoured 4, moving clips favoured 8 — was taken on
+ *  the direct path, where the prompt is all the model has. A continuation also
+ *  has the prior clip carrying the scene, the people and the motion, which is
+ *  exactly the structure those extra steps were buying.
+ *
+ *  Four was tried first and did not hold. Two things broke together and both
+ *  are what too few denoising steps look like: hands came back melted, and the
+ *  voice came back metallic. The audio dials above recovered some of the second
+ *  on simple material — a moan is low-frequency and survives — but on wet
+ *  consonants and speech the ringing came straight back, which is the shape of a
+ *  sampler that has not resolved the fine end rather than of anything specific
+ *  to audio.
+ *
+ *  Six rather than eight: half the saving back, not all of it, and the reference
+ *  window and the dropped slots keep the rest. Raise it if the fine detail is
+ *  still short. */
+export const CONT_STEPS = 6;
+/** Frame rate still comes from the clip being continued, not from a fresh
  *  choice: a continuation that samples differently is a different look. */
-export const CONT_STEPS = DIRECT_STEPS;
 export const CONT_FPS = DIRECT_FPS;
 /** Longer than a first-pass render: a continuation carries a video and up to
  *  four pictures into the graph, and the extra conditioning costs time on the
  *  same card — measured at roughly twice a direct clip, 32-35¢ against 14-17¢. */
+/** How much of the prior clip goes in as the reference video.
+ *
+ *  The whole clip used to, and it is the single most expensive thing about a
+ *  continuation: a reference row sits in the packed sequence for every sampling
+ *  step, so an eight-second reference is paid eight seconds' worth on each of
+ *  the eight steps. Measured, that made a 576p continuation take 507s against a
+ *  direct render's 128s at the same size, steps and card — and at 864p it put
+ *  the render past the harness's own liveness window, where it was killed at 30
+ *  minutes having produced nothing, twice.
+ *
+ *  One second. Two was the first cut and it worked — 864p went from producing
+ *  nothing in forty-five minutes to a finished clip in six. This halves it
+ *  again: at a three-second target the two-second reference was still forty per
+ *  cent of the packed sequence, and the sequence is what the attention term
+ *  squares. The audio reference next to it was capped at five for exactly this
+ *  reason and never grew back.
+ *
+ *  Read as an offset from the start rather than a length, because that is the
+ *  port the bundle exposes and because reading to the true end is what keeps the
+ *  pinned seam honest: H3LastFrame takes its frame off this same loader, so a
+ *  window that stopped short would anchor the next clip to the wrong frame. */
+export const CONT_REF_TAIL_SEC = 1;
+
+/** Bisect switches for the metallic-voice hunt.
+ *
+ *  Three structural changes went into the continuation graph together — the
+ *  reference video trimmed to its tail, two unused reference slots dropped, and
+ *  the audio given its own loader — and then the voice came back metallic and
+ *  nobody could say which of them, if any, did it. All three move the same
+ *  thing: the layout of the packed conditioning sequence, which is where the
+ *  audio rows live too.
+ *
+ *  So they got switches, and a control render was taken with every one of them
+ *  off — the original graph, the original settings, the same brief and the same
+ *  source clip. It came back just as metallic, for 830 seconds of GPU and 92
+ *  cents against 325 and 36 for the same thing with the trim on.
+ *
+ *  So none of the three is the cause, and all three are back on: the trim alone
+ *  is measured at 2.56x on this material and costs nothing audible. Kept as
+ *  switches because the control is the only way to answer this class of
+ *  question and the next one will want them. */
+export const TRIM_REF_VIDEO = true;
+/** Removes the two reference slots the studio never fills. */
+export const DROP_SLOTS = true;
+/** Gives the audio its own untrimmed copy of the clip, and the port to stage it. */
+export const OWN_AUDIO_LOADER = true;
+
 export const CONT_TIMEOUT_SEC = 2400;
 
 /** Whether the seam is anchored as a keyframe as well as described.
@@ -1883,6 +1966,7 @@ export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = '
 	}
 	for (const [name, u] of [
 		['the prior clip', spec.priorClipUrl],
+		...(OWN_AUDIO_LOADER ? ([['the prior clip audio', spec.priorClipAudioUrl]] as const) : []),
 		['the character', spec.characterUrl],
 		['the location', spec.locationUrl],
 		// Required only when the brief was written expecting it. The writer is told
@@ -1894,6 +1978,40 @@ export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = '
 		// but failing here says which and costs nothing.
 		if (!u) throw new Error(`${name} has no url — it was not uploaded`);
 	}
+
+	// No two references may share a link.
+	//
+	// Hygiene rather than a fix for anything measured: each reference is its own
+	// upload, so two of them arriving with one url means a caller has wired the
+	// same bytes to two ports and one of the two is not what it says it is.
+	//
+	// It is NOT what made the audio loader fail — that was the port being
+	// declared among the params instead of the inputs, so the harness passed the
+	// url through as a value instead of staging the file. This check was written
+	// while that was still misdiagnosed; it is kept because the invariant is
+	// worth holding, not because it caught anything.
+	const seen = new Map<string, string>();
+	for (const [name, u] of [
+		['the prior clip', spec.priorClipUrl],
+		...(OWN_AUDIO_LOADER ? ([['the prior clip audio', spec.priorClipAudioUrl]] as const) : []),
+		['the character', spec.characterUrl],
+		['the location', spec.locationUrl],
+		...(spec.pinned === false ? [] : ([['the final frame', spec.lastFrameUrl]] as const))
+	] as const) {
+		if (!u) continue;
+		// The signature is per-upload and carries a timestamp, so two uploads of
+		// the same bytes differ in the query string alone. The path is what the
+		// harness stages by and what has to be distinct.
+		const key = u.split('?')[0];
+		const already = seen.get(key);
+		if (already) {
+			throw new Error(
+				`${name} and ${already} are the same file — the harness stages one file per url, ` +
+					`so the second reference would reach the GPU as a link rather than a file`
+			);
+		}
+		seen.set(key, name);
+	}
 	for (const n of [spec.seconds, spec.width, spec.height]) {
 		if (!Number.isFinite(n) || n <= 0) throw new Error('seconds, width and height must be positive');
 	}
@@ -1904,9 +2022,25 @@ export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = '
 	// clip side. The bundle is built per workspace and the seam anchor is a node
 	// that must not exist on a free start, so the flag has to reach the builder,
 	// and this is the only channel it has.
+	// Where the reference video starts reading. Only when the clip is longer than
+	// the window — a shorter one is already inside it, and an offset past its end
+	// would hand the model nothing.
+	const priorSecs = spec.priorSeconds ?? 0;
+	const refStart =
+		TRIM_REF_VIDEO && priorSecs > CONT_REF_TAIL_SEC ? priorSecs - CONT_REF_TAIL_SEC : 0;
+	// `run-<slug>` last, as the direct path carries it. There it tells the
+	// generator whose reference images to serve; here it buys the other half of
+	// what that shape gives you, which this path did not have — a url that is
+	// unique per render. Two continuations with the same adapters and the same
+	// window asked for byte-identical urls, so nothing between here and the GPU
+	// could tell a rebuilt bundle from the one it fetched an hour ago. Three
+	// failed renders were diagnosed against a bundle that may or may not have
+	// been the one that ran, which is not a position to debug from.
 	const sel =
 		(formatPicks([...base, ...(spec.loras ?? [])]) || 'base') +
-		(SEAM_ANCHOR && spec.pinned !== false ? ',pin-1' : '');
+		(SEAM_ANCHOR && spec.pinned !== false ? ',pin-1' : '') +
+		(refStart > 0 ? `,st-${refStart.toFixed(2)}` : '') +
+		`,run-${spec.slug}`;
 
 	return `version: "1.0"
 kind: Workspace
@@ -1988,7 +2122,8 @@ ${modelsBlock(grokKey)}
         Save the result as cont1.mp4
 
         References, each copied exactly as written:
-        prior_clip = ${spec.priorClipUrl}
+        prior_clip = ${spec.priorClipUrl}${OWN_AUDIO_LOADER ? `
+        prior_clip_audio = ${spec.priorClipAudioUrl}` : ''}
         character_sheet = ${spec.characterUrl}
         environment_plate = ${spec.locationUrl}${spec.pinned === false ? '' : `
         ref_picture_3 = ${spec.lastFrameUrl}`}

@@ -96,6 +96,19 @@ export interface RenderRow {
 	 *  what was asked for — and those want three different fixes. This is the
 	 *  field that makes a rejection actionable instead of merely counted. */
 	note?: string;
+	/** Where the clip this run produced actually is.
+	 *
+	 *  The row said what was made and never where it landed, so a session rebuilt
+	 *  from this log could name its own clip and not fetch it — "the clip it
+	 *  produced cannot be located", on every production reopened after a reload.
+	 *  The bytes were on disk the whole time; nothing wrote down the two ids that
+	 *  address them.
+	 *
+	 *  Written when the render closes, beside the wall clock, from the page that
+	 *  has just received the artifact. Absent on every row written before this
+	 *  existed, which is why every reader treats it as optional. */
+	clipArtifact?: string;
+	clipFile?: string;
 }
 
 function ensure(): void {

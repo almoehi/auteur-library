@@ -31,7 +31,7 @@ import { listRefs, readRef } from '../../refs.server';
 import { getSheet, readSheet } from '../../sheets.server';
 import { pruneStashes, readStashed, stashRefs } from '../../refstash.server';
 import { cached } from '../../../clips.server';
-import { frameAt, lastFrame } from '../../ffmpeg.server';
+import { durationOf, frameAt, lastFrame } from '../../ffmpeg.server';
 import { readFileSync } from 'node:fs';
 import { putObject, s3FromEnv } from '../../s3presign.server';
 import { recordRender } from '../../renders.server';
@@ -339,6 +339,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// Cleared before anything reads them: the spec arrives from the browser and
 		// these end up in the agent's prompt as links to fetch.
 		spec.priorClipUrl = undefined;
+		spec.priorClipAudioUrl = undefined;
 		spec.characterUrl = undefined;
 		spec.locationUrl = undefined;
 		spec.lastFrameUrl = undefined;
@@ -355,6 +356,18 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				{ ok: false, error: 'that clip is not in the library any more — it cannot be continued' },
 				{ status: 200 }
 			);
+		}
+
+		// How long the clip runs, for the reference window. Read from the cached
+		// file rather than taken from the payload: the browser knows what it asked
+		// for, this knows what came back, and the offset is computed against the
+		// bytes the GPU will actually read. Best-effort — a clip whose duration
+		// cannot be read falls back to the whole-clip reference that has always
+		// been the behaviour, which is slow rather than wrong.
+		try {
+			spec.priorSeconds = await durationOf(clipPath);
+		} catch {
+			spec.priorSeconds = undefined;
 		}
 
 		const character = spec.characterId ? getSheet(spec.characterId) : null;
@@ -407,6 +420,16 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			spec.priorClipUrl = await putObject(
 				s3,
 				`studio-cont/${spec.slug}/prior_clip.mp4`,
+				new Uint8Array(readFileSync(clipPath)),
+				fetch
+			);
+			// The same bytes under a second key. The audio loader needs its own URL
+			// or the harness stages the clip once and hands the second node the
+			// link instead of the file — which is exactly how this failed the
+			// first time, at validation, before the GPU.
+			spec.priorClipAudioUrl = await putObject(
+				s3,
+				`studio-cont/${spec.slug}/prior_clip_audio.mp4`,
 				new Uint8Array(readFileSync(clipPath)),
 				fetch
 			);
