@@ -190,13 +190,28 @@ cumshot adapter pointed at a female squirt produces a dribble.
 **A second copy of the character sheet does not counteract chain drift.** 44.5%
 against 43.9%, where the sheet itself is 29.6%.
 
-**Full-URL bundles load on the hosted harness only with an absolute `url:`.**
-The library form `name@ref` works everywhere. A bundle served from a plain URL
-failed on the hosted harness — raw GitHub, jsDelivr, `lazy: false`, all the
-same — until the one relative line inside it, `url: workflow.json`, was made
-absolute; then it rendered (5677401). The local harness resolves the relative
-form against the YAML's address, the hosted one does not. The studio now
-writes the absolute sibling address into every YAML it serves
-(`absoluteGraphUrl`), taken from the request that fetched it. The failure
-surfaces as "workspace is not open" from the status poll, which points at the
-wrong thing.
+**The bundle's `url:` line is relative, and two harness builds disagreed about
+it.** A bundle is two files; the YAML names the JSON as `url: workflow.json`.
+The pinned local image and Hannes's production Modal deployment (measured
+2026-09-04, job fc-01M1PXP1SRQHAETH1PX329K45P) both resolve that against the
+YAML's directory — and join an ABSOLUTE url the same way, producing
+`…/wf/<sel>/https://host/…/workflow.json → 404` and a task that never leaves
+`running`. The older `auteur-serverless-golem` build (2026-08-31, 5677401) did
+the opposite: relative failed, absolute rendered. Relative is therefore the
+default; `AUTEUR_BUNDLE_ABSOLUTE_URL=1` switches the absolute form on for a
+harness that still wants it. It used to switch on with `AUTEUR_STUDIO_URL`,
+which every hosted target sets — that coupling is how the 404 happened. The
+failure surfaces as a workspace that opens and dispatches but never renders,
+which points at the wrong thing; the 404 is in the studio's own log.
+
+**Two harnesses, one studio.** With `AUTEUR_MODAL_KEY`/`SECRET`/`WORKSPACE` set
+the studio submits every workspace to Hannes's Modal deployment instead of the
+local container (`webui/src/lib/modal.server.ts`); every later call goes through
+the sandbox proxy with the same path grammar and two auth headers
+(`harnessTarget()` in `$lib/harness`). One sandbox serves many workspaces — two
+jobs submitted minutes apart landed in the same `sb-…` — and it comes up in
+under 40 s cold, under 10 s warm. Finished clips are fetched by the presigned
+urls the run result carries when the proxy no longer answers, and a poll-state
+with no agent behind it is rebuilt from that result. The studio must be
+reachable from the internet (`AUTEUR_STUDIO_URL`) because the sandbox fetches
+each render's bundle from it.
