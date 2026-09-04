@@ -98,25 +98,28 @@ export function writeLoraStack(
 	});
 }
 
-/** The bundle's own reference to its graph, made absolute.
+/** The bundle's own reference to its graph — relative by default, absolute on request.
  *
  *  A bundle is two files, and the YAML points at the JSON with a relative
- *  `url: workflow.json`. The local harness resolves that against the YAML's
- *  address and comes back here for the graph; the hosted harness does not —
- *  the same bundle from the same public path failed there until that one line
- *  was made absolute, and then it rendered (5677401). So every served YAML
- *  says the full address of its sibling. The address is taken from the request
- *  that fetched the YAML, which is by construction one the caller can reach.
+ *  `url: workflow.json`. Two harness builds have now been measured resolving
+ *  that line, and they disagree:
+ *
+ *   - the pinned local image AND Hannes's production Modal deployment (measured
+ *     2026-09-04, job fc-01M1PXP1SRQHAETH1PX329K45P) resolve it against the
+ *     YAML's directory — and treat an ABSOLUTE url the same way, producing
+ *     `…/wf/<sel>/https://host/…/workflow.json → 404`;
+ *   - the older `auteur-serverless-golem` build (2026-08-31, run 5677401) did
+ *     the opposite: relative failed, absolute rendered.
+ *
+ *  Relative is the standard reading and the one both current targets share, so
+ *  it is the default. The absolute form stays reachable behind
+ *  AUTEUR_BUNDLE_ABSOLUTE_URL=1 for a harness that still wants it. Note this is
+ *  NOT gated on AUTEUR_STUDIO_URL any more: that variable says where the studio
+ *  is reachable, which every hosted target needs, and it used to switch this on
+ *  as a side effect — which is how the 404 above happened.
  */
 export function absoluteGraphUrl(yaml: string, reqUrl: URL): string {
-	// Only when a hosted harness is the target. The local harness — the pinned
-	// known-good image — does the opposite of the hosted one: it joins the url:
-	// onto the YAML's directory even when it is absolute, and a render died on
-	// "…/contwf/<sel>/http://host.docker.internal:5290/…/workflow.json → 404".
-	// Two loaders, two behaviours; the studio serves the one the target reads.
-	// AUTEUR_STUDIO_URL is set exactly when the studio is being reached from
-	// outside, which is the hosted case.
-	if (!env.AUTEUR_STUDIO_URL) return yaml;
+	if (env.AUTEUR_BUNDLE_ABSOLUTE_URL !== '1') return yaml;
 	const sibling = new URL(reqUrl.href);
 	sibling.pathname = sibling.pathname.replace(/workflow\.ya?ml$/, 'workflow.json');
 	sibling.search = '';

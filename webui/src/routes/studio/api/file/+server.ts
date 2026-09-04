@@ -18,7 +18,7 @@ import type { RequestHandler } from './$types';
 
 /** Same host as the proxy uses: the golem router matches on the Host header and
  *  only answers to this name (127.0.0.1 returns DOMAIN_NOT_REGISTERED). */
-import { HARNESS } from '$lib/harness';
+import { harnessArtifact } from '$lib/harness';
 import { cached, serve, store, typeFor } from '../../../clips.server';
 
 /** Identical to the grammar the /api/harness proxy enforces: a bare name
@@ -48,12 +48,10 @@ export const GET: RequestHandler = async ({ url, request, fetch }) => {
 	if (!isPlainName(artifact)) throw error(400, 'Bad artifact id');
 	if (!isPlainName(file)) throw error(400, 'Bad file key');
 
-	// The workspace id is already constrained to URL-safe characters by the
-	// regex; artifact and file are encoded so a space or '#' in a filename
-	// (clip names are not uniform) cannot truncate the harness path.
-	const target = `${HARNESS}/workspaces/${workspace}/artifacts/${encodeURIComponent(
-		artifact
-	)}/${encodeURIComponent(file)}`;
+	// harnessArtifact encodes artifact and file so a space or '#' in a filename
+	// (clip names are not uniform) cannot truncate the harness path, and — on the
+	// hosted harness — falls through to the finished run's presigned url once the
+	// sandbox that served the file is gone.
 
 	const range = request.headers.get('range');
 
@@ -79,7 +77,7 @@ export const GET: RequestHandler = async ({ url, request, fetch }) => {
 
 	let res: Response;
 	try {
-		res = await fetch(target, { headers });
+		res = await harnessArtifact(workspace, artifact, file, { headers });
 	} catch (e) {
 		// Nobody started the container. 502 with a short body, per contract:
 		// the caller can tell "harness down" from "file missing" (a passed-

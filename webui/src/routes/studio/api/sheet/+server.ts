@@ -11,7 +11,7 @@
  */
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { HARNESS } from '$lib/harness';
+import { harnessArtifact } from '$lib/harness';
 import { readPreview } from '../../anchorjobs.server';
 import {
 	MAX_SHEET_BYTES,
@@ -184,12 +184,9 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	// Straight from the harness, while the workspace agent is still alive to
 	// serve it. A sheet is worth having a local copy of for the same reason a
 	// clip is — more so, since every later render depends on it.
-	const url = `${HARNESS}/workspaces/${workspace}/artifacts/${encodeURIComponent(
-		artifact
-	)}/${encodeURIComponent(file)}`;
 	let bytes: Uint8Array;
 	try {
-		const res = await fetch(url);
+		const res = await harnessArtifact(workspace, artifact, file);
 		if (!res.ok) {
 			return json({ ok: false, error: `the harness answered ${res.status}` }, { status: 200 });
 		}

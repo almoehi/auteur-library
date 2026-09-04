@@ -19,7 +19,7 @@
  */
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { HARNESS } from '$lib/harness';
+import { harnessArtifact, harnessPost } from '$lib/harness';
 import { pickOutput } from '../../artifacts.server';
 import { store } from '../../../clips.server';
 import { addRuns, listRuns, updateRun, type BatchRun } from '../../batches.server';
@@ -36,10 +36,7 @@ async function poll(workspace: string): Promise<{ artifact: string; file: string
 		if (Date.now() > deadline) return null;
 		await new Promise((r) => setTimeout(r, POLL_MS));
 		try {
-			const res = await fetch(`${HARNESS}/workspaces/${workspace}/api/poll-state`, {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ req: {} }),
+			const res = await harnessPost(workspace, 'poll-state', { req: {} }, {
 				signal: AbortSignal.timeout(30_000)
 			});
 			const text = await res.text();
@@ -74,9 +71,7 @@ async function follow(run: BatchRun): Promise<void> {
 		return;
 	}
 	try {
-		const res = await fetch(
-			`${HARNESS}/workspaces/${run.workspace}/artifacts/${encodeURIComponent(got.artifact)}/${encodeURIComponent(got.file)}`
-		);
+		const res = await harnessArtifact(run.workspace, got.artifact, got.file);
 		if (!res.ok) {
 			updateRun(run.slug, { state: 'failed', error: `the clip could not be fetched — ${res.status}` });
 			return;

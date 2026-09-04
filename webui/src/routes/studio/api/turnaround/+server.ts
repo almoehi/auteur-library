@@ -21,7 +21,7 @@ import type { RequestHandler } from './$types';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { HARNESS } from '$lib/harness';
+import { harnessArtifact, harnessPost } from '$lib/harness';
 import { sheetGrid } from '../../ffmpeg.server';
 import { store } from '../../../clips.server';
 import { attachSheetImage, getSheet, setSheetRender } from '../../sheets.server';
@@ -156,10 +156,7 @@ async function poll(workspace: string): Promise<{ artifact: string; file: string
 		if (Date.now() > deadline) return null;
 		await new Promise((r) => setTimeout(r, POLL_MS));
 		try {
-			const res = await fetch(`${HARNESS}/workspaces/${workspace}/api/poll-state`, {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ req: {} }),
+			const res = await harnessPost(workspace, 'poll-state', { req: {} }, {
 				signal: AbortSignal.timeout(30_000)
 			});
 			const text = await res.text();
@@ -287,9 +284,7 @@ async function build(
 
 	const dir = mkdtempSync(join(tmpdir(), 'auteur-turn-'));
 	try {
-		const res = await fetch(
-			`${HARNESS}/workspaces/${workspace}/artifacts/${encodeURIComponent(got.artifact)}/${encodeURIComponent(got.file)}`
-		);
+		const res = await harnessArtifact(workspace, got.artifact, got.file);
 		if (!res.ok) {
 			setSheetRender(id, { state: 'failed', error: `the turnaround could not be fetched — ${res.status}`, workspace });
 			return;

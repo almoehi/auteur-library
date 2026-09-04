@@ -19,7 +19,7 @@
 import { error, json } from '@sveltejs/kit';
 import { pickOutput } from '../../artifacts.server';
 import type { RequestHandler } from './$types';
-import { HARNESS } from '$lib/harness';
+import { harnessArtifact, harnessPost } from '$lib/harness';
 import { attachSheetImage, getSheet, setSheetRender } from '../../sheets.server';
 
 /** Long enough for a cold container and nine models, short enough that a wedged
@@ -33,10 +33,7 @@ async function harnessCall(
 	op: string,
 	body: unknown = {}
 ): Promise<unknown> {
-	const res = await fetch(`${HARNESS}/workspaces/${workspace}/api/${op}`, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ req: body }),
+	const res = await harnessPost(workspace, op, { req: body }, {
 		signal: AbortSignal.timeout(30_000)
 	});
 	const text = await res.text();
@@ -76,9 +73,7 @@ async function follow(
 		if (art) {
 			const name = art.file;
 			try {
-				const res = await fetch(
-					`${HARNESS}/workspaces/${workspace}/artifacts/${encodeURIComponent(art.artifact)}/${encodeURIComponent(name)}`
-				);
+				const res = await harnessArtifact(workspace, art.artifact, name);
 				if (!res.ok) {
 					giveUpOrRetry(id, attempt, `the sheet could not be fetched — ${res.status}`, fetchFn);
 					return;

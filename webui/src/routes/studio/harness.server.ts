@@ -3,7 +3,7 @@
  *  Every call it exposes is workspace-scoped and side-effecting, which is why
  *  none of them are reachable through the read-only proxy at /studio/api/harness.
  */
-import { HARNESS } from '$lib/harness';
+import { harnessPost } from '$lib/harness';
 import { listSkills, listWorkflows } from './library.server';
 
 /** The harness answers some endpoints with an object and some with that same
@@ -29,12 +29,7 @@ export function unwrap(text: string): unknown {
 const CALL_TIMEOUT_MS = 60_000;
 
 async function call(workspaceId: string, op: string, req: unknown) {
-	const res = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/${op}`, {
-		signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ req })
-	});
+	const res = await harnessPost(workspaceId, op, { req }, { signal: AbortSignal.timeout(CALL_TIMEOUT_MS) });
 	const text = await res.text();
 	return { ok: res.ok, status: res.status, data: unwrap(text), text };
 }

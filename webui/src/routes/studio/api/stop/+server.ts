@@ -21,7 +21,7 @@
  */
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { HARNESS } from '$lib/harness';
+import { harnessPost } from '$lib/harness';
 import { SLUG_RE } from '../../types';
 
 interface StopReport {
@@ -33,11 +33,7 @@ interface StopReport {
 
 async function post(workspaceId: string, op: string, body: unknown): Promise<Response | null> {
 	try {
-		return await fetch(`${HARNESS}/workspaces/${workspaceId}/api/${op}`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body)
-		});
+		return await harnessPost(workspaceId, op, body);
 	} catch {
 		// The harness being unreachable is itself a kind of stopped.
 		return null;
@@ -57,10 +53,7 @@ async function stopOne(workspaceId: string): Promise<StopReport> {
 	// again the moment a worker is free.
 	let state: unknown;
 	try {
-		const res = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/poll-state`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({})
+		const res = await harnessPost(workspaceId, 'poll-state', {}, {
 		});
 		if (res.ok) state = JSON.parse(await res.text());
 	} catch {

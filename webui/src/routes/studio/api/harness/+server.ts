@@ -1,20 +1,17 @@
-/** Proxy to a locally running auteur harness.
+/** Proxy to the harness — local or hosted — for the page's read-mostly calls.
  *
- *  The harness is a Docker container on the developer's own machine (see
- *  ~/auteur). This route exists to give the browser a same-origin endpoint: the
- *  harness sends no CORS headers, so a page cannot call it directly, and its URL
- *  has no business being in a client bundle.
+ *  This route exists to give the browser a same-origin endpoint: the local
+ *  harness sends no CORS headers, the hosted one wants auth headers that have
+ *  no business being in a client bundle, and either way its address is not the
+ *  page's concern.
  *
  *  Unauthenticated: this app is a local operator tool. See the README.
  */
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-
-/** The golem router matches routes on the request's Host header, and the
- *  harness registers its API under this exact domain — calling 127.0.0.1 or
- *  localhost returns DOMAIN_NOT_REGISTERED even though the port is the same.
- *  /etc/hosts maps the name to 127.0.0.1 (run.sh adds the entry). */
-import { HARNESS } from '$lib/harness';
+import { HARNESS, harnessTarget } from '$lib/harness';
+import { hostedHarness, jobFor, refreshJob, type RunResult } from '$lib/modal.server';
+import type { PollState } from '../../types';
 
 /** Workspace API methods the dashboard is allowed to reach. The harness exposes
  *  more (task removal, workflow teardown); those stay out until a surface
@@ -47,11 +44,13 @@ const WORKSPACE_RE = /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/;
 const WORKSPACE_TIMEOUT_MS = 20_000;
 
 /** Which of the two silences this is. Returns the flag the dashboard branches
- *  on, so the wrong instruction is never shown. */
+ *  on, so the wrong instruction is never shown. Hosted there is no container to
+ *  restart, so the answer is always "this one workspace", never "offline". */
 async function diagnose(
 	fetch: typeof globalThis.fetch,
 	cause: unknown
 ): Promise<{ offline?: true; wedged?: true; error: string }> {
+	if (hostedHarness()) return { wedged: true, error: String(cause) };
 	try {
 		const probe = await fetch(`${HARNESS}/openapi.yaml`, {
 			signal: AbortSignal.timeout(5_000)
@@ -63,6 +62,46 @@ async function diagnose(
 		/* the probe failed too — genuinely offline, fall through */
 	}
 	return { offline: true, error: String(cause) };
+}
+
+/** A poll-state the page can read when there is no agent to ask.
+ *
+ *  Two moments in a hosted run have no sandbox: before it starts, and after the
+ *  run has ended and Modal has torn it down. Before, the honest answer is an
+ *  open-less workspace with nothing in it — the page shows "starting". After,
+ *  the run's result carries every task's final status and every artifact's
+ *  files, which is exactly the part of a poll-state the page acts on (a task
+ *  going `success` and an artifact naming a clip), so it is rebuilt from that.
+ *  Fields the result does not have are filled with what the page treats as
+ *  neutral. */
+function synthesize(workspaceId: string, result: RunResult | null): PollState {
+	const [name, version] = workspaceId.split('@');
+	if (!result) {
+		return { workspace: { name, version, is_open: false }, tasks: [], artifacts: [], workflows: [], worker_statuses: [], recent_messages: [] };
+	}
+	return {
+		workspace: { name, version, is_open: false },
+		tasks: result.tasks.map((t) => ({
+			id: t.key,
+			key: t.key,
+			title: t.key,
+			status: t.status,
+			origin: null,
+			agent: null,
+			...(t.failure_reason ? { failure_reason: t.failure_reason } : {})
+		})) as PollState['tasks'],
+		artifacts: result.artifacts.map((a) => ({
+			id: a.artifactId,
+			key: a.artifactId,
+			name: a.artifactId,
+			description: '',
+			files: a.files.map((f) => f.fileKey),
+			status: 'ready'
+		})) as PollState['artifacts'],
+		workflows: [],
+		worker_statuses: [],
+		recent_messages: []
+	};
 }
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
@@ -78,11 +117,22 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	if (!workspace || !WORKSPACE_RE.test(workspace)) throw error(400, 'Bad workspace id');
 	if (!op || !OPS.has(op)) throw error(400, `Unsupported op: ${op}`);
 
+	// Hosted: a workspace whose sandbox is not up answers from the job book
+	// rather than from a proxy that has nothing behind it.
+	let target = await harnessTarget(workspace);
+	if (!target && hostedHarness()) {
+		const job = await refreshJob(workspace).catch(() => jobFor(workspace));
+		if (!job) return json({ ok: false, error: `${workspace} was not submitted from this studio` }, { status: 200 });
+		if (op === 'poll-state') return json({ ok: true, status: 200, data: synthesize(workspace, job.done ? job.result : null), synthesized: true });
+		return json({ ok: false, status: 503, error: 'sandbox not up yet' }, { status: 200 });
+	}
+	if (!target) target = { base: HARNESS, headers: {} };
+
 	let res: Response;
 	try {
-		res = await fetch(`${HARNESS}/workspaces/${workspace}/api/${op}`, {
+		res = await fetch(`${target.base}/workspaces/${workspace}/api/${op}`, {
 			method: 'POST',
-			headers: { 'content-type': 'application/json' },
+			headers: { ...target.headers, 'content-type': 'application/json' },
 			body: JSON.stringify(body ?? {}),
 			// A workspace call that has not answered in this long is not slow, it is
 			// stuck. Without a deadline the request hangs until the platform's own
@@ -106,6 +156,13 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			{ ok: false, ...(await diagnose(fetch, e)) },
 			{ status: 200 }
 		);
+	}
+
+	// Hosted, a proxy that no longer has a sandbox behind it (the run ended) is
+	// the third moment with no agent. The job book has the ending.
+	if (!res.ok && hostedHarness() && op === 'poll-state') {
+		const job = await refreshJob(workspace, true).catch(() => jobFor(workspace));
+		if (job?.done) return json({ ok: true, status: 200, data: synthesize(workspace, job.result), synthesized: true });
 	}
 
 	const text = await res.text();

@@ -60,6 +60,7 @@ import {
 /** Same host as the proxy uses: the golem router matches on the Host header and
  *  only answers to this name (127.0.0.1 returns DOMAIN_NOT_REGISTERED). */
 import { HARNESS } from '$lib/harness';
+import { hostedHarness, openHosted } from '$lib/modal.server';
 
 /*  Workspaces are immutable once opened — reopening an id is a silent no-op, it
  *  does not re-run anything. So every launch gets a fresh slug and the version
@@ -108,110 +109,119 @@ async function openWorkspace(
 	// chance to see a bad reference before the slug is spent: an id can be
 	// opened once, so a workspace that opens against a missing workflow is not
 	// retryable, it is another run thrown away.
-	let pre: Response;
-	try {
-		pre = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/prefetch-workspace`, {
-			// Bounded, and only this one. Prefetch is idempotent and fails closed, so
-			// a timeout here costs a retry. open-workspace is left unbounded on
-			// purpose: abort that fetch after the harness has opened the workspace
-			// and you get one that is rendering and that nobody polls.
-			signal: AbortSignal.timeout(PREFETCH_TIMEOUT_MS),
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ req: { yaml } })
-		});
-	} catch (e) {
-		// Nobody started the container: a normal state, not an exception. The
-		// caller renders this as a banner.
-		const timedOut = e instanceof Error && e.name === 'TimeoutError';
-		return json(
-			{
-				ok: false,
-				offline: !timedOut,
-				error: timedOut
-					? `the harness did not finish prefetching within ${PREFETCH_TIMEOUT_MS / 1000}s`
-					: String(e)
-			},
-			{ status: 200 }
-		);
-	}
-
-	const preText = await pre.text();
-	if (!pre.ok) {
-		return json(
-			{ ok: false, error: `prefetch failed (${pre.status}): ${preText.slice(0, 300)}` },
-			{ status: 200 }
-		);
-	}
-
-	// Same double-wrapping as everywhere else on this API.
-	let preData: unknown = preText;
-	try {
-		const once: unknown = JSON.parse(preText);
-		preData = typeof once === 'string' ? JSON.parse(once) : once;
-	} catch {
-		/* leave as text */
-	}
-	const pd = preData as { error?: string; errors?: string[] } | undefined;
-	const preErrors = [
-		...(pd?.error ? [pd.error] : []),
-		...(Array.isArray(pd?.errors) ? pd.errors : [])
-	].filter((x) => typeof x === 'string' && x.trim());
-
-	if (preErrors.length) {
-		console.error(`=== auteur: prefetch rejected ${workspaceId} ===\n${preErrors.join('\n')}`);
-		return json(
-			{ ok: false, error: `the workspace references something that could not be loaded:\n${preErrors.join('\n')}` },
-			{ status: 200 }
-		);
-	}
-
-	let res: Response;
-	try {
-		res = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/open-workspace`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ req: { yaml, owner: 'studio' } })
-		});
-	} catch (e) {
-		return json({ ok: false, offline: true, error: String(e) }, { status: 200 });
-	}
-
-	const text = await res.text();
-
-	// The harness answers with an object, but sometimes JSON-encoded inside a
-	// string (the same double-wrapping the read proxy unwraps). Step back one
-	// level at a time so a plain-prose error survives readable.
-	let data: unknown = text;
-	try {
-		const once = JSON.parse(text);
-		data = once;
-		if (typeof once === 'string') {
-			try {
-				data = JSON.parse(once);
-			} catch {
-				data = once;
-			}
+	// Two harnesses, one open sequence. Hosted, the YAML goes up whole and the
+	// workspace opens itself inside a sandbox; there is no prefetch to consult
+	// and no open call to make — see $lib/modal.server. Everything after this
+	// block (bookmark, library, refs) is the same for both.
+	if (hostedHarness()) {
+		const opened = await openHosted(workspaceId, yaml);
+		if (!opened.ok) return json({ ok: false, error: opened.error }, { status: 200 });
+	} else {
+		let pre: Response;
+		try {
+			pre = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/prefetch-workspace`, {
+				// Bounded, and only this one. Prefetch is idempotent and fails closed, so
+				// a timeout here costs a retry. open-workspace is left unbounded on
+				// purpose: abort that fetch after the harness has opened the workspace
+				// and you get one that is rendering and that nobody polls.
+				signal: AbortSignal.timeout(PREFETCH_TIMEOUT_MS),
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ req: { yaml } })
+			});
+		} catch (e) {
+			// Nobody started the container: a normal state, not an exception. The
+			// caller renders this as a banner.
+			const timedOut = e instanceof Error && e.name === 'TimeoutError';
+			return json(
+				{
+					ok: false,
+					offline: !timedOut,
+					error: timedOut
+						? `the harness did not finish prefetching within ${PREFETCH_TIMEOUT_MS / 1000}s`
+						: String(e)
+				},
+				{ status: 200 }
+			);
 		}
-	} catch {
-		/* not JSON at all — surface verbatim */
-	}
 
-	// Two independent ways to fail: a non-2xx (a dead workspace agent answers 500
-	// with INTERNAL_AGENT_EXECUTION_FAILED on every endpoint), or a 200 carrying a
-	// non-empty `error` field. Treating the second as success is how you end up
-	// polling a workspace that was never opened.
-	const d = data as { error?: string; code?: string } | string | undefined;
-	const harnessError = typeof d === 'string' ? '' : (d?.error ?? '').trim();
+		const preText = await pre.text();
+		if (!pre.ok) {
+			return json(
+				{ ok: false, error: `prefetch failed (${pre.status}): ${preText.slice(0, 300)}` },
+				{ status: 200 }
+			);
+		}
 
-	if (!res.ok) {
-		const detail =
-			typeof d === 'string'
-				? d
-				: `${d?.code ?? res.status} — ${harnessError || text.slice(0, 300)}`;
-		return json({ ok: false, error: detail }, { status: 200 });
+		// Same double-wrapping as everywhere else on this API.
+		let preData: unknown = preText;
+		try {
+			const once: unknown = JSON.parse(preText);
+			preData = typeof once === 'string' ? JSON.parse(once) : once;
+		} catch {
+			/* leave as text */
+		}
+		const pd = preData as { error?: string; errors?: string[] } | undefined;
+		const preErrors = [
+			...(pd?.error ? [pd.error] : []),
+			...(Array.isArray(pd?.errors) ? pd.errors : [])
+		].filter((x) => typeof x === 'string' && x.trim());
+
+		if (preErrors.length) {
+			console.error(`=== auteur: prefetch rejected ${workspaceId} ===\n${preErrors.join('\n')}`);
+			return json(
+				{ ok: false, error: `the workspace references something that could not be loaded:\n${preErrors.join('\n')}` },
+				{ status: 200 }
+			);
+		}
+
+		let res: Response;
+		try {
+			res = await fetch(`${HARNESS}/workspaces/${workspaceId}/api/open-workspace`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ req: { yaml, owner: 'studio' } })
+			});
+		} catch (e) {
+			return json({ ok: false, offline: true, error: String(e) }, { status: 200 });
+		}
+
+		const text = await res.text();
+
+		// The harness answers with an object, but sometimes JSON-encoded inside a
+		// string (the same double-wrapping the read proxy unwraps). Step back one
+		// level at a time so a plain-prose error survives readable.
+		let data: unknown = text;
+		try {
+			const once = JSON.parse(text);
+			data = once;
+			if (typeof once === 'string') {
+				try {
+					data = JSON.parse(once);
+				} catch {
+					data = once;
+				}
+			}
+		} catch {
+			/* not JSON at all — surface verbatim */
+		}
+
+		// Two independent ways to fail: a non-2xx (a dead workspace agent answers 500
+		// with INTERNAL_AGENT_EXECUTION_FAILED on every endpoint), or a 200 carrying a
+		// non-empty `error` field. Treating the second as success is how you end up
+		// polling a workspace that was never opened.
+		const d = data as { error?: string; code?: string } | string | undefined;
+		const harnessError = typeof d === 'string' ? '' : (d?.error ?? '').trim();
+
+		if (!res.ok) {
+			const detail =
+				typeof d === 'string'
+					? d
+					: `${d?.code ?? res.status} — ${harnessError || text.slice(0, 300)}`;
+			return json({ ok: false, error: detail }, { status: 200 });
+		}
+		if (harnessError) return json({ ok: false, error: harnessError }, { status: 200 });
 	}
-	if (harnessError) return json({ ok: false, error: harnessError }, { status: 200 });
 
 	// Bookmark it. Until this existed a run lived only in the tab that started
 	// it: close the tab and the film was still on the harness but unreachable,
