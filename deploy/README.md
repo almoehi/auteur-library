@@ -80,16 +80,21 @@ at the origin. Deploy that and `www.ratemyd.app/studio` is the studio.
    from those urls and rebuilds the page's poll-state from the result, so a
    finished run still reads as finished.
 
-## Two things to verify on the first deploy, not assume
+## Verified through Vercel's rewrite proxy (2026-09-04, PR #1148 preview)
 
-1. **Vercel's rewrite proxy and the stream.** The confirmation layer streams
-   its reply; `/studio/api/file` streams clips. Check on a PR preview that the
-   first character arrives in about a second and a clip plays. If the proxy
-   buffers, serve the origin as `studio.ratemyd.app` directly instead and turn
-   the rewrite into a redirect — the same containers, `STUDIO_ORIGIN` changed.
-2. **Rewrite precedence.** ratemyd has no `/studio` route, so the rewrite
-   should win over the SvelteKit catch-all. Confirm `www.ratemyd.app/studio`
-   returns the studio's HTML and not ratemyd's 404 page.
+Both questions the first deploy was meant to answer were answered early, on a
+preview whose rewrite pointed at a tunnel in front of the studio:
+
+- **Precedence.** `/studio` returned the studio's HTML (title `studio · auteur`,
+  assets under `/studio-app/`, none of ratemyd's `/_app/`); the rewrite
+  outranks the SvelteKit catch-all.
+- **Streaming.** The confirmation layer's reply arrived in 40 chunks, first at
+  0.8 s, last at 2.0 s — the proxy streams rather than buffers.
+- **Video.** An 8 MB clip came through whole in 1.9 s; a `Range: bytes=0-1023`
+  request was answered 206 with a correct `content-range`, so `<video>`
+  scrubbing (and iOS Safari, which insists on ranges) works.
+
+So the path-rewrite design stands; the subdomain fallback is not needed.
 
 ## What this deliberately is not
 
