@@ -1,0 +1,78 @@
+# The studio, hosted: harness + studio + TLS/auth edge on one Linux box.
+#
+# This mirrors the operator's laptop one-to-one rather than redesigning it,
+# because the harness is picky about two addresses and both are baked in:
+#
+#   * it answers only to the Host header `host.docker.internal:19006`
+#     (HTTP_BASE_URL; anything else is ROUTE_NOT_FOUND), and
+#   * it fetches each render's workflow bundle from `host.docker.internal:5290`,
+#     the address the studio writes into the workspace YAML.
+#
+# On Docker Desktop that name exists for free. On Linux it does not, so:
+# the harness gets `host-gateway` for it (and hands the same to its sandboxes
+# via SANDBOX_EXTRA_HOSTS), and the studio runs on the host network, where
+# 127.0.0.1:19006 IS the harness and the name is pinned to loopback below.
+# Nothing here is reachable from outside except Caddy on 80/443 — see README.
+services:
+  harness:
+    image: almoehi/auteur:known-good   # pinned: `latest` (2026-08-30) never collects the artifact
+    container_name: harness
+    restart: unless-stopped
+    env_file: ./auteur.env
+    environment:
+      RENDER_PARALLELISM: "4"
+      TASK_PARALLELISM: "10"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:                             # loopback only; the studio sits on the host network
+      - "127.0.0.1:19006:9006"         # HTTP API (the domain the router matches)
+      - "127.0.0.1:19881:9881"         # golem router
+      - "127.0.0.1:19007:9007"         # MCP
+    volumes:
+      - ./data:/data/golem
+      - ./workflows:/work/workflows
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  studio:
+    build: ../webui
+    image: auteur-studio:local
+    container_name: studio
+    restart: unless-stopped
+    network_mode: host                 # sees the harness at 127.0.0.1:19006; listens on :5290
+    env_file: ./auteur.env             # GROK_API_KEY lives there already
+    environment:
+      HOST: "0.0.0.0"                  # containers reach it via host-gateway; ufw keeps it off the internet
+      PORT: "5290"
+      BODY_SIZE_LIMIT: "Infinity"
+      AUTEUR_HARNESS_URL: "http://host.docker.internal:19006"
+      # The public origin the browser sees. Behind the ratemyd.app/studio
+      # rewrite that is www.ratemyd.app; on a subdomain it is that subdomain.
+      ORIGIN: "${STUDIO_ORIGIN}"
+      # Deliberately NOT set: AUTEUR_STUDIO_URL. Setting it switches the bundle
+      # YAML to absolute urls, which this (local-style) harness image resolves
+      # wrongly — that was a live 404. The default host.docker.internal:5290 is
+      # exactly right here.
+    extra_hosts:
+      - "host.docker.internal:127.0.0.1"
+    volumes:
+      - ./auteur.env:/root/auteur/.env:ro        # s3presign reads AWS keys from $HOME/auteur/.env
+      - ./studio-library:/root/auteur/studio-library
+      - ./studio-tuning:/root/auteur/studio-tuning
+
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    network_mode: host                 # 80/443 on the host; proxies to 127.0.0.1:5290
+    environment:
+      STUDIO_HOST: "${STUDIO_HOST}"
+      BASIC_AUTH_USER: "${BASIC_AUTH_USER}"
+      BASIC_AUTH_HASH: "${BASIC_AUTH_HASH}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,18 @@
+# TLS from Let's Encrypt on the origin host, and one shared password in front
+# of everything. The studio has no authentication of its own — it was written
+# as an operator's tool — and an open URL here is an open GPU budget. Basic
+# auth is the smallest possible lock; it is not the account system, it is what
+# stands in until there is one.
+{$STUDIO_HOST} {
+	encode zstd gzip
+
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+
+	reverse_proxy 127.0.0.1:5290 {
+		# The confirmation layer streams its sentence token by token; a buffered
+		# proxy would turn "1.0s to first character" back into "wait for all of it".
+		flush_interval -1
+	}
+}
