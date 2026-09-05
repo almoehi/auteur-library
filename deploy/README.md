@@ -96,6 +96,22 @@ preview whose rewrite pointed at a tunnel in front of the studio:
 
 So the path-rewrite design stands; the subdomain fallback is not needed.
 
+## The first clip through the hosted harness (2026-09-06)
+
+Five runs to get there, and the fix was one line in the YAML: **no model
+credentials inline**. Hannes's build resolves them from its own environment;
+with `apiKeys.token` present the worker never started (context utilisation
+frozen at 2 % for eighteen minutes, then the sandbox harness stopped answering).
+With the key omitted — which the studio now does whenever the target is the
+hosted harness — the worker called the workflow in 100 s, the compute took
+~2.7 min, and the clip landed **5 min 23 s** after the button: 1024×576, 48 fps,
+5.15 s with audio, 14 cents. The Civitai LoRAs were fetched by Hannes's side
+without a mirror.
+
+The two earlier dead ends, so nobody walks them again: a stale image with a
+mock compute provider (`endpoint_id mock:ep:...`, zero GPU spend), and the
+absolute bundle `url:` (404 on this harness).
+
 ## What this deliberately is not
 
 No accounts, no token charge, no upload moderation — one shared password, one
