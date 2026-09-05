@@ -11,7 +11,7 @@
  *  because those are exactly the parts that differ.
  */
 import { env } from '$env/dynamic/private';
-import { BASE, loraFor, type Lora, type Pick } from './loras';
+import { BASE, TURBO_ALTERNATIVES, loraFor, type Lora, type Pick } from './loras';
 
 export interface StackEntry {
 	lora: Lora;
@@ -30,7 +30,12 @@ export interface StackEntry {
  *  number and never whether one is present.
  */
 export function stack(picks: Pick[], baseAt: Record<string, number> = {}): StackEntry[] {
-	const out = BASE.map((l) => ({ lora: l, strength: baseAt[l.key] ?? l.strength }));
+	// AUTEUR_TURBO_KEY swaps BASE's speed distillation for one of the alternatives
+	// — the whole entry, file and strength, never both at once. Unset or unknown
+	// leaves BASE exactly as it is.
+	const alt = TURBO_ALTERNATIVES.find((l) => l.key === (env.AUTEUR_TURBO_KEY || '').trim());
+	const base = alt ? BASE.map((l) => (l.key === 'turbo' ? alt : l)) : BASE;
+	const out = base.map((l) => ({ lora: l, strength: baseAt[l.key] ?? l.strength }));
 	for (const p of picks) {
 		const l = loraFor(p.key);
 		if (l && !BASE.some((b) => b.key === l.key)) out.push({ lora: l, strength: p.strength });

@@ -154,6 +154,41 @@ export const BASE: Lora[] = [
 ];
 
 /** Chosen per clip. Exactly one `act`, any number of `detail`. */
+/** Other speed distillations that can stand in for BASE's `turbo` — one at a time,
+ *  never stacked. Chosen server-side by AUTEUR_TURBO_KEY (bundle.server.ts,
+ *  stack()) so an A/B needs a restart and a key, not a code change.
+ *
+ *  Why these two: the H3 Acceleration Arena (crowd A/B, 2026-09) put the
+ *  LightX2V 8-step v1.0 and Larryvrh's turbo at the top, and several users
+ *  report better motion and audio from them than from the 4-step v0.1 that BASE
+ *  carries. Strengths are the authors' own: 1.0 for both. Steps stay at 8 —
+ *  Larry's README says 6–8 is the useful range and above 8 over-sharpens.
+ *  Larry's is trained on the t2v base and documented as working on the int8
+ *  convrot variants; whether it also lands on the fl2va graph is what the A/B
+ *  is for. */
+export const TURBO_ALTERNATIVES: Lora[] = [
+	{
+		key: 'turbo8',
+		label: 'LightX2V turbo 8-step v1.0',
+		file: 'minimax_h3_fl2v_lightx2v_turbo_8step_v1.0_resized_avg_rank_24_bf16.safetensors',
+		url: 'https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_8step_v1.0_resized_avg_rank_24_bf16.safetensors',
+		sha256: '8e05b7b982c3aff7deb692a188c8a8d8acaeff8a12abfe1aeac822fb8ee3f0b7',
+		strength: 1.0,
+		use: 'the speed distillation the step count is built around',
+		kind: 'base'
+	},
+	{
+		key: 'larry',
+		label: 'Larryvrh turbo v4-600 ema',
+		file: 'minimax_h3_turbo_v4_step600_ema.safetensors',
+		url: 'https://huggingface.co/larryvrh/MiniMax-H3-Turbo-Lora/resolve/main/minimax_h3_turbo_v4_step600_ema.safetensors',
+		sha256: '5f3a626cd72c93a8b9318d6760c510bc5092d2ab13aaba1f932c5bab07a416d3',
+		strength: 1.0,
+		use: 'the speed distillation the step count is built around',
+		kind: 'base'
+	}
+];
+
 export const CATALOGUE: Lora[] = [
 	{
 		key: 'bj',
