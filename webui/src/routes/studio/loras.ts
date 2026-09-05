@@ -165,7 +165,17 @@ export const BASE: Lora[] = [
  *  Larry's README says 6–8 is the useful range and above 8 over-sharpens.
  *  Larry's is trained on the t2v base and documented as working on the int8
  *  convrot variants; whether it also lands on the fl2va graph is what the A/B
- *  is for. */
+ *  was for.
+ *
+ *  MEASURED 2026-09-06, and the answer is no — do not switch to these. Same
+ *  seed, same request, our stack (bj 1.2, cum 0.8, realism, mystic, 8 steps):
+ *  both came back with the anatomy gone — detached genitals floating before
+ *  the face, limbs multiplied or merged, a face-sized organ, the camera
+ *  yanked into a tight POV — while the 4-step v0.1 held the framing and the
+ *  bodies. Speed was identical (232/239/242 s). The arena ranked these on
+ *  plain clips with no adapters; our adapter stack is tuned to the v0.1 and
+ *  collapses under the others. Kept only so the switch has something to
+ *  point at when a future stack is re-tuned. */
 export const TURBO_ALTERNATIVES: Lora[] = [
 	{
 		key: 'turbo8',
