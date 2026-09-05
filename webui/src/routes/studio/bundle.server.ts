@@ -125,3 +125,25 @@ export function absoluteGraphUrl(yaml: string, reqUrl: URL): string {
 	sibling.search = '';
 	return yaml.replace(/^url:\s*workflow\.json\s*$/m, `url: ${sibling.href}`);
 }
+
+/** Civitai downloads, served from a mirror of our own when one is named.
+ *
+ *  Hannes's hosted harness does not fetch from Civitai — no token in its
+ *  sandbox, and none is going to be put there for every workspace that names a
+ *  LoRA. What it does fetch is a plain url, and beside it `<url>.sha256`, a
+ *  text file holding the checksum it verifies against. So each Civitai entry
+ *  (which already carries a `filename:` and a `sha256:`) is pointed at
+ *  `${AUTEUR_MODEL_MIRROR}/<filename>`, where the studio — or later a bucket —
+ *  serves the file and its sidecar. Unset, nothing changes: the local harness
+ *  has the token and fetches Civitai itself.
+ */
+export function mirrorCivitai(yaml: string): string {
+	const base = (env.AUTEUR_MODEL_MIRROR || '').replace(/\/+$/, '');
+	if (!base) return yaml;
+	// `url:` line, then (same indent) the `filename:` line — the two are
+	// adjacent in every entry the library writes.
+	return yaml.replace(
+		/^(\s*-\s*url:\s*)https:\/\/civitai\.com\/[^\n]*\n(\s*filename:\s*)([^\s]+)\s*$/gm,
+		(_m, pre, mid, filename) => `${pre}${base}/${filename}\n${mid}${filename}`
+	);
+}

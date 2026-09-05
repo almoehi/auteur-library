@@ -28,7 +28,7 @@
  */
 import { error, text } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { absoluteGraphUrl } from '../../../../bundle.server';
+import { absoluteGraphUrl, mirrorCivitai } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -132,7 +132,9 @@ const QUANT_ATTN = true;
  *  (the workflow sits with endpoint_id null and the task at `running`). The
  *  Sage handling below follows the card, so the override is safe to flip. */
 const CARD = (env.AUTEUR_GPU_CARD || 'h100').trim();
-const SAGE_BLIND = ['h100', 'l40s'];
+// b200 is treated as blind until a Sage build for sm100 is seen working in the
+// compute image; losing the patch costs speed, keeping it wrongly costs the render.
+const SAGE_BLIND = ['h100', 'l40s', 'b200'];
 
 const OUR = {
 	sageKj: 'our_sage_kj',
@@ -877,7 +879,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		);
 	}
 	if (file === 'workflow.yaml' || file === 'workflow.yml') {
-		return text(absoluteGraphUrl(await buildYaml(entries), url), {
+		return text(mirrorCivitai(absoluteGraphUrl(await buildYaml(entries), url)), {
 			headers: { 'content-type': 'text/yaml' }
 		});
 	}

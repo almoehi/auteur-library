@@ -273,6 +273,9 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				'GROK_API_KEY is not set — copy it from ~/auteur/.env into webui/.env and restart the dev server.'
 		});
 	}
+	// The key the YAML carries. The hosted harness resolves credentials itself and
+	// must not receive them inline; the local build reads them from the YAML.
+	const yamlKey = hostedHarness() ? '' : grokKey;
 
 	let payload: {
 		brief?: Brief;
@@ -315,7 +318,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
 		let sheetYaml: string;
 		try {
-			sheetYaml = composeSheetWorkspace(spec, grokKey);
+			sheetYaml = composeSheetWorkspace(spec, yamlKey);
 		} catch (e) {
 			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
 		}
@@ -476,7 +479,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 
 		let contYaml: string;
 		try {
-			contYaml = composeContinuationWorkspace(spec, grokKey);
+			contYaml = composeContinuationWorkspace(spec, yamlKey);
 		} catch (e) {
 			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
 		}
@@ -615,7 +618,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		pruneStashes(20, spec.slug);
 		let directYaml: string;
 		try {
-			directYaml = composeDirectWorkspace(spec, grokKey);
+			directYaml = composeDirectWorkspace(spec, yamlKey);
 		} catch (e) {
 			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
 		}
@@ -685,7 +688,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	try {
 		if (stage === 'planning') {
 			workspaceId = briefToWorkspaceId(brief);
-			yaml = composePlanningWorkspace(brief, overrides, grokKey);
+			yaml = composePlanningWorkspace(brief, overrides, yamlKey);
 		} else {
 			// The render workspace's planner prompt carries the approved planning
 			// documents inline — the two workspaces share nothing on the harness

@@ -328,6 +328,11 @@ function profilesBlock(seed: number): string {
  *  the intended channel rather than a trick.
  */
 function modelsBlock(grokKey: string): string {
+	// An empty key means the harness supplies its own — the hosted build resolves
+	// model credentials from its environment and Hannes asked that none travel in
+	// the YAML. The local build has no such path (see above), so the studio only
+	// passes an empty key when it is talking to the hosted harness.
+	const keyLines = grokKey ? `\n      apiKeys:\n        token: ${yamlDoubleQuoted(grokKey)}` : '';
 	return `  # Model registry. The key travels on each model — see modelsBlock() for why.
   #
   # Everything runs on Grok because everything has to read the content: the
@@ -345,9 +350,7 @@ function modelsBlock(grokKey: string): string {
       name: "Grok 4.5 (xAI)"
       provider: grok
       model: "grok-4.5"
-      endpoint: "https://api.x.ai/v1"
-      apiKeys:
-        token: ${yamlDoubleQuoted(grokKey)}
+      endpoint: "https://api.x.ai/v1"${keyLines}
       streaming: false
       reasoningEffort: default
       temperature: 0.7
@@ -361,9 +364,7 @@ function modelsBlock(grokKey: string): string {
       name: "Grok 4.20 non-reasoning (xAI)"
       provider: grok
       model: "grok-4.20-0309-non-reasoning"
-      endpoint: "https://api.x.ai/v1"
-      apiKeys:
-        token: ${yamlDoubleQuoted(grokKey)}
+      endpoint: "https://api.x.ai/v1"${keyLines}
       streaming: false
       reasoningEffort: default
       temperature: 0.4
@@ -377,9 +378,7 @@ function modelsBlock(grokKey: string): string {
       name: "Grok 4.3 (xAI)"
       provider: grok
       model: "grok-4.3"
-      endpoint: "https://api.x.ai/v1"
-      apiKeys:
-        token: ${yamlDoubleQuoted(grokKey)}
+      endpoint: "https://api.x.ai/v1"${keyLines}
       streaming: false
       reasoningEffort: default
       temperature: 0.4

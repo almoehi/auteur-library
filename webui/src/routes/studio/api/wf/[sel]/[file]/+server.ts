@@ -22,7 +22,7 @@
 import { error, text } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { contentTypeFor, readStashed, stashedNames } from '../../../../refstash.server';
-import { absoluteGraphUrl, modelBlock, stack, writeLoraStack } from '../../../../bundle.server';
+import { absoluteGraphUrl, mirrorCivitai, modelBlock, stack, writeLoraStack } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -61,7 +61,9 @@ const LOADER_NODE = '674';
  *  (the workflow sits with endpoint_id null and the task at `running`). The
  *  Sage handling below follows the card, so the override is safe to flip. */
 const CARD = (env.AUTEUR_GPU_CARD || 'h100').trim();
-const SAGE_BLIND = ['h100', 'l40s'];
+// b200 is treated as blind until a Sage build for sm100 is seen working in the
+// compute image; losing the patch costs speed, keeping it wrongly costs the render.
+const SAGE_BLIND = ['h100', 'l40s', 'b200'];
 
 const SAGE_KJ = '157';
 const SAGE_MM = '663';
@@ -334,7 +336,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		return text(buildJson(entries, refs), { headers: { 'content-type': 'application/json' } });
 	}
 	if (file === 'workflow.yaml' || file === 'workflow.yml') {
-		return text(absoluteGraphUrl(buildYaml(entries, refs), url), {
+		return text(mirrorCivitai(absoluteGraphUrl(buildYaml(entries, refs), url)), {
 			headers: { 'content-type': 'text/yaml' }
 		});
 	}
