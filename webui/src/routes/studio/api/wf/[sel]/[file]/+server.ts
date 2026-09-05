@@ -96,6 +96,12 @@ function fitSageForCard(
 	if (!SAGE_BLIND.includes(CARD)) return;
 	delete graph[SAGE_MM];
 	sol.inputs.model = [SAGE_KJ, 0];
+	// The switchable patch is switched off here too, not left to the harness's
+	// per-card override: that override knows h100 and l40s and nothing newer, so
+	// on a b200 `auto` stayed on and the sampler died with
+	// "Unsupported CUDA architecture: sm100" (2026-09-06). The card list is ours;
+	// the graph should already say what the card can run.
+	kj.inputs = { ...(kj.inputs ?? {}), sage_attention: 'disabled' };
 }
 
 
@@ -304,7 +310,7 @@ function buildYaml(entries: { lora: Lora; strength: number }[], refs: string[] =
 		`      description: "SageAttention mode. Left to the harness, which forces it to disabled on the cards whose compute image has no sm89/sm90 kernels and leaves it alone elsewhere."\n` +
 		`      binding: sage_attention@${SAGE_KJ}\n` +
 		`      required: false\n` +
-		`      default: auto\n`;
+		`      default: ${SAGE_BLIND.includes(CARD) ? 'disabled' : 'auto'}\n`;
 	if (!withPorts.includes('\n  outputs:')) {
 		throw error(500, 'the base bundle has no outputs: section — it has been re-exported');
 	}

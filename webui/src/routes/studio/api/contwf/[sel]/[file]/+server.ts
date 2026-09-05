@@ -231,7 +231,13 @@ function fitOurModelPath(graph: Graph, entries: ReturnType<typeof stack>): void 
 	// bundle: off on the h100, on wherever it runs.
 	graph[OUR.sageKj] = {
 		class_type: 'PathchSageAttentionKJ',
-		inputs: { sage_attention: 'auto', allow_compile: false, model: [N.unet, 0] }
+		inputs: {
+			// Off outright on the cards that cannot run it — the harness's own override
+			// only knows h100 and l40s (b200 died on `auto`, sm100).
+			sage_attention: SAGE_BLIND.includes(CARD) ? 'disabled' : 'auto',
+			allow_compile: false,
+			model: [N.unet, 0]
+		}
 	};
 
 	// The second patch, only where it can run.
@@ -815,7 +821,7 @@ async function buildYaml(entries: ReturnType<typeof stack>): Promise<string> {
 		`      description: "SageAttention mode. Left to the harness, which forces it to disabled on the cards whose compute image has no sm89/sm90 kernels and leaves it alone elsewhere."\n` +
 		`      binding: sage_attention@${OUR.sageKj}\n` +
 		`      required: false\n` +
-		`      default: auto\n` +
+		`      default: ${SAGE_BLIND.includes(CARD) ? 'disabled' : 'auto'}\n` +
 		`    - name: seed\n` +
 		`      kind: int\n` +
 		`      description: "Noise seed. -1 draws a new one, so a second take differs from the first."\n` +
