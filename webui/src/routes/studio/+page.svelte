@@ -6444,6 +6444,44 @@
 	 chat client converges on. 100dvh (not vh) keeps it correct on mobile Safari,
 	 where the URL bar changes the viewport height mid-scroll. -->
 <div class="studio flex h-[100dvh] overflow-hidden">
+	<!-- The name and the control that opens the list, in the page's own corner.
+		 There were two of these — one in the rail, one in the main column, each
+		 shown when the other was not — on the theory that they sat at the same
+		 point and so nothing appeared to move. They did sit at the same point,
+		 until the layout beside them changed: the main column now starts after the
+		 rail's reserved space, so the closed copy was drawn a rail's width in and
+		 the wordmark jumped sideways every time the list was opened or shut.
+
+		 Two things that must stay in one place cannot be two things. This is one
+		 header, fixed to the viewport, above both the rail and the page: it is
+		 drawn once, it cannot be moved by anything either of them does, and the
+		 panel slides out from under it. -->
+	<header class="fixed top-0 left-0 z-50 flex h-12 items-center gap-2.5 px-3">
+		<button
+			type="button"
+			aria-label={sidebarOpen ? 'hide past productions' : 'show past productions'}
+			aria-expanded={sidebarOpen}
+			onclick={() => setNavOpen(!sidebarOpen)}
+			class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+		>
+			<!-- Three rules, the last one short. It reads as a list that can be
+					 pulled open rather than as a menu, and the ragged end keeps it from
+					 sitting like a block of three identical bars. -->
+			<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
+				<path
+					d="M2.5 4h11M2.5 8h11M2.5 12h7"
+					stroke="currentColor"
+					stroke-width="1.5"
+					stroke-linecap="round"
+				/>
+			</svg>
+		</button>
+		<!-- The product's name, at a size a name is set at. It was ten pixels of
+			 letterspaced caps in the faintest colour on the page — the least legible
+			 text in the app was the thing it is called. -->
+		<h1 class="font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
+	</header>
+
 	<!-- ── past productions ────────────────────────────────────────────────────
 	     Off-canvas below lg, because the transcript is the page on a phone and a
 	     permanent rail would take a third of it. Above lg it is simply there:
@@ -6462,34 +6500,8 @@
 			? 'translate-x-0 lg:translate-x-0'
 			: '-translate-x-full lg:hidden'}"
 	>
-		<!-- The control that closes the rail sits in the rail, at the same point on
-			 the screen it occupies when the rail is shut. It never appears to move;
-			 the panel slides out from under it. Putting it in the main header only
-			 meant the button and the thing it opened were in two different places. -->
-		<div class="flex h-12 shrink-0 items-center gap-2.5 px-3">
-			<button
-				type="button"
-				aria-label="hide past productions"
-				aria-expanded="true"
-				onclick={() => setNavOpen(false)}
-				class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
-			>
-				<!-- Three rules, the last one short. It reads as a list that can be
-	 pulled open rather than as a menu, and the ragged end keeps it from
-	 sitting like a block of three identical bars. -->
-				<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
-					<path
-						d="M2.5 4h11M2.5 8h11M2.5 12h7"
-						stroke="currentColor"
-						stroke-width="1.5"
-						stroke-linecap="round"
-					/>
-				</svg>
-			</button>
-			<h1 class="truncate font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">
-				Auteur
-			</h1>
-		</div>
+		<!-- The room the fixed header stands in. The rail's list begins below it. -->
+		<div class="h-12 shrink-0" aria-hidden="true"></div>
 
 		<!-- The two doors, named apart.
 			 They were one radio pair inside the composer's format menu, which put a
@@ -6792,38 +6804,9 @@
 	{/if}
 
 	<main class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-		<!-- Pinned to the page's left edge, not to the centre column: this is the
-			 same point the rail's own toggle occupies, so the control stays put and
-			 the panel slides out from under it. Inside the centred wrapper it sat a
-			 hundred and twenty pixels in, and the rail then opened from somewhere
-			 else entirely — the button and the thing it opened in two places. -->
-		<header class="flex h-12 shrink-0 items-center gap-2.5 px-3">
-			{#if !sidebarOpen}
-				<button
-					type="button"
-					aria-label="show past productions"
-					aria-expanded="false"
-					class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
-					onclick={() => setNavOpen(true)}
-				>
-					<!-- Three rules, the last one short. It reads as a list that can be
-	 pulled open rather than as a menu, and the ragged end keeps it from
-	 sitting like a block of three identical bars. -->
-					<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
-						<path
-							d="M2.5 4h11M2.5 8h11M2.5 12h7"
-							stroke="currentColor"
-							stroke-width="1.5"
-							stroke-linecap="round"
-						/>
-					</svg>
-				</button>
-				<!-- The product's name, at a size a name is set at. It was ten pixels
-						 of letterspaced caps in the faintest colour on the page — the least
-						 legible text in the app was the thing it is called. -->
-				<h1 class="font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
-			{/if}
-		</header>
+		<!-- The same room on this side, so the transcript starts below the header
+			 rather than under it. -->
+		<div class="h-12 shrink-0" aria-hidden="true"></div>
 
 		<!-- 66rem only when the task rail is beside it and needs the room. On its
 			 own a reading column that wide is not a measure, it is a stretch: the
