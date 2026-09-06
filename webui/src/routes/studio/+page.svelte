@@ -2017,6 +2017,22 @@
 			shotBusy[itemId] = false;
 			c.phase = undefined;
 			c.busySince = undefined;
+			// A press that never reached a GPU gives the surface back.
+			//
+			// The clock is started by the press and was only ever stopped by a clip
+			// arriving, so every way this can fail — the writer returning nothing,
+			// the checker's changes, a continuation whose clip is no longer the one
+			// being continued, a throw — left the loader running over nothing. The
+			// error said so and the loader disagreed with it, and dismissing the
+			// error handed back a stage counting toward a render that was never
+			// dispatched. Read from the card rather than tracked through the three
+			// exits: what matters is whether a clip is actually on its way.
+			const started = c.cardId ? chat.find((x) => x.id === c.cardId) : undefined;
+			if (STAGE_UI && !started?.shot?.launched) {
+				stageStartedAt = 0;
+				stageWaitFrom = '';
+				stageWaitBlurUrl = '';
+			}
 			persist();
 		}
 	}
@@ -5687,29 +5703,29 @@
 		startContinue(stageContinuable);
 	});
 
-	/** A round that stopped and is waiting to be sent again.
+	/** The round the operator is in the middle of: streaming, waiting to be
+	 *  agreed with, or stopped and waiting to be sent again.
 	 *
-	 *  The confirm card carries this — the checker's changes, or an error — and
-	 *  the stage does not draw cards, so a session that stopped here came back
-	 *  looking brand new: welcome screen, no clip, no message, nothing to press.
-	 *  The work was not lost, only unreachable. This is the way back to it.
+	 *  All three at once, on purpose. They were split before — the stage drew
+	 *  only a round that had already finished arriving, and took the loader for
+	 *  everything up to it — which put "Generating" over a read-back nobody had
+	 *  agreed to yet, then produced the finished sentence in one go. The
+	 *  read-back exists to be watched while it is still free to change; a
+	 *  surface that hides the writing and shows only the verdict is the
+	 *  automatic accept again, wearing a spinner.
 	 *
-	 *  Only when nothing else is happening: a round left behind by a shot that
-	 *  went on to render anyway is history, not a prompt for action. */
-	let stageStuck = $derived(
+	 *  Never over a render. Once the clock is running the round has been agreed
+	 *  and the clip is what the stage is for, and a round left behind by a shot
+	 *  that went on to render is history rather than a prompt for action. */
+	let stageRound = $derived(
 		(() => {
-			if (stageClockFrom || sending) return null;
+			if (stageClockFrom) return null;
 			for (let i = chat.length - 1; i >= 0; i--) {
 				const c = chat[i].confirm;
 				if (!c) continue;
 				const card = c.cardId ? chat.find((x) => x.id === c.cardId) : null;
 				if (card?.shot?.launched) return null;
-				// Anything that has been read back and not yet shot: the ordinary
-				// case, where the sentence is waiting to be agreed with, as much as
-				// the two unhappy ones. They are the same state — a round that will
-				// not move until somebody presses — and splitting them left the
-				// ordinary one with nothing to draw it.
-				if (c.error || c.fixed?.length || (!c.sent && !c.streaming && c.line.trim())) {
+				if (c.error || c.fixed?.length || c.streaming || (!c.sent && c.line.trim())) {
 					return chat[i];
 				}
 				return null;
@@ -5718,6 +5734,22 @@
 		})()
 	);
 
+	/** The message a round is an answer to.
+	 *
+	 *  Usually its own `said`. A round raised by a moved setting has none — it
+	 *  answers the composer rather than a sentence — and in the transcript that
+	 *  is fine, because the message it is still about is a few lines up. The
+	 *  stage shows one round and nothing above it, so it carries the request
+	 *  forward rather than drawing a reply to an empty screen. */
+	function roundRequest(item: ChatItem): string {
+		const at = chat.indexOf(item);
+		for (let i = at; i >= 0; i--) {
+			const said = chat[i].confirm?.said?.trim();
+			if (said) return said;
+		}
+		return '';
+	}
+
 	/** Whether the strip is on screen at all.
 	 *
 	 *  Named because two places need the same answer and they had drifted: the
@@ -5725,16 +5757,19 @@
 	 *  it clear of the picture was only applied when there was more than one
 	 *  thumbnail. One clip plus one pending tile satisfied the first and not the
 	 *  second, so the strip sat on top of the video. */
-	let stagePhaseIsWorking = $derived(!stageError && (stageClockFrom || sending));
+	/** `sending` still counts, for the sends that have no round to show: a photo
+	 *  going up, a character or a location sheet being written. A clip's own send
+	 *  raises its round in the same tick, so the loader never gets the read-back. */
+	let stagePhaseIsWorking = $derived(!stageError && !stageRound && (stageClockFrom || sending));
 	let showStrip = $derived(stageThumbs.length > 1 || !!stagePhaseIsWorking);
 
 	let stagePhase = $derived(
 		stageError
 			? 'error'
-			: stageClockFrom || sending
-				? 'working'
-				: stageStuck
-					? 'stuck'
+			: stageRound
+				? 'round'
+				: stageClockFrom || sending
+					? 'working'
 					: stageClip
 						? 'ready'
 						: 'empty'
@@ -6104,6 +6139,88 @@
 			</div>
 		{/if}
 	</div>
+{/snippet}
+
+{#snippet confirmReply(item: ChatItem, canPress: boolean)}
+	{#if item.confirm}
+		{@const c = item.confirm}
+		{@const parts = splitConfirm(c.line)}
+		<!-- What is about to be shot, in the operator's own language.
+		     Deliberately plain: no card chrome, no heading, no label saying what it
+		     is. It reads as the studio answering, because that is what it is — and a
+		     box around it would make it look like a form to fill in rather than a
+		     sentence to agree with.
+
+		     One drawing, two surfaces. The stage grew its own version of this — the
+		     same three parts, centred in a 16:9 box, at rest — and the two designs
+		     drifted the moment there were two of them. `canPress` is the only thing
+		     the callers disagree about: the transcript shows the button on the newest
+		     unlaunched round and nowhere else, because an older round is a step in
+		     the conversation rather than an order you can still place; the stage
+		     shows one round and it is always that one. -->
+		<div class="enter">
+			<!-- What this paragraph is, and what to do with it. Without it the studio
+			     answers a request with three sentences of prose and no frame: it could
+			     be a plan, a summary, or something that already happened.
+
+			     Written by the model, not by us. A fixed label says the same eleven
+			     words to the fortieth clip as to the first. -->
+			{#if parts.lead}
+				<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
+			{/if}
+			<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
+				{parts.said}{#if c.streaming && !parts.added}<span class="caret" aria-hidden="true"
+					></span>{/if}
+			</p>
+			{#if parts.added}
+				<!-- Ours, and it has to look it. Same size, quieter colour: it is not a
+				     footnote — it is half of what starts if the button is pressed — but
+				     it is an offer, and an offer that looks like a statement is not one. -->
+				<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
+					{parts.added}{#if c.streaming}<span class="caret" aria-hidden="true"></span>{/if}
+				</p>
+			{/if}
+
+			{#if c.error}
+				<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">{c.error}</p>
+			{/if}
+
+			<!-- The checker had to change the brief, so this is no longer the clip that
+			     was agreed to. It says what moved and waits: sending it anyway is a
+			     decision, and it is not ours. -->
+			{#if c.fixed?.length}
+				<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
+					Írás közben ezt igazítottuk rajta: {c.fixed.join(' · ')}
+				</p>
+			{/if}
+
+			{#if canPress && !c.streaming && c.line.trim()}
+				<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+					<button
+						type="button"
+						disabled={shotBusy[item.id]}
+						class="btn btn-primary"
+						onclick={() => acceptConfirm(item.id)}
+					>
+						{#if shotBusy[item.id]}
+							{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
+							{c.phase === 'writing' ? 'brief írása' : c.phase === 'starting' ? 'indítás' : 'indul'} ·
+							{clock(el)}
+						{:else if c.fixed?.length}
+							mehet így
+						{:else}
+							{c.continues ? 'Folytatás indítása' : 'Videó generálás indítása'}
+						{/if}
+					</button>
+					<!-- The cost, next to the thing that spends it. Not a warning — just the
+					     two numbers a person wants before they commit. -->
+					<span class="text-xs text-[var(--st-faint)]">
+						{composerShape.seconds}s{#if typicalClip}&nbsp;· {typicalLabel(typicalClip)}{/if}
+					</span>
+				</div>
+			{/if}
+		</div>
+	{/if}
 {/snippet}
 
 {#snippet document(blocks: Block[])}
@@ -6915,80 +7032,39 @@
 											>
 										</div>
 									</div>
-								{:else if stagePhase === 'stuck' && stageStuck?.confirm}
-									{@const c = stageStuck.confirm}
-									{@const parts = splitConfirm(c.line)}
-									{@const halted = !!c.error || !!c.fixed?.length}
-									<!-- The round that is waiting, and the way on from it.
-								 Two things arrive here. Usually it is the read-back: what the
-								 studio understood, offered while changing it is still free —
-								 which is the whole reason the read-back exists, and why the
-								 stage draws it rather than pressing the button itself.
-								 Sometimes it is a round that stopped, and then it says what
-								 happened in the checker's own words rather than a generic
-								 line: "the brief was changed" is not a reason, the changes
-								 are the reason. -->
+								{:else if stagePhase === 'round' && stageRound?.confirm}
+									{@const c = stageRound.confirm}
+									<!-- The request, in the operator's own words, in the shape the transcript
+									gives it. Absent on a round that answers a moved setting rather than a
+									message — there is no new sentence to show, so it keeps the one the
+									round is still about rather than leaving the reply talking to nobody. -->
+									{@const asked = c.said.trim() || roundRequest(stageRound)}
+									<!-- The round, drawn as what it is: an exchange.
+									
+									     The stage used to compose its own version of this — the same sentences,
+									     centred inside a 16:9 box the size of the clip that did not exist yet,
+									     with the button under them. It read as an alert rather than an answer,
+									     and it arrived all at once, finished, because the loader covered the
+									     whole of the writing. What the operator asked for is the transcript's
+									     own drawing: their line, then the studio's, flowing from the top of a
+									     reading column, a word at a time.
+									
+									     Only this round. The stage shows one thing and the chain is in the strip
+									     beside it; a transcript of every round is the transcript, and it is one
+									     switch away in full production. -->
 									<div
-										class="flex aspect-video h-full max-h-full max-w-full flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
+										class="scroller mx-auto flex min-h-0 w-full max-w-[48rem] flex-1 flex-col gap-5 overflow-y-auto px-1 pt-1"
 									>
-										{#if halted}
-											<p class="text-sm leading-relaxed text-[var(--st-muted)]">
-												{c.error ?? 'the brief was checked and changed before it could shoot'}
-											</p>
-											{#if c.fixed?.length}
-												<ul
-													class="max-w-md space-y-1 text-xs leading-relaxed text-[var(--st-faint)]"
+										{#if asked}
+											<div class="flex justify-end">
+												<p
+													class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
 												>
-													{#each c.fixed as f (f)}
-														<li>{f}</li>
-													{/each}
-												</ul>
-											{/if}
-										{:else}
-											<!-- The same three parts the transcript draws, in the stage's
-									     own middle: the model's opening line, what it understood,
-									     and what we added. Quieter for the addition, because it is
-									     an offer rather than a statement. -->
-											{#if parts.lead}
-												<p class="text-xs text-[var(--st-faint)]">{parts.lead}</p>
-											{/if}
-											<p class="doc max-w-xl text-sm leading-relaxed text-[var(--st-text)]">
-												{parts.said}
-											</p>
-											{#if parts.added}
-												<p class="doc max-w-xl text-sm leading-relaxed text-[var(--st-muted)]">
-													{parts.added}
+													{asked}
 												</p>
-											{/if}
+											</div>
 										{/if}
-										<div class="flex flex-wrap items-center justify-center gap-2.5">
-											<button
-												type="button"
-												disabled={shotBusy[stageStuck.id]}
-												onclick={() => acceptConfirm(stageStuck!.id)}
-												class="btn btn-primary btn-sm"
-											>
-												{#if shotBusy[stageStuck.id]}
-													{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
-													{c.phase === 'writing'
-														? 'brief írása'
-														: c.phase === 'starting'
-															? 'indítás'
-															: 'indul'} · {clock(el)}
-												{:else if halted}
-													mehet így
-												{:else}
-													{c.continues ? 'Folytatás indítása' : 'Videó generálás indítása'}
-												{/if}
-											</button>
-											<!-- The cost, next to the thing that spends it. Not a warning —
-									     just the two numbers a person wants before they commit. -->
-											<span class="text-xs text-[var(--st-faint)]">
-												{composerShape.seconds}s{#if typicalClip}&nbsp;· {typicalLabel(
-														typicalClip
-													)}{/if}
-											</span>
-										</div>
+										{@render confirmReply(stageRound, true)}
 									</div>
 								{:else if stagePhase === 'error'}
 									<div
@@ -7477,108 +7553,18 @@
 										</div>
 									</div>
 								{:else if item.kind === 'confirm' && item.confirm}
-									<!-- What is about to be shot, in the operator's own language.
-							     Deliberately plain: no card chrome, no heading, no label saying
-							     what it is. It reads as the studio answering, because that is
-							     what it is — and a box around it would make it look like a form
-							     to fill in rather than a sentence to agree with.
-
-							     The button only appears on the newest one. An older round is a
-							     step in the conversation, not an order you can still place, and
-							     two live buttons is two ways to shoot the wrong version. -->
+									<!-- The button only appears on the newest one. An older round is a step in
+									     the conversation, not an order you can still place, and two live buttons
+									     is two ways to shoot the wrong version. -->
 									{@const newest = chat.filter((c) => c.kind === 'confirm').at(-1)?.id === item.id}
-									<!-- Gone once its clip is on a GPU. It came back reading "start the
-							     render" over a render that was already running, and pressing it
-							     again wrote a second brief and paid for the same eight seconds
-							     twice. A started clip lives on the card below. -->
+									<!-- Gone once its clip is on a GPU. It came back reading "start the render"
+									     over a render that was already running, and pressing it again wrote a
+									     second brief and paid for the same eight seconds twice. A started clip
+									     lives on the card below. -->
 									{@const started = item.confirm.cardId
 										? !!chat.find((x) => x.id === item.confirm?.cardId)?.shot?.launched
 										: false}
-									{@const parts = splitConfirm(item.confirm.line)}
-									<div class="enter">
-										<!-- What this paragraph is, and what to do with it. Without it the
-								     studio answers a request with three sentences of prose and no
-								     frame: it could be a plan, a summary, or something that already
-								     happened, and the only clue that a decision is owed is a button
-								     below the fold.
-
-								     Written by the model, not by us. A fixed label says the same
-								     eleven words to the fortieth clip as to the first, and a room
-								     that says the same thing every time is a room with nobody in
-								     it. It costs nothing to be different each time — this is the
-								     one part of the answer allowed to sound like a person. -->
-										{#if parts.lead}
-											<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
-										{/if}
-										<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
-											{parts.said}{#if item.confirm.streaming && !parts.added}<span
-													class="caret"
-													aria-hidden="true"
-												></span>{/if}
-										</p>
-										{#if parts.added}
-											<!-- Ours, and it has to look it. Same size, quieter colour: it is
-									     not a footnote — it is half of what starts if the button is
-									     pressed — but it is an offer, and an offer that looks like a
-									     statement is not one. -->
-											<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
-												{parts.added}{#if item.confirm.streaming}<span
-														class="caret"
-														aria-hidden="true"
-													></span>{/if}
-											</p>
-										{/if}
-
-										{#if item.confirm.error}
-											<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
-												{item.confirm.error}
-											</p>
-										{/if}
-
-										<!-- The checker had to change the brief, so this is no longer the
-								     clip that was agreed to. It says what moved and waits: sending
-								     it anyway is a decision, and it is not ours. -->
-										{#if item.confirm.fixed?.length}
-											<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
-												Írás közben ezt igazítottuk rajta: {item.confirm.fixed.join(' · ')}
-											</p>
-										{/if}
-
-										{#if newest && !started && !item.confirm.streaming && item.confirm.line.trim()}
-											<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
-												<button
-													type="button"
-													disabled={shotBusy[item.id]}
-													class="btn btn-primary"
-													onclick={() => acceptConfirm(item.id)}
-												>
-													{#if shotBusy[item.id]}
-														{@const el = Math.max(
-															0,
-															Math.round((now - (item.confirm.busySince ?? now)) / 1000)
-														)}
-														{item.confirm.phase === 'writing'
-															? 'brief írása'
-															: item.confirm.phase === 'starting'
-																? 'indítás'
-																: 'indul'} · {clock(el)}
-													{:else if item.confirm.fixed?.length}
-														mehet így
-													{:else}
-														{item.confirm.continues
-															? 'Folytatás indítása'
-															: 'Videó generálás indítása'}
-													{/if}
-												</button>
-												<!-- The cost, next to the thing that spends it. Not a warning —
-										     just the two numbers a person wants before they commit. -->
-												<span class="text-xs text-[var(--st-faint)]">
-													{composerShape.seconds}s{#if typicalClip}&nbsp;·
-														{typicalLabel(typicalClip)}{/if}
-												</span>
-											</div>
-										{/if}
-									</div>
+									{@render confirmReply(item, newest && !started)}
 								{:else if item.kind === 'error'}
 									<!-- The card that launched the render this error is about, found by
 								 looking back rather than read off the item.
