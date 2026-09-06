@@ -6190,7 +6190,7 @@
 			     decision, and it is not ours. -->
 			{#if c.fixed?.length}
 				<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
-					Írás közben ezt igazítottuk rajta: {c.fixed.join(' · ')}
+					We adjusted this while writing it: {c.fixed.join(' · ')}
 				</p>
 			{/if}
 
@@ -6204,12 +6204,16 @@
 					>
 						{#if shotBusy[item.id]}
 							{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
-							{c.phase === 'writing' ? 'brief írása' : c.phase === 'starting' ? 'indítás' : 'indul'} ·
+							{c.phase === 'writing'
+								? 'writing the brief'
+								: c.phase === 'starting'
+									? 'opening the workspace'
+									: 'starting'} ·
 							{clock(el)}
 						{:else if c.fixed?.length}
-							mehet így
+							send it anyway
 						{:else}
-							{c.continues ? 'Folytatás indítása' : 'Videó generálás indítása'}
+							{c.continues ? 'Continue the clip' : 'Generate the video'}
 						{/if}
 					</button>
 					<!-- The cost, next to the thing that spends it. Not a warning — just the
@@ -6454,7 +6458,7 @@
 	{/if}
 
 	<aside
-		class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--st-line)] bg-[var(--st-bg)] transition-transform lg:static lg:z-auto {sidebarOpen
+		class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--st-line)] bg-[var(--st-bg)] transition-transform lg:static lg:z-auto xl:fixed xl:z-40 {sidebarOpen
 			? 'translate-x-0 lg:translate-x-0'
 			: '-translate-x-full lg:hidden'}"
 	>
@@ -6496,7 +6500,13 @@
 			 chat surface because a plan is a conversation.
 			 The names are the ones the menu already used. -->
 		<div class="px-3 pt-2 pb-2">
-			{#each [{ id: 'simple', label: 'New clip', hint: 'shots, chained by hand' }, { id: 'advanced', label: 'New full production', hint: 'screenplay first, then a scene list' }] as door (door.id)}
+			<!-- One door. The second one — a full production: a screenplay first, then a
+				 scene list shot from it — is a different product with a different
+				 surface, and offering it beside "New clip" asked a person to choose
+				 between the two before they had made anything at all. The mode is
+				 intact and a production already made still opens in it; it is simply
+				 not the first question the studio asks. -->
+			{#each [{ id: 'simple', label: 'New clip', hint: 'shots, chained by hand' }] as door (door.id)}
 				<button
 					type="button"
 					onclick={() => {
@@ -6765,43 +6775,14 @@
 			</div>
 		{/if}
 
-		<div
-			class="px-3 pt-1 pb-3 {sheets.length || films.length
-				? ''
-				: 'border-t border-[var(--st-line)]'}"
-		>
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a
-				href="/studio/admin"
-				class="flex min-h-10 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
-			>
-				<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" aria-hidden="true">
-					<path
-						d="M3 5h10M3 11h10"
-						stroke="currentColor"
-						stroke-width="1.5"
-						stroke-linecap="round"
-					/>
-					<circle
-						cx="6"
-						cy="5"
-						r="1.8"
-						fill="var(--st-bg)"
-						stroke="currentColor"
-						stroke-width="1.5"
-					/>
-					<circle
-						cx="10.5"
-						cy="11"
-						r="1.8"
-						fill="var(--st-bg)"
-						stroke="currentColor"
-						stroke-width="1.5"
-					/>
-				</svg>
-				Prompts &amp; models
-			</a>
-		</div>
+		<!-- The rail ends with the operator's own work.
+		     It carried a link to /studio/admin under it — the prompt and model
+		     registry, which is a workbench for whoever tunes the writers rather than
+		     somewhere a person making a clip has reason to go. In the hosted app it
+		     was worse than clutter: that route is not part of what ships there, so
+		     the one control in the rail that was not the operator's own work was
+		     also the one that led nowhere. The panel is reached by its own address
+		     wherever it is deployed. -->
 	</aside>
 
 	<!-- The rail takes 256px off the left when it opens. Matching that with an
@@ -9248,7 +9229,7 @@
 											<button
 												type="button"
 												onclick={() => (pickKind = 'character')}
-												class="flex cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-2.5 pl-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+												class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-3 pl-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
 											>
 												<span
 													class="flex size-5 shrink-0 items-center justify-center rounded-full ring-1 ring-[var(--st-line)]"
@@ -10244,11 +10225,19 @@
 		</div>
 	</main>
 
-	<!-- The rail takes 16rem off the left when it opens; this gives the same back
-		 on the right, so the reading column's centre stays on the screen's centre
-		 and opening the rail moves nothing. On a desktop the rail never reaches
-		 the column anyway, and a page that jumps sideways when you reveal a list
-		 punishes you for looking.
+	<!-- The counterweight, and the narrow band it is still needed in.
+		 Where the rail sits in the flow it takes 16rem off the left, and this gives
+		 the same back on the right so the reading column's centre stays on the
+		 screen's centre. It cost width to do it: 32rem of it, which is why opening
+		 the rail resized the composer and rewrapped every line of the answer above
+		 it. Centred is not the same as unchanged, and the composer is a control —
+		 a control that changes size when you open a list somewhere else has been
+		 moved by something that has nothing to do with it.
+
+		 So from xl up the rail floats over the left gutter instead (xl:fixed on the
+		 aside), where on a screen that wide it reaches nothing, and the page below
+		 it does not move at all. Between lg and xl there is no gutter to float in,
+		 so the rail keeps its place in the flow and this keeps the centre.
 
 		 A spacer rather than a padding rule on main: the rule has to be
 		 conditional, and a conditional Tailwind variant is not reliably found by
@@ -10256,7 +10245,7 @@
 		 pruner. Both failed silently. This is static classes inside an if, which
 		 cannot. Below lg the rail is an overlay and owes nothing. -->
 	{#if sidebarOpen}
-		<div class="hidden w-64 shrink-0 lg:block" aria-hidden="true"></div>
+		<div class="hidden w-64 shrink-0 lg:block xl:hidden" aria-hidden="true"></div>
 	{/if}
 
 	<!-- ── the film viewer ────────────────────────────────────────────────────────
@@ -10746,16 +10735,112 @@
 		--st-line-control: #4c4c52;
 		--st-text: var(--color-text);
 		--st-muted: var(--color-muted);
-		--st-faint: var(--color-faint);
-		--st-accent: var(--color-coral);
-		--st-green: var(--color-green);
-		--st-accent-strong: var(--color-coral-dark);
-		/* What sits on top of a filled accent surface. The accent is white now, so
-		 * this is the one that had to move with it. */
-		--st-on-accent: var(--color-on-accent);
+		/* One step below muted. A bare var(--color-faint) was wrong in a host that
+		 * has no such token: an unresolvable var() invalidates the whole
+		 * declaration, so every faint line inherited full text colour and the third
+		 * step of the hierarchy silently did not exist. The fallback is the
+		 * studio's own value, so it looks the same wherever it is mounted. */
+		--st-faint: var(--color-faint, #86868b);
+		--st-green: var(--color-green, #22c55e);
+		/* The accent is white, and it is the studio's own rather than the host's.
+		 *
+		 * It read var(--color-coral) — the host's accent — and in an app whose
+		 * coral is a hot pink the one control that spends GPU time became a hot
+		 * pink pill on black, which reads as a tube site rather than a studio and
+		 * put the loudest thing on the view on a button instead of on the picture
+		 * the view exists for. The standalone app has always had this right: its
+		 * own accent token IS white. So the studio names white directly, spends it
+		 * once per view, and keeps colour for the semantic layer — the activity
+		 * dots, the error card — where it means something. */
+		--st-accent: var(--st-text);
+		--st-accent-strong: #fff;
+		--st-on-accent: var(--st-bg);
 		background: var(--st-bg);
 		color: var(--st-text);
 		font-family: var(--font-body);
+	}
+
+	/* ── buttons ──────────────────────────────────────────────────────────────
+	 * Four kinds and no fifth. These live in the studio's own stylesheet in the
+	 * standalone app and did not come across with it, so all twenty-six buttons
+	 * in here rendered as bare text on a bare background: the one control that
+	 * spends GPU time looked like a bolder sentence, which is exactly the thing
+	 * a primary button exists not to be.
+	 *
+	 *   .btn-primary    the one thing on a view that spends GPU time or cannot
+	 *                   be undone. Filled with the accent. ONE per view.
+	 *   .btn-secondary  the ordinary action. Filled with a surface, so it reads
+	 *                   as a control without competing with the primary.
+	 *   .btn-quiet      dismiss, cancel, "not now". No fill until you reach it.
+	 *   .btn-danger     destroys something that cost money. The only red.
+	 *
+	 * One height, one radius, one weight per kind. .btn-sm is the only size
+	 * modifier, for controls sitting inside a card's own furniture. */
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		min-height: 2.25rem;
+		padding-inline: 1.125rem;
+		border-radius: 9999px;
+		font-family: var(--font-body);
+		font-size: 0.875rem;
+		font-weight: 500;
+		white-space: nowrap;
+		cursor: pointer;
+		transition: background-color 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+	}
+	.btn:disabled {
+		cursor: default;
+		opacity: 0.4;
+	}
+	.btn-sm {
+		min-height: 2rem;
+		padding-inline: 0.875rem;
+		font-size: 0.8125rem;
+	}
+	/* The accent, filled, and the strip already taught this language: the clip you
+	 * are looking at is the one lit with --st-text. */
+	.btn-primary {
+		background: var(--st-accent);
+		color: var(--st-on-accent);
+		font-weight: 600;
+	}
+	.btn-primary:hover:not(:disabled) {
+		background: var(--st-accent-strong);
+	}
+	.btn-primary:disabled {
+		background: var(--st-surface-2);
+		color: var(--st-faint);
+		opacity: 1;
+	}
+	.btn-secondary {
+		background: var(--st-surface-2);
+		/* Muted, not full text. On a filled pill the label was as bright as the
+		 * primary's, so a row of them read as a row of equals and the eye had to
+		 * work out which one mattered. */
+		color: var(--st-muted);
+	}
+	.btn-secondary:hover:not(:disabled) {
+		background: var(--st-line);
+		color: var(--st-text);
+	}
+	.btn-quiet {
+		background: none;
+		color: var(--st-muted);
+	}
+	.btn-quiet:hover:not(:disabled) {
+		background: var(--st-surface);
+		color: var(--st-text);
+	}
+	.btn-danger {
+		background: var(--st-surface-2);
+		color: #f2938a;
+	}
+	.btn-danger:hover:not(:disabled) {
+		background: #5c2f24;
+		color: #f7ded9;
 	}
 
 	/* Headings and the wordmark carry the display face, the way they do across
