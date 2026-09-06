@@ -1333,15 +1333,20 @@
 		shrink(composer);
 		pushItem({ who: 'user', kind: 'text', text });
 		sending = true;
-		// The stage starts waiting on the press, not on the dispatch. Everything
-		// between the two — the read-back, the brief, the workspace — is machinery
-		// the operator asked not to be shown, and a surface that stays empty while
-		// it runs reads as a button that did nothing.
-		if (STAGE_UI) {
-			stageStartedAt = Date.now();
-			stageWaitFrom = stageNewest?.id ?? '';
-			stageWaitBlurUrl = continuing ? (stageNewest?.artifact?.files?.[0]?.url ?? '') : '';
-		}
+		// The stage's clock does not start here.
+		//
+		// It used to: everything between the send and the clip was machinery the
+		// operator asked not to be shown, so the loader stood in for all of it and
+		// a surface that stayed empty read as a button that did nothing. That held
+		// while the read-back was accepted automatically and the send really did
+		// run to a render.
+		//
+		// It no longer does. There is a decision in the middle now, and a loader
+		// over it hides the one thing the operator is being asked to look at —
+		// `working` outranks every other stage phase, so the sentence never gets
+		// drawn. The clock starts on the press instead, in acceptConfirm; until
+		// then `sending` covers the read-back's own second or two, which is honest,
+		// because during it something is genuinely happening.
 		try {
 			// Simple mode never plans. Every message is a scene to render, and the
 			// answer is the prompt itself — offered for reading and editing before
@@ -1918,6 +1923,15 @@
 		shotBusy[itemId] = true;
 		c.busySince = Date.now();
 		c.error = undefined;
+		// This is the press the stage waits on. From here to the clip is the
+		// machinery nobody asked to watch — the brief, the checker, the workspace,
+		// the GPU — so the loader covers all of it, and the blur underneath is the
+		// clip this one grows out of when it is a continuation.
+		if (STAGE_UI) {
+			stageStartedAt = Date.now();
+			stageWaitFrom = stageNewest?.id ?? '';
+			stageWaitBlurUrl = c.continues ? (stageNewest?.artifact?.files?.[0]?.url ?? '') : '';
+		}
 		try {
 			// Second press: the brief already exists and was shown, changes and all.
 			// Write it again and the operator is shown one set of changes and shoots
