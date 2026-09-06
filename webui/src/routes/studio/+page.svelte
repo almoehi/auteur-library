@@ -6246,6 +6246,81 @@
 	{/if}
 {/snippet}
 
+{#snippet filmReel()}
+	<!-- The reel. Whole clips only — that is the line between a strip and
+ an editor, and the one that keeps this from becoming a tool you
+ have to learn. -->
+	<div class="enter mb-2 flex items-center gap-2.5 px-2">
+		<button
+			type="button"
+			aria-label="play the film"
+			onclick={() => openFilmViewer(0)}
+			class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[0.7rem] text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control)]"
+		>
+			▶
+		</button>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5"
+			ondragover={(e) => {
+				if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
+			}}
+			ondrop={(e) => dropClipIntoFilm(e)}
+		>
+			{#each film as c, i (filmKey(c))}
+				{#if i}
+					<span
+						class="relative w-1.5 shrink-0 self-stretch"
+						aria-hidden="true"
+						class:seam-jump={seamJumps(i)}
+					></span>
+				{/if}
+				<button
+					type="button"
+					aria-label="shot {i + 1}"
+					draggable="true"
+					ondragstart={(e) => e.dataTransfer?.setData('text/plain', String(i))}
+					ondragover={(e) => e.preventDefault()}
+					ondrop={(e) => {
+						if (e.dataTransfer?.types.includes(CLIP_DRAG)) return;
+						e.preventDefault();
+						moveInFilm(Number(e.dataTransfer?.getData('text/plain')), i);
+					}}
+					onclick={(e) => {
+						const r = e.currentTarget.getBoundingClientRect();
+						if (e.clientX > r.right - 22 && e.clientY < r.top + 22) dropFromFilm(i);
+						else openFilmViewer(i);
+					}}
+					class="group relative aspect-video w-[5.4rem] shrink-0 cursor-grab overflow-hidden rounded-lg bg-[var(--st-surface)] active:cursor-grabbing"
+				>
+					<!-- svelte-ignore a11y_media_has_caption -->
+					<video
+						src={fileUrl(c.workspace, c.artifact, c.file)}
+						muted
+						loop
+						playsinline
+						preload="auto"
+						use:looping
+						class="h-full w-full bg-black object-cover"
+					></video>
+					<span
+						class="pointer-events-none absolute top-0.5 right-0.5 flex size-[1.1rem] items-center justify-center rounded-full bg-black/60 text-[0.65rem] text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+						>✕</span
+					>
+				</button>
+			{/each}
+		</div>
+		<button
+			type="button"
+			disabled={film.length < 2 || filmBusy}
+			onclick={exportFilm}
+			class="shrink-0 cursor-pointer rounded-full bg-[var(--st-text)] px-3.5 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-text)]"
+		>
+			{filmBusy ? 'assembling…' : 'Export'}
+		</button>
+	</div>
+{/snippet}
+
 {#snippet document(blocks: Block[])}
 	<div class="space-y-3.5 text-[0.95rem] leading-[1.7] text-[var(--st-text)]">
 		{#each blocks as b, i (i)}
@@ -8864,7 +8939,11 @@
 						 it when this row was usually full. It is not: with no hint and no
 						 film it is an empty band holding the status line a centimetre clear
 						 of the box it is reporting on. -->
-								{#if composerHint || film.length}
+								<!-- Standing on the stage for the same reason the reel's band is: this row
+								     appears the moment there is a film to count, and appearing is height, and
+								     height is the picture's width. Off the stage it keeps its old behaviour,
+								     where an empty row is only an empty row. -->
+								{#if composerHint || film.length || (STAGE_UI && mode === 'simple')}
 									<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
 										<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
 										<span class="flex-1"></span>
@@ -8896,79 +8975,29 @@
 									</div>
 								{/if}
 
-								{#if film.length && filmOpen}
-									<!-- The reel. Whole clips only — that is the line between a strip and
-							 an editor, and the one that keeps this from becoming a tool you
-							 have to learn. -->
-									<div class="enter mb-2 flex items-center gap-2.5 px-2">
-										<button
-											type="button"
-											aria-label="play the film"
-											onclick={() => openFilmViewer(0)}
-											class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[0.7rem] text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control)]"
-										>
-											▶
-										</button>
-										<!-- svelte-ignore a11y_no_static_element_interactions -->
-										<div
-											class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5"
-											ondragover={(e) => {
-												if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
-											}}
-											ondrop={(e) => dropClipIntoFilm(e)}
-										>
-											{#each film as c, i (filmKey(c))}
-												{#if i}
-													<span
-														class="relative w-1.5 shrink-0 self-stretch"
-														aria-hidden="true"
-														class:seam-jump={seamJumps(i)}
-													></span>
-												{/if}
-												<button
-													type="button"
-													aria-label="shot {i + 1}"
-													draggable="true"
-													ondragstart={(e) => e.dataTransfer?.setData('text/plain', String(i))}
-													ondragover={(e) => e.preventDefault()}
-													ondrop={(e) => {
-														if (e.dataTransfer?.types.includes(CLIP_DRAG)) return;
-														e.preventDefault();
-														moveInFilm(Number(e.dataTransfer?.getData('text/plain')), i);
-													}}
-													onclick={(e) => {
-														const r = e.currentTarget.getBoundingClientRect();
-														if (e.clientX > r.right - 22 && e.clientY < r.top + 22) dropFromFilm(i);
-														else openFilmViewer(i);
-													}}
-													class="group relative aspect-video w-[5.4rem] shrink-0 cursor-grab overflow-hidden rounded-lg bg-[var(--st-surface)] active:cursor-grabbing"
-												>
-													<!-- svelte-ignore a11y_media_has_caption -->
-													<video
-														src={fileUrl(c.workspace, c.artifact, c.file)}
-														muted
-														loop
-														playsinline
-														preload="auto"
-														use:looping
-														class="h-full w-full bg-black object-cover"
-													></video>
-													<span
-														class="pointer-events-none absolute top-0.5 right-0.5 flex size-[1.1rem] items-center justify-center rounded-full bg-black/60 text-[0.65rem] text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-														>✕</span
-													>
-												</button>
-											{/each}
-										</div>
-										<button
-											type="button"
-											disabled={film.length < 2 || filmBusy}
-											onclick={exportFilm}
-											class="shrink-0 cursor-pointer rounded-full bg-[var(--st-text)] px-3.5 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-text)]"
-										>
-											{filmBusy ? 'assembling…' : 'Export'}
-										</button>
+								<!-- The reel's room is standing, whether or not there is a reel in it.
+								     The picture on the stage is height-bound — it is 16:9 filling whatever
+								     height is left — and the composer is capped to the picture's width. So a
+								     row appearing above the composer took height off the stage, which took
+								     width off the picture, which took width off the composer: adding one clip
+								     to the film visibly shrank both surfaces and rewrapped the text between
+								     them. Nothing about adding a clip should resize the thing you are looking
+								     at.
+								
+								     So the band is always there and the reel opens into it. It costs the
+								     picture a fixed slice of height for the whole session rather than a
+								     variable one at the moment you act, which is the trade this surface keeps
+								     making: the rail's space is held open for the same reason. Only on the
+								     stage — with the transcript there is no height-bound picture to protect
+								     and an empty band is just a gap. -->
+								{#if STAGE_UI && mode === 'simple'}
+									<div class="h-[4.4rem] shrink-0" aria-hidden={!(film.length && filmOpen)}>
+										{#if film.length && filmOpen}
+											{@render filmReel()}
+										{/if}
 									</div>
+								{:else if film.length && filmOpen}
+									{@render filmReel()}
 								{/if}
 								<!-- `relative` is load-bearing: the add and format menus open upward
 						 from inside the composer and anchor to this box, not to the page. -->
