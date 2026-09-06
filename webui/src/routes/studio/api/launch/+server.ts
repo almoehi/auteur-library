@@ -101,7 +101,9 @@ async function openWorkspace(
 	// The composed YAML now carries the API key on every model, and this log is
 	// the one place it would otherwise be printed in full.
 	const printable = yaml.replaceAll(grokKey, '«GROK_API_KEY»');
-	console.log(`\n=== auteur: opening ${workspaceId} ===\n${printable}\n=== end ${workspaceId} ===\n`);
+	console.log(
+		`\n=== auteur: opening ${workspaceId} ===\n${printable}\n=== end ${workspaceId} ===\n`
+	);
 
 	// Opening is two calls since the 2026-08-19 release. Prefetch resolves the
 	// skills and workflows the YAML names — fetching them from their branches —
@@ -170,7 +172,10 @@ async function openWorkspace(
 		if (preErrors.length) {
 			console.error(`=== auteur: prefetch rejected ${workspaceId} ===\n${preErrors.join('\n')}`);
 			return json(
-				{ ok: false, error: `the workspace references something that could not be loaded:\n${preErrors.join('\n')}` },
+				{
+					ok: false,
+					error: `the workspace references something that could not be loaded:\n${preErrors.join('\n')}`
+				},
 				{ status: 200 }
 			);
 		}
@@ -234,7 +239,10 @@ async function openWorkspace(
 	// an internal prompt nobody wrote. It still shows: as a line and a clip
 	// inside the session that caused it, which is where it belongs.
 	if (!opts.internal) {
-		recordProduction({ ...record, ...(planning ? { planningWs: workspaceId } : { renderWs: workspaceId }) });
+		recordProduction({
+			...record,
+			...(planning ? { planningWs: workspaceId } : { renderWs: workspaceId })
+		});
 	}
 
 	// The workspace is live from here on. Everything below adds to it and can
@@ -256,7 +264,6 @@ async function openWorkspace(
 }
 
 export const POST: RequestHandler = async ({ request, fetch }) => {
-
 	// Tuned prompts and model choices from the admin panel, if any. Read per
 	// launch so an edit between two productions takes effect on the next one
 	// without restarting the dev server.
@@ -275,7 +282,14 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	}
 	// The key the YAML carries. The hosted harness resolves credentials itself and
 	// must not receive them inline; the local build reads them from the YAML.
+
 	const yamlKey = hostedHarness() ? '' : grokKey;
+	// The card the served bundle will name, carried into the workspace profile
+	// so the two documents agree. It dispatches nothing — the bundle's own
+	// gpu_types does — but a profile naming a different card is a document
+	// contradicting itself, and it read as a live setting to the first person
+	// who looked at one mid-render.
+	const profileCard = (env.AUTEUR_GPU_CARD || 'a100').trim();
 
 	let payload: {
 		brief?: Brief;
@@ -318,7 +332,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
 		let sheetYaml: string;
 		try {
-			sheetYaml = composeSheetWorkspace(spec, yamlKey);
+			sheetYaml = composeSheetWorkspace({ ...spec, card: profileCard }, yamlKey);
 		} catch (e) {
 			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
 		}
@@ -363,7 +377,11 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// carries. Not fetched from the harness: that workspace is spent, its agent
 		// may be gone, and the bytes are already here because the page kept them
 		// the moment the clip arrived.
-		const clipPath = cached(spec.priorWorkspace ?? '', spec.priorArtifact ?? '', spec.priorFile ?? '');
+		const clipPath = cached(
+			spec.priorWorkspace ?? '',
+			spec.priorArtifact ?? '',
+			spec.priorFile ?? ''
+		);
 		if (!clipPath) {
 			return json(
 				{ ok: false, error: 'that clip is not in the library any more — it cannot be continued' },
@@ -422,7 +440,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		const s3 = s3FromEnv();
 		if (!s3) {
 			return json(
-				{ ok: false, error: 'S3 is not configured in ~/auteur/.env — the GPU has nowhere to read from' },
+				{
+					ok: false,
+					error: 'S3 is not configured in ~/auteur/.env — the GPU has nowhere to read from'
+				},
 				{ status: 200 }
 			);
 		}
@@ -474,12 +495,15 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			// sheet. Same bytes and the same URL — the file is already up there, so
 			// this costs a line in the task and no upload.
 		} catch (e) {
-			return json({ ok: false, error: `the references could not be uploaded — ${e}` }, { status: 200 });
+			return json(
+				{ ok: false, error: `the references could not be uploaded — ${e}` },
+				{ status: 200 }
+			);
 		}
 
 		let contYaml: string;
 		try {
-			contYaml = composeContinuationWorkspace(spec, yamlKey);
+			contYaml = composeContinuationWorkspace({ ...spec, card: profileCard }, yamlKey);
 		} catch (e) {
 			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
 		}
@@ -618,7 +642,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		pruneStashes(20, spec.slug);
 		let directYaml: string;
 		try {
-			directYaml = composeDirectWorkspace(spec, yamlKey);
+			directYaml = composeDirectWorkspace({ ...spec, card: profileCard }, yamlKey);
 		} catch (e) {
 			return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
 		}
@@ -688,7 +712,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 	try {
 		if (stage === 'planning') {
 			workspaceId = briefToWorkspaceId(brief);
-			yaml = composePlanningWorkspace(brief, overrides, yamlKey);
+			yaml = composePlanningWorkspace(brief, overrides, yamlKey, profileCard);
 		} else {
 			// The render workspace's planner prompt carries the approved planning
 			// documents inline — the two workspaces share nothing on the harness
@@ -705,7 +729,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 				approved as ApprovedDocs,
 				overrides,
 				grokKey,
-				listRefs().length > 0
+				listRefs().length > 0,
+				profileCard
 			);
 		}
 	} catch (e) {
@@ -716,10 +741,17 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		return json({ ok: false, error: `compose failed: ${e}` }, { status: 200 });
 	}
 
-	return await openWorkspace(workspaceId, yaml, grokKey, fetch, {
-		slug: brief.slug,
-		title: brief.title,
-		sceneCount: brief.sceneCount,
-		pitch: typeof brief.story === 'string' ? brief.story.slice(0, 200) : undefined
-	}, { planning: stage === 'planning', withLibrary: stage === 'render' });
+	return await openWorkspace(
+		workspaceId,
+		yaml,
+		grokKey,
+		fetch,
+		{
+			slug: brief.slug,
+			title: brief.title,
+			sceneCount: brief.sceneCount,
+			pitch: typeof brief.story === 'string' ? brief.story.slice(0, 200) : undefined
+		},
+		{ planning: stage === 'planning', withLibrary: stage === 'render' }
+	);
 };

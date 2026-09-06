@@ -281,20 +281,25 @@ const WORKFLOWS_BLOCK = `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit@dszabo`;
 
-function profilesBlock(seed: number): string {
+function profilesBlock(seed: number, card = 'a100'): string {
 	// steps=4 because that is what the workflow is built around: it ships a
 	// LightX2V 4-step turbo LoRA, and its own notes put steps=4 at 2-4 minutes a
 	// clip against 10-18 at steps=8. We were on 8, and measured 7-9 minutes a clip
 	// — which is the slow path, not a better one. 6-10 also work, so 8 was valid;
 	// it just paid three times the render time for a LoRA it was bypassing.
 	//
-	// gpuType is inert here: the workflow bundle declares its own gpu_types and
-	// those win. It stays because the profile schema wants a value — but it says
-	// a100 rather than l40s now, because l40s is not merely unused, it cannot run
-	// this workflow at all. Its SageAttention kernels are sm_80 only, so l40s
-	// (sm_89) and h100 (sm_90) both die in the sampler and a100 is the one card
-	// that works. Leaving a dead card named here invites someone to trust it the
-	// day the bundle stops overriding.
+	// gpuType decides nothing: the workflow bundle declares its own gpu_types and
+	// those win. It stays because the profile schema wants a value, and it now
+	// names whatever the bundle will name, because the warning this comment used
+	// to end with came true. It read a100 while the bundle read b200, and the
+	// first person to open the workspace mid-render believed the profile and
+	// raised a false alarm about the card. A document that contradicts itself
+	// costs someone an hour eventually; the two lines agree now.
+	//
+	// The default is still a100, and l40s is still absent on purpose: its
+	// SageAttention kernels are sm_80 only, so l40s (sm_89) and h100 (sm_90) both
+	// die in the sampler unless Sage is disabled for them, which the bundle route
+	// does by card.
 	//
 	// fps=48 is not a preference, it is the workflow's arithmetic. The model
 	// renders at 24fps native and a RIFE pass doubles the frames, so 48 is the
@@ -308,7 +313,7 @@ function profilesBlock(seed: number): string {
       image: { width: 720, height: 480, steps: 4, seed: ${seed} }
       video: { width: 720, height: 480, steps: 4, fps: 48, seed: ${seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: a100, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }`;
+      compute: { backend: modal, gpuType: ${card}, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }`;
 }
 
 /** The model registry.
@@ -642,7 +647,9 @@ const AGENT_GENERIC = (a: AgentTuning) => `    generic:
 ${indentBlock(a.prompt, 8)}
       readOnly: false`;
 
-const AGENT_PROMPT_WRITER = (a: AgentTuning) => `    # specific agent & model def. to be used by prompt enhancing tools available to workers
+const AGENT_PROMPT_WRITER = (
+	a: AgentTuning
+) => `    # specific agent & model def. to be used by prompt enhancing tools available to workers
     prompt_writer:
       id: prompt_writer
       name: "Prompt Writer"
@@ -934,7 +941,9 @@ export function composePlanningWorkspace(
 	/** Written into every model's apiKeys.token. Required on the worker path —
 	 *  see modelsBlock(). Empty produces a workspace that opens and then fails
 	 *  every task with 401, so the caller checks before composing. */
-	grokKey = ''
+	grokKey = '',
+	/** See DirectSpec.card: named so the profile and the bundle agree. */
+	card = 'a100'
 ): string {
 	const tuned = resolveTuning(overrides);
 	if (!brief || typeof brief !== 'object') throw new Error('brief is missing');
@@ -976,7 +985,7 @@ ${SKILLS_BLOCK}
 
 ${WORKFLOWS_BLOCK}
 
-${profilesBlock(brief.seed)}
+${profilesBlock(brief.seed, card)}
 
 ${modelsBlock(grokKey)}
 
@@ -1028,7 +1037,9 @@ export function composeRenderWorkspace(
 	 *  has to be known here: the planner is otherwise told there are no
 	 *  artifacts to read, which stops being true the moment one is imported —
 	 *  and the cost of that lie is the user's attached files going unused. */
-	hasReferenceMaterial = false
+	hasReferenceMaterial = false,
+	/** See DirectSpec.card: named so the profile and the bundle agree. */
+	card = 'a100'
 ): string {
 	const tuned = resolveTuning(overrides);
 	if (!brief || typeof brief !== 'object') throw new Error('brief is missing');
@@ -1060,7 +1071,7 @@ ${SKILLS_BLOCK}
 
 ${WORKFLOWS_BLOCK}
 
-${profilesBlock(brief.seed)}
+${profilesBlock(brief.seed, card)}
 
 ${modelsBlock(grokKey)}
 
@@ -1107,6 +1118,15 @@ export const composeWorkspace = composePlanningWorkspace;
  *  the pen.
  */
 export interface DirectSpec {
+	/** The card the bundle will name, repeated here so the two agree.
+	 *
+	 *  It decides nothing: the workflow bundle carries its own `gpu_types` and
+	 *  that is what the harness dispatches on. But a profile that says a100 under
+	 *  a bundle that says b200 is a document contradicting itself, and the first
+	 *  person to read it — which was me, an hour after switching the card —
+	 *  believed the profile and raised a false alarm mid-render. Absent leaves
+	 *  a100, which is what it always said. */
+	card?: string;
 	slug: string;
 	title: string;
 	/** One per clip, sent unchanged. */
@@ -1212,20 +1232,13 @@ function refClause(
 	if (characterName) named.push(`the character ${characterName}`);
 	if (locationName) named.push(`the location ${locationName}`);
 	const who = named.length
-		? named
-				.map(
-					(n, i) =>
-						`        <Picture ${i + 1}> is ${indentBlock(n, 0)}.\n`
-				)
-				.join('')
+		? named.map((n, i) => `        <Picture ${i + 1}> is ${indentBlock(n, 0)}.\n`).join('')
 		: '';
 	// One line per port, each a single unbroken line: the value is a presigned URL
 	// whose query string must survive verbatim, and a wrapped line is a corrupted
 	// link. They are listed after the explanation rather than inside it so the
 	// agent reads them as values to copy, not as prose.
-	const ports = refUrls
-		.map((url, i) => `        ref_${i} = ${url}\n`)
-		.join('');
+	const ports = refUrls.map((url, i) => `        ref_${i} = ${url}\n`).join('');
 
 	return `
         This clip renders with ${count} reference image${count > 1 ? 's' : ''}. The workflow declares
@@ -1370,8 +1383,10 @@ function directProfiles(spec: DirectSpec): string {
 	const tier = `      image: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, seed: ${spec.seed} }
       video: { width: ${spec.width}, height: ${spec.height}, steps: ${DIRECT_STEPS}, fps: ${DIRECT_FPS}, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: a100, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }`;
-	return '  profiles:\n' + ['draft', 'preview', 'master'].map((t) => `    ${t}:\n${tier}`).join('\n');
+      compute: { backend: modal, gpuType: ${spec.card ?? 'a100'}, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }`;
+	return (
+		'  profiles:\n' + ['draft', 'preview', 'master'].map((t) => `    ${t}:\n${tier}`).join('\n')
+	);
 }
 
 const DIRECT_AGENT = (model: string) => `    generic:
@@ -1420,7 +1435,8 @@ export function composeDirectWorkspace(spec: DirectSpec, grokKey = ''): string {
 	if (prompts.some((p) => p.length > DIRECT_PROMPT_MAX))
 		throw new Error(`a prompt is longer than ${DIRECT_PROMPT_MAX} characters`);
 	for (const n of [spec.seconds, spec.width, spec.height]) {
-		if (!Number.isFinite(n) || n <= 0) throw new Error('seconds, width and height must be positive');
+		if (!Number.isFinite(n) || n <= 0)
+			throw new Error('seconds, width and height must be positive');
 	}
 
 	const tasks = prompts
@@ -1516,6 +1532,15 @@ ${tasks}
  *  the user's head: you make a character once and shoot with it for a week.
  */
 export interface SheetSpec {
+	/** The card the bundle will name, repeated here so the two agree.
+	 *
+	 *  It decides nothing: the workflow bundle carries its own `gpu_types` and
+	 *  that is what the harness dispatches on. But a profile that says a100 under
+	 *  a bundle that says b200 is a document contradicting itself, and the first
+	 *  person to read it — which was me, an hour after switching the card —
+	 *  believed the profile and raised a false alarm mid-render. Absent leaves
+	 *  a100, which is what it always said. */
+	card?: string;
 	slug: string;
 	kind: 'character' | 'location';
 	/** Which half of the work to do.
@@ -1718,7 +1743,7 @@ spec:
       image: { width: ${SHEET_W}, height: ${SHEET_H}, steps: ${SHEET_STEPS}, seed: ${spec.seed} }
       video: { width: ${SHEET_W}, height: ${SHEET_H}, steps: ${SHEET_STEPS}, fps: ${SHEET_FPS}, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: a100, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }
+      compute: { backend: modal, gpuType: ${spec.card ?? 'a100'}, timeoutSec: ${RENDER_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }
 
 ${modelsBlock(grokKey)}
 
@@ -1763,6 +1788,15 @@ ${indentBlock(description, 8)}
  *  continues without re-encoding the lot.
  */
 export interface ContinuationSpec {
+	/** The card the bundle will name, repeated here so the two agree.
+	 *
+	 *  It decides nothing: the workflow bundle carries its own `gpu_types` and
+	 *  that is what the harness dispatches on. But a profile that says a100 under
+	 *  a bundle that says b200 is a document contradicting itself, and the first
+	 *  person to read it — which was me, an hour after switching the card —
+	 *  believed the profile and raised a false alarm mid-render. Absent leaves
+	 *  a100, which is what it always said. */
+	card?: string;
 	slug: string;
 	title?: string;
 	/** What you typed — kept for the record, not sent to the model. */
@@ -1954,7 +1988,6 @@ export const CONT_TIMEOUT_SEC = 2400;
  */
 const SEAM_ANCHOR = true;
 
-
 export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = ''): string {
 	if (!spec || typeof spec !== 'object') throw new Error('spec is missing');
 	if (typeof spec.slug !== 'string' || !SLUG_RE.test(spec.slug)) throw new Error('bad slug');
@@ -2012,7 +2045,8 @@ export function composeContinuationWorkspace(spec: ContinuationSpec, grokKey = '
 		seen.set(key, name);
 	}
 	for (const n of [spec.seconds, spec.width, spec.height]) {
-		if (!Number.isFinite(n) || n <= 0) throw new Error('seconds, width and height must be positive');
+		if (!Number.isFinite(n) || n <= 0)
+			throw new Error('seconds, width and height must be positive');
 	}
 
 	const origin = spec.studioOrigin || 'http://host.docker.internal:5290';
@@ -2071,7 +2105,7 @@ spec:
       image: { width: ${spec.width}, height: ${spec.height}, steps: ${CONT_STEPS}, seed: ${spec.seed} }
       video: { width: ${spec.width}, height: ${spec.height}, steps: ${CONT_STEPS}, fps: ${CONT_FPS}, seed: ${spec.seed} }
       audio: { sampleRate: 16000 }
-      compute: { backend: modal, gpuType: a100, timeoutSec: ${CONT_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }
+      compute: { backend: modal, gpuType: ${spec.card ?? 'a100'}, timeoutSec: ${CONT_TIMEOUT_SEC}, maxAttempts: ${RENDER_MAX_ATTEMPTS} }
 
 ${modelsBlock(grokKey)}
 
@@ -2121,16 +2155,28 @@ ${modelsBlock(grokKey)}
         Save the result as cont1.mp4
 
         References, each copied exactly as written:
-        prior_clip = ${spec.priorClipUrl}${OWN_AUDIO_LOADER ? `
-        prior_clip_audio = ${spec.priorClipAudioUrl}` : ''}
+        prior_clip = ${spec.priorClipUrl}${
+					OWN_AUDIO_LOADER
+						? `
+        prior_clip_audio = ${spec.priorClipAudioUrl}`
+						: ''
+				}
         character_sheet = ${spec.characterUrl}
-        environment_plate = ${spec.locationUrl}${spec.pinned === false ? '' : `
-        ref_picture_3 = ${spec.lastFrameUrl}`}
+        environment_plate = ${spec.locationUrl}${
+					spec.pinned === false
+						? ''
+						: `
+        ref_picture_3 = ${spec.lastFrameUrl}`
+				}
 
         <Video 1> is the clip being continued.
         <Picture 1> is the character${spec.characterName ? ` ${indentBlock(spec.characterName, 0)}` : ' as they appear in <Video 1>'}.
-        <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ' as it appears in <Video 1>'}.${spec.pinned === false ? '' : `
-        <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`}
+        <Picture 2> is the location${spec.locationName ? ` ${indentBlock(spec.locationName, 0)}` : ' as it appears in <Video 1>'}.${
+					spec.pinned === false
+						? ''
+						: `
+        <Picture 3> is the exact final frame of <Video 1> — the frame the new clip starts from.`
+				}
 
         Pass the text below as prompt_positive, unchanged. Do not rewrite,
         shorten, expand, reorder or comment on it.
