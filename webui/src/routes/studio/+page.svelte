@@ -6938,7 +6938,7 @@
 			 travel the width of the screen to find the send button. -->
 		<div
 			class="mx-auto flex min-h-0 w-full flex-1 flex-col px-5 pt-1 {STAGE_UI
-				? 'max-w-[76rem]'
+				? 'max-w-[104rem]'
 				: brief
 					? 'max-w-[66rem]'
 					: 'max-w-[48rem]'}"
@@ -9129,16 +9129,24 @@
 														/>
 													{:else}
 														<!-- Nobody kept yet, so the disc is empty — the same placeholder the
-															 cast chip wears, which is also what "Keep this person" fills. -->
+															 cast chip wears, which is also what "Keep this person" fills.
+															 Both parts are drawn from the chip's own foreground rather than a
+															 fixed token: on the selected chip that foreground is dark, and a dark
+															 figure on a dark disc on a white pill was a black blob with something
+															 buried in it. Ten per cent for the disc and fifty-five for the figure
+															 holds on either ground, which is how a placeholder avatar is drawn on
+															 a light surface anyway. -->
 														<span
-															class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--st-surface-2)]"
+															class="flex size-7 shrink-0 items-center justify-center rounded-full bg-current/10"
 														>
-															<svg viewBox="0 0 16 16" class="size-[13px]" aria-hidden="true">
-																<circle cx="8" cy="5.9" r="2.6" fill="currentColor" />
-																<path
-																	d="M3.5 13.4c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4z"
-																	fill="currentColor"
-																/>
+															<svg
+																viewBox="0 0 16 16"
+																class="size-[13px] opacity-55"
+																fill="currentColor"
+																aria-hidden="true"
+															>
+																<circle cx="8" cy="5.9" r="2.6" />
+																<path d="M3.5 13.4c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4z" />
 															</svg>
 														</span>
 													{/if}
