@@ -6545,30 +6545,41 @@
 						aria-hidden="true"
 					>
 						{#if door.id === 'simple'}
+							<!-- A frame with a play mark in it. The mark was a bare three-point
+								 triangle with hard corners sitting inside a rounded frame — the
+								 one shape on the icon that had not been told what the others
+								 were doing. Stroked in its own fill with a round join, it keeps
+								 its weight and gets the corners the rest of the set has. -->
 							<rect
 								x="2.5"
 								y="4"
 								width="11"
 								height="8"
-								rx="1.6"
+								rx="2"
 								stroke="currentColor"
 								stroke-width="1.5"
 							/>
-							<path d="M6.8 6.9v2.2l2.4-1.1z" fill="currentColor" />
+							<path
+								d="M7.1 6.6 9.9 8l-2.8 1.4z"
+								fill="currentColor"
+								stroke="currentColor"
+								stroke-width="1.1"
+								stroke-linejoin="round"
+							/>
 						{:else}
 							<rect
 								x="2.5"
 								y="3"
 								width="11"
 								height="10"
-								rx="1.6"
+								rx="2"
 								stroke="currentColor"
 								stroke-width="1.5"
 							/>
 							<path
 								d="M5.2 6h5.6M5.2 8.4h5.6M5.2 10.6h3.2"
 								stroke="currentColor"
-								stroke-width="1.4"
+								stroke-width="1.5"
 								stroke-linecap="round"
 							/>
 						{/if}
@@ -9214,27 +9225,24 @@
 												onclick={() => (pickKind = 'character')}
 												class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-3 pl-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
 											>
+												<!-- The same disc the cast chip wears, with nobody in it.
+											 It was a hairline ring around an outlined figure while the
+											 chip beside it — the same slot, filled — was a solid
+											 photograph, so one control drew its two states in two
+											 different languages and the empty one read as a dropped
+											 image rather than as a choice not yet made. A placeholder is
+											 the shape it stands in for: a filled disc, and a solid
+											 figure inside it, because hairlines at eleven pixels
+											 shimmer and an outline at that size is not a drawing, it is
+											 a suggestion of one. -->
 												<span
-													class="flex size-5 shrink-0 items-center justify-center rounded-full ring-1 ring-[var(--st-line)]"
+													class="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--st-surface-2)]"
 												>
-													<svg
-														viewBox="0 0 16 16"
-														class="size-[11px]"
-														fill="none"
-														aria-hidden="true"
-													>
-														<circle
-															cx="8"
-															cy="5.6"
-															r="2.7"
-															stroke="currentColor"
-															stroke-width="1.4"
-														/>
+													<svg viewBox="0 0 16 16" class="size-[11px]" aria-hidden="true">
+														<circle cx="8" cy="5.9" r="2.6" fill="currentColor" />
 														<path
-															d="M3.2 13c.7-2.4 2.5-3.6 4.8-3.6S12.1 10.6 12.8 13"
-															stroke="currentColor"
-															stroke-width="1.4"
-															stroke-linecap="round"
+															d="M3.5 13.4c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4z"
+															fill="currentColor"
 														/>
 													</svg>
 												</span>
@@ -9806,26 +9814,37 @@
 											</p>
 										{/if}
 										<div class="my-1 h-px bg-[var(--st-line)]"></div>
-										<button
-											type="button"
-											role="menuitemradio"
-											aria-checked={mode === 'advanced'}
-											onclick={() => {
-												setMode('advanced');
-												shutMenus();
-											}}
-											class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+										<!-- Shown, and not yet offered.
+									 A screenplay, a cast and a multi-scene shoot is the other half
+									 of this product and it is not finished; taking the row out
+									 entirely would have been honest about today and silent about
+									 where this goes, and a person deciding whether to keep using
+									 the app is deciding about both. So it stays where it will be,
+									 reading as what it is: one step down in contrast, no check
+									 column to fill, and the word for when rather than a lock icon —
+									 a lock says you may not, and the truth is not yet.
+
+									 aria-disabled rather than a disabled button, because the row is
+									 not a control that happens to be off: it is a line of text
+									 announcing something. Screen readers get told it is unavailable
+									 and the tab order does not stop on it. -->
+										<div
+											role="menuitem"
+											aria-disabled="true"
+											class="flex min-h-[2.75rem] w-full cursor-default items-center gap-2.5 rounded-xl px-3 text-left text-sm"
 										>
-											<span class="w-3.5 shrink-0 text-xs {mode === 'advanced' ? '' : 'invisible'}"
-												>&#10003;</span
-											>
+											<span class="invisible w-3.5 shrink-0 text-xs">&#10003;</span>
 											<span class="min-w-0">
-												<span class="block">full production</span>
+												<span class="block text-[var(--st-muted)]">full production</span>
 												<span class="mt-0.5 block text-xs text-[var(--st-faint)]"
 													>screenplay and cast first, then a multi-scene shoot</span
 												>
 											</span>
-										</button>
+											<span
+												class="ml-auto shrink-0 self-start pt-0.5 text-xs text-[var(--st-faint)]"
+												>coming soon</span
+											>
+										</div>
 									</div>
 								{/if}
 
