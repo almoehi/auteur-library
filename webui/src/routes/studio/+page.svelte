@@ -6458,7 +6458,7 @@
 	{/if}
 
 	<aside
-		class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--st-line)] bg-[var(--st-bg)] transition-transform lg:static lg:z-auto xl:fixed xl:z-40 {sidebarOpen
+		class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-[var(--st-line)] bg-[var(--st-bg)] transition-transform lg:static lg:z-auto {sidebarOpen
 			? 'translate-x-0 lg:translate-x-0'
 			: '-translate-x-full lg:hidden'}"
 	>
@@ -6785,12 +6785,12 @@
 		     wherever it is deployed. -->
 	</aside>
 
-	<!-- The rail takes 256px off the left when it opens. Matching that with an
-		 equal phantom margin on the right keeps the reading column's centre on the
-		 screen's centre in both states, so opening the rail moves nothing — on a
-		 desktop the two never meet anyway, and a page that jumps sideways when you
-		 reveal a list is a page that punishes you for looking. Below lg the rail is
-		 an overlay and takes no width, so no compensation is owed. -->
+	<!-- The rail's own place, held while it is away. See the counterweight after
+		 </main> for why both sides are reserved from xl up. -->
+	{#if !sidebarOpen}
+		<div class="hidden w-64 shrink-0 xl:block" aria-hidden="true"></div>
+	{/if}
+
 	<main class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
 		<!-- Pinned to the page's left edge, not to the centre column: this is the
 			 same point the rail's own toggle occupies, so the control stays put and
@@ -10225,27 +10225,36 @@
 		</div>
 	</main>
 
-	<!-- The counterweight, and the narrow band it is still needed in.
-		 Where the rail sits in the flow it takes 16rem off the left, and this gives
-		 the same back on the right so the reading column's centre stays on the
-		 screen's centre. It cost width to do it: 32rem of it, which is why opening
-		 the rail resized the composer and rewrapped every line of the answer above
-		 it. Centred is not the same as unchanged, and the composer is a control —
-		 a control that changes size when you open a list somewhere else has been
+	<!-- The counterweight on the right, and — from xl up — a standing reservation
+		 on both sides, so the rail costs the page nothing to open.
+
+		 In the flow the rail takes 16rem off the left, and this gives the same back
+		 on the right, which keeps the reading column's centre on the screen's
+		 centre. Centred is not the same as unchanged: it still cost 32rem of width,
+		 so opening the list resized the composer and rewrapped every line above it,
+		 and a control that changes size because you opened something else has been
 		 moved by something that has nothing to do with it.
 
-		 So from xl up the rail floats over the left gutter instead (xl:fixed on the
-		 aside), where on a screen that wide it reaches nothing, and the page below
-		 it does not move at all. Between lg and xl there is no gutter to float in,
-		 so the rail keeps its place in the flow and this keeps the centre.
+		 Floating the rail over the gutter instead fixed the resizing and broke
+		 worse: out of the flow it covered the composer's left edge, and main
+		 stretched across the whole window. So the space is simply always there.
+		 Where there is room for it — xl and up — the same 32rem is reserved whether
+		 the rail is open or shut, one side standing in for the rail while it is
+		 away. Nothing moves, nothing is covered, and the page keeps the proportions
+		 it has with the list open, which is the state it is read in.
 
-		 A spacer rather than a padding rule on main: the rule has to be
-		 conditional, and a conditional Tailwind variant is not reliably found by
-		 the scanner while a scoped attribute selector is dropped by Svelte's
-		 pruner. Both failed silently. This is static classes inside an if, which
-		 cannot. Below lg the rail is an overlay and owes nothing. -->
+		 Below xl there is no room to hold 32rem open for a panel that is not there,
+		 so that band keeps the counterweight alone.
+
+		 Spacers rather than a padding rule on main: the rule has to be conditional,
+		 and a conditional Tailwind variant is not reliably found by the scanner
+		 while a scoped attribute selector is dropped by Svelte's pruner. Both
+		 failed silently. These are static classes inside an if, which cannot.
+		 Below lg the rail is an overlay and owes nothing. -->
 	{#if sidebarOpen}
-		<div class="hidden w-64 shrink-0 lg:block xl:hidden" aria-hidden="true"></div>
+		<div class="hidden w-64 shrink-0 lg:block" aria-hidden="true"></div>
+	{:else}
+		<div class="hidden w-64 shrink-0 xl:block" aria-hidden="true"></div>
 	{/if}
 
 	<!-- ── the film viewer ────────────────────────────────────────────────────────
