@@ -5645,26 +5645,6 @@
 	let stageVideoW = $state(0);
 	/** Teardown for the audio rules installed on mount. */
 	let cleanupAudio: (() => void) | null = null;
-	/** What you asked for, in your words.
-	 *
-	 *  From this session when it has it, and from the render log when it does not
-	 *  — a production reopened from the library keeps no transcript, but the log
-	 *  stores the request verbatim, uncut. That is the whole point of the field:
-	 *  the row's title is the same text trimmed to sixty characters, this one is
-	 *  not. */
-	let askedFor = $derived(
-		(() => {
-			const raw = lastRequest.trim() || (stageShownWs ? (logRow[stageShownWs]?.request ?? '') : '');
-			// Everything before the first `---`, which is where your words end.
-			//
-			// What gets stored as the request is not only what you typed: the rounds
-			// are joined, and the read-back line the model wrote is appended after a
-			// separator so the writer has the agreed reading too. Useful there,
-			// wrong here — putting the model's sentence back in your box makes it
-			// look like something you said, and the next brief is written from it.
-			return raw.split(/\n\s*---\s*\n/)[0].trim();
-		})()
-	);
 	/** The brief behind what is on the stage.
 	 *
 	 *  The stage deliberately shows no prompt — that was the point of it. But the
@@ -9185,22 +9165,6 @@
 												 with a tooltip and a filled white pill respectively, which made the
 												 loudest thing in the row the one that was not the decision. -->
 												<span class="flex-1"></span>
-												{#if askedFor.trim()}
-													<button
-														type="button"
-														title="put what you asked for back in the box"
-														onclick={() => {
-															// Your words, and nothing else. Not the brief: that is the writer's
-															// answer to them, five times longer, and putting it back in a box
-															// that feeds the writer asks it to rewrite its own output.
-															input = askedFor;
-															grow(composer);
-															composer?.focus();
-														}}
-														class="cursor-pointer rounded-full px-2.5 py-1 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-														>Ask again</button
-													>
-												{/if}
 												{#if continuing && !continuing.characterId}
 													<button
 														type="button"
