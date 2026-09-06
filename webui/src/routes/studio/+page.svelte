@@ -3863,6 +3863,32 @@
 	 *  the ones scrolled away from stop. */
 	let tileEyes: IntersectionObserver | null = null;
 
+	/** Park a video on its final frame and leave it there.
+	 *
+	 *  The chip that offers to continue from the last frame shows the last frame.
+	 *  A poster is the first one — which on a five second clip is a different
+	 *  moment, a different pose, sometimes a different framing, so the picture
+	 *  would have been illustrating the wrong thing while claiming to be exact.
+	 *  A hair before the end rather than the end itself: seeking to `duration`
+	 *  lands past the last decodable frame in Safari and paints nothing. */
+	function lastFrame(el: HTMLVideoElement) {
+		const park = () => {
+			if (!Number.isFinite(el.duration) || el.duration <= 0) return;
+			try {
+				el.currentTime = Math.max(0, el.duration - 0.06);
+			} catch {
+				/* a seek before the media is ready throws; loadedmetadata retries it */
+			}
+		};
+		el.addEventListener('loadedmetadata', park);
+		if (el.readyState >= 1) park();
+		return {
+			destroy() {
+				el.removeEventListener('loadedmetadata', park);
+			}
+		};
+	}
+
 	function looping(el: HTMLVideoElement) {
 		tileEyes ??= new IntersectionObserver(
 			(entries) =>
@@ -5775,8 +5801,21 @@
 	 *  on the left to clear the strip; the strip is in the right-hand margin now
 	 *  and takes nothing, so the padding was width surrendered to a column that
 	 *  had moved out from under it. */
+	/** …and a floor under it, which is the measure the empty page already uses.
+	 *
+	 *  Capped to the picture alone the composer inherited the picture's problem:
+	 *  the picture is 16:9 and height-bound, so on a wide, short window it is
+	 *  narrow, and everything pinned to it went narrow with it — a composer and a
+	 *  film reel squeezed into the middle of a screen with room to spare, under
+	 *  the three suggestion cards that had been sitting at 48rem the whole time.
+	 *
+	 *  So: at least what the suggestions take, and the picture's width whenever
+	 *  that is more. The two line up on any window tall enough for the picture to
+	 *  reach 48rem, which is the case the alignment was for; below that the
+	 *  composer stops shrinking rather than following the picture down. */
+	const COMPOSER_FLOOR = '48rem';
 	let composerCap = $derived(
-		STAGE_UI && stageVideoW > 320 ? `max-width:${stageVideoW}px` : undefined
+		STAGE_UI ? `max-width:max(${COMPOSER_FLOOR}, ${Math.max(stageVideoW, 0)}px)` : undefined
 	);
 
 	let stagePhaseIsWorking = $derived(!stageError && !stageRound && (stageClockFrom || sending));
@@ -9024,6 +9063,7 @@
 							 in the clip — in identical chips. You enter this from the picker
 							 below, and this band is how you know you are here and how you leave. -->
 								{#if mode === 'simple' && (continuing || (STAGE_UI && stageContinuable))}
+									{@const clipUrl = stageContinuable?.artifact?.files?.[0]?.url ?? ''}
 									<div
 										class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
 									>
@@ -9048,105 +9088,138 @@
 									     the room, the light and the motion all come from it. This only
 									     decides whether the FIRST INSTANT is nailed to the frame the
 									     last clip ended on. -->
+											<!-- One question, three answers, and the two that carry something show it.
+										     It was a toggle, two modifiers of the toggle and an escape hatch — four
+										     controls for one decision, with the off state written twice (turning
+										     Continue off and pressing "new clip" run the same three lines). And the
+										     distinction that actually matters was carried by words alone: whether the
+										     next clip starts on this exact frame, or merely with these people in this
+										     room. Both of those are pictures. Naming them was doing the work an
+										     image does better and faster.
+
+										     So: the frame chip wears the frame it would start on, the person chip
+										     wears the person it would keep, and the third wears nothing — which is
+										     not an omission, it is the answer. An empty rectangle would read as a
+										     picture that failed to load. -->
 											<div class="mt-2 flex flex-wrap items-center gap-1.5">
-												{#if STAGE_UI && askedFor.trim()}
-													<!-- The brief, one button away from where the next order is
-											     given. Named by its icon and its tooltip rather than a
-											     word, because the row beside it is already four words
-											     long and this is the only round control in it. -->
-													<button
-														type="button"
-														title="put what you asked for back in the box"
-														aria-label="ask again"
-														onclick={() => {
-															// Your words, and nothing else.
-															//
-															// Not the brief: that is the writer's answer to them, five
-															// times longer, and putting it back in a box that feeds the
-															// writer asks it to rewrite its own output. What you typed
-															// is the thing worth changing a word of and sending again.
-															input = askedFor;
-															grow(composer);
-															composer?.focus();
-														}}
-														class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line-control)] hover:text-[var(--st-text)]"
-													>
-														<svg
-															viewBox="0 0 16 16"
-															class="size-[15px]"
-															fill="none"
-															aria-hidden="true"
-														>
-															<path
-																d="M13 7.2A5 5 0 0 0 4.2 5M3 8.8A5 5 0 0 0 11.8 11"
-																stroke="currentColor"
-																stroke-width="1.5"
-																stroke-linecap="round"
-															/>
-															<path
-																d="M13 3.6v3.6h-3.6M3 12.4V8.8h3.6"
-																stroke="currentColor"
-																stroke-width="1.5"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															/>
-														</svg>
-													</button>
-												{/if}
-												{#if STAGE_UI}
-													<!-- The standing answer, in front of the choices it governs.
-											     Ticked, the three modes decide HOW the next message
-											     continues; unticked they step back and the message makes a
-											     clip of its own. -->
-													<button
-														type="button"
-														role="switch"
-														aria-checked={!!continuing}
-														onclick={() => {
-															if (continuing) {
-																contOffFor = stageContinuable?.id ?? '';
-																continuing = null;
-																spendConfirmChain();
-															} else if (stageContinuable) {
-																contOffFor = '';
-																startContinue(stageContinuable);
-															}
-														}}
-														class="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors {continuing
-															? 'bg-[var(--st-text)] text-[var(--st-bg)]'
-															: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}"
-													>
-														<span aria-hidden="true">{continuing ? '✓' : ''}</span>
-														<span>Continue</span>
-													</button>
-												{/if}
-												{#each [[true, 'from the last frame'], [false, 'same scene, new take']] as [on, label] (label)}
-													<button
-														type="button"
-														aria-pressed={pinSeam === on}
-														disabled={STAGE_UI && !continuing}
-														onclick={() => (pinSeam = on as boolean)}
-														class="cursor-pointer rounded-full px-3 py-1 text-xs transition-colors disabled:cursor-default disabled:opacity-35 {pinSeam ===
-														on
-															? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-															: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}"
-														>{label}</button
-													>
-												{/each}
-												<!-- The way out, as the third state rather than a separate button:
-										     leaving a continuation is what "new clip" means, and one row of
-										     three reads better than two options plus an escape hatch. -->
 												<button
 													type="button"
-													disabled={STAGE_UI && !continuing}
+													aria-pressed={!!continuing && pinSeam}
+													onclick={() => {
+														contOffFor = '';
+														if (!continuing && stageContinuable) startContinue(stageContinuable);
+														pinSeam = true;
+													}}
+													class="flex min-h-9 cursor-pointer items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-xs transition-colors {continuing &&
+													pinSeam
+														? 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'
+														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+												>
+													{#if clipUrl}
+														<!-- svelte-ignore a11y_media_has_caption -->
+														<video
+															src={clipUrl}
+															muted
+															playsinline
+															preload="metadata"
+															use:lastFrame
+															class="h-7 w-[3.1rem] shrink-0 rounded-full bg-black object-cover"
+														></video>
+													{/if}
+													<span>From the last frame</span>
+												</button>
+												<button
+													type="button"
+													aria-pressed={!!continuing && !pinSeam}
+													onclick={() => {
+														contOffFor = '';
+														if (!continuing && stageContinuable) startContinue(stageContinuable);
+														pinSeam = false;
+													}}
+													class="flex min-h-9 cursor-pointer items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-xs transition-colors {continuing &&
+													!pinSeam
+														? 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'
+														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+												>
+													{#if chosenCharacter}
+														<img
+															src="/studio/api/sheet/img/{chosenCharacter.id}"
+															alt=""
+															class="size-7 shrink-0 rounded-full object-cover"
+														/>
+													{:else}
+														<!-- Nobody kept yet, so the disc is empty — the same placeholder the
+															 cast chip wears, which is also what "Keep this person" fills. -->
+														<span
+															class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--st-surface-2)]"
+														>
+															<svg viewBox="0 0 16 16" class="size-[13px]" aria-hidden="true">
+																<circle cx="8" cy="5.9" r="2.6" fill="currentColor" />
+																<path
+																	d="M3.5 13.4c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4z"
+																	fill="currentColor"
+																/>
+															</svg>
+														</span>
+													{/if}
+													<span>Same person &amp; place</span>
+												</button>
+												<button
+													type="button"
+													aria-pressed={!continuing}
 													onclick={() => {
 														contOffFor = stageContinuable?.id ?? '';
 														continuing = null;
 														spendConfirmChain();
 													}}
-													class="cursor-pointer rounded-full px-3 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-muted)] disabled:cursor-default disabled:opacity-35"
-													>new clip</button
+													class="flex min-h-9 cursor-pointer items-center rounded-full px-3.5 text-xs transition-colors {continuing
+														? 'text-[var(--st-faint)] hover:text-[var(--st-text)]'
+														: 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'}"
 												>
+													New clip
+												</button>
+
+												<!-- The two things you can do TO this clip, as opposed to the three you can
+												 do next. Plain weight and no fill, because the accent is spent on the
+												 answer above and these are not answers to it. They were a round glyph
+												 with a tooltip and a filled white pill respectively, which made the
+												 loudest thing in the row the one that was not the decision. -->
+												<span class="flex-1"></span>
+												{#if askedFor.trim()}
+													<button
+														type="button"
+														title="put what you asked for back in the box"
+														onclick={() => {
+															// Your words, and nothing else. Not the brief: that is the writer's
+															// answer to them, five times longer, and putting it back in a box
+															// that feeds the writer asks it to rewrite its own output.
+															input = askedFor;
+															grow(composer);
+															composer?.focus();
+														}}
+														class="cursor-pointer rounded-full px-2.5 py-1 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+														>Ask again</button
+													>
+												{/if}
+												{#if continuing && !continuing.characterId}
+													<button
+														type="button"
+														onclick={makeCharacterFromClip}
+														disabled={charFromClipBusy}
+														class="flex cursor-pointer items-center gap-2 rounded-full px-2.5 py-1 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-60"
+													>
+														<!-- Fifteen seconds of five frames and a vision call. Long enough that a
+														 button which only changes its words reads as one that did nothing. -->
+														{#if charFromClipBusy}
+															<span
+																class="spin size-3 shrink-0 rounded-full border-2 border-[var(--st-line)] border-t-[var(--st-text)]"
+															></span>
+														{/if}
+														<span
+															>{charFromClipBusy ? 'Reading the clip…' : 'Keep this person'}</span
+														>
+													</button>
+												{/if}
 											</div>
 											{#if !STAGE_UI}
 												<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
@@ -9162,53 +9235,21 @@
 									     approved, and the drift compounds down the chain. One frame kept
 									     as a character stops that. The send button stays live: this is
 									     advice on the way past, not a gate. -->
+											<!-- The offer itself now sits in the row above, beside the choice it
+											     belongs to. What stays here is what that row has no place for: the
+											     reason, on the surfaces that show reasons, and whatever went wrong. -->
 											{#if continuing && !continuing.characterId}
-												<!-- On the stage the reasoning goes and the button stays: the
-										     drift it prevents is real and measured, and an action nobody
-										     can reach is the same as one that was never built. -->
-												<div
-													class="mt-2 {STAGE_UI
-														? ''
-														: 'rounded-xl bg-[var(--st-surface-2)] px-3 py-2'}"
-												>
-													{#if !STAGE_UI}
-														<p class="text-xs leading-relaxed text-[var(--st-muted)]">
-															No character is kept for this clip, so each continuation copies the
-															one before it and the likeness drifts. Keeping one now holds it.
-														</p>
-													{/if}
-													<div class="mt-1.5 flex flex-wrap items-center gap-2">
-														<button
-															type="button"
-															onclick={makeCharacterFromClip}
-															disabled={charFromClipBusy}
-															class="flex cursor-pointer items-center gap-2 rounded-full bg-[var(--st-text)] px-3 py-1 text-xs font-semibold text-[var(--st-bg)] transition-opacity disabled:cursor-default disabled:opacity-60"
-														>
-															<!-- Fifteen seconds of five frames and a vision call. Long enough
-													     that a button which only changes its words reads as a button
-													     that did nothing. -->
-															{#if charFromClipBusy}
-																<span
-																	class="spin size-3 shrink-0 rounded-full border-2 border-[var(--st-bg)]/30 border-t-[var(--st-bg)]"
-																></span>
-															{/if}
-															<span
-																>{charFromClipBusy
-																	? 'Reading the clip…'
-																	: 'Keep the person as a character'}</span
-															>
-														</button>
-														{#if !STAGE_UI}
-															<span class="text-xs text-[var(--st-faint)]">or send without one</span
-															>
-														{/if}
-													</div>
-													{#if charFromClipError}
-														<p class="mt-1.5 text-xs leading-relaxed text-[var(--st-warn,#e06c6c)]">
-															{charFromClipError}
-														</p>
-													{/if}
-												</div>
+												{#if !STAGE_UI}
+													<p class="mt-2 text-xs leading-relaxed text-[var(--st-muted)]">
+														No character is kept for this clip, so each continuation copies the one
+														before it and the likeness drifts. Keeping one now holds it.
+													</p>
+												{/if}
+												{#if charFromClipError}
+													<p class="mt-1.5 text-xs leading-relaxed text-[var(--st-warn,#e06c6c)]">
+														{charFromClipError}
+													</p>
+												{/if}
 											{:else if continuing && !STAGE_UI}
 												<p class="mt-2 text-xs leading-relaxed text-[var(--st-muted)]">
 													Kept as <span class="font-semibold">{continuing.characterName}</span> — every
