@@ -87,8 +87,18 @@
 		{ task: 'write_screenplay', artifact: 'screenplay', doc: 'screenplay', label: 'Screenplay' },
 		{ task: 'character_table', artifact: 'character_table', doc: 'characterTable', label: 'Cast' },
 		{ task: 'create_scenes', artifact: 'scene_list', doc: 'sceneList', label: 'Scenes' },
-		{ task: 'write_art_direction', artifact: 'art_direction', doc: 'artDirection', label: 'Art direction' },
-		{ task: 'write_visual_bible', artifact: 'visual_bible', doc: 'visualBible', label: 'Visual bible' }
+		{
+			task: 'write_art_direction',
+			artifact: 'art_direction',
+			doc: 'artDirection',
+			label: 'Art direction'
+		},
+		{
+			task: 'write_visual_bible',
+			artifact: 'visual_bible',
+			doc: 'visualBible',
+			label: 'Visual bible'
+		}
 	] as const;
 
 	type PlanningStep = (typeof PLANNING_STEPS)[number];
@@ -221,7 +231,6 @@
 	let latestPlanId = $state('');
 	let sceneCount = $state(4);
 
-
 	let planningWs = $state('');
 	let renderWs = $state('');
 	const activeWs = $derived(renderWs || planningWs);
@@ -292,7 +301,11 @@
 			const r = await fetch('/studio/api/history', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ slug, title: title.slice(0, 80) || 'New session', pitch: title.slice(0, 200) })
+				body: JSON.stringify({
+					slug,
+					title: title.slice(0, 80) || 'New session',
+					pitch: title.slice(0, 200)
+				})
 			});
 			const d = (await r.json()) as { productions?: Production[] };
 			if (d.productions) history = d.productions;
@@ -668,12 +681,16 @@
 	 *  there. The elapsed number is the important one. It is what turns "this
 	 *  feels slow" into a judgement someone can actually make. */
 	const shootBoard = $derived.by(() => {
-		const tasks = (renderPoll?.tasks ?? []).filter((t) => /shoot[_ ]?scene/i.test(t.key ?? t.title ?? ''));
+		const tasks = (renderPoll?.tasks ?? []).filter((t) =>
+			/shoot[_ ]?scene/i.test(t.key ?? t.title ?? '')
+		);
 		const arts = renderPoll?.artifacts ?? [];
 		return tasks
 			.map((t) => {
 				const n = sceneNo(t.key ?? '', t.title ?? '');
-				const art = arts.find((a) => sceneNo(a.key ?? '', a.name ?? '') === n && /clip/i.test(a.key ?? ''));
+				const art = arts.find(
+					(a) => sceneNo(a.key ?? '', a.name ?? '') === n && /clip/i.test(a.key ?? '')
+				);
 				const done = art?.status === 'approved';
 				const failed = DEAD.includes(t.status);
 				return {
@@ -824,7 +841,6 @@
 			}
 		}
 	}
-
 
 	/* ── reference files ───────────────────────────────────────────────────────
 	 *  Faces, rooms, movements you want the render to copy. They are staged on
@@ -987,7 +1003,6 @@
 			body: JSON.stringify({ id, description })
 		});
 	}
-
 
 	// --- plan editing (only the latest plan, only before launch) -----------------
 
@@ -1222,9 +1237,7 @@
 	 *  legitimately — but it is the moment the reader starts wondering, and
 	 *  saying it first is the difference between a slow page and a broken one. */
 	const OVERDUE = 1.5;
-	const promptOverdue = $derived(
-		!!typicalPrompt && sendingFor * 1000 > typicalPrompt * OVERDUE
-	);
+	const promptOverdue = $derived(!!typicalPrompt && sendingFor * 1000 > typicalPrompt * OVERDUE);
 	const clipOverdue = $derived(
 		!!typicalClip && startedAt > 0 && now - startedAt > typicalClip * OVERDUE
 	);
@@ -1274,9 +1287,7 @@
 	 *  `justify-center` on the scroll container, a transcript taller than the box
 	 *  was then centred inside it — which puts its top above scrollTop 0, where
 	 *  nothing can reach it. One wrong predicate, two bugs. */
-	const showExamples = $derived(
-		!brief && !sending && chat.every((c) => c.id === welcomeId)
-	);
+	const showExamples = $derived(!brief && !sending && chat.every((c) => c.id === welcomeId));
 
 	const composerPlaceholder = $derived.by(() => {
 		// An instruction, not an example. A worked example belongs on the empty
@@ -1340,14 +1351,20 @@
 				// A continuation is read back too. The round remembers which clip and
 				// which seam it was written for; the button then writes through
 				// continueFromRequest — see acceptConfirm.
-				else if (continuing) await confirmFromRequest(text, '', STAGE_UI);
+				else if (continuing) await confirmFromRequest(text);
 				// Read it back first, in a sentence, before spending anything on it.
 				// The brief and the render follow from the button on that card —
 				// see confirmFromRequest and acceptConfirm.
-				else if (wantTarget === 'clip') await confirmFromRequest(text, '', STAGE_UI);
+				//
+				// The stage used to accept this for you, which made the send one press
+				// instead of two. But the read-back exists because a creator took their
+				// references to a general chat and iterated there: what they wanted was
+				// to see whether they had been understood while changing it was still
+				// free. Accepting it automatically spends a render on every misreading,
+				// which is the thing it was built to stop. The stage draws it now.
+				else if (wantTarget === 'clip') await confirmFromRequest(text);
 				else await sheetFromRequest(text, wantTarget);
-			}
-			else if (!brief) await planFromIdea(text);
+			} else if (!brief) await planFromIdea(text);
 			else if (!planningWs) await refinePlan(text);
 			else await managerChat(text);
 		} catch (e) {
@@ -1415,7 +1432,13 @@
 			pushError(m?.message || `The prompt could not be written (${res.status}).`);
 			return null;
 		}
-		let r: { ok: boolean; shot?: ChatItem['shot']; warn?: string[]; fixed?: string[]; error?: string };
+		let r: {
+			ok: boolean;
+			shot?: ChatItem['shot'];
+			warn?: string[];
+			fixed?: string[];
+			error?: string;
+		};
 		try {
 			r = (await res.json()) as typeof r;
 		} catch {
@@ -1600,23 +1623,23 @@
 	 *  than editing the prompt the model last produced. */
 	let lastRequest = $state('');
 
-/** The rounds already agreed in this session, oldest first.
- *
- *  Read out of the chat rather than kept in a variable, for the same reason the
- *  awaited sheets are: the conversation is the record and a variable is not. It
- *  survives a reload; a variable does not, and a refinement that has forgotten
- *  what it is refining silently drops everything said before it. */
-/** The operator's half and ours, told apart.
- *
- *  The read-back is what they said; anything after the marker is what the
- *  studio is filling in for them. Rendered at the same weight they read as one
- *  paragraph, and then a room nobody asked for looks like a room they asked
- *  for — which is precisely the agreement this layer exists to make honest.
- *
- *  Split on the marker the writer is told to emit rather than on sentence
- *  punctuation: a full stop is in every abbreviation and half the prose, and a
- *  wrong split here would attribute their own words to us. No marker means
- *  there was nothing to add, which is a normal and good answer. */
+	/** The rounds already agreed in this session, oldest first.
+	 *
+	 *  Read out of the chat rather than kept in a variable, for the same reason the
+	 *  awaited sheets are: the conversation is the record and a variable is not. It
+	 *  survives a reload; a variable does not, and a refinement that has forgotten
+	 *  what it is refining silently drops everything said before it. */
+	/** The operator's half and ours, told apart.
+	 *
+	 *  The read-back is what they said; anything after the marker is what the
+	 *  studio is filling in for them. Rendered at the same weight they read as one
+	 *  paragraph, and then a room nobody asked for looks like a room they asked
+	 *  for — which is precisely the agreement this layer exists to make honest.
+	 *
+	 *  Split on the marker the writer is told to emit rather than on sentence
+	 *  punctuation: a full stop is in every abbreviation and half the prose, and a
+	 *  wrong split here would attribute their own words to us. No marker means
+	 *  there was nothing to add, which is a normal and good answer. */
 	function splitConfirm(line: string): { lead: string; said: string; added: string } {
 		let rest = line;
 		let added = '';
@@ -1647,7 +1670,13 @@
 	}
 
 	/** The composer's settings as the confirmation sees them. */
-	type ConfirmSettings = { seconds: number; who: string; where: string; angles: number; mode: string };
+	type ConfirmSettings = {
+		seconds: number;
+		who: string;
+		where: string;
+		angles: number;
+		mode: string;
+	};
 	function settingsNow(): ConfirmSettings {
 		return {
 			seconds: composerShape.seconds,
@@ -1713,21 +1742,22 @@
 	});
 
 	/** Close the current read-back chain: every unsent round is spent.
- *
- *  The rounds of a shot are its "agreed so far"; a round that outlives its
- *  shot leaks into the next one as agreement nobody made. Called on launch,
- *  and on entering or leaving a continuation — a continuation is a different
- *  order from the new clip that was being described before it, and vice
- *  versa, so neither may inherit the other's history. */
+	 *
+	 *  The rounds of a shot are its "agreed so far"; a round that outlives its
+	 *  shot leaks into the next one as agreement nobody made. Called on launch,
+	 *  and on entering or leaving a continuation — a continuation is a different
+	 *  order from the new clip that was being described before it, and vice
+	 *  versa, so neither may inherit the other's history. */
 	function spendConfirmChain() {
-		for (const x of chat) if (x.kind === 'confirm' && x.confirm && !x.confirm.sent) x.confirm.sent = true;
+		for (const x of chat)
+			if (x.kind === 'confirm' && x.confirm && !x.confirm.sent) x.confirm.sent = true;
 		settingsWritten = null;
 		// Written down. In memory the chain was closed; on disk it was not, so a
 		// reload after "new clip" brought the old rounds back unsent.
 		persist();
 	}
 
-		function confirmHistory(): string[] {
+	function confirmHistory(): string[] {
 		const out: string[] = [];
 		for (const c of chat) {
 			if (c.kind === 'confirm' && c.confirm?.line && !c.confirm.sent) out.push(c.confirm.line);
@@ -1868,11 +1898,11 @@
 	 *  change — then it stops and says what changed, because that is a different
 	 *  clip from the one that was agreed to.
 	 */
-/** Start a brief the way its own card would.
- *
- *  The composer can be set to several takes or several camera angles, and the
- *  card offers renderBatch for those — calling renderShot from here regardless
- *  would quietly deliver one clip where two were asked for and read back. */
+	/** Start a brief the way its own card would.
+	 *
+	 *  The composer can be set to several takes or several camera angles, and the
+	 *  card offers renderBatch for those — calling renderShot from here regardless
+	 *  would quietly deliver one clip where two were asked for and read back. */
 	async function startFromCard(card: ChatItem): Promise<void> {
 		if (!card.shot) return;
 		const cardAngles = card.shot.continues && card.shot.continues.pinned !== false ? 1 : angles;
@@ -1881,7 +1911,7 @@
 		else await renderShot(card.id);
 	}
 
-		async function acceptConfirm(itemId: string) {
+	async function acceptConfirm(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
 		const c = item?.confirm;
 		if (!c || shotBusy[itemId]) return;
@@ -1911,7 +1941,10 @@
 			// it can only keep the ones it is given. A round that answered a
 			// setting change said nothing and contributes nothing here.
 			const rounds = chat.filter((x) => x.kind === 'confirm' && x.confirm && !x.confirm.sent);
-			const raw = rounds.map((x) => x.confirm!.said.trim()).filter(Boolean).join('\n');
+			const raw = rounds
+				.map((x) => x.confirm!.said.trim())
+				.filter(Boolean)
+				.join('\n');
 			const request = agreed ? `${raw || c.said}\n\n---\n\n${agreed}` : raw || c.said;
 			c.phase = 'writing';
 			// A continuation writes through its own path, against the clip the round
@@ -2213,16 +2246,24 @@
 	const chosenLocation = $derived(locations.find((l) => l.id === wantLocation));
 	let sheetBusy = $state<Record<string, boolean>>({});
 
-
 	/** Three voices worth having without writing one.
 	 *
 	 *  Physical description only — pitch, weight, accent, pace. Not a mood and
 	 *  not a character trait: the model renders what a microphone would pick up,
 	 *  and "confident" is not a sound. */
 	const VOICE_PRESETS = [
-		{ label: 'low and husky', text: 'a low, warm, slightly husky adult female voice, neutral American accent, unhurried' },
-		{ label: 'bright and young', text: 'a bright, light adult female voice, neutral American accent, quick and forward' },
-		{ label: 'soft and breathy', text: 'a soft, breathy adult female voice, neutral American accent, close and unhurried' }
+		{
+			label: 'low and husky',
+			text: 'a low, warm, slightly husky adult female voice, neutral American accent, unhurried'
+		},
+		{
+			label: 'bright and young',
+			text: 'a bright, light adult female voice, neutral American accent, quick and forward'
+		},
+		{
+			label: 'soft and breathy',
+			text: 'a soft, breathy adult female voice, neutral American accent, close and unhurried'
+		}
 	];
 
 	/** The voice being edited.
@@ -2313,7 +2354,12 @@
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
-				sheet?: { kind: 'character' | 'location'; description: string; voice?: string; why?: string };
+				sheet?: {
+					kind: 'character' | 'location';
+					description: string;
+					voice?: string;
+					why?: string;
+				};
 				error?: string;
 			};
 			if (!r.ok || !r.sheet) {
@@ -2852,10 +2898,6 @@
 			sheetBusy[itemId] = false;
 		}
 	}
-
-	
-
-
 
 	/** Rewrite the card in place. The old one collapses rather than disappearing:
 	 *  a prompt that was nearly right is worth being able to look back at. */
@@ -3665,7 +3707,9 @@
 			const res = await fetch('/studio/api/join', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ parts: film.map((c) => ({ workspace: c.workspace, artifact: c.artifact, file: c.file })) })
+				body: JSON.stringify({
+					parts: film.map((c) => ({ workspace: c.workspace, artifact: c.artifact, file: c.file }))
+				})
 			});
 			const r = (await res.json()) as {
 				ok?: boolean;
@@ -3930,7 +3974,12 @@
 	const composerShape = $derived.by(() => {
 		const prior = continuing ? logRow[continuing.workspace] : null;
 		if (!prior?.width || !prior?.height) {
-			return { seconds: wantSeconds, res: wantRes, portrait: wantOrientation === 'portrait', fixed: false };
+			return {
+				seconds: wantSeconds,
+				res: wantRes,
+				portrait: wantOrientation === 'portrait',
+				fixed: false
+			};
 		}
 		const longest = Math.max(prior.width, prior.height);
 		// Length stays yours even here. Only the two that decide whether the pieces
@@ -4024,7 +4073,9 @@
 
 	async function dropSheet(id: string) {
 		try {
-			const res = await fetch(`/studio/api/sheet?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+			const res = await fetch(`/studio/api/sheet?id=${encodeURIComponent(id)}`, {
+				method: 'DELETE'
+			});
 			const r = (await res.json()) as { ok?: boolean; sheets?: StoredSheet[] };
 			if (r.sheets) sheets = r.sheets;
 			// Whatever was pointing at it stops pointing at it.
@@ -4085,7 +4136,11 @@
 		const out: { workspace: string; artifact: string; file: string }[] = [];
 		for (const w of order) {
 			const it = chat.find(
-				(c) => c.kind === 'clips' && c.artifact?.workspace === w && c.artifact?.id && c.artifact.files?.length
+				(c) =>
+					c.kind === 'clips' &&
+					c.artifact?.workspace === w &&
+					c.artifact?.id &&
+					c.artifact.files?.length
 			);
 			if (it?.artifact?.id) {
 				out.push({ workspace: w, artifact: it.artifact.id, file: it.artifact.files[0].name });
@@ -4218,7 +4273,9 @@
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.shot || item.shot.launched) return;
 		const n = Math.round(Math.min(2, Math.max(0, value)) * 20) / 20;
-		item.shot.loras = (item.shot.loras ?? []).map((p) => (p.key === key ? { ...p, strength: n } : p));
+		item.shot.loras = (item.shot.loras ?? []).map((p) =>
+			p.key === key ? { ...p, strength: n } : p
+		);
 	}
 
 	/** Move an always-loaded adapter for this clip only.
@@ -4465,7 +4522,9 @@
 			if (loadedWf.length) extras.push(`Extra workflows loaded: ${loadedWf.join(', ')}.`);
 			if (loadedSk.length) extras.push(`Extra skills loaded: ${loadedSk.join(', ')}.`);
 			for (const f of [...failedWf, ...failedSk]) {
-				extras.push(`${f.name} did not load — ${f.detail ?? 'no reason given'}. The shoot goes on without it.`);
+				extras.push(
+					`${f.name} did not load — ${f.detail ?? 'no reason given'}. The shoot goes on without it.`
+				);
 			}
 			if (r.refs?.imported.length) {
 				extras.push(
@@ -4655,12 +4714,7 @@
 					// order of magnitude longer, and a couple of them in the sample
 					// would make the clip estimate useless.
 					// Only a render this tab actually watched. See sawRunning.
-					if (
-						sawRunning &&
-						simpleRun &&
-						startedAt &&
-						!ts.some((t) => DEAD.includes(t.status))
-					) {
+					if (sawRunning && simpleRun && startedAt && !ts.some((t) => DEAD.includes(t.status))) {
 						recordWait('clip', Date.now() - startedAt);
 						refreshClipEstimate();
 					}
@@ -4748,7 +4802,12 @@
 					if (next) {
 						const ok = await resetTaskByKey(next, CONSISTENCY_INSTRUCTION);
 						if (ok) {
-							chain = { taskKey: next, downstream: chain.downstream.slice(1), armed: false, polls: 0 };
+							chain = {
+								taskKey: next,
+								downstream: chain.downstream.slice(1),
+								armed: false,
+								polls: 0
+							};
 						} else {
 							pushError('Could not start regenerating the next document.');
 							// The unreset tasks still hold their old (valid) content —
@@ -4810,8 +4869,7 @@
 			const item = pushItem({
 				who: 'studio',
 				kind: 'approval',
-				text:
-					'The plan is ready. Read anything you want to check above — once shooting starts, none of it can be changed.\n\nIf you want a particular face, room or movement in the film, attach it with the clip on the message box before you start. That is the last moment it can be handed to the crew.\n\nShooting uses GPU time and costs money.'
+				text: 'The plan is ready. Read anything you want to check above — once shooting starts, none of it can be changed.\n\nIf you want a particular face, room or movement in the film, attach it with the clip on the message box before you start. That is the last moment it can be handed to the crew.\n\nShooting uses GPU time and costs money.'
 			});
 			approvalId = item.id;
 		}
@@ -4989,7 +5047,10 @@
 			try {
 				const r = await call('chat', { msg: ASSEMBLY_MSG }, renderWs);
 				if (r.ok && typeof r.data === 'string' && r.data.trim()) pushStudio(r.data);
-				else if (!r.ok) pushError('The assembly request did not go through — you can send it again from the chat.');
+				else if (!r.ok)
+					pushError(
+						'The assembly request did not go through — you can send it again from the chat.'
+					);
 			} catch (e) {
 				pushError(`The assembly request did not go through: ${e}`);
 			}
@@ -5059,9 +5120,7 @@
 
 		const shoots = rtasks.filter(isShootTask).sort((x, y) => sceneNo(x.key) - sceneNo(y.key));
 		if (shoots.length > 0) {
-			shoots.forEach((t, i) =>
-				out.push({ id: t.id, label: t.key, status: mapStatus(t.status) })
-			);
+			shoots.forEach((t, i) => out.push({ id: t.id, label: t.key, status: mapStatus(t.status) }));
 		} else {
 			for (let i = 0; i < b.sceneCount; i++) {
 				out.push({ id: `shoot-ghost-${i}`, label: `shoot_scene_${i + 1}`, status: 'pending' });
@@ -5631,7 +5690,14 @@
 				if (!c) continue;
 				const card = c.cardId ? chat.find((x) => x.id === c.cardId) : null;
 				if (card?.shot?.launched) return null;
-				if (c.fixed?.length || c.error) return chat[i];
+				// Anything that has been read back and not yet shot: the ordinary
+				// case, where the sentence is waiting to be agreed with, as much as
+				// the two unhappy ones. They are the same state — a round that will
+				// not move until somebody presses — and splitting them left the
+				// ordinary one with nothing to draw it.
+				if (c.error || c.fixed?.length || (!c.sent && !c.streaming && c.line.trim())) {
+					return chat[i];
+				}
 				return null;
 			}
 			return null;
@@ -5735,71 +5801,71 @@
 		// is a conversation, and dropping it on reload was the same loss as
 		// dropping a run.
 		if (!(s.planningWs || s.renderWs || s.sessionSlug)) return false;
-			sessionSlug = s.sessionSlug ?? '';
-			// Back into the same state the banner reads, so a reload lands you where
-			// you were rather than one step to the side of it.
-			continuing = s.continuing ?? null;
-			brief = s.brief ?? null;
-			launchedBrief = s.launchedBrief ?? s.brief ?? null;
-			sceneCount = s.brief?.sceneCount ?? sceneCount;
-			planningWs = s.planningWs ?? '';
-			renderWs = s.renderWs ?? '';
-			// The mode follows the run you opened. Landing in a simple run with
-			// the advanced composer under it is the same mismatch as the rail:
-			// the page describing one mode while showing the other.
-			if (ONE_CLIP_WS.test(renderWs)) mode = 'simple';
-			else if (s.planningWs) mode = 'advanced';
-			assemblySent = s.assemblySent ?? false;
-			startedAt = s.startedAt || Date.now();
-			// Asked here rather than anywhere later, because everything below
-			// reads as live: the poller, the clock, the rail's pills.
-			staleRun = Date.now() - startedAt > RUN_CEILING_MS;
-			if (assemblySent) {
-				shootsAnnounced = true;
-				finalByNameOnly = true;
-			}
+		sessionSlug = s.sessionSlug ?? '';
+		// Back into the same state the banner reads, so a reload lands you where
+		// you were rather than one step to the side of it.
+		continuing = s.continuing ?? null;
+		brief = s.brief ?? null;
+		launchedBrief = s.launchedBrief ?? s.brief ?? null;
+		sceneCount = s.brief?.sceneCount ?? sceneCount;
+		planningWs = s.planningWs ?? '';
+		renderWs = s.renderWs ?? '';
+		// The mode follows the run you opened. Landing in a simple run with
+		// the advanced composer under it is the same mismatch as the rail:
+		// the page describing one mode while showing the other.
+		if (ONE_CLIP_WS.test(renderWs)) mode = 'simple';
+		else if (s.planningWs) mode = 'advanced';
+		assemblySent = s.assemblySent ?? false;
+		startedAt = s.startedAt || Date.now();
+		// Asked here rather than anywhere later, because everything below
+		// reads as live: the poller, the clock, the rail's pills.
+		staleRun = Date.now() - startedAt > RUN_CEILING_MS;
+		if (assemblySent) {
+			shootsAnnounced = true;
+			finalByNameOnly = true;
+		}
 
-			// A saved conversation is restored as itself. Anything older —
-			// written before transcripts were saved — falls back to the plan
-			// card, which is what it used to do.
-			if (s.chat?.length) {
-				chat = s.chat;
-				superseded = s.superseded ?? {};
-				latestPlanId = s.latestPlanId ?? '';
-				boardId = s.boardId ?? '';
-				approvalId = s.approvalId ?? '';
-				gateOpen = s.gateOpen ?? {};
-				docPhase = s.docPhase ?? {};
-				docAccepted = s.docAccepted ?? {};
-				latestDocItem = s.latestDocItem ?? {};
-				docBody = s.docBody ?? {};
-				docFile = s.docFile ?? {};
-				docUrl = s.docUrl ?? {};
-				docTaskId = s.docTaskId ?? {};
-				for (const id of s.clipPosted ?? []) clipPosted.add(id);
-				for (const id of s.failedNoted ?? []) failedNoted.add(id);
-				for (const id of s.preAssemblyIds ?? []) preAssemblyIds.add(id);
-				seenActivity = new Set(s.seenActivity ?? []);
-				shootsAnnounced = s.shootsAnnounced ?? shootsAnnounced;
-				finalPosted = s.finalPosted ?? false;
-				finalByNameOnly = s.finalByNameOnly ?? finalByNameOnly;
-				welcomeId = s.welcomeId ?? '';
+		// A saved conversation is restored as itself. Anything older —
+		// written before transcripts were saved — falls back to the plan
+		// card, which is what it used to do.
+		if (s.chat?.length) {
+			chat = s.chat;
+			superseded = s.superseded ?? {};
+			latestPlanId = s.latestPlanId ?? '';
+			boardId = s.boardId ?? '';
+			approvalId = s.approvalId ?? '';
+			gateOpen = s.gateOpen ?? {};
+			docPhase = s.docPhase ?? {};
+			docAccepted = s.docAccepted ?? {};
+			latestDocItem = s.latestDocItem ?? {};
+			docBody = s.docBody ?? {};
+			docFile = s.docFile ?? {};
+			docUrl = s.docUrl ?? {};
+			docTaskId = s.docTaskId ?? {};
+			for (const id of s.clipPosted ?? []) clipPosted.add(id);
+			for (const id of s.failedNoted ?? []) failedNoted.add(id);
+			for (const id of s.preAssemblyIds ?? []) preAssemblyIds.add(id);
+			seenActivity = new Set(s.seenActivity ?? []);
+			shootsAnnounced = s.shootsAnnounced ?? shootsAnnounced;
+			finalPosted = s.finalPosted ?? false;
+			finalByNameOnly = s.finalByNameOnly ?? finalByNameOnly;
+			welcomeId = s.welcomeId ?? '';
 			lastRequest = s.lastRequest ?? '';
-			} else if (brief) {
-				const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
-				latestPlanId = item.id;
-			}
-			// A run past the ceiling is not polled. The harness has already
-			// given up on every task it could have been running, so the loop
-			// would only ask a dead workspace the same question every thirty
-			// seconds while the page counted the hours since the tab closed.
-			//
-			// The cost, stated plainly: work that finished after this tab was
-			// closed is not collected. Nothing that was still running can be —
-			// it was abandoned hours before the ceiling — but a clip that
-			// landed and was never posted stays uncollected until the run is
-			// started again.
-			if (!staleRun) startPolling();
+		} else if (brief) {
+			const item = pushItem({ who: 'studio', kind: 'plan', plan: brief });
+			latestPlanId = item.id;
+		}
+		// A run past the ceiling is not polled. The harness has already
+		// given up on every task it could have been running, so the loop
+		// would only ask a dead workspace the same question every thirty
+		// seconds while the page counted the hours since the tab closed.
+		//
+		// The cost, stated plainly: work that finished after this tab was
+		// closed is not collected. Nothing that was still running can be —
+		// it was abandoned hours before the ceiling — but a clip that
+		// landed and was never posted stays uncollected until the run is
+		// started again.
+		if (!staleRun) startPolling();
 		return true;
 	}
 
@@ -5988,7 +6054,9 @@
 	{#if offline || lastError}
 		<div class="mb-3 rounded-xl bg-[var(--st-surface-2)] px-3 py-2">
 			<p class="text-xs leading-relaxed text-[var(--st-muted)]">
-				{offline ? 'The harness is not responding — showing the last known state.' : 'Error from the harness — showing the last known state.'}
+				{offline
+					? 'The harness is not responding — showing the last known state.'
+					: 'Error from the harness — showing the last known state.'}
 			</p>
 		</div>
 	{/if}
@@ -6029,22 +6097,23 @@
 		{#each blocks as b, i (i)}
 			{#if b.kind === 'heading'}
 				<h4
-					class="font-display font-semibold {b.level === 1
-						? 'text-base'
-						: 'text-sm'} {i > 0 ? 'pt-2' : ''}"
+					class="font-display font-semibold {b.level === 1 ? 'text-base' : 'text-sm'} {i > 0
+						? 'pt-2'
+						: ''}"
 				>
 					{b.text}
 				</h4>
 			{:else if b.kind === 'para'}
-				<p>{#each b.spans as s, j (j)}{#if s.bold}<strong class="font-semibold"
-								>{s.text}</strong
-							>{:else if s.italic}<em>{s.text}</em>{:else}{s.text}{/if}{/each}</p>
+				<p>
+					{#each b.spans as s, j (j)}{#if s.bold}<strong class="font-semibold">{s.text}</strong
+							>{:else if s.italic}<em>{s.text}</em>{:else}{s.text}{/if}{/each}
+				</p>
 			{:else if b.kind === 'list'}
 				<ul class="space-y-1.5 pl-4">
 					{#each b.items as item, j (j)}
 						<li class="list-disc">
 							{#each item as s, k (k)}{#if s.bold}<strong class="font-semibold">{s.text}</strong
-								>{:else if s.italic}<em>{s.text}</em>{:else}{s.text}{/if}{/each}
+									>{:else if s.italic}<em>{s.text}</em>{:else}{s.text}{/if}{/each}
 						</li>
 					{/each}
 				</ul>
@@ -6084,7 +6153,9 @@
 			{:else if b.kind === 'rule'}
 				<hr class="border-[var(--st-line)]" />
 			{:else if b.kind === 'slug'}
-				<p class="pt-3 font-mono text-xs font-semibold tracking-widest text-[var(--st-muted)] uppercase">
+				<p
+					class="pt-3 font-mono text-xs font-semibold tracking-widest text-[var(--st-muted)] uppercase"
+				>
 					{b.text}
 				</p>
 			{:else if b.kind === 'transition'}
@@ -6200,7 +6271,7 @@
 				<span class="px-2 text-center text-[11px] text-[var(--st-faint)]">interrupted</span>
 			{/if}
 			<span
-				class="pointer-events-none absolute bottom-1.5 left-1.5 rounded-[5px] bg-black/50 px-1.5 py-px text-[11px] font-medium tabular-nums text-white backdrop-blur-md"
+				class="pointer-events-none absolute bottom-1.5 left-1.5 rounded-[5px] bg-black/50 px-1.5 py-px text-[11px] font-medium text-white tabular-nums backdrop-blur-md"
 			>
 				{run.index}
 			</span>
@@ -6268,14 +6339,21 @@
 				onclick={() => setNavOpen(false)}
 				class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
 			>
-<!-- Three rules, the last one short. It reads as a list that can be
+				<!-- Three rules, the last one short. It reads as a list that can be
 	 pulled open rather than as a menu, and the ragged end keeps it from
 	 sitting like a block of three identical bars. -->
-<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
-	<path d="M2.5 4h11M2.5 8h11M2.5 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-</svg>
+				<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
+					<path
+						d="M2.5 4h11M2.5 8h11M2.5 12h7"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+					/>
+				</svg>
 			</button>
-			<h1 class="font-display truncate text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
+			<h1 class="truncate font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">
+				Auteur
+			</h1>
 		</div>
 
 		<!-- The two doors, named apart.
@@ -6314,11 +6392,32 @@
 						aria-hidden="true"
 					>
 						{#if door.id === 'simple'}
-							<rect x="2.5" y="4" width="11" height="8" rx="1.6" stroke="currentColor" stroke-width="1.5" />
+							<rect
+								x="2.5"
+								y="4"
+								width="11"
+								height="8"
+								rx="1.6"
+								stroke="currentColor"
+								stroke-width="1.5"
+							/>
 							<path d="M6.8 6.9v2.2l2.4-1.1z" fill="currentColor" />
 						{:else}
-							<rect x="2.5" y="3" width="11" height="10" rx="1.6" stroke="currentColor" stroke-width="1.5" />
-							<path d="M5.2 6h5.6M5.2 8.4h5.6M5.2 10.6h3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+							<rect
+								x="2.5"
+								y="3"
+								width="11"
+								height="10"
+								rx="1.6"
+								stroke="currentColor"
+								stroke-width="1.5"
+							/>
+							<path
+								d="M5.2 6h5.6M5.2 8.4h5.6M5.2 10.6h3.2"
+								stroke="currentColor"
+								stroke-width="1.4"
+								stroke-linecap="round"
+							/>
 						{/if}
 					</svg>
 					<span class="min-w-0 truncate">{door.label}</span>
@@ -6428,7 +6527,9 @@
 									</span>
 								{:else if kind === 'film'}
 									<span class="mt-0.5 block text-xs text-[var(--st-faint)]">
-										{p.sceneCount} scene{p.sceneCount === 1 ? '' : 's'}{p.renderWs ? ' · shot' : ' · planning'}
+										{p.sceneCount} scene{p.sceneCount === 1 ? '' : 's'}{p.renderWs
+											? ' · shot'
+											: ' · planning'}
 									</span>
 								{/if}
 							</button>
@@ -6491,26 +6592,81 @@
 						class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-[var(--st-surface)] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
 					>
 						<svg viewBox="0 0 16 16" class="size-4" fill="none" aria-hidden="true">
-							<rect x="2.5" y="2.5" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
-							<rect x="8.9" y="2.5" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
-							<rect x="2.5" y="8.9" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
-							<rect x="8.9" y="8.9" width="4.6" height="4.6" rx="1.2" stroke="currentColor" stroke-width="1.5" />
+							<rect
+								x="2.5"
+								y="2.5"
+								width="4.6"
+								height="4.6"
+								rx="1.2"
+								stroke="currentColor"
+								stroke-width="1.5"
+							/>
+							<rect
+								x="8.9"
+								y="2.5"
+								width="4.6"
+								height="4.6"
+								rx="1.2"
+								stroke="currentColor"
+								stroke-width="1.5"
+							/>
+							<rect
+								x="2.5"
+								y="8.9"
+								width="4.6"
+								height="4.6"
+								rx="1.2"
+								stroke="currentColor"
+								stroke-width="1.5"
+							/>
+							<rect
+								x="8.9"
+								y="8.9"
+								width="4.6"
+								height="4.6"
+								rx="1.2"
+								stroke="currentColor"
+								stroke-width="1.5"
+							/>
 						</svg>
 					</button>
 				</div>
 			</div>
 		{/if}
 
-		<div class="px-3 pt-1 pb-3 {sheets.length || films.length ? '' : 'border-t border-[var(--st-line)]'}">
+		<div
+			class="px-3 pt-1 pb-3 {sheets.length || films.length
+				? ''
+				: 'border-t border-[var(--st-line)]'}"
+		>
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a
 				href="/studio/admin"
 				class="flex min-h-10 cursor-pointer items-center gap-3 rounded-xl px-3 text-sm text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
 			>
 				<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" aria-hidden="true">
-					<path d="M3 5h10M3 11h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-					<circle cx="6" cy="5" r="1.8" fill="var(--st-bg)" stroke="currentColor" stroke-width="1.5" />
-					<circle cx="10.5" cy="11" r="1.8" fill="var(--st-bg)" stroke="currentColor" stroke-width="1.5" />
+					<path
+						d="M3 5h10M3 11h10"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+					/>
+					<circle
+						cx="6"
+						cy="5"
+						r="1.8"
+						fill="var(--st-bg)"
+						stroke="currentColor"
+						stroke-width="1.5"
+					/>
+					<circle
+						cx="10.5"
+						cy="11"
+						r="1.8"
+						fill="var(--st-bg)"
+						stroke="currentColor"
+						stroke-width="1.5"
+					/>
 				</svg>
 				Prompts &amp; models
 			</a>
@@ -6530,26 +6686,31 @@
 			 hundred and twenty pixels in, and the rail then opened from somewhere
 			 else entirely — the button and the thing it opened in two places. -->
 		<header class="flex h-12 shrink-0 items-center gap-2.5 px-3">
-				{#if !sidebarOpen}
-					<button
-						type="button"
-						aria-label="show past productions"
-						aria-expanded="false"
-						class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
-						onclick={() => setNavOpen(true)}
-					>
-<!-- Three rules, the last one short. It reads as a list that can be
+			{#if !sidebarOpen}
+				<button
+					type="button"
+					aria-label="show past productions"
+					aria-expanded="false"
+					class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)]"
+					onclick={() => setNavOpen(true)}
+				>
+					<!-- Three rules, the last one short. It reads as a list that can be
 	 pulled open rather than as a menu, and the ragged end keeps it from
 	 sitting like a block of three identical bars. -->
-<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
-	<path d="M2.5 4h11M2.5 8h11M2.5 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-</svg>
-					</button>
-					<!-- The product's name, at a size a name is set at. It was ten pixels
+					<svg viewBox="0 0 16 16" class="size-[18px]" fill="none" aria-hidden="true">
+						<path
+							d="M2.5 4h11M2.5 8h11M2.5 12h7"
+							stroke="currentColor"
+							stroke-width="1.5"
+							stroke-linecap="round"
+						/>
+					</svg>
+				</button>
+				<!-- The product's name, at a size a name is set at. It was ten pixels
 						 of letterspaced caps in the faintest colour on the page — the least
 						 legible text in the app was the thing it is called. -->
-					<h1 class="font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
-				{/if}
+				<h1 class="font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
+			{/if}
 		</header>
 
 		<!-- 66rem only when the task rail is beside it and needs the room. On its
@@ -6563,249 +6724,321 @@
 					? 'max-w-[66rem]'
 					: 'max-w-[48rem]'}"
 		>
-
-		<!-- Two columns only when there is a second column to put something in.
+			<!-- Two columns only when there is a second column to put something in.
 			 The task rail below is behind an if, but the grid reserved its 16rem
 			 and the 40px gap unconditionally — so with no production running the
 			 page held 296px of nothing on the right and pushed the reading column
 			 148px left of centre. That was the centring that would not come right,
 			 and it was never the sidebar. -->
-		<div
-			class="flex min-h-0 flex-1 flex-col {brief
-				? 'lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-10'
-				: ''}"
-		>
-			<!-- ── chat column ─────────────────────────────────────────────── -->
-			<!-- min-h-0 is load-bearing: without it a flex child refuses to shrink
+			<div
+				class="flex min-h-0 flex-1 flex-col {brief
+					? 'lg:grid lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-10'
+					: ''}"
+			>
+				<!-- ── chat column ─────────────────────────────────────────────── -->
+				<!-- min-h-0 is load-bearing: without it a flex child refuses to shrink
 				 below its content and the inner overflow-y-auto never engages. -->
-			<div class="flex min-h-0 min-w-0 flex-1 flex-col">
-				<!-- Mobile: the rail collapses into a slim strip above the chat. -->
-				{#if brief}
-					<div class="mb-5 lg:hidden">
-						<button
-							type="button"
-							class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl bg-[var(--st-surface)] px-4 py-3 text-left"
-							onclick={() => (railOpen = !railOpen)}
-						>
-							<span class="min-w-0 truncate text-xs text-[var(--st-muted)]">{railSummary}</span>
-							<span class="shrink-0 text-xs text-[var(--st-faint)]">
-								{railOpen ? 'hide' : 'progress'}
-							</span>
-						</button>
-						{#if railOpen}
-							<div class="enter mt-2 rounded-2xl bg-[var(--st-surface)] p-4">
-								{@render railList()}
-							</div>
-						{/if}
-					</div>
-				{/if}
+				<div class="flex min-h-0 min-w-0 flex-1 flex-col">
+					<!-- Mobile: the rail collapses into a slim strip above the chat. -->
+					{#if brief}
+						<div class="mb-5 lg:hidden">
+							<button
+								type="button"
+								class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl bg-[var(--st-surface)] px-4 py-3 text-left"
+								onclick={() => (railOpen = !railOpen)}
+							>
+								<span class="min-w-0 truncate text-xs text-[var(--st-muted)]">{railSummary}</span>
+								<span class="shrink-0 text-xs text-[var(--st-faint)]">
+									{railOpen ? 'hide' : 'progress'}
+								</span>
+							</button>
+							{#if railOpen}
+								<div class="enter mt-2 rounded-2xl bg-[var(--st-surface)] p-4">
+									{@render railList()}
+								</div>
+							{/if}
+						</div>
+					{/if}
 
-				<!-- ── the transcript — the only scrolling region on the page ── -->
-				<!-- Empty state centres its own content: a welcome line pinned to the
+					<!-- ── the transcript — the only scrolling region on the page ── -->
+					<!-- Empty state centres its own content: a welcome line pinned to the
 					 top of a tall blank column reads as a page that failed to load.
 					 Once the transcript has real messages it goes back to flowing from
 					 the top, which is what a conversation wants. -->
-				<!-- The stage is the CLIP surface, and only that.
+					<!-- The stage is the CLIP surface, and only that.
 					 It replaced the transcript in every mode at first, which quietly
 					 swallowed the full-production flow: the plan, the screenplay, the
 					 scene board and the crew’s replies are all cards, and a full
 					 production is a conversation with them. What was left was a loader
 					 counting to 97% over a planning run that renders no clip at all,
 					 with the work sitting in cards nobody could see. -->
-				{#if STAGE_UI && mode === 'simple'}
-				<!-- ── the stage ──────────────────────────────────────────────────
+					{#if STAGE_UI && mode === 'simple'}
+						<!-- ── the stage ──────────────────────────────────────────────────
 					 A clip is made in one place and watched in the same place. The
 					 transcript below is the same engine with its cards drawn; this is
 					 what the operator asked to see instead — no read-back, no brief, no
 					 announcement of a launch, and nothing to scroll. -->
-				<!-- The strip floats rather than sits in the row.
+						<!-- The strip floats rather than sits in the row.
 					 In the row it took its width off the stage, so the clip centred in
 					 what was left while the composer below centred in the whole column —
 					 same width, forty-nine pixels apart, which reads as a mistake because
 					 it is one. Floated, the clip has the column to itself and the two line
 					 up; the strip lives in the margin the picture leaves beside it. -->
-				<div
-					class="relative flex min-h-0 flex-1 {showStrip ? 'pl-[6.2rem]' : ''}"
-				>
-					<!-- the chain, newest first. Four, because a strip that grows past
+						<div class="relative flex min-h-0 flex-1 {showStrip ? 'pl-[6.2rem]' : ''}">
+							<!-- the chain, newest first. Four, because a strip that grows past
 						 the stage's own height starts scrolling, which is the thing this
 						 surface exists not to do. -->
-					{#if showStrip}
-						<div class="absolute top-0 left-0 z-10 flex w-[5.4rem] flex-col gap-2">
-							<!-- The one being made takes its place in the strip the moment it is
+							{#if showStrip}
+								<div class="absolute top-0 left-0 z-10 flex w-[5.4rem] flex-col gap-2">
+									<!-- The one being made takes its place in the strip the moment it is
 								 asked for, at the top where it will land. The chain is what this
 								 column shows and the next link is already real — it is being paid
 								 for — so leaving the row out until it arrives makes the strip
 								 disagree with the stage beside it. -->
-							{#if stagePhase === 'working'}
-								<div
-									class="flex aspect-video w-full items-center justify-center rounded-lg bg-[var(--st-surface)] ring-2 ring-[var(--st-text)]"
-								>
-									<span
-										class="spin size-4 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"
-									></span>
-								</div>
-							{/if}
-							{#each stageThumbs as t (t.key)}
-								{#if t.url}
-									<!-- Nothing in the strip is lit while a new one is being made:
+									{#if stagePhase === 'working'}
+										<div
+											class="flex aspect-video w-full items-center justify-center rounded-lg bg-[var(--st-surface)] ring-2 ring-[var(--st-text)]"
+										>
+											<span
+												class="spin size-4 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"
+											></span>
+										</div>
+									{/if}
+									{#each stageThumbs as t (t.key)}
+										{#if t.url}
+											<!-- Nothing in the strip is lit while a new one is being made:
 										 the pending row is where the attention belongs. -->
-									{@const here =
-										stagePhase !== 'working' &&
-										t.workspace === stageShownWs &&
-										(!!stageSel || stageNewest?.artifact?.key !== 'film')}
-									<!-- The one on the stage is lit and the rest are stepped back, so
+											{@const here =
+												stagePhase !== 'working' &&
+												t.workspace === stageShownWs &&
+												(!!stageSel || stageNewest?.artifact?.key !== 'film')}
+											<!-- The one on the stage is lit and the rest are stepped back, so
 										 where you are in the chain is legible without reading
 										 anything. -->
-									<button
-										type="button"
-										draggable={!!t.artifact && !!t.file}
-										ondragstart={(e) => {
-											e.dataTransfer?.setData(
-												CLIP_DRAG,
-												JSON.stringify({ workspace: t.workspace, artifact: t.artifact, file: t.file })
-											);
-											if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
-										}}
-										onclick={() => {
-											// Picking a clip is leaving the error behind. Without this the
-											// stage stayed on it: an export that failed once took over the
-											// surface, survived a reload with the transcript, and every
-											// thumbnail answered with the same dead message.
-											if (stageError) chat = chat.filter((c) => c !== stageError);
-											stageSel = t.workspace === (stageNewest?.artifact?.workspace ?? '') ? '' : t.workspace;
-										}}
-										class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-opacity {here
-											? 'opacity-100 ring-2 ring-[var(--st-text)]'
-											: 'opacity-45 hover:opacity-75'}"
-									>
-										<!-- svelte-ignore a11y_media_has_caption -->
-										<video
-											src={t.url}
-											muted
-											playsinline
-											preload="metadata"
-											onloadedmetadata={(e) =>
-												(clipSecs = { ...clipSecs, [t.key]: e.currentTarget.duration })}
-											class="h-full w-full object-cover"
-										></video>
-										{#if clipSecs[t.key]}
-											<span
-												class="pointer-events-none absolute right-1 bottom-1 rounded bg-black/65 px-1 font-mono text-[0.6rem] leading-4 text-white"
-												>{clipClock(clipSecs[t.key])}</span
+											<button
+												type="button"
+												draggable={!!t.artifact && !!t.file}
+												ondragstart={(e) => {
+													e.dataTransfer?.setData(
+														CLIP_DRAG,
+														JSON.stringify({
+															workspace: t.workspace,
+															artifact: t.artifact,
+															file: t.file
+														})
+													);
+													if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+												}}
+												onclick={() => {
+													// Picking a clip is leaving the error behind. Without this the
+													// stage stayed on it: an export that failed once took over the
+													// surface, survived a reload with the transcript, and every
+													// thumbnail answered with the same dead message.
+													if (stageError) chat = chat.filter((c) => c !== stageError);
+													stageSel =
+														t.workspace === (stageNewest?.artifact?.workspace ?? '')
+															? ''
+															: t.workspace;
+												}}
+												class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-opacity {here
+													? 'opacity-100 ring-2 ring-[var(--st-text)]'
+													: 'opacity-45 hover:opacity-75'}"
 											>
+												<!-- svelte-ignore a11y_media_has_caption -->
+												<video
+													src={t.url}
+													muted
+													playsinline
+													preload="metadata"
+													onloadedmetadata={(e) =>
+														(clipSecs = { ...clipSecs, [t.key]: e.currentTarget.duration })}
+													class="h-full w-full object-cover"
+												></video>
+												{#if clipSecs[t.key]}
+													<span
+														class="pointer-events-none absolute right-1 bottom-1 rounded bg-black/65 px-1 font-mono text-[0.6rem] leading-4 text-white"
+														>{clipClock(clipSecs[t.key])}</span
+													>
+												{/if}
+											</button>
 										{/if}
-									</button>
-								{/if}
-							{/each}
-						</div>
-					{/if}
+									{/each}
+								</div>
+							{/if}
 
-					<div class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2">
-						{#if stagePhase === 'working'}
-							<!-- The percentage is honest about what it is: elapsed against the
+							<div class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2">
+								{#if stagePhase === 'working'}
+									<!-- The percentage is honest about what it is: elapsed against the
 								 median of this machine's own finished runs. Half of all runs are
 								 past a median, so it caps short of full and says so in words
 								 rather than sitting at 100 while nothing happens. -->
-							<!-- The size the clip will be, so nothing jumps when it arrives:
+									<!-- The size the clip will be, so nothing jumps when it arrives:
 								 height-bound and 16:9, the same way the video is measured. -->
-							<!-- The size the clip will be, so nothing jumps when it arrives. -->
-							<div
-								class="relative flex aspect-video h-full max-h-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--st-surface)]"
-							>
-								{#if stageWaitBlurUrl}
-									<!-- svelte-ignore a11y_media_has_caption -->
-									<video
-										src={stageWaitBlurUrl}
-										muted
-										autoplay
-										loop
-										playsinline
-										class="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-[0.55]"
-									></video>
-								{:else}
-									<div class="stage-dots absolute inset-0"></div>
-								{/if}
-								<div
-									class="relative flex items-center gap-3 rounded-full bg-black/45 px-4 py-2 backdrop-blur"
-								>
-									<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
-									<span class="font-display text-sm font-semibold text-white">Generating {stagePercent}%</span>
-								</div>
-							</div>
-						{:else if stagePhase === 'stuck' && stageStuck?.confirm}
-							{@const c = stageStuck.confirm}
-							<!-- The round that stopped, and the way on from it.
-								 It says what happened in the checker's own words rather than a
-								 generic line: "the brief was changed" is not a reason, and the
-								 changes are the reason. -->
-							<div
-								class="flex aspect-video h-full max-h-full max-w-full flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
-							>
-								<p class="text-sm leading-relaxed text-[var(--st-muted)]">
-									{c.error ?? 'the brief was checked and changed before it could shoot'}
-								</p>
-								{#if c.fixed?.length}
-									<ul class="max-w-md space-y-1 text-xs leading-relaxed text-[var(--st-faint)]">
-										{#each c.fixed as f (f)}
-											<li>{f}</li>
-										{/each}
-									</ul>
-								{/if}
-								<button
-									type="button"
-									disabled={shotBusy[stageStuck.id]}
-									onclick={() => acceptConfirm(stageStuck!.id)}
-									class="btn btn-primary btn-sm"
-									>{shotBusy[stageStuck.id] ? 'starting…' : 'shoot it'}</button
-								>
-							</div>
-						{:else if stagePhase === 'error'}
-							<div
-								class="flex aspect-video w-full max-w-3xl flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
-							>
-								<p class="text-sm leading-relaxed text-[var(--st-muted)]">{stageError?.text}</p>
-								<button
-									type="button"
-									onclick={() => { if (stageError) chat = chat.filter((c) => c !== stageError); }}
-									class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-1.5 text-xs font-semibold"
-									>try it again</button
-								>
-							</div>
-						{:else if stagePhase === 'empty'}
-							<!-- A new production opens on what it opened on before: the greeting
+									<!-- The size the clip will be, so nothing jumps when it arrives. -->
+									<div
+										class="relative flex aspect-video h-full max-h-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--st-surface)]"
+									>
+										{#if stageWaitBlurUrl}
+											<!-- svelte-ignore a11y_media_has_caption -->
+											<video
+												src={stageWaitBlurUrl}
+												muted
+												autoplay
+												loop
+												playsinline
+												class="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-[0.55]"
+											></video>
+										{:else}
+											<div class="stage-dots absolute inset-0"></div>
+										{/if}
+										<div
+											class="relative flex items-center gap-3 rounded-full bg-black/45 px-4 py-2 backdrop-blur"
+										>
+											<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+											></span>
+											<span class="font-display text-sm font-semibold text-white"
+												>Generating {stagePercent}%</span
+											>
+										</div>
+									</div>
+								{:else if stagePhase === 'stuck' && stageStuck?.confirm}
+									{@const c = stageStuck.confirm}
+									{@const parts = splitConfirm(c.line)}
+									{@const halted = !!c.error || !!c.fixed?.length}
+									<!-- The round that is waiting, and the way on from it.
+								 Two things arrive here. Usually it is the read-back: what the
+								 studio understood, offered while changing it is still free —
+								 which is the whole reason the read-back exists, and why the
+								 stage draws it rather than pressing the button itself.
+								 Sometimes it is a round that stopped, and then it says what
+								 happened in the checker's own words rather than a generic
+								 line: "the brief was changed" is not a reason, the changes
+								 are the reason. -->
+									<div
+										class="flex aspect-video h-full max-h-full max-w-full flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
+									>
+										{#if halted}
+											<p class="text-sm leading-relaxed text-[var(--st-muted)]">
+												{c.error ?? 'the brief was checked and changed before it could shoot'}
+											</p>
+											{#if c.fixed?.length}
+												<ul
+													class="max-w-md space-y-1 text-xs leading-relaxed text-[var(--st-faint)]"
+												>
+													{#each c.fixed as f (f)}
+														<li>{f}</li>
+													{/each}
+												</ul>
+											{/if}
+										{:else}
+											<!-- The same three parts the transcript draws, in the stage's
+									     own middle: the model's opening line, what it understood,
+									     and what we added. Quieter for the addition, because it is
+									     an offer rather than a statement. -->
+											{#if parts.lead}
+												<p class="text-xs text-[var(--st-faint)]">{parts.lead}</p>
+											{/if}
+											<p class="doc max-w-xl text-sm leading-relaxed text-[var(--st-text)]">
+												{parts.said}
+											</p>
+											{#if parts.added}
+												<p class="doc max-w-xl text-sm leading-relaxed text-[var(--st-muted)]">
+													{parts.added}
+												</p>
+											{/if}
+										{/if}
+										<div class="flex flex-wrap items-center justify-center gap-2.5">
+											<button
+												type="button"
+												disabled={shotBusy[stageStuck.id]}
+												onclick={() => acceptConfirm(stageStuck!.id)}
+												class="btn btn-primary btn-sm"
+											>
+												{#if shotBusy[stageStuck.id]}
+													{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
+													{c.phase === 'writing'
+														? 'brief írása'
+														: c.phase === 'starting'
+															? 'indítás'
+															: 'indul'} · {clock(el)}
+												{:else if halted}
+													mehet így
+												{:else}
+													{c.continues ? 'Folytatás indítása' : 'Videó generálás indítása'}
+												{/if}
+											</button>
+											<!-- The cost, next to the thing that spends it. Not a warning —
+									     just the two numbers a person wants before they commit. -->
+											<span class="text-xs text-[var(--st-faint)]">
+												{composerShape.seconds}s{#if typicalClip}&nbsp;· {typicalLabel(
+														typicalClip
+													)}{/if}
+											</span>
+										</div>
+									</div>
+								{:else if stagePhase === 'error'}
+									<div
+										class="flex aspect-video w-full max-w-3xl flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
+									>
+										<p class="text-sm leading-relaxed text-[var(--st-muted)]">{stageError?.text}</p>
+										<button
+											type="button"
+											onclick={() => {
+												if (stageError) chat = chat.filter((c) => c !== stageError);
+											}}
+											class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-1.5 text-xs font-semibold"
+											>try it again</button
+										>
+									</div>
+								{:else if stagePhase === 'empty'}
+									<!-- A new production opens on what it opened on before: the greeting
 								 and three things to try. The stage has nothing to show yet and a
 								 blank rectangle where a clip will be is not an invitation. -->
-							<h2
-								class="font-display enter mx-auto max-w-[26rem] text-center text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
-							>
-								{#each WELCOME_LINES as line, i (line)}
-									{line}{#if i === 0}<br />{/if}
-								{/each}
-							</h2>
-							<div class="grid w-full max-w-3xl gap-2.5 pt-2 sm:grid-cols-3">
-								{#each examples as ex (ex)}
-									<button
-										type="button"
-										class="flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
-										onclick={() => useExample(ex)}
+									<h2
+										class="enter mx-auto max-w-[26rem] text-center font-display text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
 									>
-										<svg viewBox="0 0 16 16" class="mt-0.5 size-3.5 shrink-0 opacity-45" fill="none" aria-hidden="true">
-											<path d="M4 12L12 4M6 4h6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-										</svg>
-										<span class="min-w-0">{ex}</span>
-									</button>
-								{/each}
-							</div>
-						{:else if stagePhase === 'ready' && stageClip}
-							{@const f = stageShownUrl ? { url: stageShownUrl } : null}
-							{@const sws = stageShownWs}
-						{@const shownPart =
-							stageShown?.artifact && stageShown?.file
-								? { workspace: stageShown.workspace, artifact: stageShown.artifact, file: stageShown.file }
-								: null}
-							{@const sv = verdict[sws]}
-							<!-- The clip takes the room it is given: this is what the operator
+										{#each WELCOME_LINES as line, i (line)}
+											{line}{#if i === 0}<br />{/if}
+										{/each}
+									</h2>
+									<div class="grid w-full max-w-3xl gap-2.5 pt-2 sm:grid-cols-3">
+										{#each examples as ex (ex)}
+											<button
+												type="button"
+												class="flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
+												onclick={() => useExample(ex)}
+											>
+												<svg
+													viewBox="0 0 16 16"
+													class="mt-0.5 size-3.5 shrink-0 opacity-45"
+													fill="none"
+													aria-hidden="true"
+												>
+													<path
+														d="M4 12L12 4M6 4h6v6"
+														stroke="currentColor"
+														stroke-width="1.6"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													/>
+												</svg>
+												<span class="min-w-0">{ex}</span>
+											</button>
+										{/each}
+									</div>
+								{:else if stagePhase === 'ready' && stageClip}
+									{@const f = stageShownUrl ? { url: stageShownUrl } : null}
+									{@const sws = stageShownWs}
+									{@const shownPart =
+										stageShown?.artifact && stageShown?.file
+											? {
+													workspace: stageShown.workspace,
+													artifact: stageShown.artifact,
+													file: stageShown.file
+												}
+											: null}
+									{@const sv = verdict[sws]}
+									<!-- The clip takes the room it is given: this is what the operator
 								 came to look at, and a 48rem cap in the middle of a wide screen
 								 left a third of it black. Height-bound rather than width-bound, so
 								 a portrait clip and a 16:9 one both fill what there is.
@@ -6813,366 +7046,424 @@
 								 The actions ride on top of the picture rather than under it. Below
 								 the frame they pushed the clip up and competed with the composer
 								 for the same band of the screen. -->
-							<div class="flex min-h-0 w-full flex-1 items-center justify-center">
-								<!-- Sized to the clip, not to the column: the row of actions anchors
+									<div class="flex min-h-0 w-full flex-1 items-center justify-center">
+										<!-- Sized to the clip, not to the column: the row of actions anchors
 									 to this box, and anchored to the column it hung off the picture's
 									 edges into the black beside it. -->
-								<div class="relative h-full w-fit max-w-full">
-								{#if f}
-									<!-- svelte-ignore a11y_media_has_caption -->
-									<video
-										src={f.url}
-										controls
-										autoplay={stageClip.id === stageAutoplayId}
-										loop
-										playsinline
-										bind:clientWidth={stageVideoW}
-										class="video-with-controls h-full w-auto max-w-full rounded-2xl bg-black"
-									></video>
-								{/if}
-								<div
-									class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3"
-								>
-									<span class="pointer-events-auto flex items-center gap-2">
-										{#if shownPart}
-											{#if film.some((x) => filmKey(x) === filmKey(shownPart))}
-												<span
-													class="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
-												>
-													<span aria-hidden="true">✓</span><span>In the film</span>
-												</span>
-											{:else}
-												<button
-													type="button"
-													onclick={() => addClipToFilm(shownPart, stageClip?.artifact?.title ?? '')}
-													class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white backdrop-blur transition-colors hover:bg-black/75"
-													>Add to film</button
-												>
+										<div class="relative h-full w-fit max-w-full">
+											{#if f}
+												<!-- svelte-ignore a11y_media_has_caption -->
+												<video
+													src={f.url}
+													controls
+													autoplay={stageClip.id === stageAutoplayId}
+													loop
+													playsinline
+													bind:clientWidth={stageVideoW}
+													class="video-with-controls h-full w-auto max-w-full rounded-2xl bg-black"
+												></video>
 											{/if}
-										{/if}
-									</span>
-									<span class="pointer-events-auto flex items-center gap-1">
-										{#if !sv}
-											<button
-												type="button"
-												onclick={() => rate(sws, 'kept')}
-												class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
-												>Good</button
+											<div
+												class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3"
 											>
-											<button
-												type="button"
-												onclick={() => rate(sws, 'rejected')}
-												class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
-												>Not good</button
-											>
-										{:else}
-											<span
-												class="rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
-												>{sv === 'kept' ? 'Noted as good' : 'Noted'}</span
-											>
-										{/if}
-									</span>
-								</div>
-								</div>
-							</div>
-						{/if}
-					</div>
-				</div>
-				{:else}
-				<div
-					bind:this={scrollEl}
-					onscroll={onTranscriptScroll}
-					class="scroller min-h-0 flex-1 space-y-5 overflow-y-auto px-1 pb-2 {showExamples
-						? 'flex flex-col justify-center'
-						: ''}"
-				>
-					{#each chat as item, itemAt (item.id)}
-						{#if superseded[item.id]}
-							<p class="text-xs text-[var(--st-faint)]">
-								earlier version
-								{#if item.kind === 'plan' && item.plan}
-									· {item.plan.title}
-								{:else if item.kind === 'artifact' && item.artifact}
-									· {item.artifact.title}
+												<span class="pointer-events-auto flex items-center gap-2">
+													{#if shownPart}
+														{#if film.some((x) => filmKey(x) === filmKey(shownPart))}
+															<span
+																class="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
+															>
+																<span aria-hidden="true">✓</span><span>In the film</span>
+															</span>
+														{:else}
+															<button
+																type="button"
+																onclick={() =>
+																	addClipToFilm(shownPart, stageClip?.artifact?.title ?? '')}
+																class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white backdrop-blur transition-colors hover:bg-black/75"
+																>Add to film</button
+															>
+														{/if}
+													{/if}
+												</span>
+												<span class="pointer-events-auto flex items-center gap-1">
+													{#if !sv}
+														<button
+															type="button"
+															onclick={() => rate(sws, 'kept')}
+															class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
+															>Good</button
+														>
+														<button
+															type="button"
+															onclick={() => rate(sws, 'rejected')}
+															class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
+															>Not good</button
+														>
+													{:else}
+														<span
+															class="rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
+															>{sv === 'kept' ? 'Noted as good' : 'Noted'}</span
+														>
+													{/if}
+												</span>
+											</div>
+										</div>
+									</div>
 								{/if}
-							</p>
-						{:else if item.who === 'user'}
-							<div class="flex justify-end">
-								<p
-									class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
-								>
-									{item.text}
-								</p>
 							</div>
-						{:else if item.kind === 'text' && item.id === welcomeId && !showExamples}
-							<!-- Nothing. The greeting is the empty page's, and once you have said
+						</div>
+					{:else}
+						<div
+							bind:this={scrollEl}
+							onscroll={onTranscriptScroll}
+							class="scroller min-h-0 flex-1 space-y-5 overflow-y-auto px-1 pb-2 {showExamples
+								? 'flex flex-col justify-center'
+								: ''}"
+						>
+							{#each chat as item, itemAt (item.id)}
+								{#if superseded[item.id]}
+									<p class="text-xs text-[var(--st-faint)]">
+										earlier version
+										{#if item.kind === 'plan' && item.plan}
+											· {item.plan.title}
+										{:else if item.kind === 'artifact' && item.artifact}
+											· {item.artifact.title}
+										{/if}
+									</p>
+								{:else if item.who === 'user'}
+									<div class="flex justify-end">
+										<p
+											class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
+										>
+											{item.text}
+										</p>
+									</div>
+								{:else if item.kind === 'text' && item.id === welcomeId && !showExamples}
+									<!-- Nothing. The greeting is the empty page's, and once you have said
 								 something the page is not empty — leaving it there turns a headline
 								 into the first line of the transcript, which it never was. It stays
 								 in `chat` so reset() and the restore path are untouched. -->
-						{:else if item.kind === 'text' && item.id === welcomeId && showExamples}
-							<!-- The greeting is the page, not a message in it. Short enough to
+								{:else if item.kind === 'text' && item.id === welcomeId && showExamples}
+									<!-- The greeting is the page, not a message in it. Short enough to
 								 set at display size, so it gets one. -->
-							<h2
-								class="font-display enter mx-auto max-w-[26rem] text-center text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
-							>
-								{#each WELCOME_LINES as line, i (line)}
-									{line}{#if i === 0}<br />{/if}
-								{/each}
-							</h2>
-						{:else if item.kind === 'text'}
-							<div class="enter">
-								<p class="doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">{item.text}</p>
-							</div>
-						{:else if item.kind === 'board'}
-							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
-								<div class="mb-4 flex items-baseline justify-between gap-3">
-									<h3 class="font-display text-base font-semibold">The plan</h3>
-									<span class="font-mono text-[11px] text-[var(--st-faint)]">
-										{boardDone} of {board.length}
-									</span>
-								</div>
+									<h2
+										class="enter mx-auto max-w-[26rem] text-center font-display text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
+									>
+										{#each WELCOME_LINES as line, i (line)}
+											{line}{#if i === 0}<br />{/if}
+										{/each}
+									</h2>
+								{:else if item.kind === 'text'}
+									<div class="enter">
+										<p class="doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+											{item.text}
+										</p>
+									</div>
+								{:else if item.kind === 'board'}
+									<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+										<div class="mb-4 flex items-baseline justify-between gap-3">
+											<h3 class="font-display text-base font-semibold">The plan</h3>
+											<span class="font-mono text-[11px] text-[var(--st-faint)]">
+												{boardDone} of {board.length}
+											</span>
+										</div>
 
-								<div class="divide-y divide-[var(--st-surface-2)]">
-									{#each board as row (row.key)}
-										<div class="py-3 first:pt-0 last:pb-0">
-											<div class="flex items-center gap-3">
-												<!-- State reads without colour too: a spinner spins, a
+										<div class="divide-y divide-[var(--st-surface-2)]">
+											{#each board as row (row.key)}
+												<div class="py-3 first:pt-0 last:pb-0">
+													<div class="flex items-center gap-3">
+														<!-- State reads without colour too: a spinner spins, a
 												     check is a check. Colour alone would fail anyone who
 												     cannot separate the green from the grey. -->
-												<span class="flex size-4 shrink-0 items-center justify-center">
-													{#if row.state === 'done'}
-														<svg viewBox="0 0 16 16" class="size-4 text-[#5b8f6e]" fill="none" aria-hidden="true">
-															<path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-														</svg>
-													{:else if row.state === 'writing' || row.state === 'rewriting'}
-														<span class="spin size-3.5 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"></span>
-													{:else if row.state === 'failed'}
-														<svg viewBox="0 0 16 16" class="size-4 text-[#c4614b]" fill="none" aria-hidden="true">
-															<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-														</svg>
-													{:else}
-														<span class="size-1.5 rounded-full bg-[var(--st-faint)]"></span>
-													{/if}
-												</span>
-
-												<span
-													class="font-display flex-1 text-sm font-semibold {row.state === 'waiting'
-														? 'text-[var(--st-faint)]'
-														: 'text-[var(--st-text)]'}"
-												>
-													{row.label}
-												</span>
-
-												{#if row.state === 'done'}
-													<button
-														type="button"
-														class="cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 transition-colors hover:text-[var(--st-text)] hover:underline"
-														onclick={() => (expanded[row.key] = !expanded[row.key])}
-													>
-														{expanded[row.key] ? 'close' : 'read'}
-													</button>
-												{:else if row.state === 'rewriting'}
-													<span class="text-xs text-[var(--st-faint)]">rewriting</span>
-												{:else if row.state === 'writing'}
-													<span class="text-xs text-[var(--st-faint)]">writing…</span>
-												{:else if row.state === 'failed'}
-													<span class="text-xs text-[var(--st-muted)]">stalled</span>
-												{/if}
-											</div>
-
-											{#if row.state === 'done' && expanded[row.key]}
-												<div class="mt-3 border-l border-[var(--st-surface-2)] pl-4">
-													{#if row.body}
-														{@render document(renderDocument(row.file ?? '', row.body))}
-													{:else if row.url}
-														<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-														<a href={row.url} class="text-xs text-[var(--st-muted)] underline" download>
-															download the file
-														</a>
-													{/if}
-
-													<div class="mt-4 flex flex-wrap items-center gap-2">
-														<button
-															type="button"
-															onclick={() => (changeOpen[row.key] = !changeOpen[row.key])}
-															class="btn btn-secondary btn-sm"
-														>
-															request a change
-														</button>
-														<!-- The way out, next to the way in. A document runs to several
-														     screens, and without this the only way to close one was to
-														     scroll back up to the row that opened it. -->
-														<button
-															type="button"
-															onclick={() => (expanded[row.key] = false)}
-															class="cursor-pointer rounded-full px-3.5 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-														>
-															close
-														</button>
-													</div>
-													<div>
-														{#if changeOpen[row.key]}
-															<form
-																class="mt-3 flex gap-2"
-																onsubmit={(e) => {
-																	e.preventDefault();
-																	requestChange(row.key, row.key);
-																}}
-															>
-																<label class="sr-only" for="change-{row.key}">What should change</label>
-																<input
-																	id="change-{row.key}"
-																	bind:value={changeText[row.key]}
-																	placeholder="what should change in this document"
-																	class="min-w-0 flex-1 rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--st-faint)] focus:border-[var(--st-muted)]"
-																/>
-																<button
-																	type="submit"
-																	disabled={changeBusy[row.key] || !(changeText[row.key] ?? '').trim()}
-																	class="btn btn-primary"
+														<span class="flex size-4 shrink-0 items-center justify-center">
+															{#if row.state === 'done'}
+																<svg
+																	viewBox="0 0 16 16"
+																	class="size-4 text-[#5b8f6e]"
+																	fill="none"
+																	aria-hidden="true"
 																>
-																	send
-																</button>
-															</form>
-															<p class="mt-2 text-xs text-[var(--st-faint)]">
-																This step is rewritten, and everything built on it is refreshed after it.
-															</p>
+																	<path
+																		d="M3.5 8.5l3 3 6-7"
+																		stroke="currentColor"
+																		stroke-width="2"
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																	/>
+																</svg>
+															{:else if row.state === 'writing' || row.state === 'rewriting'}
+																<span
+																	class="spin size-3.5 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"
+																></span>
+															{:else if row.state === 'failed'}
+																<svg
+																	viewBox="0 0 16 16"
+																	class="size-4 text-[#c4614b]"
+																	fill="none"
+																	aria-hidden="true"
+																>
+																	<path
+																		d="M4 4l8 8M12 4l-8 8"
+																		stroke="currentColor"
+																		stroke-width="2"
+																		stroke-linecap="round"
+																	/>
+																</svg>
+															{:else}
+																<span class="size-1.5 rounded-full bg-[var(--st-faint)]"></span>
+															{/if}
+														</span>
+
+														<span
+															class="flex-1 font-display text-sm font-semibold {row.state ===
+															'waiting'
+																? 'text-[var(--st-faint)]'
+																: 'text-[var(--st-text)]'}"
+														>
+															{row.label}
+														</span>
+
+														{#if row.state === 'done'}
+															<button
+																type="button"
+																class="cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 transition-colors hover:text-[var(--st-text)] hover:underline"
+																onclick={() => (expanded[row.key] = !expanded[row.key])}
+															>
+																{expanded[row.key] ? 'close' : 'read'}
+															</button>
+														{:else if row.state === 'rewriting'}
+															<span class="text-xs text-[var(--st-faint)]">rewriting</span>
+														{:else if row.state === 'writing'}
+															<span class="text-xs text-[var(--st-faint)]">writing…</span>
+														{:else if row.state === 'failed'}
+															<span class="text-xs text-[var(--st-muted)]">stalled</span>
 														{/if}
 													</div>
-												</div>
-											{/if}
-										</div>
-									{/each}
-								</div>
 
-								<!-- The button belongs to the thing it acts on. It is present from
+													{#if row.state === 'done' && expanded[row.key]}
+														<div class="mt-3 border-l border-[var(--st-surface-2)] pl-4">
+															{#if row.body}
+																{@render document(renderDocument(row.file ?? '', row.body))}
+															{:else if row.url}
+																<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+																<a
+																	href={row.url}
+																	class="text-xs text-[var(--st-muted)] underline"
+																	download
+																>
+																	download the file
+																</a>
+															{/if}
+
+															<div class="mt-4 flex flex-wrap items-center gap-2">
+																<button
+																	type="button"
+																	onclick={() => (changeOpen[row.key] = !changeOpen[row.key])}
+																	class="btn btn-secondary btn-sm"
+																>
+																	request a change
+																</button>
+																<!-- The way out, next to the way in. A document runs to several
+														     screens, and without this the only way to close one was to
+														     scroll back up to the row that opened it. -->
+																<button
+																	type="button"
+																	onclick={() => (expanded[row.key] = false)}
+																	class="cursor-pointer rounded-full px-3.5 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+																>
+																	close
+																</button>
+															</div>
+															<div>
+																{#if changeOpen[row.key]}
+																	<form
+																		class="mt-3 flex gap-2"
+																		onsubmit={(e) => {
+																			e.preventDefault();
+																			requestChange(row.key, row.key);
+																		}}
+																	>
+																		<label class="sr-only" for="change-{row.key}"
+																			>What should change</label
+																		>
+																		<input
+																			id="change-{row.key}"
+																			bind:value={changeText[row.key]}
+																			placeholder="what should change in this document"
+																			class="min-w-0 flex-1 rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--st-faint)] focus:border-[var(--st-muted)]"
+																		/>
+																		<button
+																			type="submit"
+																			disabled={changeBusy[row.key] ||
+																				!(changeText[row.key] ?? '').trim()}
+																			class="btn btn-primary"
+																		>
+																			send
+																		</button>
+																	</form>
+																	<p class="mt-2 text-xs text-[var(--st-faint)]">
+																		This step is rewritten, and everything built on it is refreshed
+																		after it.
+																	</p>
+																{/if}
+															</div>
+														</div>
+													{/if}
+												</div>
+											{/each}
+										</div>
+
+										<!-- The button belongs to the thing it acts on. It is present from
 								     the start, disabled, so the shape of the run is visible before
 								     any of it has happened — and so nobody hunts for it once the
 								     last document lands. -->
-								{#if renderWs}
-									<p class="mt-5 text-xs text-[var(--st-faint)]">shooting has started</p>
-								{:else}
-									<div class="mt-5 flex flex-wrap items-center gap-3">
-										<button
-											type="button"
-											disabled={boardDone < board.length || renderLaunching || !!chain}
-											onclick={launchRender}
-											class="btn btn-primary"
-										>
-											{renderLaunching ? 'starting…' : 'start shooting'}
-										</button>
-										<span class="text-xs text-[var(--st-faint)]">
-											{#if chain}
-												a document is being rewritten
-											{:else if boardDone < board.length}
-												ready when all five are written
-											{:else}
-												uses GPU time and costs money
-											{/if}
-										</span>
-									</div>
-								{/if}
-							</article>
-						{:else if item.kind === 'shootboard'}
-							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
-								<div class="mb-1 flex items-baseline justify-between gap-3">
-									<h3 class="font-display text-base font-semibold">Shooting</h3>
-									{#if !staleRun}
-										<!-- Dropped rather than frozen on a stale run: we know the
-											 shoot is over, but not when it ended, and a stopped clock
-											 showing a number we made up is worse than no clock. -->
-										<span class="font-mono text-[11px] text-[var(--st-faint)] tabular-nums">
-											{mmss(shootElapsed)}
-										</span>
-									{/if}
-								</div>
-								<p class="mb-4 text-xs leading-relaxed text-[var(--st-muted)]">
-									Each scene is written into a prompt, then rendered on a GPU. A clip usually
-									takes several minutes and there is no output until it is finished{#if !staleRun} —
-										the timer is the only thing that moves{/if}.
-								</p>
-
-								{#if shootBoard.length}
-									<div class="divide-y divide-[var(--st-surface-2)]">
-										{#each shootBoard as row (row.n)}
-											<div class="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-												<span class="flex size-4 shrink-0 items-center justify-center">
-													{#if row.state === 'done'}
-														<svg viewBox="0 0 16 16" class="size-4 text-[#5b8f6e]" fill="none" aria-hidden="true">
-															<path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-														</svg>
-													{:else if row.state === 'failed'}
-														<svg viewBox="0 0 16 16" class="size-4 text-[#c4614b]" fill="none" aria-hidden="true">
-															<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-														</svg>
+										{#if renderWs}
+											<p class="mt-5 text-xs text-[var(--st-faint)]">shooting has started</p>
+										{:else}
+											<div class="mt-5 flex flex-wrap items-center gap-3">
+												<button
+													type="button"
+													disabled={boardDone < board.length || renderLaunching || !!chain}
+													onclick={launchRender}
+													class="btn btn-primary"
+												>
+													{renderLaunching ? 'starting…' : 'start shooting'}
+												</button>
+												<span class="text-xs text-[var(--st-faint)]">
+													{#if chain}
+														a document is being rewritten
+													{:else if boardDone < board.length}
+														ready when all five are written
 													{:else}
-														<span class="spin size-3.5 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"></span>
-													{/if}
-												</span>
-												<span class="min-w-0 flex-1 truncate text-sm">{row.title}</span>
-												<span class="shrink-0 text-xs text-[var(--st-faint)]">
-													{#if row.state === 'done'}
-														ready
-													{:else if row.state === 'failed'}
-														stalled
-													{:else if row.retries >= 3}
-														<span class="text-[var(--st-muted)]">retried {row.retries}×</span>
-													{:else}
-														rendering
+														uses GPU time and costs money
 													{/if}
 												</span>
 											</div>
-										{/each}
-									</div>
-								{:else}
-									<p class="text-sm text-[var(--st-faint)]">
-										Working out how many scenes to shoot…
-									</p>
-								{/if}
-							</article>
-						{:else if item.kind === 'activity' && item.activity}
-							<!-- Quiet by design. These are constant during a run, and a
+										{/if}
+									</article>
+								{:else if item.kind === 'shootboard'}
+									<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+										<div class="mb-1 flex items-baseline justify-between gap-3">
+											<h3 class="font-display text-base font-semibold">Shooting</h3>
+											{#if !staleRun}
+												<!-- Dropped rather than frozen on a stale run: we know the
+											 shoot is over, but not when it ended, and a stopped clock
+											 showing a number we made up is worse than no clock. -->
+												<span class="font-mono text-[11px] text-[var(--st-faint)] tabular-nums">
+													{mmss(shootElapsed)}
+												</span>
+											{/if}
+										</div>
+										<p class="mb-4 text-xs leading-relaxed text-[var(--st-muted)]">
+											Each scene is written into a prompt, then rendered on a GPU. A clip usually
+											takes several minutes and there is no output until it is finished{#if !staleRun}
+												— the timer is the only thing that moves{/if}.
+										</p>
+
+										{#if shootBoard.length}
+											<div class="divide-y divide-[var(--st-surface-2)]">
+												{#each shootBoard as row (row.n)}
+													<div class="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+														<span class="flex size-4 shrink-0 items-center justify-center">
+															{#if row.state === 'done'}
+																<svg
+																	viewBox="0 0 16 16"
+																	class="size-4 text-[#5b8f6e]"
+																	fill="none"
+																	aria-hidden="true"
+																>
+																	<path
+																		d="M3.5 8.5l3 3 6-7"
+																		stroke="currentColor"
+																		stroke-width="2"
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																	/>
+																</svg>
+															{:else if row.state === 'failed'}
+																<svg
+																	viewBox="0 0 16 16"
+																	class="size-4 text-[#c4614b]"
+																	fill="none"
+																	aria-hidden="true"
+																>
+																	<path
+																		d="M4 4l8 8M12 4l-8 8"
+																		stroke="currentColor"
+																		stroke-width="2"
+																		stroke-linecap="round"
+																	/>
+																</svg>
+															{:else}
+																<span
+																	class="spin size-3.5 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"
+																></span>
+															{/if}
+														</span>
+														<span class="min-w-0 flex-1 truncate text-sm">{row.title}</span>
+														<span class="shrink-0 text-xs text-[var(--st-faint)]">
+															{#if row.state === 'done'}
+																ready
+															{:else if row.state === 'failed'}
+																stalled
+															{:else if row.retries >= 3}
+																<span class="text-[var(--st-muted)]">retried {row.retries}×</span>
+															{:else}
+																rendering
+															{/if}
+														</span>
+													</div>
+												{/each}
+											</div>
+										{:else}
+											<p class="text-sm text-[var(--st-faint)]">
+												Working out how many scenes to shoot…
+											</p>
+										{/if}
+									</article>
+								{:else if item.kind === 'activity' && item.activity}
+									<!-- Quiet by design. These are constant during a run, and a
 							     progress line that shouts competes with the documents the
 							     user is actually here to read. Trouble is the exception:
 							     a rejection or a failure gets colour, because that is the
 							     one case where not noticing is expensive. -->
-							{@const a = item.activity}
-							<div class="enter flex items-start gap-2.5 py-0.5">
-								<span
-									class="mt-[0.45rem] size-1.5 shrink-0 rounded-full {a.tone === 'bad'
-										? 'bg-[#c4614b]'
-										: a.tone === 'warn'
-											? 'bg-[#b98a3e]'
-											: a.tone === 'good'
-												? 'bg-[#5b8f6e]'
-												: 'bg-[var(--st-faint)]'}"
-								></span>
-								<div class="min-w-0">
-									<p
-										class="text-[0.82rem] leading-relaxed {a.tone === 'bad' || a.tone === 'warn'
-											? 'text-[var(--st-muted)]'
-											: 'text-[var(--st-faint)]'}"
-									>
-										{a.text}
-									</p>
-									{#if a.detail}
-										<details class="mt-0.5">
-											<summary
-												class="cursor-pointer text-[0.72rem] text-[var(--st-faint)] hover:text-[var(--st-muted)]"
-											>
-												what it said
-											</summary>
+									{@const a = item.activity}
+									<div class="enter flex items-start gap-2.5 py-0.5">
+										<span
+											class="mt-[0.45rem] size-1.5 shrink-0 rounded-full {a.tone === 'bad'
+												? 'bg-[#c4614b]'
+												: a.tone === 'warn'
+													? 'bg-[#b98a3e]'
+													: a.tone === 'good'
+														? 'bg-[#5b8f6e]'
+														: 'bg-[var(--st-faint)]'}"
+										></span>
+										<div class="min-w-0">
 											<p
-												class="doc mt-1 border-l border-[var(--st-surface-2)] pl-3 font-mono text-[0.72rem] leading-relaxed text-[var(--st-muted)]"
+												class="text-[0.82rem] leading-relaxed {a.tone === 'bad' || a.tone === 'warn'
+													? 'text-[var(--st-muted)]'
+													: 'text-[var(--st-faint)]'}"
 											>
-												{a.detail}
+												{a.text}
 											</p>
-										</details>
-									{/if}
-								</div>
-							</div>
-						{:else if item.kind === 'confirm' && item.confirm}
-							<!-- What is about to be shot, in the operator's own language.
+											{#if a.detail}
+												<details class="mt-0.5">
+													<summary
+														class="cursor-pointer text-[0.72rem] text-[var(--st-faint)] hover:text-[var(--st-muted)]"
+													>
+														what it said
+													</summary>
+													<p
+														class="doc mt-1 border-l border-[var(--st-surface-2)] pl-3 font-mono text-[0.72rem] leading-relaxed text-[var(--st-muted)]"
+													>
+														{a.detail}
+													</p>
+												</details>
+											{/if}
+										</div>
+									</div>
+								{:else if item.kind === 'confirm' && item.confirm}
+									<!-- What is about to be shot, in the operator's own language.
 							     Deliberately plain: no card chrome, no heading, no label saying
 							     what it is. It reads as the studio answering, because that is
 							     what it is — and a box around it would make it look like a form
@@ -7181,18 +7472,17 @@
 							     The button only appears on the newest one. An older round is a
 							     step in the conversation, not an order you can still place, and
 							     two live buttons is two ways to shoot the wrong version. -->
-							{@const newest =
-								chat.filter((c) => c.kind === 'confirm').at(-1)?.id === item.id}
-							<!-- Gone once its clip is on a GPU. It came back reading "start the
+									{@const newest = chat.filter((c) => c.kind === 'confirm').at(-1)?.id === item.id}
+									<!-- Gone once its clip is on a GPU. It came back reading "start the
 							     render" over a render that was already running, and pressing it
 							     again wrote a second brief and paid for the same eight seconds
 							     twice. A started clip lives on the card below. -->
-							{@const started = item.confirm.cardId
-								? !!chat.find((x) => x.id === item.confirm?.cardId)?.shot?.launched
-								: false}
-							{@const parts = splitConfirm(item.confirm.line)}
-							<div class="enter">
-								<!-- What this paragraph is, and what to do with it. Without it the
+									{@const started = item.confirm.cardId
+										? !!chat.find((x) => x.id === item.confirm?.cardId)?.shot?.launched
+										: false}
+									{@const parts = splitConfirm(item.confirm.line)}
+									<div class="enter">
+										<!-- What this paragraph is, and what to do with it. Without it the
 								     studio answers a request with three sentences of prose and no
 								     frame: it could be a plan, a summary, or something that already
 								     happened, and the only clue that a decision is owed is a button
@@ -7203,390 +7493,418 @@
 								     that says the same thing every time is a room with nobody in
 								     it. It costs nothing to be different each time — this is the
 								     one part of the answer allowed to sound like a person. -->
-								{#if parts.lead}
-									<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
-								{/if}
-								<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
-									{parts.said}{#if item.confirm.streaming && !parts.added}<span
-											class="caret"
-											aria-hidden="true"></span>{/if}
-								</p>
-								{#if parts.added}
-									<!-- Ours, and it has to look it. Same size, quieter colour: it is
+										{#if parts.lead}
+											<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
+										{/if}
+										<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
+											{parts.said}{#if item.confirm.streaming && !parts.added}<span
+													class="caret"
+													aria-hidden="true"
+												></span>{/if}
+										</p>
+										{#if parts.added}
+											<!-- Ours, and it has to look it. Same size, quieter colour: it is
 									     not a footnote — it is half of what starts if the button is
 									     pressed — but it is an offer, and an offer that looks like a
 									     statement is not one. -->
-									<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
-										{parts.added}{#if item.confirm.streaming}<span
-												class="caret"
-												aria-hidden="true"></span>{/if}
-									</p>
-								{/if}
+											<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
+												{parts.added}{#if item.confirm.streaming}<span
+														class="caret"
+														aria-hidden="true"
+													></span>{/if}
+											</p>
+										{/if}
 
-								{#if item.confirm.error}
-									<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
-										{item.confirm.error}
-									</p>
-								{/if}
+										{#if item.confirm.error}
+											<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
+												{item.confirm.error}
+											</p>
+										{/if}
 
-								<!-- The checker had to change the brief, so this is no longer the
+										<!-- The checker had to change the brief, so this is no longer the
 								     clip that was agreed to. It says what moved and waits: sending
 								     it anyway is a decision, and it is not ours. -->
-								{#if item.confirm.fixed?.length}
-									<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
-										Írás közben ezt igazítottuk rajta: {item.confirm.fixed.join(' · ')}
-									</p>
-								{/if}
+										{#if item.confirm.fixed?.length}
+											<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
+												Írás közben ezt igazítottuk rajta: {item.confirm.fixed.join(' · ')}
+											</p>
+										{/if}
 
-								{#if newest && !started && !item.confirm.streaming && item.confirm.line.trim()}
-									<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
-										<button
-											type="button"
-											disabled={shotBusy[item.id]}
-											class="btn btn-primary"
-											onclick={() => acceptConfirm(item.id)}
-										>
-											{#if shotBusy[item.id]}
-												{@const el = Math.max(
-													0,
-													Math.round((now - (item.confirm.busySince ?? now)) / 1000)
-												)}
-												{item.confirm.phase === 'writing'
-													? 'brief írása'
-													: item.confirm.phase === 'starting'
-														? 'indítás'
-														: 'indul'} · {clock(el)}
-											{:else if item.confirm.fixed?.length}
-												mehet így
-											{:else}
-												{item.confirm.continues ? 'Folytatás indítása' : 'Videó generálás indítása'}
-											{/if}
-										</button>
-										<!-- The cost, next to the thing that spends it. Not a warning —
+										{#if newest && !started && !item.confirm.streaming && item.confirm.line.trim()}
+											<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+												<button
+													type="button"
+													disabled={shotBusy[item.id]}
+													class="btn btn-primary"
+													onclick={() => acceptConfirm(item.id)}
+												>
+													{#if shotBusy[item.id]}
+														{@const el = Math.max(
+															0,
+															Math.round((now - (item.confirm.busySince ?? now)) / 1000)
+														)}
+														{item.confirm.phase === 'writing'
+															? 'brief írása'
+															: item.confirm.phase === 'starting'
+																? 'indítás'
+																: 'indul'} · {clock(el)}
+													{:else if item.confirm.fixed?.length}
+														mehet így
+													{:else}
+														{item.confirm.continues
+															? 'Folytatás indítása'
+															: 'Videó generálás indítása'}
+													{/if}
+												</button>
+												<!-- The cost, next to the thing that spends it. Not a warning —
 										     just the two numbers a person wants before they commit. -->
-										<span class="text-xs text-[var(--st-faint)]">
-											{composerShape.seconds}s{#if typicalClip}&nbsp;·
-												{typicalLabel(typicalClip)}{/if}
-										</span>
+												<span class="text-xs text-[var(--st-faint)]">
+													{composerShape.seconds}s{#if typicalClip}&nbsp;·
+														{typicalLabel(typicalClip)}{/if}
+												</span>
+											</div>
+										{/if}
 									</div>
-								{/if}
-							</div>
-						{:else if item.kind === 'error'}
-							<!-- The card that launched the render this error is about, found by
+								{:else if item.kind === 'error'}
+									<!-- The card that launched the render this error is about, found by
 								 looking back rather than read off the item.
 							     Stored at push time it would only ever appear on errors raised
 							     after this shipped, and the one on screen when it was asked for was
 							     already saved. A rule about what is displayed has to hold for what
 							     is on disk — the same lesson the caption taught an hour earlier. -->
-							{@const stalled = /^A shooting step stalled/.test(item.text ?? '')}
-							{@const src = stalled
-								? [...chat.slice(0, itemAt)].reverse().find((c) => c.kind === 'shot' && c.shot?.launched)
-								: undefined}
-							<div class="enter rounded-2xl bg-[var(--st-surface)] p-4">
-								<p class="text-xs font-semibold text-[#f2d7cd]">
-									<span class="mr-2 rounded-md bg-[#5c2f24] px-2 py-0.5">error</span>
-								</p>
-								<p class="doc mt-2 text-sm leading-relaxed text-[var(--st-muted)]">{item.text}</p>
-								{#if src}
-									<button
-										type="button"
-										disabled={shotBusy[src.id] || item.retried}
-										class="btn btn-secondary btn-sm mt-3"
-										onclick={() => retryShot(item.id, src.id)}
-										>{shotBusy[src.id]
-											? 'starting…'
-											: item.retried
-												? 'started again'
-												: 'try it again'}</button
-									>
-								{/if}
-							</div>
-						{:else if item.kind === 'sheet' && item.sheet}
-							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
-								<div class="mb-3 flex items-baseline justify-between gap-4">
-									<h3 class="font-display text-base font-semibold">
-										{item.sheet.stage === 'anchor'
-											? 'The character'
-											: item.sheet.kind === 'character'
-												? 'Character sheet'
-												: 'Location sheet'}
-									</h3>
-									<span class="text-xs text-[var(--st-faint)]">
-										{item.sheet.uploaded
-											? 'your own picture — kept as it is'
-											: item.sheet.stage === 'anchor'
-												? 'one picture — say what to change, or save it'
-												: item.sheet.kind === 'character'
-													? 'front · face · profiles · rear · expression'
-													: 'six views of the same place'}
-									</span>
-								</div>
-
-								{#if item.sheet.url}
-									<img
-										src={item.sheet.url}
-										alt={item.sheet.name ?? ''}
-										class="w-full rounded-xl bg-[var(--st-bg)]"
-									/>
-									{#if item.sheet.description}
-										<p class="doc mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
-											{item.sheet.description}
+									{@const stalled = /^A shooting step stalled/.test(item.text ?? '')}
+									{@const src = stalled
+										? [...chat.slice(0, itemAt)]
+												.reverse()
+												.find((c) => c.kind === 'shot' && c.shot?.launched)
+										: undefined}
+									<div class="enter rounded-2xl bg-[var(--st-surface)] p-4">
+										<p class="text-xs font-semibold text-[#f2d7cd]">
+											<span class="mr-2 rounded-md bg-[#5c2f24] px-2 py-0.5">error</span>
 										</p>
-									{/if}
-								{:else}
-									<!-- The description before it costs anything, editable, for the
+										<p class="doc mt-2 text-sm leading-relaxed text-[var(--st-muted)]">
+											{item.text}
+										</p>
+										{#if src}
+											<button
+												type="button"
+												disabled={shotBusy[src.id] || item.retried}
+												class="btn btn-secondary btn-sm mt-3"
+												onclick={() => retryShot(item.id, src.id)}
+												>{shotBusy[src.id]
+													? 'starting…'
+													: item.retried
+														? 'started again'
+														: 'try it again'}</button
+											>
+										{/if}
+									</div>
+								{:else if item.kind === 'sheet' && item.sheet}
+									<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+										<div class="mb-3 flex items-baseline justify-between gap-4">
+											<h3 class="font-display text-base font-semibold">
+												{item.sheet.stage === 'anchor'
+													? 'The character'
+													: item.sheet.kind === 'character'
+														? 'Character sheet'
+														: 'Location sheet'}
+											</h3>
+											<span class="text-xs text-[var(--st-faint)]">
+												{item.sheet.uploaded
+													? 'your own picture — kept as it is'
+													: item.sheet.stage === 'anchor'
+														? 'one picture — say what to change, or save it'
+														: item.sheet.kind === 'character'
+															? 'front · face · profiles · rear · expression'
+															: 'six views of the same place'}
+											</span>
+										</div>
+
+										{#if item.sheet.url}
+											<img
+												src={item.sheet.url}
+												alt={item.sheet.name ?? ''}
+												class="w-full rounded-xl bg-[var(--st-bg)]"
+											/>
+											{#if item.sheet.description}
+												<p class="doc mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
+													{item.sheet.description}
+												</p>
+											{/if}
+										{:else}
+											<!-- The description before it costs anything, editable, for the
 										 same reason the shot prompt is: a sheet is rendered once and
 										 every clip afterwards is shot against it. -->
-									<textarea
-										bind:value={item.sheet.description}
-										readonly={item.sheet.launched}
-										rows="3"
-										spellcheck="false"
-										class="block w-full resize-y rounded-xl bg-[var(--st-bg)] p-3 font-mono text-[0.8rem] leading-relaxed outline-none focus:ring-0 read-only:text-[var(--st-muted)]"
-									></textarea>
-									{#if item.sheet.why}
-										<p class="mt-2 text-xs text-[var(--st-faint)]">{item.sheet.why}</p>
-									{/if}
-									<div class="mt-4 flex items-center justify-between gap-3 border-t border-[var(--st-line)] pt-4">
-										<p class="text-xs text-[var(--st-faint)]">
-											{item.sheet.launched
-												? 'Rendering — it appears here when it is done.'
-												: 'Six views, about as long as a clip takes.'}
-										</p>
-										<button
-											type="button"
-											disabled={item.sheet.launched ||
-												sheetBusy[item.id] ||
-												!item.sheet.description.trim()}
-											onclick={() => renderSheet(item.id)}
-											class="btn btn-primary"
-										>
-											{item.sheet.launched ? 'Rendering…' : 'Render it'}
-										</button>
-									</div>
-								{/if}
+											<textarea
+												bind:value={item.sheet.description}
+												readonly={item.sheet.launched}
+												rows="3"
+												spellcheck="false"
+												class="block w-full resize-y rounded-xl bg-[var(--st-bg)] p-3 font-mono text-[0.8rem] leading-relaxed outline-none read-only:text-[var(--st-muted)] focus:ring-0"
+											></textarea>
+											{#if item.sheet.why}
+												<p class="mt-2 text-xs text-[var(--st-faint)]">{item.sheet.why}</p>
+											{/if}
+											<div
+												class="mt-4 flex items-center justify-between gap-3 border-t border-[var(--st-line)] pt-4"
+											>
+												<p class="text-xs text-[var(--st-faint)]">
+													{item.sheet.launched
+														? 'Rendering — it appears here when it is done.'
+														: 'Six views, about as long as a clip takes.'}
+												</p>
+												<button
+													type="button"
+													disabled={item.sheet.launched ||
+														sheetBusy[item.id] ||
+														!item.sheet.description.trim()}
+													onclick={() => renderSheet(item.id)}
+													class="btn btn-primary"
+												>
+													{item.sheet.launched ? 'Rendering…' : 'Render it'}
+												</button>
+											</div>
+										{/if}
 
-								{#if item.sheet.url && item.sheet.stage === 'anchor'}
-								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
-									{#if item.sheet.id && item.sheet.uploaded}
-										{@const kept = sheets.find((x) => x.id === item.sheet?.id)}
-										{@const dn =
-											keptEdits[item.id]?.name ?? kept?.name ?? item.sheet.name ?? ''}
-										<!-- The stored voice, or the one a character made today would have
+										{#if item.sheet.url && item.sheet.stage === 'anchor'}
+											<div class="mt-4 border-t border-[var(--st-line)] pt-4">
+												{#if item.sheet.id && item.sheet.uploaded}
+													{@const kept = sheets.find((x) => x.id === item.sheet?.id)}
+													{@const dn =
+														keptEdits[item.id]?.name ?? kept?.name ?? item.sheet.name ?? ''}
+													<!-- The stored voice, or the one a character made today would have
 											 been given. Characters made before that was written have none,
 											 and an empty box with grey suggestion text meant the suggestion
 											 was never what got rendered — a placeholder looks filled in and
 											 is worth nothing. Now it is real text you can edit, and Update
 											 is what makes it theirs. -->
-										{@const dv = keptEdits[item.id]?.voice ?? kept?.voice ?? DEFAULT_VOICE}
-										{@const changed =
-											dn.trim() !== (kept?.name ?? '') ||
-											dv.trim() !== (kept?.voice ?? DEFAULT_VOICE)}
-										<!-- The character is usable the moment the picture lands — the
+													{@const dv = keptEdits[item.id]?.voice ?? kept?.voice ?? DEFAULT_VOICE}
+													{@const changed =
+														dn.trim() !== (kept?.name ?? '') ||
+														dv.trim() !== (kept?.voice ?? DEFAULT_VOICE)}
+													<!-- The character is usable the moment the picture lands — the
 									 turnaround is an improvement to it, not a condition of it. So
 									 the first line is the useful state and the wait is a second,
 									 quieter one, rather than the card going silent for three
 									 minutes with a sentence in the past tense above it. -->
-										<p class="text-sm text-[var(--st-muted)]">
-											Ready to use — pick
-											<span class="text-[var(--st-text)]">{kept?.name ?? item.sheet.name}</span>
-											from
-											<span class="text-[var(--st-text)]">+</span> in the box below.
-										</p>
-												<!-- No progress line here. It is in the strip above the box now,
+													<p class="text-sm text-[var(--st-muted)]">
+														Ready to use — pick
+														<span class="text-[var(--st-text)]"
+															>{kept?.name ?? item.sheet.name}</span
+														>
+														from
+														<span class="text-[var(--st-text)]">+</span> in the box below.
+													</p>
+													<!-- No progress line here. It is in the strip above the box now,
 											 where it stays on screen; a card scrolls away in a minute and
 											 took the only sign of a running GPU with it. What stays is the
 											 outcome, which the strip cannot report because by then it is
 											 gone. -->
-												{#if kept?.sheet?.state === 'failed'}
-											<p class="mt-2 text-xs text-[var(--st-faint)]">
-												The six views could not be drawn. {item.sheet.kind === 'character'
-													? 'They are'
-													: 'It is'} still usable without them.
-											</p>
-										{/if}
+													{#if kept?.sheet?.state === 'failed'}
+														<p class="mt-2 text-xs text-[var(--st-faint)]">
+															The six views could not be drawn. {item.sheet.kind === 'character'
+																? 'They are'
+																: 'It is'} still usable without them.
+														</p>
+													{/if}
 
-										<!-- What is worth changing once you can see who they are: what
+													<!-- What is worth changing once you can see who they are: what
 									 they are called, and how they sound. The voice was reachable
 									 only from the composer, which is not where this decision
 									 happens. -->
-										<div class="mt-4 border-t border-[var(--st-line)] pt-4">
-											{#if item.sheet.kind === 'character'}
-												<label
-													class="block text-xs text-[var(--st-faint)]"
-													for="kept-voice-{item.id}"
-												>
-													How they sound — carried into every clip they are in
-												</label>
-												<input
-													id="kept-voice-{item.id}"
-													value={dv}
-													oninput={(e) => editKept(item.id, 'voice', e.currentTarget.value)}
-													spellcheck="false"
-													maxlength="240"
-																										class="mt-2 mb-4 w-full rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
-												/>
-											{/if}
-											<label
-												class="block text-xs text-[var(--st-faint)]"
-												for="kept-name-{item.id}"
-											>
-												{item.sheet.kind === 'character' ? 'Name them' : 'Name it'} — this is what
-												the picker will show
-											</label>
-											<div class="mt-2 flex flex-wrap items-center gap-2">
-												<input
-													id="kept-name-{item.id}"
-													value={dn}
-													oninput={(e) => editKept(item.id, 'name', e.currentTarget.value)}
-													spellcheck="false"
-													class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
-												/>
-												<!-- Only when there is something to apply. A button that is
+													<div class="mt-4 border-t border-[var(--st-line)] pt-4">
+														{#if item.sheet.kind === 'character'}
+															<label
+																class="block text-xs text-[var(--st-faint)]"
+																for="kept-voice-{item.id}"
+															>
+																How they sound — carried into every clip they are in
+															</label>
+															<input
+																id="kept-voice-{item.id}"
+																value={dv}
+																oninput={(e) => editKept(item.id, 'voice', e.currentTarget.value)}
+																spellcheck="false"
+																maxlength="240"
+																class="mt-2 mb-4 w-full rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+															/>
+														{/if}
+														<label
+															class="block text-xs text-[var(--st-faint)]"
+															for="kept-name-{item.id}"
+														>
+															{item.sheet.kind === 'character' ? 'Name them' : 'Name it'} — this is what
+															the picker will show
+														</label>
+														<div class="mt-2 flex flex-wrap items-center gap-2">
+															<input
+																id="kept-name-{item.id}"
+																value={dn}
+																oninput={(e) => editKept(item.id, 'name', e.currentTarget.value)}
+																spellcheck="false"
+																class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+															/>
+															<!-- Only when there is something to apply. A button that is
 											 always lit invites a press that does nothing, and then the
 											 one that matters looks the same as the one that did not. -->
-												{#if changed}
-													<button
-														type="button"
-														disabled={sheetBusy[item.id] || !dn.trim()}
-														onclick={() => updateKept(item.id, item.sheet?.id ?? '', dn, dv)}
-														class="btn btn-primary"
-														>{sheetBusy[item.id] ? 'Updating…' : 'Update'}</button
-													>
-												{/if}
-												<button
-													type="button"
-													onclick={() => item.sheet?.id && dropSheet(item.sheet.id)}
-													class="btn btn-secondary">Remove</button
-												>
-											</div>
-										</div>
-									{:else if item.sheet.id}
-										{@const kept = sheets.find((x) => x.id === item.sheet?.id)}
-										<!-- Only claim they are drawing while they are. This said it
+															{#if changed}
+																<button
+																	type="button"
+																	disabled={sheetBusy[item.id] || !dn.trim()}
+																	onclick={() => updateKept(item.id, item.sheet?.id ?? '', dn, dv)}
+																	class="btn btn-primary"
+																	>{sheetBusy[item.id] ? 'Updating…' : 'Update'}</button
+																>
+															{/if}
+															<button
+																type="button"
+																onclick={() => item.sheet?.id && dropSheet(item.sheet.id)}
+																class="btn btn-secondary">Remove</button
+															>
+														</div>
+													</div>
+												{:else if item.sheet.id}
+													{@const kept = sheets.find((x) => x.id === item.sheet?.id)}
+													<!-- Only claim they are drawing while they are. This said it
 											 unconditionally, so a card whose six views had finished — or
 											 whose render had failed — went on promising them for ever. -->
-										<p class="text-sm text-[var(--st-muted)]">
-											Saved as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
-											Pick {item.sheet.kind === 'character' ? 'them' : 'it'} from
-											<span class="text-[var(--st-text)]">+</span> in the box below{kept?.sheet?.state ===
-											'rendering'
-												? ' — the six views are still drawing.'
-												: kept?.sheet?.file
-													? ' — the six views are ready on it.'
-													: '.'}
-										</p>
-									{:else}
-										<!-- The voice, where the decision to keep them is made.
+													<p class="text-sm text-[var(--st-muted)]">
+														Saved as <span class="font-semibold text-[var(--st-text)]"
+															>{item.sheet.name}</span
+														>. Pick {item.sheet.kind === 'character' ? 'them' : 'it'} from
+														<span class="text-[var(--st-text)]">+</span> in the box below{kept
+															?.sheet?.state === 'rendering'
+															? ' — the six views are still drawing.'
+															: kept?.sheet?.file
+																? ' — the six views are ready on it.'
+																: '.'}
+													</p>
+												{:else}
+													<!-- The voice, where the decision to keep them is made.
 											 It was written by the same call that wrote the description and
 											 it travels onto the sheet on save, but it was doing that
 											 invisibly: the first question asked of this card was "where
 											 would I see it?", which is the answer to whether it belongs
 											 here. Editable, so what is on screen is what gets kept. -->
-										{#if item.sheet.kind === 'character' && item.sheet.voice !== undefined}
-											<label class="block text-xs text-[var(--st-faint)]" for="char-voice-{item.id}">
-												How they sound — carried into every clip they are in
-											</label>
-											<input
-												id="char-voice-{item.id}"
-												bind:value={item.sheet.voice}
-												spellcheck="false"
-												maxlength="240"
-												class="mt-2 mb-4 w-full rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
-											/>
+													{#if item.sheet.kind === 'character' && item.sheet.voice !== undefined}
+														<label
+															class="block text-xs text-[var(--st-faint)]"
+															for="char-voice-{item.id}"
+														>
+															How they sound — carried into every clip they are in
+														</label>
+														<input
+															id="char-voice-{item.id}"
+															bind:value={item.sheet.voice}
+															spellcheck="false"
+															maxlength="240"
+															class="mt-2 mb-4 w-full rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+														/>
+													{/if}
+													<label
+														class="block text-xs text-[var(--st-faint)]"
+														for="char-name-{item.id}"
+													>
+														{item.sheet.kind === 'character' ? 'Name them' : 'Name it'} — this is what
+														the picker will show
+													</label>
+													<div class="mt-2 flex flex-wrap items-center gap-2">
+														<input
+															id="char-name-{item.id}"
+															bind:value={item.sheet.name}
+															spellcheck="false"
+															class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+														/>
+														<button
+															type="button"
+															disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
+															onclick={() => saveSubject(item.id)}
+															class="btn btn-primary"
+														>
+															{sheetBusy[item.id]
+																? 'Saving…'
+																: item.sheet.kind === 'character'
+																	? 'Save character'
+																	: 'Save location'}
+														</button>
+													</div>
+													<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
+														Not right? Say what to change in the chat — {item.sheet.kind ===
+														'character'
+															? 'the same person is'
+															: 'the same place is'} kept and only what you name moves.
+													</p>
+												{/if}
+											</div>
+										{:else if item.sheet.url}
+											<div class="mt-4 border-t border-[var(--st-line)] pt-4">
+												{#if item.sheet.id}
+													<p class="text-sm text-[var(--st-muted)]">
+														Kept as <span class="font-semibold text-[var(--st-text)]"
+															>{item.sheet.name}</span
+														>. Every clip can use it from here on.
+													</p>
+												{:else}
+													<label
+														class="block text-xs text-[var(--st-faint)]"
+														for="sheet-name-{item.id}"
+													>
+														Name it — this is what the picker will show
+													</label>
+													<div class="mt-2 flex flex-wrap items-center gap-2">
+														<input
+															id="sheet-name-{item.id}"
+															bind:value={item.sheet.name}
+															spellcheck="false"
+															class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
+														/>
+														<button
+															type="button"
+															disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
+															onclick={() => keepSheet(item.id)}
+															class="btn btn-primary"
+														>
+															{sheetBusy[item.id] ? 'Keeping…' : 'Keep it'}
+														</button>
+													</div>
+													<p class="mt-2 text-xs text-[var(--st-faint)]">
+														Keep it now — the harness stops serving this image once the run's
+														workspace shuts down.
+													</p>
+												{/if}
+											</div>
 										{/if}
-										<label class="block text-xs text-[var(--st-faint)]" for="char-name-{item.id}">
-											{item.sheet.kind === 'character' ? 'Name them' : 'Name it'} — this is what the
-											picker will show
-										</label>
-										<div class="mt-2 flex flex-wrap items-center gap-2">
-											<input
-												id="char-name-{item.id}"
-												bind:value={item.sheet.name}
-												spellcheck="false"
-												class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
-											/>
-											<button
-												type="button"
-												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
-												onclick={() => saveSubject(item.id)}
-												class="btn btn-primary"
+									</article>
+								{:else if item.kind === 'shot' && item.shot}
+									{@const n = item.shot.prompt.trim()
+										? item.shot.prompt.trim().split(/\s+/).length
+										: 0}
+									{@const picked = item.shot.loras ?? []}
+									<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+										<div class="mb-3 flex items-baseline justify-between gap-4">
+											<h3 class="font-display text-base font-semibold">
+												The prompt
+												{#if item.shot.characterName || item.shot.locationName}
+													<span
+														class="ml-2 align-middle text-xs font-normal text-[var(--st-faint)]"
+													>
+														{item.shot.characterName ? `with ${item.shot.characterName}` : ''}{item
+															.shot.characterName && item.shot.locationName
+															? ' '
+															: ''}{item.shot.locationName ? `in ${item.shot.locationName}` : ''}
+													</span>
+												{/if}
+											</h3>
+											<span
+												class="text-xs tabular-nums {n > 700
+													? 'font-semibold text-[#e0a03a]'
+													: 'text-[var(--st-faint)]'}"
 											>
-												{sheetBusy[item.id]
-													? 'Saving…'
-													: item.sheet.kind === 'character'
-														? 'Save character'
-														: 'Save location'}
-											</button>
-										</div>
-										<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">
-											Not right? Say what to change in the chat — {item.sheet.kind === 'character'
-												? 'the same person is'
-												: 'the same place is'} kept and only what you name moves.
-										</p>
-									{/if}
-								</div>
-								{:else if item.sheet.url}
-								<div class="mt-4 border-t border-[var(--st-line)] pt-4">
-									{#if item.sheet.id}
-										<p class="text-sm text-[var(--st-muted)]">
-											Kept as <span class="font-semibold text-[var(--st-text)]">{item.sheet.name}</span>.
-											Every clip can use it from here on.
-										</p>
-									{:else}
-										<label class="block text-xs text-[var(--st-faint)]" for="sheet-name-{item.id}">
-											Name it — this is what the picker will show
-										</label>
-										<div class="mt-2 flex flex-wrap items-center gap-2">
-											<input
-												id="sheet-name-{item.id}"
-												bind:value={item.sheet.name}
-												spellcheck="false"
-												class="min-w-0 flex-1 rounded-lg bg-[var(--st-bg)] px-3 py-2 text-sm outline-none focus:ring-0"
-											/>
-											<button
-												type="button"
-												disabled={sheetBusy[item.id] || !item.sheet.name?.trim()}
-												onclick={() => keepSheet(item.id)}
-												class="btn btn-primary"
-											>
-												{sheetBusy[item.id] ? 'Keeping…' : 'Keep it'}
-											</button>
-										</div>
-										<p class="mt-2 text-xs text-[var(--st-faint)]">
-											Keep it now — the harness stops serving this image once the run's
-											workspace shuts down.
-										</p>
-									{/if}
-								</div>
-								{/if}
-							</article>
-						{:else if item.kind === 'shot' && item.shot}
-							{@const n = item.shot.prompt.trim() ? item.shot.prompt.trim().split(/\s+/).length : 0}
-							{@const picked = item.shot.loras ?? []}
-							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
-								<div class="mb-3 flex items-baseline justify-between gap-4">
-									<h3 class="font-display text-base font-semibold">
-										The prompt
-										{#if item.shot.characterName || item.shot.locationName}
-											<span class="ml-2 align-middle text-xs font-normal text-[var(--st-faint)]">
-												{item.shot.characterName ? `with ${item.shot.characterName}` : ''}{item.shot
-													.characterName && item.shot.locationName
-													? ' '
-													: ''}{item.shot.locationName ? `in ${item.shot.locationName}` : ''}
+												{n} / 700 words
 											</span>
-										{/if}
-									</h3>
-									<span
-										class="text-xs tabular-nums {n > 700
-											? 'font-semibold text-[#e0a03a]'
-											: 'text-[var(--st-faint)]'}"
-									>
-										{n} / 700 words
-									</span>
-								</div>
+										</div>
 
-								<!-- The literal text the workflow will receive. Editable, because the
+										<!-- The literal text the workflow will receive. Editable, because the
 									 planning chain's render prompts were invisible and that is how it
 									 shipped briefs describing a face instead of a scene.
 
@@ -7597,575 +7915,581 @@
 									 looks like it was checked. What they approved is the sentence
 									 above; this is the machine's version of it, one tap away for the
 									 one time in ten that something came back wrong. -->
-								<details class="group">
-									<summary
-										class="flex cursor-pointer list-none items-center gap-2 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-									>
-										<span
-											class="text-[0.6rem] transition-transform group-open:rotate-90"
-											aria-hidden="true">›</span
-										>
-										<span>The words the crew gets</span>
-									</summary>
-									<label class="sr-only" for="shot-{item.id}">Render prompt</label>
-									<textarea
-										id="shot-{item.id}"
-										bind:value={item.shot.prompt}
-										rows="10"
-										spellcheck="false"
-										readonly={item.shot.launched}
-										class="mt-2 block w-full resize-y rounded-xl bg-[var(--st-bg)] p-3 font-mono text-[13px] leading-relaxed text-[var(--st-text)] outline-none read-only:text-[var(--st-muted)]"
-									></textarea>
-								</details>
+										<details class="group">
+											<summary
+												class="flex cursor-pointer list-none items-center gap-2 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+											>
+												<span
+													class="text-[0.6rem] transition-transform group-open:rotate-90"
+													aria-hidden="true">›</span
+												>
+												<span>The words the crew gets</span>
+											</summary>
+											<label class="sr-only" for="shot-{item.id}">Render prompt</label>
+											<textarea
+												id="shot-{item.id}"
+												bind:value={item.shot.prompt}
+												rows="10"
+												spellcheck="false"
+												readonly={item.shot.launched}
+												class="mt-2 block w-full resize-y rounded-xl bg-[var(--st-bg)] p-3 font-mono text-[13px] leading-relaxed text-[var(--st-text)] outline-none read-only:text-[var(--st-muted)]"
+											></textarea>
+										</details>
 
-								{#if item.shot.why}
-									<p class="mt-2.5 text-xs text-[var(--st-faint)]">{item.shot.why}</p>
-								{/if}
+										{#if item.shot.why}
+											<p class="mt-2.5 text-xs text-[var(--st-faint)]">{item.shot.why}</p>
+										{/if}
 
-								<!-- What this clip renders with. The writer picks; you overrule it
+										<!-- What this clip renders with. The writer picks; you overrule it
 									 here, before the GPU rather than after. Two more adapters load on
 									 every clip regardless and are not listed — they are not choices.
 									 The cap is two: four at once produced a clip whose anatomy fell
 									 apart exactly where two adapters overlapped. -->
-								<div class="mt-4 border-t border-[var(--st-line)] pt-3.5">
-									<!-- The always-loaded set, shown rather than hidden. Moving one of
+										<div class="mt-4 border-t border-[var(--st-line)] pt-3.5">
+											<!-- The always-loaded set, shown rather than hidden. Moving one of
 										 these into the base made it vanish off the card, which is how
 										 you end up asking for an adapter that is already running. They
 										 cannot be switched off — every clip is built on them — but the
 										 realism slider and the anatomy corrector are both worth a nudge,
 										 and doing that used to mean editing the catalogue. -->
-									<div class="mb-3">
-										<div class="mb-2 text-xs text-[var(--st-faint)]">always on</div>
-										{#each BASE as l (l.key)}
-											{@const at = item.shot.baseLoras?.[l.key] ?? l.strength}
-											<div class="mt-1.5 flex items-center gap-3">
-												<span class="w-40 shrink-0 truncate text-xs text-[var(--st-muted)]"
-													>{l.label}</span
-												>
-												{#if item.shot.launched}
-													<span class="flex-1 text-xs tabular-nums text-[var(--st-faint)]"
-														>{at}</span
-													>
-												{:else}
-													<input
-														type="range"
-														min="0"
-														max="2"
-														step="0.05"
-														value={at}
-														aria-label="{l.label} strength"
-														oninput={(e) =>
-															setBaseStrength(item.id, l.key, Number(e.currentTarget.value))}
-														class="h-1 min-w-0 flex-1 cursor-pointer accent-[var(--st-accent)]"
-													/>
-													<button
-														type="button"
-														title="back to {l.strength}"
-														onclick={() => resetLoraStrength(item.id, l.key)}
-														class="w-9 shrink-0 cursor-pointer text-right text-xs tabular-nums {at ===
-														l.strength
-															? 'text-[var(--st-muted)]'
-															: 'text-[var(--st-text)]'}">{at.toFixed(2)}</button
-													>
-													<span
-														class="w-24 shrink-0 text-right text-xs tabular-nums text-[var(--st-faint)]"
-													>
-														{l.band ? `${l.band[0]}–${l.band[1]}` : `author ${l.strength}`}
-													</span>
+											<div class="mb-3">
+												<div class="mb-2 text-xs text-[var(--st-faint)]">always on</div>
+												{#each BASE as l (l.key)}
+													{@const at = item.shot.baseLoras?.[l.key] ?? l.strength}
+													<div class="mt-1.5 flex items-center gap-3">
+														<span class="w-40 shrink-0 truncate text-xs text-[var(--st-muted)]"
+															>{l.label}</span
+														>
+														{#if item.shot.launched}
+															<span class="flex-1 text-xs text-[var(--st-faint)] tabular-nums"
+																>{at}</span
+															>
+														{:else}
+															<input
+																type="range"
+																min="0"
+																max="2"
+																step="0.05"
+																value={at}
+																aria-label="{l.label} strength"
+																oninput={(e) =>
+																	setBaseStrength(item.id, l.key, Number(e.currentTarget.value))}
+																class="h-1 min-w-0 flex-1 cursor-pointer accent-[var(--st-accent)]"
+															/>
+															<button
+																type="button"
+																title="back to {l.strength}"
+																onclick={() => resetLoraStrength(item.id, l.key)}
+																class="w-9 shrink-0 cursor-pointer text-right text-xs tabular-nums {at ===
+																l.strength
+																	? 'text-[var(--st-muted)]'
+																	: 'text-[var(--st-text)]'}">{at.toFixed(2)}</button
+															>
+															<span
+																class="w-24 shrink-0 text-right text-xs text-[var(--st-faint)] tabular-nums"
+															>
+																{l.band ? `${l.band[0]}–${l.band[1]}` : `author ${l.strength}`}
+															</span>
+														{/if}
+													</div>
+												{/each}
+											</div>
+
+											<div class="mb-2 flex items-baseline gap-2">
+												<span class="text-xs text-[var(--st-faint)]">on top of that</span>
+												{#if picked.length === 0}
+													<span class="text-xs text-[var(--st-faint)]">— none chosen</span>
 												{/if}
 											</div>
-										{/each}
-									</div>
+											{#if item.shot.launched}
+												<div class="flex flex-wrap gap-1.5">
+													{#each picked as p (p.key)}
+														<span
+															class="rounded-md bg-[var(--st-bg)] px-2 py-0.5 text-xs text-[var(--st-muted)]"
+															>{loraFor(p.key)?.label ?? p.key}
+															<span class="tabular-nums opacity-60">{p.strength}</span></span
+														>
+													{/each}
+												</div>
+											{:else}
+												<div class="flex flex-wrap gap-1.5">
+													{#each CATALOGUE as l (l.key)}
+														{@const on = picked.some((p) => p.key === l.key)}
+														<button
+															type="button"
+															title="{l.use}{l.trigger ? ` · trigger: ${l.trigger}` : ''}"
+															class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {on
+																? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+																: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+															onclick={() => toggleLora(item.id, l.key)}
+														>
+															{l.label}
+															{#if on}<span class="tabular-nums opacity-70"
+																	>{picked.find((p) => p.key === l.key)?.strength}</span
+																>{/if}
+														</button>
+													{/each}
+												</div>
 
-									<div class="mb-2 flex items-baseline gap-2">
-										<span class="text-xs text-[var(--st-faint)]">on top of that</span>
-										{#if picked.length === 0}
-											<span class="text-xs text-[var(--st-faint)]">— none chosen</span>
-										{/if}
-									</div>
-									{#if item.shot.launched}
-										<div class="flex flex-wrap gap-1.5">
-											{#each picked as p (p.key)}
-												<span
-													class="rounded-md bg-[var(--st-bg)] px-2 py-0.5 text-xs text-[var(--st-muted)]"
-													>{loraFor(p.key)?.label ?? p.key}
-													<span class="tabular-nums opacity-60">{p.strength}</span></span
-												>
-											{/each}
-										</div>
-									{:else}
-										<div class="flex flex-wrap gap-1.5">
-											{#each CATALOGUE as l (l.key)}
-												{@const on = picked.some((p) => p.key === l.key)}
-												<button
-													type="button"
-													title="{l.use}{l.trigger ? ` · trigger: ${l.trigger}` : ''}"
-													class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {on
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
-													onclick={() => toggleLora(item.id, l.key)}
-												>
-													{l.label}
-													{#if on}<span class="tabular-nums opacity-70"
-															>{picked.find((p) => p.key === l.key)?.strength}</span
-														>{/if}
-												</button>
-											{/each}
-										</div>
-
-										<!-- One slider per chosen adapter. The number starts on the
+												<!-- One slider per chosen adapter. The number starts on the
 											 author's own recommendation, which is the only figure here
 											 that came from someone rendering with it. The band beside it
 											 is what they published; the slider goes past it on purpose,
 											 because you can see the clip and they could not. -->
-										{#each picked as p (p.key)}
-											{@const l = loraFor(p.key)}
-											{#if l}
-												<div class="mt-2.5 flex items-center gap-3">
-													<span class="w-40 shrink-0 truncate text-xs text-[var(--st-muted)]"
-														>{l.label}</span
-													>
-													<input
-														type="range"
-														min="0"
-														max="2"
-														step="0.05"
-														value={p.strength}
-														aria-label="{l.label} strength"
-														oninput={(e) =>
-															setLoraStrength(item.id, p.key, Number(e.currentTarget.value))}
-														class="h-1 min-w-0 flex-1 cursor-pointer accent-[var(--st-accent)]"
-													/>
-													<button
-														type="button"
-														title="back to the author's recommendation, {l.strength}"
-														onclick={() => resetLoraStrength(item.id, p.key)}
-														class="w-9 shrink-0 cursor-pointer text-right text-xs tabular-nums {p.strength ===
-														l.strength
-															? 'text-[var(--st-muted)]'
-															: 'text-[var(--st-text)]'}">{p.strength.toFixed(2)}</button
-													>
-													<span
-														class="w-24 shrink-0 text-right text-xs tabular-nums text-[var(--st-faint)]"
-													>
-														{l.band ? `${l.band[0]}–${l.band[1]}` : `author ${l.strength}`}
-													</span>
-												</div>
+												{#each picked as p (p.key)}
+													{@const l = loraFor(p.key)}
+													{#if l}
+														<div class="mt-2.5 flex items-center gap-3">
+															<span class="w-40 shrink-0 truncate text-xs text-[var(--st-muted)]"
+																>{l.label}</span
+															>
+															<input
+																type="range"
+																min="0"
+																max="2"
+																step="0.05"
+																value={p.strength}
+																aria-label="{l.label} strength"
+																oninput={(e) =>
+																	setLoraStrength(item.id, p.key, Number(e.currentTarget.value))}
+																class="h-1 min-w-0 flex-1 cursor-pointer accent-[var(--st-accent)]"
+															/>
+															<button
+																type="button"
+																title="back to the author's recommendation, {l.strength}"
+																onclick={() => resetLoraStrength(item.id, p.key)}
+																class="w-9 shrink-0 cursor-pointer text-right text-xs tabular-nums {p.strength ===
+																l.strength
+																	? 'text-[var(--st-muted)]'
+																	: 'text-[var(--st-text)]'}">{p.strength.toFixed(2)}</button
+															>
+															<span
+																class="w-24 shrink-0 text-right text-xs text-[var(--st-faint)] tabular-nums"
+															>
+																{l.band ? `${l.band[0]}–${l.band[1]}` : `author ${l.strength}`}
+															</span>
+														</div>
+													{/if}
+												{/each}
 											{/if}
-										{/each}
-									{/if}
-								</div>
-
-								{#if !item.shot.launched}
-									<div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-										<div class="flex items-center gap-1.5">
-											<span class="mr-1 text-xs text-[var(--st-faint)]">seconds</span>
-											{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
-												<button
-													type="button"
-													class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {item
-														.shot.seconds === sec
-														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-														: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
-													onclick={() => setShotSeconds(item.id, sec)}>{sec}</button
-												>
-											{/each}
 										</div>
-										<!-- Not offered on a continuation. The frame there is not a choice:
+
+										{#if !item.shot.launched}
+											<div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+												<div class="flex items-center gap-1.5">
+													<span class="mr-1 text-xs text-[var(--st-faint)]">seconds</span>
+													{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
+														<button
+															type="button"
+															class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {item
+																.shot.seconds === sec
+																? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+																: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+															onclick={() => setShotSeconds(item.id, sec)}>{sec}</button
+														>
+													{/each}
+												</div>
+												<!-- Not offered on a continuation. The frame there is not a choice:
 											 it is whatever the clip being continued was shot at, and anything
 											 else produces two pieces that cannot be concatenated — which is
 											 discovered only after both have been rendered. A control whose
 											 every other setting breaks the thing it feeds is not a control. -->
-										{#if item.shot.continues}
-											<span class="text-xs text-[var(--st-faint)]"
-												>{frameFor(item.shot.resolution ?? '576p', item.shot.orientation)
-													.width}x{frameFor(item.shot.resolution ?? '576p', item.shot.orientation)
-													.height} · follows the clip before it</span
-											>
-										{:else}
-											<div class="flex items-center gap-1.5">
-												<!-- Unlike seconds and frame shape, this changes no words in
+												{#if item.shot.continues}
+													<span class="text-xs text-[var(--st-faint)]"
+														>{frameFor(item.shot.resolution ?? '576p', item.shot.orientation)
+															.width}x{frameFor(
+															item.shot.resolution ?? '576p',
+															item.shot.orientation
+														).height} · follows the clip before it</span
+													>
+												{:else}
+													<div class="flex items-center gap-1.5">
+														<!-- Unlike seconds and frame shape, this changes no words in
 													 the brief, so it is set in place and costs no rewrite. -->
-												<span class="mr-1 text-xs text-[var(--st-faint)]">size</span>
-												{#each RES_KEYS as r (r)}
-													{@const f = frameFor(r, item.shot.orientation)}
-													<button
-														type="button"
-														title="{f.width}x{f.height}"
-														class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {(item
-															.shot.resolution ?? '576p') === r
-															? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-															: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
-														onclick={() => {
-															if (item.shot) item.shot.resolution = r;
-														}}>{r}</button
-													>
-												{/each}
+														<span class="mr-1 text-xs text-[var(--st-faint)]">size</span>
+														{#each RES_KEYS as r (r)}
+															{@const f = frameFor(r, item.shot.orientation)}
+															<button
+																type="button"
+																title="{f.width}x{f.height}"
+																class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {(item
+																	.shot.resolution ?? '576p') === r
+																	? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+																	: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+																onclick={() => {
+																	if (item.shot) item.shot.resolution = r;
+																}}>{r}</button
+															>
+														{/each}
+													</div>
+													<div class="flex items-center gap-1.5">
+														<span class="mr-1 text-xs text-[var(--st-faint)]">frame</span>
+														{#each [['portrait', 'portrait'], ['landscape', 'landscape']] as [val, label] (val)}
+															<button
+																type="button"
+																class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {item
+																	.shot.orientation === val
+																	? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+																	: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
+																onclick={() =>
+																	setShotOrientation(item.id, val as 'portrait' | 'landscape')}
+																>{label}</button
+															>
+														{/each}
+													</div>
+												{/if}
 											</div>
-											<div class="flex items-center gap-1.5">
-												<span class="mr-1 text-xs text-[var(--st-faint)]">frame</span>
-												{#each [['portrait', 'portrait'], ['landscape', 'landscape']] as [val, label] (val)}
-													<button
-														type="button"
-														class="cursor-pointer rounded-md px-2 py-0.5 text-xs transition-colors {item
-															.shot.orientation === val
-															? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-															: 'text-[var(--st-muted)] hover:text-[var(--st-text)]'}"
-														onclick={() =>
-															setShotOrientation(item.id, val as 'portrait' | 'landscape')}
-														>{label}</button
-													>
-												{/each}
-											</div>
-										{/if}
-									</div>
 
-									<!-- The button states what it will do. How many clips is chosen
+											<!-- The button states what it will do. How many clips is chosen
 										 once, in the composer, and confirmed here at the moment of
 										 spend — a second control asking the same question is how a card
 										 grows a settings panel. A continuation is always one: a second
 										 version would need the first one's clip as its reference, and a
 										 second camera angle on a shot that continues another would
 										 break the join it exists to make. -->
-									<!-- The counts this card will actually spend. Versions apply to a
+											<!-- The counts this card will actually spend. Versions apply to a
 										 continuation like any other shot — each take continues the same
 										 prior clip, so they are alternatives you choose between. Angles
 										 do not, when the seam is pinned: the first instant is nailed to
 										 the frame the last clip ended on and a second camera cannot
 										 start there. On a free start they apply again. -->
-									{@const cardAngles =
-										item.shot.continues && item.shot.continues.pinned !== false ? 1 : angles}
-									{@const n = takes * cardAngles}
-									<!-- Anything the check could not get the writer to fix, said once,
+											{@const cardAngles =
+												item.shot.continues && item.shot.continues.pinned !== false ? 1 : angles}
+											{@const n = takes * cardAngles}
+											<!-- Anything the check could not get the writer to fix, said once,
 										 directly above the button that spends the money. Not a warning
 										 dialog and not a block: the brief renders, and this is what to
 										 look at if the clip comes back wrong. The way out is already
 										 here — "write it again" is the next control along. -->
-									{#if item.shot.warn?.length}
-										<p class="mt-4 text-xs leading-relaxed text-[var(--st-faint)]">
-											{item.shot.warn.join(' · ')}
-										</p>
-									{/if}
-									<!-- A fault the check caught and the writer then fixed. Said in the
+											{#if item.shot.warn?.length}
+												<p class="mt-4 text-xs leading-relaxed text-[var(--st-faint)]">
+													{item.shot.warn.join(' · ')}
+												</p>
+											{/if}
+											<!-- A fault the check caught and the writer then fixed. Said in the
 										 past tense because there is nothing to do about it — it is here
 										 because the brief took twice as long to arrive and the wait
 										 otherwise looks like the writer being slow. -->
-									{#if item.shot.fixed?.length}
-										<p class="mt-4 text-xs leading-relaxed text-[var(--st-faint)]">
-											újraírva — {item.shot.fixed.join(' · ')}
-										</p>
-									{/if}
-									<div class="mt-5 flex flex-wrap items-center gap-2.5">
-										<button
-											type="button"
-											disabled={shotBusy[item.id]}
-											class="btn btn-primary"
-											onclick={() =>
-												n > 1 ? renderBatch(item.id, takes, cardAngles) : renderShot(item.id)}
-										>
-											{shotBusy[item.id]
-												? 'starting…'
-												: n > 1
-													? `render ${countLabel(takes, cardAngles)}`
-													: 'render this'}
-										</button>
-										<button
-											type="button"
-											disabled={shotBusy[item.id]}
-											class="btn btn-quiet"
-											onclick={() => rewriteShot(item.id)}>write it again</button
-										>
-
-									</div>
-								{/if}
-							</article>
-						{:else if item.kind === 'plan' && item.plan}
-							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
-								{#if editingPlan && item.id === latestPlanId}
-									<label class="sr-only" for="edit-title">Title</label>
-									<input
-										id="edit-title"
-										bind:value={editTitle}
-										class="w-full rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 font-display text-lg font-semibold outline-none focus:border-[var(--st-muted)]"
-									/>
-									<label class="sr-only" for="edit-story">Story</label>
-									<textarea
-										id="edit-story"
-										bind:value={editStory}
-										rows="12"
-										class="mt-3 block w-full resize-y rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] p-4 text-[0.95rem] leading-[1.75] outline-none focus:border-[var(--st-muted)]"
-									></textarea>
-									<label class="sr-only" for="edit-style">Look</label>
-									<textarea
-										id="edit-style"
-										bind:value={editStyle}
-										rows="2"
-										class="mt-3 block w-full resize-y rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] p-4 text-sm leading-relaxed outline-none focus:border-[var(--st-muted)]"
-									></textarea>
-									<div class="mt-4 flex items-center gap-3">
-										<button
-											type="button"
-											onclick={saveEdit}
-											class="btn btn-primary"
-										>
-											save
-										</button>
-										<button
-											type="button"
-											onclick={() => (editingPlan = false)}
-											class="cursor-pointer px-2 py-2.5 text-xs text-[var(--st-muted)] hover:text-[var(--st-text)]"
-										>
-											cancel
-										</button>
-									</div>
-								{:else}
-									<h3 class="font-display text-lg leading-snug font-semibold tracking-tight">
-										{item.plan.title}
-									</h3>
-									<!-- The voice the model picked. Your sentence rarely specifies one,
+											{#if item.shot.fixed?.length}
+												<p class="mt-4 text-xs leading-relaxed text-[var(--st-faint)]">
+													újraírva — {item.shot.fixed.join(' · ')}
+												</p>
+											{/if}
+											<div class="mt-5 flex flex-wrap items-center gap-2.5">
+												<button
+													type="button"
+													disabled={shotBusy[item.id]}
+													class="btn btn-primary"
+													onclick={() =>
+														n > 1 ? renderBatch(item.id, takes, cardAngles) : renderShot(item.id)}
+												>
+													{shotBusy[item.id]
+														? 'starting…'
+														: n > 1
+															? `render ${countLabel(takes, cardAngles)}`
+															: 'render this'}
+												</button>
+												<button
+													type="button"
+													disabled={shotBusy[item.id]}
+													class="btn btn-quiet"
+													onclick={() => rewriteShot(item.id)}>write it again</button
+												>
+											</div>
+										{/if}
+									</article>
+								{:else if item.kind === 'plan' && item.plan}
+									<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+										{#if editingPlan && item.id === latestPlanId}
+											<label class="sr-only" for="edit-title">Title</label>
+											<input
+												id="edit-title"
+												bind:value={editTitle}
+												class="w-full rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 font-display text-lg font-semibold outline-none focus:border-[var(--st-muted)]"
+											/>
+											<label class="sr-only" for="edit-story">Story</label>
+											<textarea
+												id="edit-story"
+												bind:value={editStory}
+												rows="12"
+												class="mt-3 block w-full resize-y rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] p-4 text-[0.95rem] leading-[1.75] outline-none focus:border-[var(--st-muted)]"
+											></textarea>
+											<label class="sr-only" for="edit-style">Look</label>
+											<textarea
+												id="edit-style"
+												bind:value={editStyle}
+												rows="2"
+												class="mt-3 block w-full resize-y rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] p-4 text-sm leading-relaxed outline-none focus:border-[var(--st-muted)]"
+											></textarea>
+											<div class="mt-4 flex items-center gap-3">
+												<button type="button" onclick={saveEdit} class="btn btn-primary">
+													save
+												</button>
+												<button
+													type="button"
+													onclick={() => (editingPlan = false)}
+													class="cursor-pointer px-2 py-2.5 text-xs text-[var(--st-muted)] hover:text-[var(--st-text)]"
+												>
+													cancel
+												</button>
+											</div>
+										{:else}
+											<h3 class="font-display text-lg leading-snug font-semibold tracking-tight">
+												{item.plan.title}
+											</h3>
+											<!-- The voice the model picked. Your sentence rarely specifies one,
 									     so this is a decision taken on your behalf — and seeing it named
 									     is what lets you disagree with it in one line, rather than
 									     reverse-engineering it from four hundred words of prose. -->
-									{#if item.plan.register}
-										<p class="mt-1.5 font-mono text-[11px] tracking-wide text-[var(--st-faint)]">
-											{item.plan.register}
-										</p>
-									{/if}
-									<!-- The summary, not the story. Four hundred words of prose is
+											{#if item.plan.register}
+												<p
+													class="mt-1.5 font-mono text-[11px] tracking-wide text-[var(--st-faint)]"
+												>
+													{item.plan.register}
+												</p>
+											{/if}
+											<!-- The summary, not the story. Four hundred words of prose is
 									     what the crew needs and not what a person reads before deciding
 									     whether this is the film they asked for — and asking them to
 									     read it to find out buries the decision under the material.
 									     The story is one click away and entirely unchanged. -->
-									<p class="doc mt-3 text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
-										{item.plan.summary || item.plan.story}
-									</p>
-									<p class="mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
-										{item.plan.style}
-									</p>
-									{#if item.plan.summary}
-										<button
-											type="button"
-											class="mt-3 cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 hover:text-[var(--st-text)] hover:underline"
-											onclick={() => (expanded[item.id] = !expanded[item.id])}
-										>
-											{expanded[item.id] ? 'hide the full story' : 'read the full story'}
-										</button>
-										{#if expanded[item.id]}
-											<p
-												class="doc enter mt-3 rounded-xl bg-[var(--st-bg)] px-4 py-3.5 text-[0.95rem] leading-[1.75] text-[var(--st-muted)]"
-											>
-												{item.plan.story}
+											<p class="doc mt-3 text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+												{item.plan.summary || item.plan.story}
 											</p>
-										{/if}
-									{/if}
-									<p class="mt-3 text-xs text-[var(--st-faint)]">
-										{item.plan.sceneCount} scenes
-										{#if item.id === latestPlanId && !planningWs}
-											· refine it by typing in the chat
-										{/if}
-									</p>
-									{#if item.id === latestPlanId && !planningWs}
-										<div class="mt-5 flex flex-wrap items-center gap-3">
-											<button
-												type="button"
-												disabled={launchingPlanning}
-												onclick={launchPlanning}
-												class="btn btn-primary"
-											>
-												{launchingPlanning ? 'starting…' : 'start'}
-											</button>
-											<button
-												type="button"
-												disabled={launchingPlanning}
-												onclick={openEdit}
-												class="cursor-pointer px-2 py-2.5 text-sm text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-50"
-											>
-												edit
-											</button>
-										</div>
-									{:else if item.id === latestPlanId}
-										<p class="mt-4 text-xs text-[var(--st-faint)]">started</p>
-									{/if}
-								{/if}
-							</article>
-						{:else if item.kind === 'artifact' && item.artifact}
-							{@const art = item.artifact}
-							{@const isCurrent = latestDocItem[art.key] === item.id}
-							{@const phase = docPhase[art.key]}
-							<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
-								<h3 class="font-display text-base font-semibold">{art.title}</h3>
-								{#if art.body}
-									<div class="relative mt-3" class:clamp={isLong(art.body) && !expanded[item.id]}>
-										{@render document(renderDocument(art.files[0]?.name ?? '', art.body))}
-									</div>
-									{#if isLong(art.body)}
-										<button
-											type="button"
-											class="mt-3 cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 hover:text-[var(--st-text)] hover:underline"
-											onclick={() => (expanded[item.id] = !expanded[item.id])}
-										>
-											{expanded[item.id] ? 'collapse' : 'more'}
-										</button>
-									{/if}
-								{:else}
-									<!-- The text could not be read — the file itself is offered
-									     instead of an empty card. Same-origin route, but not a
-									     SvelteKit page, hence the lint exception. -->
-									{#each art.files as f (f.name)}
-										<p class="mt-2 text-sm text-[var(--st-muted)]">
-											<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-											<a
-												href={f.url}
-												target="_blank"
-												rel="noreferrer"
-												class="underline underline-offset-4"
-											>
-												{f.name}
-											</a>
-										</p>
-									{/each}
-								{/if}
-
-								{#if isCurrent && !renderWs}
-									<div class="mt-4 border-t border-[var(--st-line)] pt-4">
-										{#if phase === 'regen'}
-											<p class="text-xs text-[var(--st-muted)]">regenerating</p>
-										{:else if docAccepted[art.key]}
-											<p class="text-xs text-[var(--st-faint)]">elfogadva</p>
-										{:else}
-											<div class="flex flex-wrap items-center gap-3">
+											<p class="mt-3 text-sm leading-relaxed text-[var(--st-muted)]">
+												{item.plan.style}
+											</p>
+											{#if item.plan.summary}
 												<button
 													type="button"
-													onclick={() => (docAccepted[art.key] = true)}
-													class="btn btn-secondary btn-sm"
+													class="mt-3 cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 hover:text-[var(--st-text)] hover:underline"
+													onclick={() => (expanded[item.id] = !expanded[item.id])}
 												>
-													ok
+													{expanded[item.id] ? 'hide the full story' : 'read the full story'}
 												</button>
-												<button
-													type="button"
-													onclick={() => (changeOpen[item.id] = !changeOpen[item.id])}
-													class="cursor-pointer px-1 py-2 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-												>
-													request a change
-												</button>
-											</div>
-											{#if changeOpen[item.id]}
-												<form
-													class="mt-3 flex gap-2"
-													onsubmit={(e) => {
-														e.preventDefault();
-														requestChange(item.id, art.key);
-													}}
-												>
-													<label class="sr-only" for="change-{item.id}">What should change</label>
-													<input
-														id="change-{item.id}"
-														bind:value={changeText[item.id]}
-														placeholder="what should change in this document"
-														class="min-w-0 flex-1 rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--st-faint)] focus:border-[var(--st-muted)]"
-													/>
+												{#if expanded[item.id]}
+													<p
+														class="doc enter mt-3 rounded-xl bg-[var(--st-bg)] px-4 py-3.5 text-[0.95rem] leading-[1.75] text-[var(--st-muted)]"
+													>
+														{item.plan.story}
+													</p>
+												{/if}
+											{/if}
+											<p class="mt-3 text-xs text-[var(--st-faint)]">
+												{item.plan.sceneCount} scenes
+												{#if item.id === latestPlanId && !planningWs}
+													· refine it by typing in the chat
+												{/if}
+											</p>
+											{#if item.id === latestPlanId && !planningWs}
+												<div class="mt-5 flex flex-wrap items-center gap-3">
 													<button
-														type="submit"
-														disabled={changeBusy[item.id] || !(changeText[item.id] ?? '').trim()}
+														type="button"
+														disabled={launchingPlanning}
+														onclick={launchPlanning}
 														class="btn btn-primary"
 													>
-														send
+														{launchingPlanning ? 'starting…' : 'start'}
 													</button>
-												</form>
-												<p class="mt-2 text-xs text-[var(--st-faint)]">
-													This step is rewritten, and everything built on it is refreshed after it.
-												</p>
+													<button
+														type="button"
+														disabled={launchingPlanning}
+														onclick={openEdit}
+														class="cursor-pointer px-2 py-2.5 text-sm text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-50"
+													>
+														edit
+													</button>
+												</div>
+											{:else if item.id === latestPlanId}
+												<p class="mt-4 text-xs text-[var(--st-faint)]">started</p>
 											{/if}
 										{/if}
-									</div>
-								{/if}
-							</article>
-						{:else if item.kind === 'approval'}
-							<!-- A second way to start the shoot. The board has the real one, and
+									</article>
+								{:else if item.kind === 'artifact' && item.artifact}
+									{@const art = item.artifact}
+									{@const isCurrent = latestDocItem[art.key] === item.id}
+									{@const phase = docPhase[art.key]}
+									<article class="enter rounded-2xl bg-[var(--st-surface)] p-5 sm:p-6">
+										<h3 class="font-display text-base font-semibold">{art.title}</h3>
+										{#if art.body}
+											<div
+												class="relative mt-3"
+												class:clamp={isLong(art.body) && !expanded[item.id]}
+											>
+												{@render document(renderDocument(art.files[0]?.name ?? '', art.body))}
+											</div>
+											{#if isLong(art.body)}
+												<button
+													type="button"
+													class="mt-3 cursor-pointer text-xs text-[var(--st-muted)] underline-offset-4 hover:text-[var(--st-text)] hover:underline"
+													onclick={() => (expanded[item.id] = !expanded[item.id])}
+												>
+													{expanded[item.id] ? 'collapse' : 'more'}
+												</button>
+											{/if}
+										{:else}
+											<!-- The text could not be read — the file itself is offered
+									     instead of an empty card. Same-origin route, but not a
+									     SvelteKit page, hence the lint exception. -->
+											{#each art.files as f (f.name)}
+												<p class="mt-2 text-sm text-[var(--st-muted)]">
+													<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+													<a
+														href={f.url}
+														target="_blank"
+														rel="noreferrer"
+														class="underline underline-offset-4"
+													>
+														{f.name}
+													</a>
+												</p>
+											{/each}
+										{/if}
+
+										{#if isCurrent && !renderWs}
+											<div class="mt-4 border-t border-[var(--st-line)] pt-4">
+												{#if phase === 'regen'}
+													<p class="text-xs text-[var(--st-muted)]">regenerating</p>
+												{:else if docAccepted[art.key]}
+													<p class="text-xs text-[var(--st-faint)]">elfogadva</p>
+												{:else}
+													<div class="flex flex-wrap items-center gap-3">
+														<button
+															type="button"
+															onclick={() => (docAccepted[art.key] = true)}
+															class="btn btn-secondary btn-sm"
+														>
+															ok
+														</button>
+														<button
+															type="button"
+															onclick={() => (changeOpen[item.id] = !changeOpen[item.id])}
+															class="cursor-pointer px-1 py-2 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+														>
+															request a change
+														</button>
+													</div>
+													{#if changeOpen[item.id]}
+														<form
+															class="mt-3 flex gap-2"
+															onsubmit={(e) => {
+																e.preventDefault();
+																requestChange(item.id, art.key);
+															}}
+														>
+															<label class="sr-only" for="change-{item.id}"
+																>What should change</label
+															>
+															<input
+																id="change-{item.id}"
+																bind:value={changeText[item.id]}
+																placeholder="what should change in this document"
+																class="min-w-0 flex-1 rounded-xl border border-[var(--st-line)] bg-[var(--st-bg)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--st-faint)] focus:border-[var(--st-muted)]"
+															/>
+															<button
+																type="submit"
+																disabled={changeBusy[item.id] ||
+																	!(changeText[item.id] ?? '').trim()}
+																class="btn btn-primary"
+															>
+																send
+															</button>
+														</form>
+														<p class="mt-2 text-xs text-[var(--st-faint)]">
+															This step is rewritten, and everything built on it is refreshed after
+															it.
+														</p>
+													{/if}
+												{/if}
+											</div>
+										{/if}
+									</article>
+								{:else if item.kind === 'approval'}
+									<!-- A second way to start the shoot. The board has the real one, and
 							     this is deliberately duplicate: for one evening the button lived
 							     only there, the board failed to post, and an otherwise finished
 							     plan could not be approved by any means at all. A control that
 							     gates the entire run should not have exactly one home. -->
-							<!-- Text only. The board above already lists the five documents and
+									<!-- Text only. The board above already lists the five documents and
 							     opens each one; repeating that here put the same list twice on
 							     one screen, and the button that matters ended up below the
 							     duplicate rather than beside the thing it acts on. Both now live
 							     on the board. -->
-							<p class="enter doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
-								{item.text}
-							</p>
-						{:else if item.kind === 'takes' && item.takes && !item.artifact}
-							<!-- A batch nobody has chosen from yet: the strip, and nothing else.
+									<p class="enter doc text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+										{item.text}
+									</p>
+								{:else if item.kind === 'takes' && item.takes && !item.artifact}
+									<!-- A batch nobody has chosen from yet: the strip, and nothing else.
 								 No verdict row and no continue here — those belong to the take you
 								 keep, and offering them on four clips at once would ask for four
 								 answers to a question that has one. -->
-							{@const t = item.takes}
-							{@const live = t.runs.filter((r) => r.state === 'rendering').length}
-							{@const done = t.runs.filter((r) => r.state === 'ready')}
-							{@const gone = t.runs.filter((r) => r.state === 'failed')}
-							{@const row = done[0]?.clip ? logRow[done[0].clip.workspace] : undefined}
-							<div class="enter">
-								<p class="text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
-									{#if live}
-										{t.runs.length} clips of this shot, rendering together.
-									{:else if done.length}
-										{done.length}
-										{done.length === 1 ? 'clip' : 'clips'} of this shot.
-										<span class="text-[var(--st-faint)]">Press one to look properly.</span>
-									{/if}
-								</p>
+									{@const t = item.takes}
+									{@const live = t.runs.filter((r) => r.state === 'rendering').length}
+									{@const done = t.runs.filter((r) => r.state === 'ready')}
+									{@const gone = t.runs.filter((r) => r.state === 'failed')}
+									{@const row = done[0]?.clip ? logRow[done[0].clip.workspace] : undefined}
+									<div class="enter">
+										<p class="text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+											{#if live}
+												{t.runs.length} clips of this shot, rendering together.
+											{:else if done.length}
+												{done.length}
+												{done.length === 1 ? 'clip' : 'clips'} of this shot.
+												<span class="text-[var(--st-faint)]">Press one to look properly.</span>
+											{/if}
+										</p>
 
-								<!-- The grid follows the count rather than always being four: two
+										<!-- The grid follows the count rather than always being four: two
 									 takes in a four-column grid leave half the row empty and the card
 									 reads as broken. Two across on a phone whatever the count — at
 									 375px four tiles are 77 wide, which is too small to press, and
 									 two are 161. -->
-								<div class="st-takes mt-3" data-n={t.runs.length}>
-									{#each t.runs as run (run.slug)}
-										{@render takeTile(item, run)}
-									{/each}
-								</div>
+										<div class="st-takes mt-3" data-n={t.runs.length}>
+											{#each t.runs as run (run.slug)}
+												{@render takeTile(item, run)}
+											{/each}
+										</div>
 
-								<div
-									class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--st-faint)]"
-								>
-									{#if live}
-										<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
-										></span>
-										<span class="tabular-nums">{done.length} of {t.runs.length} landed</span>
-									{/if}
-									<!-- One row describes all of them: the takes differ by seed and by
+										<div
+											class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--st-faint)]"
+										>
+											{#if live}
+												<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+												></span>
+												<span class="tabular-nums">{done.length} of {t.runs.length} landed</span>
+											{/if}
+											<!-- One row describes all of them: the takes differ by seed and by
 										 nothing else, so the size, the length and the adapters are the
 										 same sentence four times over. -->
-									{#if row}
-										{#if row.launched?.length}
-											<span class="text-[var(--st-muted)]">
-												{row.launched
-													.map((p) => `${loraFor(p.key)?.label ?? p.key} ${p.strength}`)
-													.join(' · ')}
-											</span>
-										{/if}
-										<span class="tabular-nums"
-											>{row.steps} steps · {row.width}×{row.height} · {row.fps}fps · {row.seconds}s</span
-										>
-									{/if}
-								</div>
+											{#if row}
+												{#if row.launched?.length}
+													<span class="text-[var(--st-muted)]">
+														{row.launched
+															.map((p) => `${loraFor(p.key)?.label ?? p.key} ${p.strength}`)
+															.join(' · ')}
+													</span>
+												{/if}
+												<span class="tabular-nums"
+													>{row.steps} steps · {row.width}×{row.height} · {row.fps}fps · {row.seconds}s</span
+												>
+											{/if}
+										</div>
 
-								{#if !live && !done.length}
-									<p class="text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
-										None of them finished.
-									</p>
-								{/if}
-								{#each gone as g (g.slug)}
-									<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
-										Clip {g.index} — {g.error || 'no reason given'}
-									</p>
-								{/each}
-							</div>
-						{:else if (item.kind === 'clips' || item.kind === 'takes') && item.artifact}
-							{@const ws = item.artifact.workspace ?? ''}
-							{@const v = verdict[ws]}
-							<!-- A caption only where it says more than the title does. An assembled
+										{#if !live && !done.length}
+											<p class="text-[0.95rem] leading-[1.75] text-[var(--st-text)]">
+												None of them finished.
+											</p>
+										{/if}
+										{#each gone as g (g.slug)}
+											<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
+												Clip {g.index} — {g.error || 'no reason given'}
+											</p>
+										{/each}
+									</div>
+								{:else if (item.kind === 'clips' || item.kind === 'takes') && item.artifact}
+									{@const ws = item.artifact.workspace ?? ''}
+									{@const v = verdict[ws]}
+									<!-- A caption only where it says more than the title does. An assembled
 							     thing has a length and a part count worth reading — "The film — 3
 							     clips, 23s." — and a single clip has a name that repeats what the
 							     card already is. Those two used to look the same.
@@ -8179,13 +8503,13 @@
 							     Up here with the other consts because {@const} must be a block's
 							     immediate child — this file's own rule, and I had just put it inside
 							     a div. -->
-							<!-- A turnaround is a reference picture that happens to be a video:
+									<!-- A turnaround is a reference picture that happens to be a video:
 							     there is nothing to continue from it, nothing to put in a film,
 							     and no verdict to give it — it either resembles the character or
 							     it is redrawn from the card. Offering the scene band under it put
 							     four controls on screen that all lead somewhere wrong. -->
-							{@const scenic = item.artifact.key !== 'turnaround'}
-							<!-- No caption on a turnaround either. It sat directly under the
+									{@const scenic = item.artifact.key !== 'turnaround'}
+									<!-- No caption on a turnaround either. It sat directly under the
 							     character's own card and said, in a full sentence, what the picture
 							     above it had already said — and with a long descriptive name in the
 							     middle of it, "The turn ultra slim body, flat breast was built
@@ -8194,17 +8518,20 @@
 							     Written into the transcript, so cards kept before this change carry
 							     it too; the rule has to hold for what is on disk, not only for what
 							     is written next. -->
-							{@const said =
-								scenic && item.kind !== 'takes' && item.text && item.text !== item.artifact.title
-									? item.text
-									: ''}
-							<div class="enter">
-								<div class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
-								{#each item.artifact.files as f (f.name)}
-									{@render videoCard(f.name, f.url, said, ws)}
-								{/each}
+									{@const said =
+										scenic &&
+										item.kind !== 'takes' &&
+										item.text &&
+										item.text !== item.artifact.title
+											? item.text
+											: ''}
+									<div class="enter">
+										<div class="mt-3 overflow-hidden rounded-2xl bg-[var(--st-surface)]">
+											{#each item.artifact.files as f (f.name)}
+												{@render videoCard(f.name, f.url, said, ws)}
+											{/each}
 
-								<!-- Everything you can do with a finished clip, in one band.
+											<!-- Everything you can do with a finished clip, in one band.
 								     It used to be five: a caption, a line of render settings, "how
 								     was it?", the buttons, and a paragraph. Five stacked rows are a
 								     list, not a hierarchy, and the eye had nowhere to land.
@@ -8219,223 +8546,242 @@
 								     nobody wants them; the tenth time a clip came back wrong and the
 								     seed and the adapters are exactly what is needed, so they are one
 								     tap away rather than gone. -->
-										{#if ws && scenic}
-									{@const ci = contInfo(ws)}
-									{@const chain = chainOf(ws)}
-									{@const others =
-										item.kind === 'takes' && item.takes
-											? readyTakes(item.id).filter((r) => r.index !== item.takes?.kept)
-											: []}
-									{@const v = verdict[ws]}
-									<div class="flex flex-col gap-2 px-4 pt-3 pb-4">
-										<div class="flex flex-wrap items-center gap-2">
-											<button
-												type="button"
-												disabled={!ci.ok}
-												onclick={() => startContinue(item)}
-												class="btn btn-primary btn-sm"
-												>Continue</button
-											>
-											{#if filmPart(item.artifact)}
-												{#if inFilm(item.artifact)}
-													<span class="flex items-center gap-1.5 px-1 text-xs text-[var(--st-muted)]">
-														<span aria-hidden="true">✓</span><span>In the film</span>
-													</span>
-												{:else}
-													<button
-														type="button"
-														onclick={() => addToFilm(item)}
-														class="btn btn-secondary btn-sm"
-														>Add to film</button
-													>
-												{/if}
-											{/if}
-											{#if chain.length > 1}
-												<button
-													type="button"
-													disabled={joining[ws]}
-													onclick={() => joinScene(ws)}
-													class="btn btn-secondary btn-sm"
-													>{joining[ws] ? 'Joining…' : `The whole scene · ${chain.length}`}</button
-												>
-											{/if}
-											{#if others.length}
-												<button
-													type="button"
-													onclick={(e) => openTake(item.id, others[0].index, e.currentTarget)}
-													class="btn btn-quiet btn-sm"
-													>{others.length === 1 ? 'Other take' : `${others.length} other takes`}</button
-												>
-											{/if}
+											{#if ws && scenic}
+												{@const ci = contInfo(ws)}
+												{@const chain = chainOf(ws)}
+												{@const others =
+													item.kind === 'takes' && item.takes
+														? readyTakes(item.id).filter((r) => r.index !== item.takes?.kept)
+														: []}
+												{@const v = verdict[ws]}
+												<div class="flex flex-col gap-2 px-4 pt-3 pb-4">
+													<div class="flex flex-wrap items-center gap-2">
+														<button
+															type="button"
+															disabled={!ci.ok}
+															onclick={() => startContinue(item)}
+															class="btn btn-primary btn-sm">Continue</button
+														>
+														{#if filmPart(item.artifact)}
+															{#if inFilm(item.artifact)}
+																<span
+																	class="flex items-center gap-1.5 px-1 text-xs text-[var(--st-muted)]"
+																>
+																	<span aria-hidden="true">✓</span><span>In the film</span>
+																</span>
+															{:else}
+																<button
+																	type="button"
+																	onclick={() => addToFilm(item)}
+																	class="btn btn-secondary btn-sm">Add to film</button
+																>
+															{/if}
+														{/if}
+														{#if chain.length > 1}
+															<button
+																type="button"
+																disabled={joining[ws]}
+																onclick={() => joinScene(ws)}
+																class="btn btn-secondary btn-sm"
+																>{joining[ws]
+																	? 'Joining…'
+																	: `The whole scene · ${chain.length}`}</button
+															>
+														{/if}
+														{#if others.length}
+															<button
+																type="button"
+																onclick={(e) => openTake(item.id, others[0].index, e.currentTarget)}
+																class="btn btn-quiet btn-sm"
+																>{others.length === 1
+																	? 'Other take'
+																	: `${others.length} other takes`}</button
+															>
+														{/if}
 
-											<!-- Pushed to the far end. Asked, not inferred, and not on the
+														<!-- Pushed to the far end. Asked, not inferred, and not on the
 											     path to the next clip. -->
-											<span class="ml-auto flex items-center gap-0.5">
-												{#if !v}
-													<button
-														type="button"
-														onclick={() => rate(ws, 'kept')}
-														class="btn btn-quiet btn-sm"
-														>Good</button
-													>
-													<button
-														type="button"
-														onclick={() => rate(ws, 'rejected')}
-														class="btn btn-quiet btn-sm"
-														>Not good</button
-													>
-												{:else if v === 'kept'}
-													<span class="px-2 text-xs text-[var(--st-faint)]">Noted as good</span>
-												{:else if diagnosing[ws]}
-													<span class="flex items-center gap-2 px-2 text-xs text-[var(--st-faint)]">
-														<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
-														></span>
-														<span>Working out the fix</span>
-													</span>
-												{:else if !fix[ws]}
-													<button
-														type="button"
-														onclick={() => diagnose(ws)}
-														class="btn btn-secondary btn-sm"
-														>Work out why</button
-													>
-												{/if}
-											</span>
+														<span class="ml-auto flex items-center gap-0.5">
+															{#if !v}
+																<button
+																	type="button"
+																	onclick={() => rate(ws, 'kept')}
+																	class="btn btn-quiet btn-sm">Good</button
+																>
+																<button
+																	type="button"
+																	onclick={() => rate(ws, 'rejected')}
+																	class="btn btn-quiet btn-sm">Not good</button
+																>
+															{:else if v === 'kept'}
+																<span class="px-2 text-xs text-[var(--st-faint)]"
+																	>Noted as good</span
+																>
+															{:else if diagnosing[ws]}
+																<span
+																	class="flex items-center gap-2 px-2 text-xs text-[var(--st-faint)]"
+																>
+																	<span
+																		class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+																	></span>
+																	<span>Working out the fix</span>
+																</span>
+															{:else if !fix[ws]}
+																<button
+																	type="button"
+																	onclick={() => diagnose(ws)}
+																	class="btn btn-secondary btn-sm">Work out why</button
+																>
+															{/if}
+														</span>
+													</div>
+
+													{#if !ci.ok}
+														<p class="text-xs leading-relaxed text-[var(--st-faint)]">{ci.why}</p>
+													{:else if !ci.exact}
+														<p class="text-xs text-[var(--st-faint)]">
+															Continues from a frame of this clip.
+														</p>
+													{/if}
+												</div>
+											{/if}
 										</div>
 
-										{#if !ci.ok}
-											<p class="text-xs leading-relaxed text-[var(--st-faint)]">{ci.why}</p>
-										{:else if !ci.exact}
-											<p class="text-xs text-[var(--st-faint)]">Continues from a frame of this clip.</p>
+										{#if ws && scenic}
+											{#if fix[ws]}
+												{@const f = fix[ws]}
+												<div class="mt-2.5 rounded-2xl bg-[var(--st-surface)] p-4">
+													<p class="text-[13px] leading-relaxed text-[var(--st-text)]">{f.why}</p>
+													{#if f.loras?.length}
+														<p class="mt-2 text-xs text-[var(--st-muted)]">
+															next attempt with {f.loras
+																.map((p) => `${loraFor(p.key)?.label ?? p.key} ${p.strength}`)
+																.join(' · ')}
+														</p>
+													{/if}
+													<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+														<button
+															type="button"
+															disabled={fixBusy[ws]}
+															class="btn btn-primary"
+															onclick={() => renderFix(ws)}
+														>
+															{fixBusy[ws] ? 'starting…' : 'render the fix'}
+														</button>
+														<button
+															type="button"
+															class="cursor-pointer rounded-full px-3 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+															onclick={() => openFix(ws)}>read the brief first</button
+														>
+														<button
+															type="button"
+															class="cursor-pointer rounded-full px-3 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+															onclick={() => diagnose(ws)}>look again</button
+														>
+													</div>
+												</div>
+											{/if}
 										{/if}
 									</div>
 								{/if}
-								</div>
+							{/each}
 
-									{#if ws && scenic}
-									{#if fix[ws]}
-										{@const f = fix[ws]}
-										<div class="mt-2.5 rounded-2xl bg-[var(--st-surface)] p-4">
-											<p class="text-[13px] leading-relaxed text-[var(--st-text)]">{f.why}</p>
-											{#if f.loras?.length}
-												<p class="mt-2 text-xs text-[var(--st-muted)]">
-													next attempt with {f.loras
-														.map((p) => `${loraFor(p.key)?.label ?? p.key} ${p.strength}`)
-														.join(' · ')}
-												</p>
-											{/if}
-											<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
-												<button
-													type="button"
-													disabled={fixBusy[ws]}
-													class="btn btn-primary"
-													onclick={() => renderFix(ws)}
-												>
-													{fixBusy[ws] ? 'starting…' : 'render the fix'}
-												</button>
-												<button
-													type="button"
-													class="cursor-pointer rounded-full px-3 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-													onclick={() => openFix(ws)}>read the brief first</button
-												>
-												<button
-													type="button"
-													class="cursor-pointer rounded-full px-3 py-2 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-													onclick={() => diagnose(ws)}>look again</button
-												>
-											</div>
-										</div>
-									{/if}
-								{/if}
-							</div>
-						{/if}
-					{/each}
-
-					{#if sending}
-						<!-- A word alone reads as frozen once it has been on screen for
+							{#if sending}
+								<!-- A word alone reads as frozen once it has been on screen for
 							 ten seconds. The counter is the proof that something is still
 							 happening, and it makes a stall visible as a stall. -->
-						<p class="flex items-center gap-2.5 text-xs text-[var(--st-faint)]">
-							<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
-							<span>{sendingWhat}</span>
-							{#if sendingFor > 1}
-								<span class="tabular-nums">{sendingFor}s</span>
+								<p class="flex items-center gap-2.5 text-xs text-[var(--st-faint)]">
+									<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
+									<span>{sendingWhat}</span>
+									{#if sendingFor > 1}
+										<span class="tabular-nums">{sendingFor}s</span>
+									{/if}
+									{#if typicalPrompt && sendingFor > 2}
+										<span aria-hidden="true">·</span>
+										<span>{promptOverdue ? 'longer than usual' : typicalLabel(typicalPrompt)}</span>
+									{/if}
+								</p>
 							{/if}
-							{#if typicalPrompt && sendingFor > 2}
-								<span aria-hidden="true">·</span>
-								<span>{promptOverdue ? 'longer than usual' : typicalLabel(typicalPrompt)}</span>
-							{/if}
-						</p>
-					{/if}
 
-					{#if showExamples}
-						<!-- Three of them, one row, equal width — a set the eye reads as a
+							{#if showExamples}
+								<!-- Three of them, one row, equal width — a set the eye reads as a
 							 set. Stacked full-width pills made three sentences of different
 							 lengths look like three unrelated things, and the longest one
 							 decided the shape of the block. -->
-						<div class="grid gap-2.5 pt-2 sm:grid-cols-3">
-							{#each examples as ex (ex)}
-								<button
-									type="button"
-									class="flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
-									onclick={() => useExample(ex)}
-								>
-									<!-- Says what the click does: it fills the box, it does not send. -->
-									<svg viewBox="0 0 16 16" class="mt-0.5 size-3.5 shrink-0 opacity-45" fill="none" aria-hidden="true">
-										<path d="M4 12L12 4M6 4h6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-									</svg>
-									<span class="min-w-0">{ex}</span>
-								</button>
-							{/each}
+								<div class="grid gap-2.5 pt-2 sm:grid-cols-3">
+									{#each examples as ex (ex)}
+										<button
+											type="button"
+											class="flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
+											onclick={() => useExample(ex)}
+										>
+											<!-- Says what the click does: it fills the box, it does not send. -->
+											<svg
+												viewBox="0 0 16 16"
+												class="mt-0.5 size-3.5 shrink-0 opacity-45"
+												fill="none"
+												aria-hidden="true"
+											>
+												<path
+													d="M4 12L12 4M6 4h6v6"
+													stroke="currentColor"
+													stroke-width="1.6"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+											</svg>
+											<span class="min-w-0">{ex}</span>
+										</button>
+									{/each}
+								</div>
+							{/if}
+
+							<div bind:this={bottomEl}></div>
 						</div>
 					{/if}
 
-					<div bind:this={bottomEl}></div>
-				</div>
-				{/if}
-
-				<!-- ── the composer — pinned, outside the scrolling region ── -->
-				<div class="relative shrink-0 pt-3 pb-4">
-					{#if !atBottom}
-						<!-- Scrolled up and reading? New messages must not yank the view.
+					<!-- ── the composer — pinned, outside the scrolling region ── -->
+					<div class="relative shrink-0 pt-3 pb-4">
+						{#if !atBottom}
+							<!-- Scrolled up and reading? New messages must not yank the view.
 							 This is the way back down, the way every chat client offers it. -->
-						<button
-							type="button"
-							class="enter absolute -top-9 left-1/2 z-10 -translate-x-1/2 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 py-1.5 text-xs text-[var(--st-text)]"
-							onclick={() => scrollToBottom('smooth')}
-						>
-							latest ↓
-						</button>
-					{/if}
-					<!-- Not on the stage, which says this itself and says it right. Two
+							<button
+								type="button"
+								class="enter absolute -top-9 left-1/2 z-10 -translate-x-1/2 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-3.5 py-1.5 text-xs text-[var(--st-text)]"
+								onclick={() => scrollToBottom('smooth')}
+							>
+								latest ↓
+							</button>
+						{/if}
+						<!-- Not on the stage, which says this itself and says it right. Two
 						 clocks for one render is one too many, and this one cannot tell that
 						 the clip already arrived — it counts while the poll is alive, so a
 						 session left open reads "116m · longer than usual" over a finished
 						 take. -->
-					{#if pollingActive && startedAt && !STAGE_UI}
-						<!-- Live status: the dot says something is happening, the clock says
+						{#if pollingActive && startedAt && !STAGE_UI}
+							<!-- Live status: the dot says something is happening, the clock says
 							 how long, and the label says what — the three things a reader
 							 waiting twenty minutes actually wants. Opacity-only pulse: the
 							 house rules forbid glows. -->
 							<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
-							<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
-							<span class="tabular-nums">{elapsedLabel(now - startedAt)}</span>
-							{#if simpleRun && typicalClip}
-								<!-- The other half of the sentence. `4m 59s` alone cannot tell
+								<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"></span>
+								<span class="tabular-nums">{elapsedLabel(now - startedAt)}</span>
+								{#if simpleRun && typicalClip}
+									<!-- The other half of the sentence. `4m 59s` alone cannot tell
 									 you whether the answer is due at five minutes or at twenty,
 									 and that is the whole difference between waiting and
 									 wondering whether the page has hung. -->
-								<span class="text-[var(--st-faint)]">·</span>
-								<span class="text-[var(--st-faint)]">
-									{clipOverdue ? 'longer than usual' : typicalLabel(typicalClip)}
-								</span>
-							{/if}
-							{#if railRunning}
-								<span class="text-[var(--st-faint)]">·</span>
-								<span class="min-w-0 truncate">{friendly(railRunning.label)}</span>
-							{/if}
-						</p>
-					{/if}
+									<span class="text-[var(--st-faint)]">·</span>
+									<span class="text-[var(--st-faint)]">
+										{clipOverdue ? 'longer than usual' : typicalLabel(typicalClip)}
+									</span>
+								{/if}
+								{#if railRunning}
+									<span class="text-[var(--st-faint)]">·</span>
+									<span class="min-w-0 truncate">{friendly(railRunning.label)}</span>
+								{/if}
+							</p>
+						{/if}
 						<!-- A character being drawn belongs in the same slot as everything else
 					     that is happening, which is here: pinned above the box, the way a
 					     chat client reports its own work. It was inside the character's
@@ -8461,180 +8807,186 @@
 								<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
 							</p>
 						{/each}
-					{#if refFiles.length}
-						<div class="mb-2 space-y-1.5">
-							{#each refFiles as f (f.id)}
-								<div class="flex items-center gap-2 rounded-xl bg-[var(--st-surface)] px-3 py-2">
-									<span class="max-w-[9rem] shrink-0 truncate font-mono text-[11px] text-[var(--st-muted)]">
-										{f.name}
-									</span>
-									<input
-										value={f.description}
-										placeholder="what is this — the crew cannot see the file, only this line"
-										onchange={(e) => describeRefFile(f.id, e.currentTarget.value)}
-										class="min-w-0 flex-1 border-0 bg-transparent text-xs outline-none placeholder:text-[var(--st-faint)]"
-									/>
-									<button
-										type="button"
-										aria-label="remove {f.name}"
-										class="shrink-0 cursor-pointer px-1 text-xs text-[var(--st-faint)] hover:text-[var(--st-text)]"
-										onclick={() => dropRef(f.id)}
-									>
-										×
-									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-					{#if refError}
-						<p class="mb-2 text-xs text-[var(--st-muted)]">{refError}</p>
-					{/if}
-					<!-- The hint line was a full-width row with an empty right half, so the
+						{#if refFiles.length}
+							<div class="mb-2 space-y-1.5">
+								{#each refFiles as f (f.id)}
+									<div class="flex items-center gap-2 rounded-xl bg-[var(--st-surface)] px-3 py-2">
+										<span
+											class="max-w-[9rem] shrink-0 truncate font-mono text-[11px] text-[var(--st-muted)]"
+										>
+											{f.name}
+										</span>
+										<input
+											value={f.description}
+											placeholder="what is this — the crew cannot see the file, only this line"
+											onchange={(e) => describeRefFile(f.id, e.currentTarget.value)}
+											class="min-w-0 flex-1 border-0 bg-transparent text-xs outline-none placeholder:text-[var(--st-faint)]"
+										/>
+										<button
+											type="button"
+											aria-label="remove {f.name}"
+											class="shrink-0 cursor-pointer px-1 text-xs text-[var(--st-faint)] hover:text-[var(--st-text)]"
+											onclick={() => dropRef(f.id)}
+										>
+											×
+										</button>
+									</div>
+								{/each}
+							</div>
+						{/if}
+						{#if refError}
+							<p class="mb-2 text-xs text-[var(--st-muted)]">{refError}</p>
+						{/if}
+						<!-- The hint line was a full-width row with an empty right half, so the
 						 film costs no height at all. It belongs in this band and not among
 						 the composer's setting chips: there it read as a parameter, which
 						 is not what it is, and nobody looked for it. -->
-					<!-- Only when it has something in it. The reserved 1.6rem stopped the
+						<!-- Only when it has something in it. The reserved 1.6rem stopped the
 						 composer jumping when a hint appeared and went away, which was worth
 						 it when this row was usually full. It is not: with no hint and no
 						 film it is an empty band holding the status line a centimetre clear
 						 of the box it is reporting on. -->
-					{#if composerHint || film.length}
-						<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
-							<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
-							<span class="flex-1"></span>
-							{#if film.length}
+						{#if composerHint || film.length}
+							<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
+								<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
+								<span class="flex-1"></span>
+								{#if film.length}
+									<button
+										type="button"
+										aria-expanded={filmOpen}
+										ondragover={(e) => {
+											if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
+										}}
+										ondrop={(e) => dropClipIntoFilm(e)}
+										onclick={() => (filmOpen = !filmOpen)}
+										class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
+											? 'bg-[var(--st-surface-2)]'
+											: ''}"
+									>
+										<span class="reelmark" aria-hidden="true"></span>
+										<span
+											>{film.length} {film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span
+										>
+										<span
+											class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
+											>⌄</span
+										>
+									</button>
+								{/if}
+							</div>
+						{/if}
+
+						{#if film.length && filmOpen}
+							<!-- The reel. Whole clips only — that is the line between a strip and
+							 an editor, and the one that keeps this from becoming a tool you
+							 have to learn. -->
+							<div class="enter mb-2 flex items-center gap-2.5 px-2">
 								<button
 									type="button"
-									aria-expanded={filmOpen}
+									aria-label="play the film"
+									onclick={() => openFilmViewer(0)}
+									class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[0.7rem] text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control)]"
+								>
+									▶
+								</button>
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div
+									class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5"
 									ondragover={(e) => {
 										if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
 									}}
 									ondrop={(e) => dropClipIntoFilm(e)}
-									onclick={() => (filmOpen = !filmOpen)}
-									class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs tabular-nums text-[var(--st-text)] transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
-										? 'bg-[var(--st-surface-2)]'
-										: ''}"
 								>
-									<span class="reelmark" aria-hidden="true"></span>
-									<span>{film.length} {film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span>
-									<span class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
-										>⌄</span
-									>
-								</button>
-							{/if}
-						</div>
-					{/if}
-
-					{#if film.length && filmOpen}
-						<!-- The reel. Whole clips only — that is the line between a strip and
-							 an editor, and the one that keeps this from becoming a tool you
-							 have to learn. -->
-						<div class="enter mb-2 flex items-center gap-2.5 px-2">
-							<button
-								type="button"
-								aria-label="play the film"
-								onclick={() => openFilmViewer(0)}
-								class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[0.7rem] text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control)]"
-							>
-								▶
-							</button>
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div
-								class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5"
-								ondragover={(e) => {
-									if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
-								}}
-								ondrop={(e) => dropClipIntoFilm(e)}
-							>
-								{#each film as c, i (filmKey(c))}
-									{#if i}
-										<span
-											class="relative w-1.5 shrink-0 self-stretch"
-											aria-hidden="true"
-											class:seam-jump={seamJumps(i)}
-										></span>
-									{/if}
-									<button
-										type="button"
-										aria-label="shot {i + 1}"
-										draggable="true"
-										ondragstart={(e) => e.dataTransfer?.setData('text/plain', String(i))}
-										ondragover={(e) => e.preventDefault()}
-										ondrop={(e) => {
-											if (e.dataTransfer?.types.includes(CLIP_DRAG)) return;
-											e.preventDefault();
-											moveInFilm(Number(e.dataTransfer?.getData('text/plain')), i);
-										}}
-										onclick={(e) => {
-											const r = e.currentTarget.getBoundingClientRect();
-											if (e.clientX > r.right - 22 && e.clientY < r.top + 22) dropFromFilm(i);
-											else openFilmViewer(i);
-										}}
-										class="group relative aspect-video w-[5.4rem] shrink-0 cursor-grab overflow-hidden rounded-lg bg-[var(--st-surface)] active:cursor-grabbing"
-									>
-										<!-- svelte-ignore a11y_media_has_caption -->
-										<video
-											src={fileUrl(c.workspace, c.artifact, c.file)}
-											muted
-											loop
-											playsinline
-											preload="auto"
-											use:looping
-											class="h-full w-full bg-black object-cover"
-										></video>
-										<span
-											class="pointer-events-none absolute top-0.5 right-0.5 flex size-[1.1rem] items-center justify-center rounded-full bg-black/60 text-[0.65rem] text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-											>✕</span
+									{#each film as c, i (filmKey(c))}
+										{#if i}
+											<span
+												class="relative w-1.5 shrink-0 self-stretch"
+												aria-hidden="true"
+												class:seam-jump={seamJumps(i)}
+											></span>
+										{/if}
+										<button
+											type="button"
+											aria-label="shot {i + 1}"
+											draggable="true"
+											ondragstart={(e) => e.dataTransfer?.setData('text/plain', String(i))}
+											ondragover={(e) => e.preventDefault()}
+											ondrop={(e) => {
+												if (e.dataTransfer?.types.includes(CLIP_DRAG)) return;
+												e.preventDefault();
+												moveInFilm(Number(e.dataTransfer?.getData('text/plain')), i);
+											}}
+											onclick={(e) => {
+												const r = e.currentTarget.getBoundingClientRect();
+												if (e.clientX > r.right - 22 && e.clientY < r.top + 22) dropFromFilm(i);
+												else openFilmViewer(i);
+											}}
+											class="group relative aspect-video w-[5.4rem] shrink-0 cursor-grab overflow-hidden rounded-lg bg-[var(--st-surface)] active:cursor-grabbing"
 										>
-									</button>
-								{/each}
+											<!-- svelte-ignore a11y_media_has_caption -->
+											<video
+												src={fileUrl(c.workspace, c.artifact, c.file)}
+												muted
+												loop
+												playsinline
+												preload="auto"
+												use:looping
+												class="h-full w-full bg-black object-cover"
+											></video>
+											<span
+												class="pointer-events-none absolute top-0.5 right-0.5 flex size-[1.1rem] items-center justify-center rounded-full bg-black/60 text-[0.65rem] text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+												>✕</span
+											>
+										</button>
+									{/each}
+								</div>
+								<button
+									type="button"
+									disabled={film.length < 2 || filmBusy}
+									onclick={exportFilm}
+									class="shrink-0 cursor-pointer rounded-full bg-[var(--st-text)] px-3.5 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-text)]"
+								>
+									{filmBusy ? 'assembling…' : 'Export'}
+								</button>
 							</div>
-							<button
-								type="button"
-								disabled={film.length < 2 || filmBusy}
-								onclick={exportFilm}
-								class="shrink-0 cursor-pointer rounded-full bg-[var(--st-text)] px-3.5 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-text)]"
-							>
-								{filmBusy ? 'assembling…' : 'Export'}
-							</button>
-						</div>
-					{/if}
-					<!-- `relative` is load-bearing: the add and format menus open upward
+						{/if}
+						<!-- `relative` is load-bearing: the add and format menus open upward
 						 from inside the composer and anchor to this box, not to the page. -->
-					<!-- The stage above is a picture and takes the whole column; this is
+						<!-- The stage above is a picture and takes the whole column; this is
 						 a line of text and keeps the measure it had. The note above is still
 						 true — a composer a thousand pixels wide makes the eye travel the
 						 screen to find the send button — so the width went to the clip and
 						 not to the box under it. -->
-					<!-- The same gutter the stage keeps for the strip. Both boxes centre
+						<!-- The same gutter the stage keeps for the strip. Both boxes centre
 						 in the same reduced width, which is the only way their edges line
 						 up — pad one and not the other and they sit half a strip apart. -->
-					<div class={STAGE_UI && stageThumbs.length > 1 ? 'pl-[6.2rem]' : ''}>
-					<div
-						class="relative rounded-3xl bg-[var(--st-surface)] p-3 {STAGE_UI
-							? 'mx-auto w-full'
-							: ''}"
-						style={STAGE_UI && stageVideoW > 320 ? `max-width:${stageVideoW}px` : undefined}
-					>
-						<!-- Making a character or a location is a state you are IN, not a tab
+						<div class={STAGE_UI && stageThumbs.length > 1 ? 'pl-[6.2rem]' : ''}>
+							<div
+								class="relative rounded-3xl bg-[var(--st-surface)] p-3 {STAGE_UI
+									? 'mx-auto w-full'
+									: ''}"
+								style={STAGE_UI && stageVideoW > 320 ? `max-width:${stageVideoW}px` : undefined}
+							>
+								<!-- Making a character or a location is a state you are IN, not a tab
 							 sitting beside the clip settings. It was a tab, and that put two
 							 different questions on one row — what this message makes, and who is
 							 in the clip — in identical chips. You enter this from the picker
 							 below, and this band is how you know you are here and how you leave. -->
-						{#if mode === 'simple' && (continuing || (STAGE_UI && stageContinuable))}
-							<div
-								class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
-							>
-								<div class="min-w-0">
-									{#if !STAGE_UI && continuing}
-										<p class="font-display text-sm font-semibold">Continuing that clip</p>
-										<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
-											Say what happens next — with {continuing.characterName ?? 'the same person'} in
-											{continuing.locationName ?? 'the same place'}. The new piece renders on its own
-											and joins onto the end.
-										</p>
-									{/if}
-									<!-- Two options, not one switch.
+								{#if mode === 'simple' && (continuing || (STAGE_UI && stageContinuable))}
+									<div
+										class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
+									>
+										<div class="min-w-0">
+											{#if !STAGE_UI && continuing}
+												<p class="font-display text-sm font-semibold">Continuing that clip</p>
+												<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
+													Say what happens next — with {continuing.characterName ??
+														'the same person'} in
+													{continuing.locationName ?? 'the same place'}. The new piece renders on
+													its own and joins onto the end.
+												</p>
+											{/if}
+											<!-- Two options, not one switch.
 									     This was a single button showing its own state, and it was read
 									     as a choice: clicking "starts on the last frame" to ask for that
 									     turned it off. A pair where the chosen one is filled is how the
@@ -8645,577 +8997,695 @@
 									     the room, the light and the motion all come from it. This only
 									     decides whether the FIRST INSTANT is nailed to the frame the
 									     last clip ended on. -->
-									<div class="mt-2 flex flex-wrap items-center gap-1.5">
-										{#if STAGE_UI && askedFor.trim()}
-											<!-- The brief, one button away from where the next order is
+											<div class="mt-2 flex flex-wrap items-center gap-1.5">
+												{#if STAGE_UI && askedFor.trim()}
+													<!-- The brief, one button away from where the next order is
 											     given. Named by its icon and its tooltip rather than a
 											     word, because the row beside it is already four words
 											     long and this is the only round control in it. -->
-											<button
-												type="button"
-												title="put what you asked for back in the box"
-												aria-label="ask again"
-												onclick={() => {
-													// Your words, and nothing else.
-													//
-													// Not the brief: that is the writer's answer to them, five
-													// times longer, and putting it back in a box that feeds the
-													// writer asks it to rewrite its own output. What you typed
-													// is the thing worth changing a word of and sending again.
-													input = askedFor;
-													grow(composer);
-													composer?.focus();
-												}}
-												class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line-control)] hover:text-[var(--st-text)]"
-											>
-												<svg viewBox="0 0 16 16" class="size-[15px]" fill="none" aria-hidden="true">
-													<path
-														d="M13 7.2A5 5 0 0 0 4.2 5M3 8.8A5 5 0 0 0 11.8 11"
-														stroke="currentColor"
-														stroke-width="1.5"
-														stroke-linecap="round"
-													/>
-													<path d="M13 3.6v3.6h-3.6M3 12.4V8.8h3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-												</svg>
-											</button>
-										{/if}
-										{#if STAGE_UI}
-											<!-- The standing answer, in front of the choices it governs.
+													<button
+														type="button"
+														title="put what you asked for back in the box"
+														aria-label="ask again"
+														onclick={() => {
+															// Your words, and nothing else.
+															//
+															// Not the brief: that is the writer's answer to them, five
+															// times longer, and putting it back in a box that feeds the
+															// writer asks it to rewrite its own output. What you typed
+															// is the thing worth changing a word of and sending again.
+															input = askedFor;
+															grow(composer);
+															composer?.focus();
+														}}
+														class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line-control)] hover:text-[var(--st-text)]"
+													>
+														<svg
+															viewBox="0 0 16 16"
+															class="size-[15px]"
+															fill="none"
+															aria-hidden="true"
+														>
+															<path
+																d="M13 7.2A5 5 0 0 0 4.2 5M3 8.8A5 5 0 0 0 11.8 11"
+																stroke="currentColor"
+																stroke-width="1.5"
+																stroke-linecap="round"
+															/>
+															<path
+																d="M13 3.6v3.6h-3.6M3 12.4V8.8h3.6"
+																stroke="currentColor"
+																stroke-width="1.5"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+															/>
+														</svg>
+													</button>
+												{/if}
+												{#if STAGE_UI}
+													<!-- The standing answer, in front of the choices it governs.
 											     Ticked, the three modes decide HOW the next message
 											     continues; unticked they step back and the message makes a
 											     clip of its own. -->
-											<button
-												type="button"
-												role="switch"
-												aria-checked={!!continuing}
-												onclick={() => {
-													if (continuing) {
+													<button
+														type="button"
+														role="switch"
+														aria-checked={!!continuing}
+														onclick={() => {
+															if (continuing) {
+																contOffFor = stageContinuable?.id ?? '';
+																continuing = null;
+																spendConfirmChain();
+															} else if (stageContinuable) {
+																contOffFor = '';
+																startContinue(stageContinuable);
+															}
+														}}
+														class="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors {continuing
+															? 'bg-[var(--st-text)] text-[var(--st-bg)]'
+															: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}"
+													>
+														<span aria-hidden="true">{continuing ? '✓' : ''}</span>
+														<span>Continue</span>
+													</button>
+												{/if}
+												{#each [[true, 'from the last frame'], [false, 'same scene, new take']] as [on, label] (label)}
+													<button
+														type="button"
+														aria-pressed={pinSeam === on}
+														disabled={STAGE_UI && !continuing}
+														onclick={() => (pinSeam = on as boolean)}
+														class="cursor-pointer rounded-full px-3 py-1 text-xs transition-colors disabled:cursor-default disabled:opacity-35 {pinSeam ===
+														on
+															? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+															: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}"
+														>{label}</button
+													>
+												{/each}
+												<!-- The way out, as the third state rather than a separate button:
+										     leaving a continuation is what "new clip" means, and one row of
+										     three reads better than two options plus an escape hatch. -->
+												<button
+													type="button"
+													disabled={STAGE_UI && !continuing}
+													onclick={() => {
 														contOffFor = stageContinuable?.id ?? '';
 														continuing = null;
 														spendConfirmChain();
-													} else if (stageContinuable) {
-														contOffFor = '';
-														startContinue(stageContinuable);
-													}
-												}}
-												class="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors {continuing
-													? 'bg-[var(--st-text)] text-[var(--st-bg)]'
-													: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}"
-											>
-												<span aria-hidden="true">{continuing ? '✓' : ''}</span>
-												<span>Continue</span>
-											</button>
-										{/if}
-										{#each [[true, 'from the last frame'], [false, 'same scene, new take']] as [on, label] (label)}
-											<button
-												type="button"
-												aria-pressed={pinSeam === on}
-												disabled={STAGE_UI && !continuing}
-												onclick={() => (pinSeam = on as boolean)}
-												class="cursor-pointer rounded-full px-3 py-1 text-xs transition-colors disabled:cursor-default disabled:opacity-35 {pinSeam ===
-												on
-													? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-													: 'text-[var(--st-faint)] hover:text-[var(--st-muted)]'}">{label}</button
-											>
-										{/each}
-										<!-- The way out, as the third state rather than a separate button:
-										     leaving a continuation is what "new clip" means, and one row of
-										     three reads better than two options plus an escape hatch. -->
-										<button
-											type="button"
-											disabled={STAGE_UI && !continuing}
-											onclick={() => {
-												contOffFor = stageContinuable?.id ?? '';
-												continuing = null;
-												spendConfirmChain();
-											}}
-											class="cursor-pointer rounded-full px-3 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-muted)] disabled:cursor-default disabled:opacity-35"
-											>new clip</button
-										>
-									</div>
-									{#if !STAGE_UI}
-										<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
-											{pinSeam
-												? 'Seamless — the first instant is the frame the clip ended on.'
-												: 'Same people, same place, a fresh take — the action can begin anywhere. The join may step.'}
-										</p>
-									{/if}
-									<!-- Recommended, not required.
+													}}
+													class="cursor-pointer rounded-full px-3 py-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-muted)] disabled:cursor-default disabled:opacity-35"
+													>new clip</button
+												>
+											</div>
+											{#if !STAGE_UI}
+												<p class="mt-1 text-xs leading-relaxed text-[var(--st-faint)]">
+													{pinSeam
+														? 'Seamless — the first instant is the frame the clip ended on.'
+														: 'Same people, same place, a fresh take — the action can begin anywhere. The join may step.'}
+												</p>
+											{/if}
+											<!-- Recommended, not required.
 									     With no kept character the launch cuts a plate out of the prior
 									     clip on every generation, so each continuation is measured
 									     against the last render rather than against a face anybody
 									     approved, and the drift compounds down the chain. One frame kept
 									     as a character stops that. The send button stays live: this is
 									     advice on the way past, not a gate. -->
-									{#if continuing && !continuing.characterId}
-										<!-- On the stage the reasoning goes and the button stays: the
+											{#if continuing && !continuing.characterId}
+												<!-- On the stage the reasoning goes and the button stays: the
 										     drift it prevents is real and measured, and an action nobody
 										     can reach is the same as one that was never built. -->
-										<div class="mt-2 {STAGE_UI ? '' : 'rounded-xl bg-[var(--st-surface-2)] px-3 py-2'}">
-											{#if !STAGE_UI}
-												<p class="text-xs leading-relaxed text-[var(--st-muted)]">
-													No character is kept for this clip, so each continuation copies the
-													one before it and the likeness drifts. Keeping one now holds it.
-												</p>
-											{/if}
-											<div class="mt-1.5 flex flex-wrap items-center gap-2">
-												<button
-													type="button"
-													onclick={makeCharacterFromClip}
-													disabled={charFromClipBusy}
-													class="flex cursor-pointer items-center gap-2 rounded-full bg-[var(--st-text)] px-3 py-1 text-xs font-semibold text-[var(--st-bg)] transition-opacity disabled:cursor-default disabled:opacity-60"
+												<div
+													class="mt-2 {STAGE_UI
+														? ''
+														: 'rounded-xl bg-[var(--st-surface-2)] px-3 py-2'}"
 												>
-													<!-- Fifteen seconds of five frames and a vision call. Long enough
+													{#if !STAGE_UI}
+														<p class="text-xs leading-relaxed text-[var(--st-muted)]">
+															No character is kept for this clip, so each continuation copies the
+															one before it and the likeness drifts. Keeping one now holds it.
+														</p>
+													{/if}
+													<div class="mt-1.5 flex flex-wrap items-center gap-2">
+														<button
+															type="button"
+															onclick={makeCharacterFromClip}
+															disabled={charFromClipBusy}
+															class="flex cursor-pointer items-center gap-2 rounded-full bg-[var(--st-text)] px-3 py-1 text-xs font-semibold text-[var(--st-bg)] transition-opacity disabled:cursor-default disabled:opacity-60"
+														>
+															<!-- Fifteen seconds of five frames and a vision call. Long enough
 													     that a button which only changes its words reads as a button
 													     that did nothing. -->
-													{#if charFromClipBusy}
-														<span
-															class="spin size-3 shrink-0 rounded-full border-2 border-[var(--st-bg)]/30 border-t-[var(--st-bg)]"
-														></span>
+															{#if charFromClipBusy}
+																<span
+																	class="spin size-3 shrink-0 rounded-full border-2 border-[var(--st-bg)]/30 border-t-[var(--st-bg)]"
+																></span>
+															{/if}
+															<span
+																>{charFromClipBusy
+																	? 'Reading the clip…'
+																	: 'Keep the person as a character'}</span
+															>
+														</button>
+														{#if !STAGE_UI}
+															<span class="text-xs text-[var(--st-faint)]">or send without one</span
+															>
+														{/if}
+													</div>
+													{#if charFromClipError}
+														<p class="mt-1.5 text-xs leading-relaxed text-[var(--st-warn,#e06c6c)]">
+															{charFromClipError}
+														</p>
 													{/if}
-													<span
-														>{charFromClipBusy
-															? 'Reading the clip…'
-															: 'Keep the person as a character'}</span
-													>
-												</button>
-												{#if !STAGE_UI}
-													<span class="text-xs text-[var(--st-faint)]">or send without one</span>
-												{/if}
-											</div>
-											{#if charFromClipError}
-												<p class="mt-1.5 text-xs leading-relaxed text-[var(--st-warn,#e06c6c)]">
-													{charFromClipError}
+												</div>
+											{:else if continuing && !STAGE_UI}
+												<p class="mt-2 text-xs leading-relaxed text-[var(--st-muted)]">
+													Kept as <span class="font-semibold">{continuing.characterName}</span> — every
+													continuation from here is measured against that picture.
 												</p>
 											{/if}
 										</div>
-									{:else if continuing && !STAGE_UI}
-										<p class="mt-2 text-xs leading-relaxed text-[var(--st-muted)]">
-											Kept as <span class="font-semibold">{continuing.characterName}</span> — every
-											continuation from here is measured against that picture.
-										</p>
-									{/if}
-								</div>
-							</div>
-						{/if}
-						{#if mode === 'simple' && !continuing && wantTarget !== 'clip'}
-							<div
-								class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
-							>
-								<div class="min-w-0">
-									<p class="font-display text-sm font-semibold">
-										{wantTarget === 'character' ? 'New character' : 'New location'}
-									</p>
-									<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
-										{wantTarget === 'character'
-											? 'Describe them — age, build, hair, what they are wearing. A picture comes back in about a minute. Or attach a photograph, and describe only what it cannot show.'
-											: 'Describe the place — six views of it to shoot against. Or attach a photograph and keep that instead.'}
-									</p>
-								</div>
-								<button
-									type="button"
-									class="btn btn-secondary btn-sm shrink-0"
-									onclick={() => {
-										wantTarget = 'clip';
-										currentCharacter = null;
-										saveSetup();
-									}}
-								>
-									back to clips
-								</button>
-							</div>
-						{/if}
-						{#if mode === 'simple' && wantTarget === 'clip'}
-							<!-- What this clip will be made with, and only that. The rows this
+									</div>
+								{/if}
+								{#if mode === 'simple' && !continuing && wantTarget !== 'clip'}
+									<div
+										class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
+									>
+										<div class="min-w-0">
+											<p class="font-display text-sm font-semibold">
+												{wantTarget === 'character' ? 'New character' : 'New location'}
+											</p>
+											<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
+												{wantTarget === 'character'
+													? 'Describe them — age, build, hair, what they are wearing. A picture comes back in about a minute. Or attach a photograph, and describe only what it cannot show.'
+													: 'Describe the place — six views of it to shoot against. Or attach a photograph and keep that instead.'}
+											</p>
+										</div>
+										<button
+											type="button"
+											class="btn btn-secondary btn-sm shrink-0"
+											onclick={() => {
+												wantTarget = 'clip';
+												currentCharacter = null;
+												saveSetup();
+											}}
+										>
+											back to clips
+										</button>
+									</div>
+								{/if}
+								{#if mode === 'simple' && wantTarget === 'clip'}
+									<!-- What this clip will be made with, and only that. The rows this
 								 replaces showed every kept sheet whether or not you had chosen
 								 it; a chip shows what you chose and nothing else, so the answer
 								 to "who and where" is still one glance. -->
-							<div class="mb-1 flex flex-wrap items-center gap-1.5 px-1">
-								{#if chosenCharacter}
-									<span class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs">
-										<!-- The name opens the picker, the × clears it. Two things you
+									<div class="mb-1 flex flex-wrap items-center gap-1.5 px-1">
+										{#if chosenCharacter}
+											<span
+												class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs"
+											>
+												<!-- The name opens the picker, the × clears it. Two things you
 											 might want from a chip that names a choice — change it, or
 											 stop making it — and only the second had a control. -->
-										<button
-											type="button"
-											onclick={() => (pickKind = 'character')}
-											class="flex cursor-pointer items-center gap-2"
-										>
-										<img
-											src="/studio/api/sheet/img/{chosenCharacter.id}"
-											alt=""
-											class="size-5 shrink-0 rounded-full object-cover"
-										/>
-										<!-- 4rem, because a sheet made from a photograph is named after the
+												<button
+													type="button"
+													onclick={() => (pickKind = 'character')}
+													class="flex cursor-pointer items-center gap-2"
+												>
+													<img
+														src="/studio/api/sheet/img/{chosenCharacter.id}"
+														alt=""
+														class="size-5 shrink-0 rounded-full object-cover"
+													/>
+													<!-- 4rem, because a sheet made from a photograph is named after the
 											 file, and "Screenshot 2026 08 25 at 23.24.11" made a 244px chip
 											 next to an 85px one. The chip's own furniture — avatar, ×,
 											 padding — is 68px, so matching `one clip` exactly would leave
 											 the name 17px. This is the smallest cap that still fits every
 											 name anyone actually types: the longest measured, "Neon alley",
 											 needs 57px. -->
-										<span class="max-w-[4rem] truncate">{chosenCharacter.name}</span>
-										</button>
-										<button
-											type="button"
-											aria-label="shoot with anyone instead"
-											onclick={() => {
-												wantCharacter = '';
-												saveSetup();
-											}}
-											class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-											>×</button
-										>
-									</span>
-								{:else}
-									<!-- The chip stays whether or not anyone is cast.
+													<span class="max-w-[4rem] truncate">{chosenCharacter.name}</span>
+												</button>
+												<button
+													type="button"
+													aria-label="shoot with anyone instead"
+													onclick={() => {
+														wantCharacter = '';
+														saveSetup();
+													}}
+													class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+													>×</button
+												>
+											</span>
+										{:else}
+											<!-- The chip stays whether or not anyone is cast.
 										 With no character the row simply vanished, so the one place
 										 that answers "who is in this" was missing exactly when the
 										 answer was "nobody in particular" — which is a real answer and
 										 the default one. Saying it out loud also puts the picker one
 										 click from where the question is asked, instead of two menus
 										 away behind the +. -->
-									<button
-										type="button"
-										onclick={() => (pickKind = 'character')}
-										class="flex cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-2.5 pl-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
-									>
-										<span
-											class="flex size-5 shrink-0 items-center justify-center rounded-full ring-1 ring-[var(--st-line)]"
-										>
-											<svg viewBox="0 0 16 16" class="size-[11px]" fill="none" aria-hidden="true">
-												<circle cx="8" cy="5.6" r="2.7" stroke="currentColor" stroke-width="1.4" />
-												<path d="M3.2 13c.7-2.4 2.5-3.6 4.8-3.6S12.1 10.6 12.8 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-											</svg>
-										</span>
-										<span>anyone</span>
-									</button>
-								{/if}
-								{#if chosenLocation}
-									<span class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs">
-										<img
-											src="/studio/api/sheet/img/{chosenLocation.id}"
-											alt=""
-											class="size-5 shrink-0 rounded-md object-cover"
-										/>
-										<span class="max-w-[4rem] truncate">{chosenLocation.name}</span>
-										<button
-											type="button"
-											aria-label="shoot anywhere instead"
-											onclick={() => {
-												wantLocation = '';
-												saveSetup();
-											}}
-											class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
-											>×</button
-										>
-									</span>
-								{/if}
+											<button
+												type="button"
+												onclick={() => (pickKind = 'character')}
+												class="flex cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-2.5 pl-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+											>
+												<span
+													class="flex size-5 shrink-0 items-center justify-center rounded-full ring-1 ring-[var(--st-line)]"
+												>
+													<svg
+														viewBox="0 0 16 16"
+														class="size-[11px]"
+														fill="none"
+														aria-hidden="true"
+													>
+														<circle
+															cx="8"
+															cy="5.6"
+															r="2.7"
+															stroke="currentColor"
+															stroke-width="1.4"
+														/>
+														<path
+															d="M3.2 13c.7-2.4 2.5-3.6 4.8-3.6S12.1 10.6 12.8 13"
+															stroke="currentColor"
+															stroke-width="1.4"
+															stroke-linecap="round"
+														/>
+													</svg>
+												</span>
+												<span>anyone</span>
+											</button>
+										{/if}
+										{#if chosenLocation}
+											<span
+												class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs"
+											>
+												<img
+													src="/studio/api/sheet/img/{chosenLocation.id}"
+													alt=""
+													class="size-5 shrink-0 rounded-md object-cover"
+												/>
+												<span class="max-w-[4rem] truncate">{chosenLocation.name}</span>
+												<button
+													type="button"
+													aria-label="shoot anywhere instead"
+													onclick={() => {
+														wantLocation = '';
+														saveSetup();
+													}}
+													class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-faint)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+													>×</button
+												>
+											</span>
+										{/if}
 
-								{#if !planningWs}
-									<!-- Beside the format chip rather than in the field row: both
+										{#if !planningWs}
+											<!-- Beside the format chip rather than in the field row: both
 										 answer "what will this message make", both open a panel, and
 										 in the row it was squeezing the sentence into a box one line
 										 tall — at 390px the placeholder was clipped by it. -->
-									<button
-										type="button"
-										aria-expanded={modeOpen}
-										onclick={() => {
-											const open = !modeOpen;
-											shutMenus();
-											modeOpen = open;
-										}}
-										class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 text-xs whitespace-nowrap text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-									>
-										{mode !== 'simple' ? 'full production' : batchLabel}
-										<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
-											<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-										</svg>
-									</button>
-								{/if}
+											<button
+												type="button"
+												aria-expanded={modeOpen}
+												onclick={() => {
+													const open = !modeOpen;
+													shutMenus();
+													modeOpen = open;
+												}}
+												class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 text-xs whitespace-nowrap text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+											>
+												{mode !== 'simple' ? 'full production' : batchLabel}
+												<svg
+													viewBox="0 0 10 10"
+													class="size-2.5 shrink-0"
+													fill="none"
+													aria-hidden="true"
+												>
+													<path
+														d="M2 4l3 3 3-3"
+														stroke="currentColor"
+														stroke-width="1.4"
+														stroke-linecap="round"
+													/>
+												</svg>
+											</button>
+										{/if}
 
-								<!-- Length, size and frame in one chip. All three keep a saved
+										<!-- Length, size and frame in one chip. All three keep a saved
 									 default, so none of them is a question you have to answer
 									 before the first send. -->
-								<button
-									type="button"
-									aria-expanded={fmtOpen}
-									onclick={() => {
-										const open = !fmtOpen;
-										shutMenus();
-										fmtOpen = open;
-									}}
-									class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-								>
-									{composerShape.seconds}s · {composerShape.res} · {composerShape.portrait
-										? '9:16'
-										: '16:9'}
-									<!-- The same chevron the mode control carries. Two chips that open
+										<button
+											type="button"
+											aria-expanded={fmtOpen}
+											onclick={() => {
+												const open = !fmtOpen;
+												shutMenus();
+												fmtOpen = open;
+											}}
+											class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+										>
+											{composerShape.seconds}s · {composerShape.res} · {composerShape.portrait
+												? '9:16'
+												: '16:9'}
+											<!-- The same chevron the mode control carries. Two chips that open
 										 the same kind of panel were reading as two different kinds of
 										 thing: one looked like a control, the other like a readout.
 										 Dropped while continuing, where it really is a readout. -->
-									<svg viewBox="0 0 10 10" class="size-2.5 shrink-0" fill="none" aria-hidden="true">
-										<path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-									</svg>
-								</button>
-							</div>
-						{/if}
+											<svg
+												viewBox="0 0 10 10"
+												class="size-2.5 shrink-0"
+												fill="none"
+												aria-hidden="true"
+											>
+												<path
+													d="M2 4l3 3 3-3"
+													stroke="currentColor"
+													stroke-width="1.4"
+													stroke-linecap="round"
+												/>
+											</svg>
+										</button>
+									</div>
+								{/if}
 
-						<!-- The dismiss target for all three menus. A backdrop rather than a
+								<!-- The dismiss target for all three menus. A backdrop rather than a
 							 window listener, for the reason given at the <svelte:window> above,
 							 and it is the same shape the off-canvas sidebar already uses. -->
-						{#if addOpen || pickKind || fmtOpen || modeOpen}
-							<button
-								type="button"
-								aria-label="close the menu"
-								class="fixed inset-0 z-20 cursor-default"
-								onclick={shutMenus}
-							></button>
-						{/if}
-
-						<!-- ── the add menu, level one ─────────────────────────────── -->
-						{#if addOpen}
-							<div
-								role="menu"
-								class="enter absolute bottom-full left-2 z-30 mb-2 w-[20rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
-							>
-								{#each [['character', characters.length, 'New character'], ['location', locations.length, 'New location']] as [kind, kept, label] (kind)}
+								{#if addOpen || pickKind || fmtOpen || modeOpen}
 									<button
 										type="button"
-										role="menuitem"
-										onclick={() => {
-											// With nothing kept there is nothing to choose between, so
-											// the row does the only useful thing and starts making one.
-											if (kept === 0) {
-												wantTarget = kind as 'character' | 'location';
-												currentCharacter = null;
-												saveSetup();
-												shutMenus();
-											} else {
-												addOpen = false;
-												pickKind = kind as 'character' | 'location';
-											}
-										}}
-										class="flex min-h-[3.125rem] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
-									>
-										<span
-											class="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--st-muted)] ring-1 ring-[var(--st-line)]"
-										>
-											{#if kind === 'character'}
-												<svg viewBox="0 0 16 16" class="size-[15px]" fill="none" aria-hidden="true">
-													<circle cx="8" cy="5.6" r="2.7" stroke="currentColor" stroke-width="1.4" />
-													<path d="M3 13.2c.7-2.3 2.6-3.4 5-3.4s4.3 1.1 5 3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-												</svg>
-											{:else}
-												<svg viewBox="0 0 16 16" class="size-[15px]" fill="none" aria-hidden="true">
-													<rect x="2.2" y="3.4" width="11.6" height="9.2" rx="1.6" stroke="currentColor" stroke-width="1.4" />
-													<path d="M2.4 10.2l3-2.6 2.6 2.2 2.4-1.8 3.2 2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-												</svg>
-											{/if}
-										</span>
-										<span class="min-w-0">
-											<span class="block">{label}</span>
-											<span class="mt-0.5 block text-xs text-[var(--st-faint)]">
-												{kept ? `${kept} kept — or make another` : 'nothing kept yet'}
-											</span>
-										</span>
-										{#if kept}
-											<svg viewBox="0 0 10 10" class="ml-auto size-2.5 shrink-0 text-[var(--st-faint)]" fill="none" aria-hidden="true">
-												<path d="M3.5 2l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-											</svg>
-										{/if}
-									</button>
-								{/each}
+										aria-label="close the menu"
+										class="fixed inset-0 z-20 cursor-default"
+										onclick={shutMenus}
+									></button>
+								{/if}
 
-								<label
-									class="flex min-h-[3.125rem] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
-								>
-									<span class="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--st-muted)] ring-1 ring-[var(--st-line)]">
-										<svg viewBox="0 0 20 20" class="size-4" fill="none" aria-hidden="true">
-											<path
-												d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
-												stroke="currentColor"
-												stroke-width="1.6"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											/>
-										</svg>
-									</span>
-									<span class="min-w-0">
-										<span class="block">Attach reference image</span>
-										<span class="mt-0.5 block text-xs text-[var(--st-faint)]">a face or a place to shoot against</span>
-									</span>
-									<input
-										type="file"
-										multiple
-										accept="image/*,video/*"
-										class="hidden"
-										disabled={refBusy}
-										onchange={(e) => {
-											const el = e.currentTarget as HTMLInputElement;
-											attachRefs(el.files);
-											el.value = '';
-											shutMenus();
-										}}
-									/>
-								</label>
-							</div>
-						{/if}
-
-						<!-- ── the add menu, level two ─────────────────────────────── -->
-						{#if pickKind}
-							{@const kept = pickKind === 'character' ? characters : locations}
-							<div
-								role="menu"
-								class="enter absolute bottom-full left-2 z-30 mb-2 flex w-[23rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl bg-[var(--st-surface)] shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
-							>
-								<div class="flex items-center gap-2 border-b border-[var(--st-line)] py-2 pr-2.5 pl-1.5">
-									<button
-										type="button"
-										aria-label="back"
-										onclick={() => {
-											pickKind = null;
-											addOpen = true;
-										}}
-										class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+								<!-- ── the add menu, level one ─────────────────────────────── -->
+								{#if addOpen}
+									<div
+										role="menu"
+										class="enter absolute bottom-full left-2 z-30 mb-2 w-[20rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
 									>
-										<svg viewBox="0 0 16 16" class="size-3.5" fill="none" aria-hidden="true">
-											<path d="M9.5 3l-4 5 4 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-										</svg>
-									</button>
-									<span class="text-sm font-medium">
-										{pickKind === 'character' ? 'Who is in it' : 'Where it happens'}
-									</span>
-									<button
-										type="button"
-										onclick={() => {
-											wantTarget = pickKind as 'character' | 'location';
-											currentCharacter = null;
-											saveSetup();
-											shutMenus();
-										}}
-										class="ml-auto flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface-2)] px-3 text-xs font-medium transition-colors hover:bg-[var(--st-line)]"
-									>
-										<span class="text-sm leading-none">+</span>
-										{pickKind === 'character' ? 'New character' : 'New location'}
-									</button>
-								</div>
-
-								<!-- A grid, not a list. The rows this replaces stopped at three
-									 with no way past them; five to a row means twenty faces read
-									 in four. -->
-								<div class="scroller max-h-[20rem] overflow-y-auto px-3 pt-3.5 pb-3">
-									<div class="grid grid-cols-5 gap-x-2 gap-y-3">
-										{#each [{ id: '', name: pickKind === 'character' ? 'anyone' : 'anywhere' }, ...kept] as s (s.id)}
-											{@const on = pickKind === 'character' ? wantCharacter === s.id : wantLocation === s.id}
-											{@const row = sheets.find((x) => x.id === s.id)}
-											{@const sheetState = row?.sheet?.state}
-											<div class="group relative flex min-w-0 flex-col">
+										{#each [['character', characters.length, 'New character'], ['location', locations.length, 'New location']] as [kind, kept, label] (kind)}
 											<button
 												type="button"
-												role="menuitemradio"
-												aria-checked={on}
-												title={s.id
-													? pickKind === 'character'
-														? `shoot this clip with ${s.name}`
-														: `shoot this clip in ${s.name}`
-													: pickKind === 'character'
-														? 'nobody in particular — the clip invents whoever the words describe'
-														: 'nowhere in particular — the clip invents wherever the words describe'}
+												role="menuitem"
 												onclick={() => {
-													if (pickKind === 'character') wantCharacter = s.id;
-													else wantLocation = s.id;
+													// With nothing kept there is nothing to choose between, so
+													// the row does the only useful thing and starts making one.
+													if (kept === 0) {
+														wantTarget = kind as 'character' | 'location';
+														currentCharacter = null;
+														saveSetup();
+														shutMenus();
+													} else {
+														addOpen = false;
+														pickKind = kind as 'character' | 'location';
+													}
+												}}
+												class="flex min-h-[3.125rem] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+											>
+												<span
+													class="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--st-muted)] ring-1 ring-[var(--st-line)]"
+												>
+													{#if kind === 'character'}
+														<svg
+															viewBox="0 0 16 16"
+															class="size-[15px]"
+															fill="none"
+															aria-hidden="true"
+														>
+															<circle
+																cx="8"
+																cy="5.6"
+																r="2.7"
+																stroke="currentColor"
+																stroke-width="1.4"
+															/>
+															<path
+																d="M3 13.2c.7-2.3 2.6-3.4 5-3.4s4.3 1.1 5 3.4"
+																stroke="currentColor"
+																stroke-width="1.4"
+																stroke-linecap="round"
+															/>
+														</svg>
+													{:else}
+														<svg
+															viewBox="0 0 16 16"
+															class="size-[15px]"
+															fill="none"
+															aria-hidden="true"
+														>
+															<rect
+																x="2.2"
+																y="3.4"
+																width="11.6"
+																height="9.2"
+																rx="1.6"
+																stroke="currentColor"
+																stroke-width="1.4"
+															/>
+															<path
+																d="M2.4 10.2l3-2.6 2.6 2.2 2.4-1.8 3.2 2.4"
+																stroke="currentColor"
+																stroke-width="1.4"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+															/>
+														</svg>
+													{/if}
+												</span>
+												<span class="min-w-0">
+													<span class="block">{label}</span>
+													<span class="mt-0.5 block text-xs text-[var(--st-faint)]">
+														{kept ? `${kept} kept — or make another` : 'nothing kept yet'}
+													</span>
+												</span>
+												{#if kept}
+													<svg
+														viewBox="0 0 10 10"
+														class="ml-auto size-2.5 shrink-0 text-[var(--st-faint)]"
+														fill="none"
+														aria-hidden="true"
+													>
+														<path
+															d="M3.5 2l3 3-3 3"
+															stroke="currentColor"
+															stroke-width="1.4"
+															stroke-linecap="round"
+														/>
+													</svg>
+												{/if}
+											</button>
+										{/each}
+
+										<label
+											class="flex min-h-[3.125rem] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+										>
+											<span
+												class="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--st-muted)] ring-1 ring-[var(--st-line)]"
+											>
+												<svg viewBox="0 0 20 20" class="size-4" fill="none" aria-hidden="true">
+													<path
+														d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
+														stroke="currentColor"
+														stroke-width="1.6"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													/>
+												</svg>
+											</span>
+											<span class="min-w-0">
+												<span class="block">Attach reference image</span>
+												<span class="mt-0.5 block text-xs text-[var(--st-faint)]"
+													>a face or a place to shoot against</span
+												>
+											</span>
+											<input
+												type="file"
+												multiple
+												accept="image/*,video/*"
+												class="hidden"
+												disabled={refBusy}
+												onchange={(e) => {
+													const el = e.currentTarget as HTMLInputElement;
+													attachRefs(el.files);
+													el.value = '';
+													shutMenus();
+												}}
+											/>
+										</label>
+									</div>
+								{/if}
+
+								<!-- ── the add menu, level two ─────────────────────────────── -->
+								{#if pickKind}
+									{@const kept = pickKind === 'character' ? characters : locations}
+									<div
+										role="menu"
+										class="enter absolute bottom-full left-2 z-30 mb-2 flex w-[23rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl bg-[var(--st-surface)] shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+									>
+										<div
+											class="flex items-center gap-2 border-b border-[var(--st-line)] py-2 pr-2.5 pl-1.5"
+										>
+											<button
+												type="button"
+												aria-label="back"
+												onclick={() => {
+													pickKind = null;
+													addOpen = true;
+												}}
+												class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
+											>
+												<svg viewBox="0 0 16 16" class="size-3.5" fill="none" aria-hidden="true">
+													<path
+														d="M9.5 3l-4 5 4 5"
+														stroke="currentColor"
+														stroke-width="1.5"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													/>
+												</svg>
+											</button>
+											<span class="text-sm font-medium">
+												{pickKind === 'character' ? 'Who is in it' : 'Where it happens'}
+											</span>
+											<button
+												type="button"
+												onclick={() => {
+													wantTarget = pickKind as 'character' | 'location';
+													currentCharacter = null;
 													saveSetup();
 													shutMenus();
 												}}
-												class="flex min-w-0 cursor-pointer flex-col items-center gap-1.5 rounded-xl pb-1"
+												class="ml-auto flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface-2)] px-3 text-xs font-medium transition-colors hover:bg-[var(--st-line)]"
 											>
-												{#if s.id}
-													<img
-														src="/studio/api/sheet/img/{s.id}"
-														alt=""
-														class="aspect-square w-full object-cover transition-opacity hover:opacity-80 {pickKind ===
-														'character'
-															? 'rounded-full'
-															: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
-													/>
-												{:else}
-													<span
-														class="aspect-square w-full ring-1 ring-[var(--st-line)] {pickKind === 'character'
-															? 'rounded-full'
-															: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
-													></span>
-												{/if}
-												<span
-													class="max-w-full truncate text-[0.7rem] leading-tight {on
-														? 'font-medium text-[var(--st-text)]'
-														: 'text-[var(--st-faint)]'}"
-												>
-													{s.name}
-												</span>
+												<span class="text-sm leading-none">+</span>
+												{pickKind === 'character' ? 'New character' : 'New location'}
 											</button>
+										</div>
 
-											{#if s.id}
-												<!-- The six views: a quiet dot while they render, and the
+										<!-- A grid, not a list. The rows this replaces stopped at three
+									 with no way past them; five to a row means twenty faces read
+									 in four. -->
+										<div class="scroller max-h-[20rem] overflow-y-auto px-3 pt-3.5 pb-3">
+											<div class="grid grid-cols-5 gap-x-2 gap-y-3">
+												{#each [{ id: '', name: pickKind === 'character' ? 'anyone' : 'anywhere' }, ...kept] as s (s.id)}
+													{@const on =
+														pickKind === 'character'
+															? wantCharacter === s.id
+															: wantLocation === s.id}
+													{@const row = sheets.find((x) => x.id === s.id)}
+													{@const sheetState = row?.sheet?.state}
+													<div class="group relative flex min-w-0 flex-col">
+														<button
+															type="button"
+															role="menuitemradio"
+															aria-checked={on}
+															title={s.id
+																? pickKind === 'character'
+																	? `shoot this clip with ${s.name}`
+																	: `shoot this clip in ${s.name}`
+																: pickKind === 'character'
+																	? 'nobody in particular — the clip invents whoever the words describe'
+																	: 'nowhere in particular — the clip invents wherever the words describe'}
+															onclick={() => {
+																if (pickKind === 'character') wantCharacter = s.id;
+																else wantLocation = s.id;
+																saveSetup();
+																shutMenus();
+															}}
+															class="flex min-w-0 cursor-pointer flex-col items-center gap-1.5 rounded-xl pb-1"
+														>
+															{#if s.id}
+																<img
+																	src="/studio/api/sheet/img/{s.id}"
+																	alt=""
+																	class="aspect-square w-full object-cover transition-opacity hover:opacity-80 {pickKind ===
+																	'character'
+																		? 'rounded-full'
+																		: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
+																/>
+															{:else}
+																<span
+																	class="aspect-square w-full ring-1 ring-[var(--st-line)] {pickKind ===
+																	'character'
+																		? 'rounded-full'
+																		: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
+																></span>
+															{/if}
+															<span
+																class="max-w-full truncate text-[0.7rem] leading-tight {on
+																	? 'font-medium text-[var(--st-text)]'
+																	: 'text-[var(--st-faint)]'}"
+															>
+																{s.name}
+															</span>
+														</button>
+
+														{#if s.id}
+															<!-- The six views: a quiet dot while they render, and the
 												     sheet itself to open once they are there. Not announced
 												     anywhere else — this is where you would look for it. -->
-												{#if sheetState === 'rendering'}
-													<span
-														title="the six views are rendering"
-														class="beacon pointer-events-none absolute top-1 right-1 size-2 rounded-full bg-[var(--st-accent)]"
-													></span>
-												{:else if row?.sheet?.file}
-													<a
-														href="/studio/api/sheet/full/{s.id}"
-														target="_blank"
-														rel="noreferrer"
-														title="open the six views"
-														onclick={(e) => e.stopPropagation()}
-														class="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-[var(--st-bg)]/80 text-[0.6rem] text-[var(--st-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
-														>⤢</a
-													>
-												{/if}
+															{#if sheetState === 'rendering'}
+																<span
+																	title="the six views are rendering"
+																	class="beacon pointer-events-none absolute top-1 right-1 size-2 rounded-full bg-[var(--st-accent)]"
+																></span>
+															{:else if row?.sheet?.file}
+																<a
+																	href="/studio/api/sheet/full/{s.id}"
+																	target="_blank"
+																	rel="noreferrer"
+																	title="open the six views"
+																	onclick={(e) => e.stopPropagation()}
+																	class="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-[var(--st-bg)]/80 text-[0.6rem] text-[var(--st-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
+																	>⤢</a
+																>
+															{/if}
 
-												<!-- Two clicks. A face is minutes of GPU time, not a row. -->
-												{#if dropArmed === s.id}
-													<div class="absolute inset-x-0 bottom-5 flex justify-center gap-1">
-														<button
-															type="button"
-															onclick={(e) => {
-																e.stopPropagation();
-																dropSheet(s.id);
-															}}
-															class="cursor-pointer rounded-full bg-[var(--st-bg)] px-2 py-0.5 text-[0.6rem] text-[var(--st-text)]"
-															>remove</button
-														>
-														<button
-															type="button"
-															onclick={(e) => {
-																e.stopPropagation();
-																dropArmed = '';
-															}}
-															class="cursor-pointer rounded-full bg-[var(--st-bg)] px-2 py-0.5 text-[0.6rem] text-[var(--st-faint)]"
-															>keep</button
-														>
+															<!-- Two clicks. A face is minutes of GPU time, not a row. -->
+															{#if dropArmed === s.id}
+																<div class="absolute inset-x-0 bottom-5 flex justify-center gap-1">
+																	<button
+																		type="button"
+																		onclick={(e) => {
+																			e.stopPropagation();
+																			dropSheet(s.id);
+																		}}
+																		class="cursor-pointer rounded-full bg-[var(--st-bg)] px-2 py-0.5 text-[0.6rem] text-[var(--st-text)]"
+																		>remove</button
+																	>
+																	<button
+																		type="button"
+																		onclick={(e) => {
+																			e.stopPropagation();
+																			dropArmed = '';
+																		}}
+																		class="cursor-pointer rounded-full bg-[var(--st-bg)] px-2 py-0.5 text-[0.6rem] text-[var(--st-faint)]"
+																		>keep</button
+																	>
+																</div>
+															{:else}
+																<button
+																	type="button"
+																	aria-label="remove {s.name}"
+																	onclick={(e) => {
+																		e.stopPropagation();
+																		dropArmed = s.id;
+																	}}
+																	class="absolute top-1 left-1 flex size-5 cursor-pointer items-center justify-center rounded-full bg-[var(--st-bg)]/80 text-[0.7rem] leading-none text-[var(--st-faint)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
+																	>×</button
+																>
+															{/if}
+														{/if}
 													</div>
-												{:else}
-													<button
-														type="button"
-														aria-label="remove {s.name}"
-														onclick={(e) => {
-															e.stopPropagation();
-															dropArmed = s.id;
-														}}
-														class="absolute top-1 left-1 flex size-5 cursor-pointer items-center justify-center rounded-full bg-[var(--st-bg)]/80 text-[0.7rem] leading-none text-[var(--st-faint)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)]"
-														>×</button
-													>
-												{/if}
-											{/if}
+												{/each}
 											</div>
-										{/each}
-									</div>
-								</div>
+										</div>
 
-								<!-- ── how they sound ──────────────────────────────────────
+										<!-- ── how they sound ──────────────────────────────────────
 									 Here rather than on a screen of its own, because the voice
 									 is part of who somebody is and this is where you say who is
 									 in the clip. Only for a character: a room does not speak.
@@ -9225,55 +9695,60 @@
 									 what makes a two-clip scene sound like one woman instead of
 									 two. Empty is a real answer: each clip then picks its own,
 									 which is what every clip did before this existed. -->
-								{#if pickKind === 'character' && chosenCharacter}
-									<div class="flex flex-col gap-2 border-t border-[var(--st-line)] px-3 py-3">
-										<!-- One line whatever the name is. A character named from its own
+										{#if pickKind === 'character' && chosenCharacter}
+											<div class="flex flex-col gap-2 border-t border-[var(--st-line)] px-3 py-3">
+												<!-- One line whatever the name is. A character named from its own
 											 description can be sixty characters long, and a label that wraps
 											 to two lines pushes the field it belongs to off the bottom. -->
-										<label class="flex min-w-0 items-baseline gap-1 text-xs text-[var(--st-muted)]" for="voice-field">
-											<span class="shrink-0">How</span>
-											<span class="min-w-0 truncate font-medium text-[var(--st-text)]">{chosenCharacter.name}</span>
-											<span class="shrink-0">sounds</span>
-										</label>
-										<input
-											id="voice-field"
-											type="text"
-											bind:value={voiceDraft}
-											onblur={saveVoice}
-											onkeydown={(e) => {
-												if (e.key === 'Enter') {
-													e.preventDefault();
-													(e.currentTarget as HTMLInputElement).blur();
-												}
-											}}
-											maxlength="240"
-											class="min-h-9 w-full rounded-lg bg-[var(--st-surface-2)] px-3 text-sm text-[var(--st-text)] ring-1 ring-[var(--st-line)] outline-none placeholder:text-[var(--st-faint)] focus-visible:ring-2 focus-visible:ring-[var(--st-text)]"
-										/>
-										<div class="flex flex-wrap gap-1.5">
-											{#each VOICE_PRESETS as v (v.label)}
-												<button
-													type="button"
-													onclick={() => {
-														voiceDraft = v.text;
-														void saveVoice();
-													}}
-													class="min-h-7 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-2.5 text-[0.7rem] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
-													>{v.label}</button
+												<label
+													class="flex min-w-0 items-baseline gap-1 text-xs text-[var(--st-muted)]"
+													for="voice-field"
 												>
-											{/each}
-										</div>
+													<span class="shrink-0">How</span>
+													<span class="min-w-0 truncate font-medium text-[var(--st-text)]"
+														>{chosenCharacter.name}</span
+													>
+													<span class="shrink-0">sounds</span>
+												</label>
+												<input
+													id="voice-field"
+													type="text"
+													bind:value={voiceDraft}
+													onblur={saveVoice}
+													onkeydown={(e) => {
+														if (e.key === 'Enter') {
+															e.preventDefault();
+															(e.currentTarget as HTMLInputElement).blur();
+														}
+													}}
+													maxlength="240"
+													class="min-h-9 w-full rounded-lg bg-[var(--st-surface-2)] px-3 text-sm text-[var(--st-text)] ring-1 ring-[var(--st-line)] outline-none placeholder:text-[var(--st-faint)] focus-visible:ring-2 focus-visible:ring-[var(--st-text)]"
+												/>
+												<div class="flex flex-wrap gap-1.5">
+													{#each VOICE_PRESETS as v (v.label)}
+														<button
+															type="button"
+															onclick={() => {
+																voiceDraft = v.text;
+																void saveVoice();
+															}}
+															class="min-h-7 cursor-pointer rounded-full bg-[var(--st-surface-2)] px-2.5 text-[0.7rem] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-line)] hover:text-[var(--st-text)]"
+															>{v.label}</button
+														>
+													{/each}
+												</div>
+											</div>
+										{/if}
 									</div>
 								{/if}
-							</div>
-						{/if}
 
-						<!-- ── one clip or a full production ───────────────────────── -->
-						{#if modeOpen}
-							<div
-								role="menu"
-								class="enter absolute bottom-full left-2 z-30 mb-2 w-[19.5rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
-							>
-								<!-- One list, one question — what this message makes. Two axes on
+								<!-- ── one clip or a full production ───────────────────────── -->
+								{#if modeOpen}
+									<div
+										role="menu"
+										class="enter absolute bottom-full left-2 z-30 mb-2 w-[19.5rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+									>
+										<!-- One list, one question — what this message makes. Two axes on
 									 it rather than two modes: versions vary the draw, angles vary
 									 the camera, and every message makes the product of the two.
 									 "one clip" is 1 x 1 rather than a special case.
@@ -9282,420 +9757,491 @@
 									 menu is not a settings list, and beside a count they wrapped to
 									 two lines each — which is the clutter this menu has already
 									 been cleaned of twice. -->
-								<button
-									type="button"
-									role="menuitemradio"
-									aria-checked={mode === 'simple' && effAtOnce === 1}
-									onclick={() => {
-										setMode('simple');
-										takes = 1;
-										angles = 1;
-										saveSetup();
-										shutMenus();
-									}}
-									class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
-								>
-									<span class="w-3.5 shrink-0 text-xs {mode === 'simple' && effAtOnce === 1 ? '' : 'invisible'}"
-										>&#10003;</span
-									>
-									<span class="min-w-0">one clip</span>
-								</button>
+										<button
+											type="button"
+											role="menuitemradio"
+											aria-checked={mode === 'simple' && effAtOnce === 1}
+											onclick={() => {
+												setMode('simple');
+												takes = 1;
+												angles = 1;
+												saveSetup();
+												shutMenus();
+											}}
+											class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
+										>
+											<span
+												class="w-3.5 shrink-0 text-xs {mode === 'simple' && effAtOnce === 1
+													? ''
+													: 'invisible'}">&#10003;</span
+											>
+											<span class="min-w-0">one clip</span>
+										</button>
 
-								{#each [{ id: 'versions', label: 'versions' }, { id: 'angles', label: 'camera angles' }] as axis (axis.id)}
-									{@const mine = axis.id === 'versions' ? takes : angles}
-									{@const other = axis.id === 'versions' ? angles : takes}
-									<div
-										class="flex min-h-[2.75rem] w-full items-center gap-2.5 rounded-xl px-3 text-sm"
-									>
-										<span
-											class="w-3.5 shrink-0 text-xs {mode === 'simple' && mine > 1 ? '' : 'invisible'}"
-											>&#10003;</span
-										>
-										<span
-											class="min-w-0 flex-1 whitespace-nowrap {axis.id === 'angles' && !anglesApply
-												? 'text-[var(--st-faint)]'
-												: ''}">{axis.label}</span
-										>
-										<span class="flex shrink-0 gap-0.5">
-											{#each [1, 2, 3, 4] as n (n)}
-												{@const off = axis.id === 'angles' && !anglesApply}
-												{@const over = n * other > MAX_AT_ONCE || off}
-												<button
-													type="button"
-													role="menuitemradio"
-													aria-checked={mode === 'simple' && !off && mine === n}
-													aria-disabled={over}
-													onclick={() => {
-														if (over) return;
-														setMode('simple');
-														if (axis.id === 'versions') takes = n;
-														else angles = n;
-														saveSetup();
-													}}
-													class="flex size-[1.55rem] items-center justify-center rounded-lg text-xs font-medium tabular-nums transition-colors {mode ===
-														'simple' && mine === n
-														? 'bg-[var(--st-text)] text-black'
-														: over
-															? 'cursor-default text-[var(--st-faint)] opacity-25'
-															: 'cursor-pointer text-[var(--st-faint)] hover:bg-white/10 hover:text-[var(--st-text)]'}"
-													>{n}</button
+										{#each [{ id: 'versions', label: 'versions' }, { id: 'angles', label: 'camera angles' }] as axis (axis.id)}
+											{@const mine = axis.id === 'versions' ? takes : angles}
+											{@const other = axis.id === 'versions' ? angles : takes}
+											<div
+												class="flex min-h-[2.75rem] w-full items-center gap-2.5 rounded-xl px-3 text-sm"
+											>
+												<span
+													class="w-3.5 shrink-0 text-xs {mode === 'simple' && mine > 1
+														? ''
+														: 'invisible'}">&#10003;</span
 												>
-											{/each}
-										</span>
-									</div>
-								{/each}
+												<span
+													class="min-w-0 flex-1 whitespace-nowrap {axis.id === 'angles' &&
+													!anglesApply
+														? 'text-[var(--st-faint)]'
+														: ''}">{axis.label}</span
+												>
+												<span class="flex shrink-0 gap-0.5">
+													{#each [1, 2, 3, 4] as n (n)}
+														{@const off = axis.id === 'angles' && !anglesApply}
+														{@const over = n * other > MAX_AT_ONCE || off}
+														<button
+															type="button"
+															role="menuitemradio"
+															aria-checked={mode === 'simple' && !off && mine === n}
+															aria-disabled={over}
+															onclick={() => {
+																if (over) return;
+																setMode('simple');
+																if (axis.id === 'versions') takes = n;
+																else angles = n;
+																saveSetup();
+															}}
+															class="flex size-[1.55rem] items-center justify-center rounded-lg text-xs font-medium tabular-nums transition-colors {mode ===
+																'simple' && mine === n
+																? 'bg-[var(--st-text)] text-black'
+																: over
+																	? 'cursor-default text-[var(--st-faint)] opacity-25'
+																	: 'cursor-pointer text-[var(--st-faint)] hover:bg-white/10 hover:text-[var(--st-text)]'}"
+															>{n}</button
+														>
+													{/each}
+												</span>
+											</div>
+										{/each}
 
-								{#if !anglesApply}
-									<!-- Said once, under the row it applies to, rather than grey
+										{#if !anglesApply}
+											<!-- Said once, under the row it applies to, rather than grey
 										 controls with the reason left to be guessed at. And it names
 										 the way out: the same continuation on a free start can have
 										 angles, because nothing is nailed to the last frame then. -->
-									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs text-[var(--st-faint)]">
-										Angles need a free start.
-									</p>
-								{:else if mode === 'simple' && takes > 1 && effAngles > 1}
-									<!-- Only when they actually multiply. Saying "3 clips" under a
+											<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs text-[var(--st-faint)]">
+												Angles need a free start.
+											</p>
+										{:else if mode === 'simple' && takes > 1 && effAngles > 1}
+											<!-- Only when they actually multiply. Saying "3 clips" under a
 										 row that already reads "3" is noise. -->
-									<p class="mt-0.5 mb-1 pl-[2.25rem] text-xs tabular-nums text-[var(--st-faint)]">
-										{effAtOnce} clips — {effAngles} angles, {takes} versions of each
-									</p>
-								{/if}
-								<div class="my-1 h-px bg-[var(--st-line)]"></div>
-								<button
-									type="button"
-									role="menuitemradio"
-									aria-checked={mode === 'advanced'}
-									onclick={() => {
-										setMode('advanced');
-										shutMenus();
-									}}
-									class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
-								>
-									<span class="w-3.5 shrink-0 text-xs {mode === 'advanced' ? '' : 'invisible'}"
-										>&#10003;</span
-									>
-									<span class="min-w-0">
-										<span class="block">full production</span>
-										<span class="mt-0.5 block text-xs text-[var(--st-faint)]"
-											>screenplay and cast first, then a multi-scene shoot</span
+											<p
+												class="mt-0.5 mb-1 pl-[2.25rem] text-xs text-[var(--st-faint)] tabular-nums"
+											>
+												{effAtOnce} clips — {effAngles} angles, {takes} versions of each
+											</p>
+										{/if}
+										<div class="my-1 h-px bg-[var(--st-line)]"></div>
+										<button
+											type="button"
+											role="menuitemradio"
+											aria-checked={mode === 'advanced'}
+											onclick={() => {
+												setMode('advanced');
+												shutMenus();
+											}}
+											class="flex min-h-[2.75rem] w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
 										>
-									</span>
-								</button>
-							</div>
-						{/if}
+											<span class="w-3.5 shrink-0 text-xs {mode === 'advanced' ? '' : 'invisible'}"
+												>&#10003;</span
+											>
+											<span class="min-w-0">
+												<span class="block">full production</span>
+												<span class="mt-0.5 block text-xs text-[var(--st-faint)]"
+													>screenplay and cast first, then a multi-scene shoot</span
+												>
+											</span>
+										</button>
+									</div>
+								{/if}
 
-						<!-- ── length, size, frame ─────────────────────────────────── -->
-						{#if fmtOpen}
-							<!-- One row per question, label left, choices right — the shape an
+								<!-- ── length, size, frame ─────────────────────────────────── -->
+								{#if fmtOpen}
+									<!-- One row per question, label left, choices right — the shape an
 								 inspector has. Stacked as three headed groups, six durations did
 								 not fit the panel's width and 15s fell onto a line of its own, so
 								 the block stopped reading as one set. A row per question makes
 								 that wrap impossible by construction. -->
-							<div
-								role="menu"
-								class="enter absolute bottom-full left-2 z-30 mb-2 w-[19.5rem] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl bg-[var(--st-surface)] shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
-							>
-								<div class="flex items-center gap-3 px-3 py-2.5">
-									<span class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]">
-										<svg viewBox="0 0 16 16" class="size-[15px] shrink-0 opacity-80" fill="none" aria-hidden="true">
-											<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.4" />
-											<path d="M8 4.8V8l2.2 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-										</svg>
-										Length
-									</span>
-									<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-										{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
-											<button
-												type="button"
-												aria-pressed={wantSeconds === sec}
-												title="{sec} seconds"
-												onclick={() => {
-													wantSeconds = sec;
-													saveSetup();
-												}}
-												class="flex min-h-7 min-w-7 cursor-pointer items-center justify-center rounded-full px-1.5 font-mono text-xs tabular-nums transition-colors {wantSeconds ===
-												sec
-													? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
-													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{sec}</button
+									<div
+										role="menu"
+										class="enter absolute bottom-full left-2 z-30 mb-2 w-[19.5rem] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl bg-[var(--st-surface)] shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+									>
+										<div class="flex items-center gap-3 px-3 py-2.5">
+											<span
+												class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]"
 											>
-										{/each}
-									</span>
-								</div>
+												<svg
+													viewBox="0 0 16 16"
+													class="size-[15px] shrink-0 opacity-80"
+													fill="none"
+													aria-hidden="true"
+												>
+													<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.4" />
+													<path
+														d="M8 4.8V8l2.2 1.4"
+														stroke="currentColor"
+														stroke-width="1.4"
+														stroke-linecap="round"
+													/>
+												</svg>
+												Length
+											</span>
+											<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+												{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
+													<button
+														type="button"
+														aria-pressed={wantSeconds === sec}
+														title="{sec} seconds"
+														onclick={() => {
+															wantSeconds = sec;
+															saveSetup();
+														}}
+														class="flex min-h-7 min-w-7 cursor-pointer items-center justify-center rounded-full px-1.5 font-mono text-xs tabular-nums transition-colors {wantSeconds ===
+														sec
+															? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+															: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{sec}</button
+													>
+												{/each}
+											</span>
+										</div>
 
-								<div class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]">
-									<span class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]">
-										<svg viewBox="0 0 16 16" class="size-[15px] shrink-0 opacity-80" fill="none" aria-hidden="true">
-											<rect x="2" y="4" width="12" height="8" rx="1.4" stroke="currentColor" stroke-width="1.4" />
-											<path d="M5 7.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-										</svg>
-										Size
-									</span>
-									<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-										{#each RES_KEYS as r (r)}
-											{@const f = frameFor(r, composerShape.portrait ? 'portrait' : 'landscape')}
-											<button
-												type="button"
-												disabled={composerShape.fixed}
-												aria-pressed={composerShape.res === r}
-												title="{f.width}x{f.height} — bigger frames cost render time"
-												onclick={() => {
-													wantRes = r;
-													saveSetup();
-												}}
-												class="flex min-h-7 items-center justify-center rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {composerShape.fixed
-													? 'cursor-default opacity-40'
-													: 'cursor-pointer'} {composerShape.res ===
-												r
-													? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
-													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{r}</button
+										<div
+											class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]"
+										>
+											<span
+												class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]"
 											>
-										{/each}
-									</span>
-								</div>
+												<svg
+													viewBox="0 0 16 16"
+													class="size-[15px] shrink-0 opacity-80"
+													fill="none"
+													aria-hidden="true"
+												>
+													<rect
+														x="2"
+														y="4"
+														width="12"
+														height="8"
+														rx="1.4"
+														stroke="currentColor"
+														stroke-width="1.4"
+													/>
+													<path
+														d="M5 7.5h6"
+														stroke="currentColor"
+														stroke-width="1.4"
+														stroke-linecap="round"
+													/>
+												</svg>
+												Size
+											</span>
+											<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+												{#each RES_KEYS as r (r)}
+													{@const f = frameFor(
+														r,
+														composerShape.portrait ? 'portrait' : 'landscape'
+													)}
+													<button
+														type="button"
+														disabled={composerShape.fixed}
+														aria-pressed={composerShape.res === r}
+														title="{f.width}x{f.height} — bigger frames cost render time"
+														onclick={() => {
+															wantRes = r;
+															saveSetup();
+														}}
+														class="flex min-h-7 items-center justify-center rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {composerShape.fixed
+															? 'cursor-default opacity-40'
+															: 'cursor-pointer'} {composerShape.res === r
+															? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+															: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{r}</button
+													>
+												{/each}
+											</span>
+										</div>
 
-								<div class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]">
-									<span class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]">
-										<svg viewBox="0 0 16 16" class="size-[15px] shrink-0 opacity-80" fill="none" aria-hidden="true">
-											<rect x="2.4" y="3" width="11.2" height="10" rx="1.4" stroke="currentColor" stroke-width="1.4" />
-										</svg>
-										Frame
-									</span>
-									<!-- The one place a glyph beats the label: the thing being chosen
+										<div
+											class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]"
+										>
+											<span
+												class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]"
+											>
+												<svg
+													viewBox="0 0 16 16"
+													class="size-[15px] shrink-0 opacity-80"
+													fill="none"
+													aria-hidden="true"
+												>
+													<rect
+														x="2.4"
+														y="3"
+														width="11.2"
+														height="10"
+														rx="1.4"
+														stroke="currentColor"
+														stroke-width="1.4"
+													/>
+												</svg>
+												Frame
+											</span>
+											<!-- The one place a glyph beats the label: the thing being chosen
 										 IS a shape, and two rectangles say it faster than 9:16 does. -->
-									<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-										{#each [['portrait', '9:16', 'h-3 w-2'], ['landscape', '16:9', 'h-2 w-3.5']] as [val, label, box] (val)}
-											<button
-												type="button"
-												disabled={composerShape.fixed}
-												aria-pressed={(composerShape.portrait ? 'portrait' : 'landscape') === val}
-												title={label}
-												onclick={() => {
-													wantOrientation = val as 'portrait' | 'landscape';
-													saveSetup();
-												}}
-												class="flex min-h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {composerShape.fixed
-													? 'cursor-default opacity-40'
-													: 'cursor-pointer'} {(composerShape.portrait ? 'portrait' : 'landscape') ===
-												val
-													? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
-													: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-											>
-												<span class="block rounded-[2px] border border-current {box}"></span>
-												{label}
-											</button>
-										{/each}
-									</span>
-								</div>
-							</div>
-						{/if}
-						{#if pendingPhoto}
-							<!-- Held, not sent. A description is written after the picture is
+											<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+												{#each [['portrait', '9:16', 'h-3 w-2'], ['landscape', '16:9', 'h-2 w-3.5']] as [val, label, box] (val)}
+													<button
+														type="button"
+														disabled={composerShape.fixed}
+														aria-pressed={(composerShape.portrait ? 'portrait' : 'landscape') ===
+															val}
+														title={label}
+														onclick={() => {
+															wantOrientation = val as 'portrait' | 'landscape';
+															saveSetup();
+														}}
+														class="flex min-h-7 items-center gap-1.5 rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {composerShape.fixed
+															? 'cursor-default opacity-40'
+															: 'cursor-pointer'} {(composerShape.portrait
+															? 'portrait'
+															: 'landscape') === val
+															? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+															: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+													>
+														<span class="block rounded-[2px] border border-current {box}"></span>
+														{label}
+													</button>
+												{/each}
+											</span>
+										</div>
+									</div>
+								{/if}
+								{#if pendingPhoto}
+									<!-- Held, not sent. A description is written after the picture is
 								 chosen at least as often as before it, so the upload waits here
 								 and takes whatever is in the box when send is pressed. -->
-							<div class="mb-1.5 flex items-center gap-2">
-								<span
-									class="flex min-w-0 items-center gap-1.5 rounded-full bg-[var(--st-surface-2)] px-2.5 py-1 text-xs text-[var(--st-text)]"
-								>
-									<span class="truncate">{pendingPhoto.name}</span>
-									<button
-										type="button"
-										aria-label="drop the photo"
-										onclick={() => (pendingPhoto = null)}
-										class="cursor-pointer text-[var(--st-faint)] hover:text-[var(--st-text)]">×</button
-									>
-								</span>
-								<span class="text-xs text-[var(--st-faint)]">
-									describe {wantTarget === 'location' ? 'the place' : 'them'} if you like, then send
-								</span>
-							</div>
-						{/if}
-						<!-- One row: the way in, the sentence, the mode, the send. Everything
+									<div class="mb-1.5 flex items-center gap-2">
+										<span
+											class="flex min-w-0 items-center gap-1.5 rounded-full bg-[var(--st-surface-2)] px-2.5 py-1 text-xs text-[var(--st-text)]"
+										>
+											<span class="truncate">{pendingPhoto.name}</span>
+											<button
+												type="button"
+												aria-label="drop the photo"
+												onclick={() => (pendingPhoto = null)}
+												class="cursor-pointer text-[var(--st-faint)] hover:text-[var(--st-text)]"
+												>×</button
+											>
+										</span>
+										<span class="text-xs text-[var(--st-faint)]">
+											describe {wantTarget === 'location' ? 'the place' : 'them'} if you like, then send
+										</span>
+									</div>
+								{/if}
+								<!-- One row: the way in, the sentence, the mode, the send. Everything
 							 that used to sit under this in three rows of chips either became a
 							 chip above (because you chose it) or moved into the menu on the left
 							 (because you had not). -->
-						<div class="flex items-end gap-1.5">
-							{#if mode === 'simple' && wantTarget === 'clip'}
-								<button
-									type="button"
-									aria-label="add a character, a location or a reference image"
-									aria-expanded={addOpen}
-									onclick={() => {
-										const open = !addOpen && pickKind === null;
-										shutMenus();
-										addOpen = open;
-									}}
-									class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
-								>
-									<svg viewBox="0 0 16 16" class="size-[1.05rem]" fill="none" aria-hidden="true">
-										<path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-									</svg>
-								</button>
-							{:else}
-								<!-- In a creation state there is nothing to pick between, so the
+								<div class="flex items-end gap-1.5">
+									{#if mode === 'simple' && wantTarget === 'clip'}
+										<button
+											type="button"
+											aria-label="add a character, a location or a reference image"
+											aria-expanded={addOpen}
+											onclick={() => {
+												const open = !addOpen && pickKind === null;
+												shutMenus();
+												addOpen = open;
+											}}
+											class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+										>
+											<svg
+												viewBox="0 0 16 16"
+												class="size-[1.05rem]"
+												fill="none"
+												aria-hidden="true"
+											>
+												<path
+													d="M8 3v10M3 8h10"
+													stroke="currentColor"
+													stroke-width="1.5"
+													stroke-linecap="round"
+												/>
+											</svg>
+										</button>
+									{:else}
+										<!-- In a creation state there is nothing to pick between, so the
 									 paperclip is the whole menu and stands on its own. -->
-								<label
-									title={wantTarget === 'character'
-										? 'Use a picture you already have as this character'
-										: wantTarget === 'location'
-											? 'Use a picture you already have as this location'
-											: 'Attach a face, a room, a movement for the render to copy'}
-									class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
-								>
-									<svg viewBox="0 0 20 20" class="size-4" fill="none" aria-hidden="true">
-										<path
-											d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
-											stroke="currentColor"
-											stroke-width="1.6"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										/>
-									</svg>
-									<span class="sr-only">use a picture you already have</span>
-									<input
-										type="file"
-										accept="image/*"
-										class="hidden"
-										disabled={refBusy}
-										onchange={(e) => {
-											const el = e.currentTarget as HTMLInputElement;
-											holdPhoto(el.files);
-											el.value = '';
+										<label
+											title={wantTarget === 'character'
+												? 'Use a picture you already have as this character'
+												: wantTarget === 'location'
+													? 'Use a picture you already have as this location'
+													: 'Attach a face, a room, a movement for the render to copy'}
+											class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+										>
+											<svg viewBox="0 0 20 20" class="size-4" fill="none" aria-hidden="true">
+												<path
+													d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
+													stroke="currentColor"
+													stroke-width="1.6"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+											</svg>
+											<span class="sr-only">use a picture you already have</span>
+											<input
+												type="file"
+												accept="image/*"
+												class="hidden"
+												disabled={refBusy}
+												onchange={(e) => {
+													const el = e.currentTarget as HTMLInputElement;
+													holdPhoto(el.files);
+													el.value = '';
+												}}
+											/>
+										</label>
+									{/if}
+
+									<label class="sr-only" for="composer">Message</label>
+									<textarea
+										id="composer"
+										bind:this={composer}
+										bind:value={input}
+										rows="1"
+										spellcheck="false"
+										placeholder={composerPlaceholder}
+										oninput={(e) => grow(e.currentTarget)}
+										onkeydown={(e) => {
+											// Enter sends, Shift+Enter breaks the line.
+											if (e.key === 'Enter' && !e.shiftKey) {
+												e.preventDefault();
+												submit();
+											}
 										}}
-									/>
-								</label>
-							{/if}
+										class="block max-h-56 min-h-9 w-full flex-1 resize-none border-0 bg-transparent px-2 py-2 text-[1.05rem] leading-relaxed outline-none placeholder:text-[var(--st-faint)] focus:ring-0"
+									></textarea>
 
-							<label class="sr-only" for="composer">Message</label>
-							<textarea
-								id="composer"
-								bind:this={composer}
-								bind:value={input}
-								rows="1"
-								spellcheck="false"
-								placeholder={composerPlaceholder}
-								oninput={(e) => grow(e.currentTarget)}
-								onkeydown={(e) => {
-									// Enter sends, Shift+Enter breaks the line.
-									if (e.key === 'Enter' && !e.shiftKey) {
-										e.preventDefault();
-										submit();
-									}
-								}}
-								class="block max-h-56 min-h-9 w-full flex-1 resize-none border-0 bg-transparent px-2 py-2 text-[1.05rem] leading-relaxed outline-none focus:ring-0 placeholder:text-[var(--st-faint)]"
-							></textarea>
-
-							{#if mode === 'advanced' && !planningWs}
-								<!-- Scene count is the planning chain's knob: it decides how many
+									{#if mode === 'advanced' && !planningWs}
+										<!-- Scene count is the planning chain's knob: it decides how many
 									 documents get written and how many clips get scheduled. It has
 									 no simple-mode counterpart, so it sits here rather than in the
 									 menu, which is about what a clip is made with. -->
-								<div class="flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-									{#each SCENE_CHOICES as n (n)}
-										<button
-											type="button"
-											aria-pressed={sceneCount === n}
-											title="{n} scenes"
-											class="size-7 cursor-pointer rounded-full text-xs tabular-nums transition-colors {sceneCount ===
-											n
-												? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
-												: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
-											onclick={() => {
-												sceneCount = n;
-												if (brief) brief.sceneCount = n;
-											}}>{n}</button
+										<div
+											class="flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5"
 										>
-									{/each}
-								</div>
-							{/if}
+											{#each SCENE_CHOICES as n (n)}
+												<button
+													type="button"
+													aria-pressed={sceneCount === n}
+													title="{n} scenes"
+													class="size-7 cursor-pointer rounded-full text-xs tabular-nums transition-colors {sceneCount ===
+													n
+														? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+														: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+													onclick={() => {
+														sceneCount = n;
+														if (brief) brief.sceneCount = n;
+													}}>{n}</button
+												>
+											{/each}
+										</div>
+									{/if}
 
-							<button
-								type="button"
-								aria-label="send"
-								disabled={sending || charFromClipBusy || (!input.trim() && !pendingPhoto)}
-								onclick={submit}
-								class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
-							>
-								{#if sending}
-									<span class="text-xs">…</span>
-								{:else}
-									<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true">
-										<path
-											d="M10 16V4M10 4l-5 5M10 4l5 5"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										/>
-									</svg>
-								{/if}
-							</button>
-						</div>
-					</div>
-
-				</div>
-				</div>
-			</div>
-
-			<!-- ── desktop task rail ────────────────────────────────────────── -->
-			{#if brief}
-				<aside class="hidden min-h-0 lg:block">
-					<div
-						class="scroller max-h-full overflow-y-auto rounded-2xl bg-[var(--st-surface)] p-5"
-					>
-						<p class="text-[10px] font-bold tracking-[0.25em] text-[var(--st-faint)] uppercase">
-							the production
-						</p>
-						{#if pollingActive && startedAt}
-							<p class="mt-1 text-xs text-[var(--st-faint)]">{elapsedLabel(now - startedAt)}</p>
-						{:else if staleRun}
-							<p class="mt-1 text-xs text-[var(--st-faint)]">not running</p>
-						{/if}
-						<div class="mt-4">
-							{@render railList()}
-						</div>
-
-						<!-- Beneath the list, not above it: reaching for this means having
-						     read the list and decided the run is not worth continuing. -->
-						{#if pollingActive}
-							<div class="mt-5 border-t border-[var(--st-line)] pt-4">
-								{#if !stopArmed}
 									<button
 										type="button"
-										class="cursor-pointer text-xs text-[var(--st-faint)] underline-offset-4 transition-colors hover:text-[var(--st-text)] hover:underline"
-										onclick={() => (stopArmed = true)}
+										aria-label="send"
+										disabled={sending || charFromClipBusy || (!input.trim() && !pendingPhoto)}
+										onclick={submit}
+										class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
 									>
-										stop this production
+										{#if sending}
+											<span class="text-xs">…</span>
+										{:else}
+											<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true">
+												<path
+													d="M10 16V4M10 4l-5 5M10 4l5 5"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+											</svg>
+										{/if}
 									</button>
-								{:else}
-									<p class="text-xs leading-relaxed text-[var(--st-muted)]">
-										This releases the GPU and clears the queue. It cannot be resumed —
-										a new run starts from the plan again.
-									</p>
-									<div class="mt-2.5 flex items-center gap-3">
-										<button
-											type="button"
-											disabled={stopping}
-											onclick={stopRun}
-											class="btn btn-secondary btn-sm"
-										>
-											{stopping ? 'stopping…' : 'stop it'}
-										</button>
-										<button
-											type="button"
-											class="cursor-pointer text-xs text-[var(--st-faint)] hover:text-[var(--st-text)]"
-											onclick={() => (stopArmed = false)}
-										>
-											keep going
-										</button>
-									</div>
-								{/if}
+								</div>
 							</div>
-						{/if}
+						</div>
 					</div>
-				</aside>
-			{/if}
+				</div>
+
+				<!-- ── desktop task rail ────────────────────────────────────────── -->
+				{#if brief}
+					<aside class="hidden min-h-0 lg:block">
+						<div class="scroller max-h-full overflow-y-auto rounded-2xl bg-[var(--st-surface)] p-5">
+							<p class="text-[10px] font-bold tracking-[0.25em] text-[var(--st-faint)] uppercase">
+								the production
+							</p>
+							{#if pollingActive && startedAt}
+								<p class="mt-1 text-xs text-[var(--st-faint)]">{elapsedLabel(now - startedAt)}</p>
+							{:else if staleRun}
+								<p class="mt-1 text-xs text-[var(--st-faint)]">not running</p>
+							{/if}
+							<div class="mt-4">
+								{@render railList()}
+							</div>
+
+							<!-- Beneath the list, not above it: reaching for this means having
+						     read the list and decided the run is not worth continuing. -->
+							{#if pollingActive}
+								<div class="mt-5 border-t border-[var(--st-line)] pt-4">
+									{#if !stopArmed}
+										<button
+											type="button"
+											class="cursor-pointer text-xs text-[var(--st-faint)] underline-offset-4 transition-colors hover:text-[var(--st-text)] hover:underline"
+											onclick={() => (stopArmed = true)}
+										>
+											stop this production
+										</button>
+									{:else}
+										<p class="text-xs leading-relaxed text-[var(--st-muted)]">
+											This releases the GPU and clears the queue. It cannot be resumed — a new run
+											starts from the plan again.
+										</p>
+										<div class="mt-2.5 flex items-center gap-3">
+											<button
+												type="button"
+												disabled={stopping}
+												onclick={stopRun}
+												class="btn btn-secondary btn-sm"
+											>
+												{stopping ? 'stopping…' : 'stop it'}
+											</button>
+											<button
+												type="button"
+												class="cursor-pointer text-xs text-[var(--st-faint)] hover:text-[var(--st-text)]"
+												onclick={() => (stopArmed = false)}
+											>
+												keep going
+											</button>
+										</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
+					</aside>
+				{/if}
+			</div>
 		</div>
-	</div>
 	</main>
 
 	<!-- The rail takes 16rem off the left when it opens; this gives the same back
@@ -9752,7 +10298,9 @@
 				</button>
 			{/if}
 
-			<div class="lift stage overflow-hidden rounded-2xl bg-black shadow-[0_24px_70px_rgba(0,0,0,.6)]">
+			<div
+				class="lift stage overflow-hidden rounded-2xl bg-black shadow-[0_24px_70px_rgba(0,0,0,.6)]"
+			>
 				{#key filmKey(shot)}
 					<!-- svelte-ignore a11y_media_has_caption -->
 					<video
@@ -9769,7 +10317,7 @@
 
 			<div class="lift stage mt-4 flex flex-wrap items-center gap-2">
 				<span class="text-[13px] font-medium text-[var(--st-text)]">The film</span>
-				<span class="text-xs tabular-nums text-[var(--st-faint)]">
+				<span class="text-xs text-[var(--st-faint)] tabular-nums">
 					shot {filmAt + 1} of {film.length} · {filmSeconds}s
 				</span>
 			</div>
@@ -9850,13 +10398,9 @@
 				{/if}
 
 				<div
-
 					class="lift stage overflow-hidden rounded-2xl bg-black shadow-[0_24px_70px_rgba(0,0,0,.6)]"
-
 					ontouchstart={swipeStart}
-
 					ontouchend={swipeEnd}
-
 				>
 					<!-- Keyed so that stepping to another take replaces the element rather
 						 than swapping its src: a <video> handed a new src keeps the old
@@ -9878,11 +10422,11 @@
 				</div>
 
 				<div class="lift stage mt-4 flex flex-wrap items-center gap-2">
-					<span class="text-[13px] font-medium tabular-nums text-[var(--st-text)]"
+					<span class="text-[13px] font-medium text-[var(--st-text)] tabular-nums"
 						>Take {run.index}</span
 					>
 					{#if row}
-						<span class="text-xs tabular-nums text-[var(--st-faint)]">seed {row.seed}</span>
+						<span class="text-xs text-[var(--st-faint)] tabular-nums">seed {row.seed}</span>
 					{/if}
 					<span class="flex-1"></span>
 					<!-- On the take you already kept there is nothing to press: a button
@@ -9955,7 +10499,7 @@
 			playsinline
 			class="video-with-controls max-h-[70vh] max-w-full rounded-2xl bg-black shadow-[0_24px_70px_rgba(0,0,0,.6)]"
 		></video>
-		<p class="text-xs tabular-nums text-[var(--st-faint)]">
+		<p class="text-xs text-[var(--st-faint)] tabular-nums">
 			{filmPopup.parts} shots · {Math.round(filmPopup.seconds)}s
 		</p>
 	</div>
@@ -9977,8 +10521,9 @@
 		>
 			✕
 		</button>
-		<h2 class="font-display mb-5 text-center text-lg font-semibold">
-			{films.length} {films.length === 1 ? 'film' : 'films'}
+		<h2 class="mb-5 text-center font-display text-lg font-semibold">
+			{films.length}
+			{films.length === 1 ? 'film' : 'films'}
 		</h2>
 		<div class="mx-auto grid max-w-6xl grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
 			{#each films as f (f.workspace + f.artifact + f.file)}
@@ -10011,8 +10556,6 @@
 		</div>
 	</div>
 {/if}
-
-
 
 <style>
 	/* The one moving thing on the page, and it earns it: during a render nothing
