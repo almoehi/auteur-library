@@ -5760,6 +5760,25 @@
 	/** `sending` still counts, for the sends that have no round to show: a photo
 	 *  going up, a character or a location sheet being written. A clip's own send
 	 *  raises its round in the same tick, so the loader never gets the read-back. */
+	/** The measure everything under the stage keeps: the clip's own width.
+	 *
+	 *  The composer was capped to it so their edges line up, but the rows above it
+	 *  — the reference chips, the hint line, the film reel — were outside that and
+	 *  ran the full column. Adding a clip to the film therefore opened a bar that
+	 *  reached from edge to edge over a composer half its width, which reads as
+	 *  two unrelated surfaces rather than one stack.
+	 *
+	 *  Three consumers, one definition. The last time the same measure was written
+	 *  out twice, the two copies drifted the moment the layout beside them moved.
+	 *
+	 *  There is no gutter any more. Both boxes used to carry six rems of padding
+	 *  on the left to clear the strip; the strip is in the right-hand margin now
+	 *  and takes nothing, so the padding was width surrendered to a column that
+	 *  had moved out from under it. */
+	let composerCap = $derived(
+		STAGE_UI && stageVideoW > 320 ? `max-width:${stageVideoW}px` : undefined
+	);
+
 	let stagePhaseIsWorking = $derived(!stageError && !stageRound && (stageClockFrom || sending));
 	let showStrip = $derived(stageThumbs.length > 1 || !!stagePhaseIsWorking);
 
@@ -6890,12 +6909,19 @@
 					 same width, forty-nine pixels apart, which reads as a mistake because
 					 it is one. Floated, the clip has the column to itself and the two line
 					 up; the strip lives in the margin the picture leaves beside it. -->
-						<div class="relative flex min-h-0 flex-1 {showStrip ? 'pl-[6.2rem]' : ''}">
+						<div class="relative flex min-h-0 flex-1">
 							<!-- the chain, newest first. Four, because a strip that grows past
 						 the stage's own height starts scrolling, which is the thing this
 						 surface exists not to do. -->
+							<!-- The chain lives in the right-hand margin, and takes nothing from
+								 the picture. It used to sit on the left behind six rems of padding,
+								 which is width off the one thing this surface exists to show — and
+								 a clip is 16:9 inside a column that is wider than that, so the
+								 margin it leaves on either side was already there and already
+								 empty. Right rather than left because the eye starts at the
+								 picture; the chain is where you go after it, not before. -->
 							{#if showStrip}
-								<div class="absolute top-0 left-0 z-10 flex w-[5.4rem] flex-col gap-2">
+								<div class="absolute top-0 right-0 z-10 flex w-[5.4rem] flex-col gap-2">
 									<!-- The one being made takes its place in the strip the moment it is
 								 asked for, at the top where it will land. The chain is what this
 								 column shows and the next link is already real — it is being paid
@@ -6997,6 +7023,16 @@
 										{:else}
 											<div class="stage-dots absolute inset-0"></div>
 										{/if}
+										<!-- One slow pass of light across the surface, and nothing else.
+									 A still rectangle with a number on it cannot say whether it is
+									 working or hung, and the number is the wrong instrument for
+									 that: it is an estimate against a median, so it keeps moving
+									 whether or not anything is happening. The sweep is the part
+									 that means "running" — long, low-contrast, monochrome, closer
+									 to breathing than to a spinner. It passes about every four
+									 seconds, which is slow enough not to be watched and often
+									 enough to be believed. -->
+										<div class="stage-sweep pointer-events-none absolute inset-0"></div>
 										<div
 											class="relative flex items-center gap-3 rounded-full bg-black/45 px-4 py-2 backdrop-blur"
 										>
@@ -8782,165 +8818,176 @@
 								<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
 							</p>
 						{/each}
-						{#if refFiles.length}
-							<div class="mb-2 space-y-1.5">
-								{#each refFiles as f (f.id)}
-									<div class="flex items-center gap-2 rounded-xl bg-[var(--st-surface)] px-3 py-2">
-										<span
-											class="max-w-[9rem] shrink-0 truncate font-mono text-[11px] text-[var(--st-muted)]"
-										>
-											{f.name}
-										</span>
-										<input
-											value={f.description}
-											placeholder="what is this — the crew cannot see the file, only this line"
-											onchange={(e) => describeRefFile(f.id, e.currentTarget.value)}
-											class="min-w-0 flex-1 border-0 bg-transparent text-xs outline-none placeholder:text-[var(--st-faint)]"
-										/>
-										<button
-											type="button"
-											aria-label="remove {f.name}"
-											class="shrink-0 cursor-pointer px-1 text-xs text-[var(--st-faint)] hover:text-[var(--st-text)]"
-											onclick={() => dropRef(f.id)}
-										>
-											×
-										</button>
+						<!-- Everything under the stage shares the composer's measure: the reference
+							     chips, the hint line and the film reel line up with the box they belong
+							     to instead of running the width of the column over it. -->
+						<div>
+							<div class={STAGE_UI ? 'mx-auto w-full' : ''} style={composerCap}>
+								{#if refFiles.length}
+									<div class="mb-2 space-y-1.5">
+										{#each refFiles as f (f.id)}
+											<div
+												class="flex items-center gap-2 rounded-xl bg-[var(--st-surface)] px-3 py-2"
+											>
+												<span
+													class="max-w-[9rem] shrink-0 truncate font-mono text-[11px] text-[var(--st-muted)]"
+												>
+													{f.name}
+												</span>
+												<input
+													value={f.description}
+													placeholder="what is this — the crew cannot see the file, only this line"
+													onchange={(e) => describeRefFile(f.id, e.currentTarget.value)}
+													class="min-w-0 flex-1 border-0 bg-transparent text-xs outline-none placeholder:text-[var(--st-faint)]"
+												/>
+												<button
+													type="button"
+													aria-label="remove {f.name}"
+													class="shrink-0 cursor-pointer px-1 text-xs text-[var(--st-faint)] hover:text-[var(--st-text)]"
+													onclick={() => dropRef(f.id)}
+												>
+													×
+												</button>
+											</div>
+										{/each}
 									</div>
-								{/each}
-							</div>
-						{/if}
-						{#if refError}
-							<p class="mb-2 text-xs text-[var(--st-muted)]">{refError}</p>
-						{/if}
-						<!-- The hint line was a full-width row with an empty right half, so the
+								{/if}
+								{#if refError}
+									<p class="mb-2 text-xs text-[var(--st-muted)]">{refError}</p>
+								{/if}
+								<!-- The hint line was a full-width row with an empty right half, so the
 						 film costs no height at all. It belongs in this band and not among
 						 the composer's setting chips: there it read as a parameter, which
 						 is not what it is, and nobody looked for it. -->
-						<!-- Only when it has something in it. The reserved 1.6rem stopped the
+								<!-- Only when it has something in it. The reserved 1.6rem stopped the
 						 composer jumping when a hint appeared and went away, which was worth
 						 it when this row was usually full. It is not: with no hint and no
 						 film it is an empty band holding the status line a centimetre clear
 						 of the box it is reporting on. -->
-						{#if composerHint || film.length}
-							<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
-								<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
-								<span class="flex-1"></span>
-								{#if film.length}
-									<button
-										type="button"
-										aria-expanded={filmOpen}
-										ondragover={(e) => {
-											if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
-										}}
-										ondrop={(e) => dropClipIntoFilm(e)}
-										onclick={() => (filmOpen = !filmOpen)}
-										class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
-											? 'bg-[var(--st-surface-2)]'
-											: ''}"
-									>
-										<span class="reelmark" aria-hidden="true"></span>
-										<span
-											>{film.length} {film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span
-										>
-										<span
-											class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
-											>⌄</span
-										>
-									</button>
+								{#if composerHint || film.length}
+									<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
+										<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
+										<span class="flex-1"></span>
+										{#if film.length}
+											<button
+												type="button"
+												aria-expanded={filmOpen}
+												ondragover={(e) => {
+													if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
+												}}
+												ondrop={(e) => dropClipIntoFilm(e)}
+												onclick={() => (filmOpen = !filmOpen)}
+												class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
+													? 'bg-[var(--st-surface-2)]'
+													: ''}"
+											>
+												<span class="reelmark" aria-hidden="true"></span>
+												<span
+													>{film.length}
+													{film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span
+												>
+												<span
+													class="text-[0.6rem] text-[var(--st-faint)] {filmOpen
+														? 'rotate-180'
+														: ''}">⌄</span
+												>
+											</button>
+										{/if}
+									</div>
 								{/if}
-							</div>
-						{/if}
 
-						{#if film.length && filmOpen}
-							<!-- The reel. Whole clips only — that is the line between a strip and
+								{#if film.length && filmOpen}
+									<!-- The reel. Whole clips only — that is the line between a strip and
 							 an editor, and the one that keeps this from becoming a tool you
 							 have to learn. -->
-							<div class="enter mb-2 flex items-center gap-2.5 px-2">
-								<button
-									type="button"
-									aria-label="play the film"
-									onclick={() => openFilmViewer(0)}
-									class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[0.7rem] text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control)]"
-								>
-									▶
-								</button>
-								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div
-									class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5"
-									ondragover={(e) => {
-										if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
-									}}
-									ondrop={(e) => dropClipIntoFilm(e)}
-								>
-									{#each film as c, i (filmKey(c))}
-										{#if i}
-											<span
-												class="relative w-1.5 shrink-0 self-stretch"
-												aria-hidden="true"
-												class:seam-jump={seamJumps(i)}
-											></span>
-										{/if}
+									<div class="enter mb-2 flex items-center gap-2.5 px-2">
 										<button
 											type="button"
-											aria-label="shot {i + 1}"
-											draggable="true"
-											ondragstart={(e) => e.dataTransfer?.setData('text/plain', String(i))}
-											ondragover={(e) => e.preventDefault()}
-											ondrop={(e) => {
-												if (e.dataTransfer?.types.includes(CLIP_DRAG)) return;
-												e.preventDefault();
-												moveInFilm(Number(e.dataTransfer?.getData('text/plain')), i);
-											}}
-											onclick={(e) => {
-												const r = e.currentTarget.getBoundingClientRect();
-												if (e.clientX > r.right - 22 && e.clientY < r.top + 22) dropFromFilm(i);
-												else openFilmViewer(i);
-											}}
-											class="group relative aspect-video w-[5.4rem] shrink-0 cursor-grab overflow-hidden rounded-lg bg-[var(--st-surface)] active:cursor-grabbing"
+											aria-label="play the film"
+											onclick={() => openFilmViewer(0)}
+											class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-surface-2)] text-[0.7rem] text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control)]"
 										>
-											<!-- svelte-ignore a11y_media_has_caption -->
-											<video
-												src={fileUrl(c.workspace, c.artifact, c.file)}
-												muted
-												loop
-												playsinline
-												preload="auto"
-												use:looping
-												class="h-full w-full bg-black object-cover"
-											></video>
-											<span
-												class="pointer-events-none absolute top-0.5 right-0.5 flex size-[1.1rem] items-center justify-center rounded-full bg-black/60 text-[0.65rem] text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-												>✕</span
-											>
+											▶
 										</button>
-									{/each}
-								</div>
-								<button
-									type="button"
-									disabled={film.length < 2 || filmBusy}
-									onclick={exportFilm}
-									class="shrink-0 cursor-pointer rounded-full bg-[var(--st-text)] px-3.5 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-text)]"
-								>
-									{filmBusy ? 'assembling…' : 'Export'}
-								</button>
-							</div>
-						{/if}
-						<!-- `relative` is load-bearing: the add and format menus open upward
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<div
+											class="reel flex min-w-0 flex-1 items-center overflow-x-auto py-0.5"
+											ondragover={(e) => {
+												if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
+											}}
+											ondrop={(e) => dropClipIntoFilm(e)}
+										>
+											{#each film as c, i (filmKey(c))}
+												{#if i}
+													<span
+														class="relative w-1.5 shrink-0 self-stretch"
+														aria-hidden="true"
+														class:seam-jump={seamJumps(i)}
+													></span>
+												{/if}
+												<button
+													type="button"
+													aria-label="shot {i + 1}"
+													draggable="true"
+													ondragstart={(e) => e.dataTransfer?.setData('text/plain', String(i))}
+													ondragover={(e) => e.preventDefault()}
+													ondrop={(e) => {
+														if (e.dataTransfer?.types.includes(CLIP_DRAG)) return;
+														e.preventDefault();
+														moveInFilm(Number(e.dataTransfer?.getData('text/plain')), i);
+													}}
+													onclick={(e) => {
+														const r = e.currentTarget.getBoundingClientRect();
+														if (e.clientX > r.right - 22 && e.clientY < r.top + 22) dropFromFilm(i);
+														else openFilmViewer(i);
+													}}
+													class="group relative aspect-video w-[5.4rem] shrink-0 cursor-grab overflow-hidden rounded-lg bg-[var(--st-surface)] active:cursor-grabbing"
+												>
+													<!-- svelte-ignore a11y_media_has_caption -->
+													<video
+														src={fileUrl(c.workspace, c.artifact, c.file)}
+														muted
+														loop
+														playsinline
+														preload="auto"
+														use:looping
+														class="h-full w-full bg-black object-cover"
+													></video>
+													<span
+														class="pointer-events-none absolute top-0.5 right-0.5 flex size-[1.1rem] items-center justify-center rounded-full bg-black/60 text-[0.65rem] text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+														>✕</span
+													>
+												</button>
+											{/each}
+										</div>
+										<button
+											type="button"
+											disabled={film.length < 2 || filmBusy}
+											onclick={exportFilm}
+											class="shrink-0 cursor-pointer rounded-full bg-[var(--st-text)] px-3.5 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[var(--st-text)]"
+										>
+											{filmBusy ? 'assembling…' : 'Export'}
+										</button>
+									</div>
+								{/if}
+								<!-- `relative` is load-bearing: the add and format menus open upward
 						 from inside the composer and anchor to this box, not to the page. -->
-						<!-- The stage above is a picture and takes the whole column; this is
+								<!-- The stage above is a picture and takes the whole column; this is
 						 a line of text and keeps the measure it had. The note above is still
 						 true — a composer a thousand pixels wide makes the eye travel the
 						 screen to find the send button — so the width went to the clip and
 						 not to the box under it. -->
-						<!-- The same gutter the stage keeps for the strip. Both boxes centre
+								<!-- The same gutter the stage keeps for the strip. Both boxes centre
 						 in the same reduced width, which is the only way their edges line
 						 up — pad one and not the other and they sit half a strip apart. -->
-						<div class={STAGE_UI && stageThumbs.length > 1 ? 'pl-[6.2rem]' : ''}>
+							</div>
+						</div>
+						<div>
 							<div
 								class="relative rounded-3xl bg-[var(--st-surface)] p-3 {STAGE_UI
 									? 'mx-auto w-full'
 									: ''}"
-								style={STAGE_UI && stageVideoW > 320 ? `max-width:${stageVideoW}px` : undefined}
+								style={composerCap}
 							>
 								<!-- Making a character or a location is a state you are IN, not a tab
 							 sitting beside the clip settings. It was a tab, and that put two
@@ -10587,6 +10634,38 @@
 	@media (prefers-reduced-motion: reduce) {
 		.stage-dots {
 			animation: none;
+		}
+	}
+
+	/* The pass of light. A wide, very soft band of white at four per cent,
+	 * travelling the diagonal — no edge hard enough to read as a shape, and no
+	 * colour, because the only colour on this surface is the beacon and it is
+	 * already spoken for. 4.2s with a rest at each end: a sweep that restarts the
+	 * instant it finishes reads as a machine, and this is meant to read as
+	 * something breathing. */
+	.stage-sweep {
+		background: linear-gradient(
+			115deg,
+			transparent 38%,
+			rgba(255, 255, 255, 0.04) 50%,
+			transparent 62%
+		);
+		background-size: 260% 260%;
+		animation: stage-sweep 4.2s ease-in-out infinite;
+	}
+	@keyframes stage-sweep {
+		0% {
+			background-position: 100% 0;
+		}
+		70%,
+		100% {
+			background-position: 0 100%;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.stage-sweep {
+			animation: none;
+			background: none;
 		}
 	}
 	.spin {
