@@ -5891,6 +5891,14 @@
 	 *  Only with no clip on the stage. With one, the clip stays and the sheet
 	 *  reports on its own line — the alternative is the loader that sat at 97%
 	 *  over an arrived picture for a quarter of an hour. */
+	/** Which of the character's three things the stage is showing.
+	 *
+	 *  Empty means follow the work: the reference until the turnaround lands, the
+	 *  turnaround until the six views are cut, the six views after that. A press
+	 *  pins it, and a different character clears the pin — the choice was about
+	 *  that person, not a standing preference. */
+	let charView = $state<'' | 'ref' | 'turn' | 'six'>('');
+
 	let stageDrawing = $derived(stageClips.length ? null : (drawingHere[0] ?? null));
 
 	let stagePhase = $derived(
@@ -7300,56 +7308,106 @@
 									{@const drawing = stageDrawing}
 									{@const sh = drawing ? null : (stageSheet?.sheet ?? null)}
 									{@const shownId = sh?.id ?? drawing?.id ?? ''}
-									<!-- The character, where a clip would be.
-										 A sheet's result is a picture and this surface is for pictures; it is
-										 the same shape, the same height, and it arrives in the same place the
-										 thing you were waiting for always arrives. No rating row and no add to
-										 film: neither means anything about a person, and offering them was how
-										 the six views ended up looking like a clip. -->
+									{@const row = sheets.find((x) => x.id === shownId)}
+									{@const six = row?.sheet?.state === 'ready' && row.sheet.file ? shownId : ''}
+									{@const turn = row?.sheet?.clip}
+									{@const view = charView || (six ? 'six' : turn ? 'turn' : 'ref')}
+									<!-- The character, and the three things the work produces, in one frame.
+										 The reference is on screen from the moment you upload it. The turnaround
+										 lands and plays — it is a video, so it is shown as one. Then the six
+										 views are cut from it and take the surface, because that is what was
+										 being made and what every later clip is measured against.
+										
+										 All three existed already and two were unreachable: the turnaround only
+										 by landing on the clip stage where it did not belong, the six views
+										 behind a hover-only mark inside a menu. So the honest answer to "why can
+										 I not see them" was that there was nowhere to see them from. They switch
+										 here, in the frame they belong to, rather than opening a tab away from
+										 the work. -->
 									<div
-										class="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4"
+										class="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3"
 									>
-										<!-- The picture takes what is left after the name, not everything.
-											 `max-h-full` on the image alone measures against the column, not
-											 against the room the column has once the two lines under it are
-											 placed — so a tall portrait claimed the whole height and the name was
-											 drawn over the line below the stage. Its own box takes the remainder
-											 and the picture contains itself inside that. -->
-										{#if shownId}
-											<div class="flex min-h-0 w-full flex-1 items-center justify-center">
+										<div class="flex min-h-0 w-full flex-1 items-center justify-center">
+											{#if view === 'six' && six}
+												<img
+													src="/studio/api/sheet/full/{six}"
+													alt=""
+													onerror={sheetImageMissing}
+													class="max-h-full max-w-full rounded-2xl object-contain"
+												/>
+											{:else if view === 'turn' && turn}
+												<!-- svelte-ignore a11y_media_has_caption -->
+												<video
+													src={fileUrl(turn.workspace, turn.artifact, turn.file)}
+													autoplay
+													loop
+													muted
+													playsinline
+													controls
+													class="max-h-full max-w-full rounded-2xl bg-black object-contain"
+												></video>
+											{:else if shownId}
 												<img
 													src="/studio/api/sheet/img/{shownId}"
 													alt=""
 													onerror={sheetImageMissing}
-													class="max-h-full max-w-full rounded-2xl object-contain {drawing
-														? 'opacity-70'
-														: ''}"
+													class="max-h-full max-w-full rounded-2xl object-contain"
 												/>
-											</div>
-										{/if}
+											{/if}
+										</div>
 										<div class="shrink-0 text-center">
-											<p class="font-display text-base font-semibold text-[var(--st-text)]">
-												{sh?.name || drawing?.name || 'Your character'}
-											</p>
-											<!-- What changed, in one line: they are cast, so the next thing you
-												 type is about them. It is the only thing worth saying here, and
-												 saying it is the difference between a finished job and a page that
-												 went quiet. -->
-											<!-- While the six views draw, this says so here rather than
-										 leaving the surface to look finished. The countdown is the
-										 sheet's own, not a clip's estimate. -->
-											{#if drawing}
-												<p
-													class="mt-1 flex items-center justify-center gap-2 text-xs text-[var(--st-muted)]"
-												>
-													<span
-														class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
-														aria-hidden="true"
-													></span>
-													<span>Building the six views · {turnStatus(drawing)}</span>
+											<!-- Their name, and you can type it. It arrives as the first words of the
+												 description, truncated — a label, not a name — and this is the one
+												 surface where the thing being named is unmistakably a person. A field
+												 shaped like the heading it replaces, so nothing moves when you click
+												 into it. -->
+											<input
+												value={row?.name ?? sh?.name ?? drawing?.name ?? ''}
+												placeholder="Name them"
+												disabled={!shownId}
+												onblur={(e) => renameCharacter(shownId, e.currentTarget.value)}
+												onkeydown={(e) => {
+													if (e.key === 'Enter') e.currentTarget.blur();
+													if (e.key === 'Escape') {
+														e.currentTarget.value = row?.name ?? '';
+														e.currentTarget.blur();
+													}
+												}}
+												class="w-full max-w-[22rem] rounded-lg border-0 bg-transparent px-2 py-0.5 text-center font-display text-base font-semibold text-[var(--st-text)] outline-none placeholder:text-[var(--st-faint)] hover:bg-[var(--st-surface)] focus:bg-[var(--st-surface)]"
+											/>
+											<!-- The three, from the moment there is a reference: the two that are
+												 not made yet stand there disabled with a turning mark, so the wait is
+												 attached to the thing being waited for rather than announced in a
+												 sentence somewhere else. They arrive in order, and the surface
+												 follows the newest until you press one. -->
+											<div class="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+												{#each [{ id: 'ref', label: 'Reference', ok: !!shownId }, { id: 'turn', label: 'Turnaround', ok: !!turn }, { id: 'six', label: 'Six views', ok: !!six }] as t (t.id)}
+													<button
+														type="button"
+														disabled={!t.ok}
+														aria-pressed={view === t.id}
+														onclick={() => (charView = t.id as 'ref' | 'turn' | 'six')}
+														class="btn btn-sm {view === t.id && t.ok
+															? 'btn-primary'
+															: 'btn-secondary'}"
+													>
+														{#if !t.ok}
+															<span
+																class="spin size-3 shrink-0 rounded-full border-2 border-current/25 border-t-current"
+															></span>
+														{/if}
+														<span>{t.label}</span>
+													</button>
+												{/each}
+											</div>
+											{#if !six}
+												<p class="mt-2 text-xs text-[var(--st-faint)]">
+													{turn ? 'Cutting the six views' : 'Building the six views'}{drawing
+														? ` · ${turnStatus(drawing)}`
+														: ''}
 												</p>
 											{:else}
-												<p class="mt-1 text-xs text-[var(--st-muted)]">
+												<p class="mt-2 text-xs text-[var(--st-faint)]">
 													Kept. Describe a shot and they are in it.
 												</p>
 											{/if}
