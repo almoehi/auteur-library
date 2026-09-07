@@ -1662,8 +1662,14 @@
 	/** The row's groups, folded or open. Built rather than written out because
 	 *  the continuation group only exists when there is something to continue,
 	 *  and because each one has to say three things — what it is set to now, what
-	 *  else it could be, and what to do about it — which is a shape, not markup. */
-	function PILL_GROUPS() {
+	 *  else it could be, and what to do about it — which is a shape, not markup.
+	 *
+	 *  Lower case on purpose. Named PILL_GROUPS it compiled clean and threw
+	 *  "PILL_GROUPS is not defined" in the browser: a capitalised identifier in a
+	 *  template is a component reference to Svelte, so the call resolved against
+	 *  the component namespace instead of this scope. The whole surface below it
+	 *  went dead — including the send — with nothing on screen to say why. */
+	function pillGroups() {
 		const g: {
 			id: string;
 			up: boolean;
@@ -9685,7 +9691,7 @@
 								 bubble would be sliced off at the top. The wrapper is where it opens
 								 from instead — outside the scroller, above the row, over the picture. -->
 							<div class="pillwrap relative mb-1.5 lg:hidden">
-								{#each PILL_GROUPS().filter((x) => x.up && pillGrp === x.id) as grp (grp.id)}
+								{#each pillGroups().filter((x) => x.up && pillGrp === x.id) as grp (grp.id)}
 									<div
 										style="left:{pillAt.x}px; transform-origin:{pillAt.o}px bottom"
 										class="pillrise absolute bottom-full z-40 mb-1.5 flex min-w-36 flex-col gap-0.5 rounded-2xl bg-[var(--st-surface)] p-1 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
@@ -9789,7 +9795,7 @@
 										 question a continuation asks first — before how many and
 										 before how long — and it was last in the row, past two
 										 settings that do not change between takes. -->
-									{#each PILL_GROUPS() as grp (grp.id)}
+									{#each pillGroups() as grp (grp.id)}
 										<!-- Length and size stay open; the frame and the continuation fold.
 											 Two short numbers each read faster as a set than as a fact you have
 											 to tap to question — you can see at a glance that 5s is one of
