@@ -2560,6 +2560,8 @@
 				return false;
 			}
 			pendingSheet = { ...opts };
+			renderIsSheet = true;
+			renderIsSheet = false;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			shootsAnnounced = true;
@@ -3074,6 +3076,7 @@
 					pushError(r.error || 'The continuation could not start.');
 					return false;
 				}
+				renderIsSheet = false;
 				renderWs = r.workspaceId;
 				startedAt = Date.now();
 				shootsAnnounced = true;
@@ -3113,6 +3116,7 @@
 				pushError(r.error || 'The render could not start.');
 				return false;
 			}
+			renderIsSheet = false;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			// The render poll narrates a shoot it announces first; there is no
@@ -3871,6 +3875,20 @@
 	 *  would have been illustrating the wrong thing while claiming to be exact.
 	 *  A hair before the end rather than the end itself: seeking to `duration`
 	 *  lands past the last decodable frame in Safari and paints nothing. */
+	/** A portrait that has not been drawn yet is not a broken picture.
+	 *
+	 *  The sheet's own image url answers 404 until the turnaround lands, which is
+	 *  the ten minutes right after you upload the photograph — so the card that
+	 *  appeared the instant you uploaded showed the browser's torn-page icon for
+	 *  the whole of it, which reads as a file that failed rather than a picture
+	 *  being made. Hiding the element lets whatever the markup puts behind it —
+	 *  the placeholder disc, the surface fill — stand in until there is something
+	 *  to show. */
+	function sheetImageMissing(e: Event) {
+		const img = e.currentTarget as HTMLImageElement | null;
+		if (img) img.hidden = true;
+	}
+
 	function lastFrame(el: HTMLVideoElement) {
 		const park = () => {
 			if (!Number.isFinite(el.duration) || el.duration <= 0) return;
@@ -4563,6 +4581,7 @@
 				pushError(r.offline ? OFFLINE_TEXT : r.error || 'The shooting workspace did not open.');
 				return;
 			}
+			renderIsSheet = false;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			now = Date.now();
@@ -5675,8 +5694,29 @@
 	 *  GPU was still working and the old one-line counter below carried on
 	 *  ticking. The clip is in flight until its own workspace is the newest thing
 	 *  on the stage. */
+	/** Whether the run holding the render slot is a sheet rather than a clip.
+	 *
+	 *  `$state`, and set at every launch rather than only at the sheet's: a flag
+	 *  that is only ever turned on stops being a fact about the current run the
+	 *  first time a clip follows a sheet. */
+	let renderIsSheet = $state(false);
+
 	let renderInFlight = $derived(
-		!!renderWs && startedAt > 0 && stageNewest?.artifact?.workspace !== renderWs
+		!!renderWs &&
+			// A sheet is not a clip, and the stage is the clip's.
+			//
+			// Sheets take the same render slot as a shot — one slot, deliberately —
+			// so launching one sets renderWs and startedAt exactly as a clip does.
+			// But this clock only stops when the newest thing on the stage IS that
+			// workspace, and a sheet never puts a clip there: it draws six views into
+			// the library. So the loader started, found nothing to wait for, climbed
+			// to its 97% cap and sat there for the whole ten minutes a turnaround
+			// takes — announcing a video that was never coming, over a picture that
+			// had already arrived. The sheet has its own line under the composer and
+			// says its own name in it.
+			!renderIsSheet &&
+			startedAt > 0 &&
+			stageNewest?.artifact?.workspace !== renderWs
 	);
 	/** Whichever clock is running. */
 	let stageClockFrom = $derived(stageStartedAt || (renderInFlight ? startedAt : 0));
@@ -6111,9 +6151,26 @@
 		const fast = setInterval(() => {
 			if (sheetsWorking || Object.values(shotBusy).some(Boolean)) now = Date.now();
 		}, 1_000);
+		// A run outlives its poll, and nothing used to notice.
+		//
+		// The loop reschedules itself at the end of each tick, so any path that
+		// returns early — a stale run id, a workspace that went missing for one
+		// tick, a throw — simply stops it, and the loop is the only thing that
+		// ever collects a finished render. A character sheet finished on the
+		// harness, paid for and sitting on a presigned url, while this page showed
+		// it building for a quarter of an hour and never asked again. The job was
+		// still there: it answered on the first ask afterwards.
+		//
+		// So: if there is a workspace to watch and nothing watching it, start
+		// again. Twenty seconds is far below the cost of noticing by hand and far
+		// above the poll's own cadence, so a healthy loop never trips it.
+		const watchdog = setInterval(() => {
+			if (activeWs && !pollingActive && !staleRun) startPolling();
+		}, 20_000);
 		return () => {
 			clearInterval(clock);
 			clearInterval(fast);
+			clearInterval(watchdog);
 			stopPolling();
 			cleanupAudio?.();
 		};
@@ -8901,17 +8958,6 @@
 					     a line saying nothing is happening. Silence already says that, and
 					     it said it about a `startedAt` days old, next to a box you were
 					     about to type in. -->
-						{#each drawingHere as sh (sh.id)}
-							<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
-								<span
-									class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
-									aria-hidden="true"
-								></span>
-								<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
-								<span class="text-[var(--st-faint)]">·</span>
-								<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
-							</p>
-						{/each}
 						<!-- Everything under the stage shares the composer's measure: the reference
 							     chips, the hint line and the film reel line up with the box they belong
 							     to instead of running the width of the column over it. -->
@@ -8962,37 +9008,6 @@
 								     appears the moment there is a film to count, and appearing is height, and
 								     height is the picture's width. Off the stage it keeps its old behaviour,
 								     where an empty row is only an empty row. -->
-								{#if composerHint || film.length || (STAGE_UI && mode === 'simple')}
-									<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
-										<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
-										<span class="flex-1"></span>
-										{#if film.length}
-											<button
-												type="button"
-												aria-expanded={filmOpen}
-												ondragover={(e) => {
-													if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
-												}}
-												ondrop={(e) => dropClipIntoFilm(e)}
-												onclick={() => (filmOpen = !filmOpen)}
-												class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
-													? 'bg-[var(--st-surface-2)]'
-													: ''}"
-											>
-												<span class="reelmark" aria-hidden="true"></span>
-												<span
-													>{film.length}
-													{film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span
-												>
-												<span
-													class="text-[0.6rem] text-[var(--st-faint)] {filmOpen
-														? 'rotate-180'
-														: ''}">⌄</span
-												>
-											</button>
-										{/if}
-									</div>
-								{/if}
 
 								<!-- The reel's room is standing, whether or not there is a reel in it.
 								     The picture on the stage is height-bound — it is 16:9 filling whatever
@@ -9030,6 +9045,47 @@
 						 up — pad one and not the other and they sit half a strip apart. -->
 							</div>
 						</div>
+						{#each drawingHere as sh (sh.id)}
+							<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
+								<span
+									class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+									aria-hidden="true"
+								></span>
+								<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
+								<span class="text-[var(--st-faint)]">·</span>
+								<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
+							</p>
+						{/each}
+						{#if composerHint || film.length || (STAGE_UI && mode === 'simple')}
+							<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
+								<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
+								<span class="flex-1"></span>
+								{#if film.length}
+									<button
+										type="button"
+										aria-expanded={filmOpen}
+										ondragover={(e) => {
+											if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
+										}}
+										ondrop={(e) => dropClipIntoFilm(e)}
+										onclick={() => (filmOpen = !filmOpen)}
+										class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
+											? 'bg-[var(--st-surface-2)]'
+											: ''}"
+									>
+										<span class="reelmark" aria-hidden="true"></span>
+										<span
+											>{film.length}
+											{film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span
+										>
+										<span
+											class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
+											>⌄</span
+										>
+									</button>
+								{/if}
+							</div>
+						{/if}
 						<div>
 							<div
 								class="relative rounded-3xl bg-[var(--st-surface)] p-3 {STAGE_UI
@@ -9125,6 +9181,7 @@
 														<img
 															src="/studio/api/sheet/img/{chosenCharacter.id}"
 															alt=""
+															onerror={sheetImageMissing}
 															class="size-7 shrink-0 rounded-full object-cover"
 														/>
 													{:else}
@@ -9279,6 +9336,7 @@
 													<img
 														src="/studio/api/sheet/img/{chosenCharacter.id}"
 														alt=""
+														onerror={sheetImageMissing}
 														class="size-5 shrink-0 rounded-full object-cover"
 													/>
 													<!-- 4rem, because a sheet made from a photograph is named after the
@@ -9345,6 +9403,7 @@
 												<img
 													src="/studio/api/sheet/img/{chosenLocation.id}"
 													alt=""
+													onerror={sheetImageMissing}
 													class="size-5 shrink-0 rounded-md object-cover"
 												/>
 												<span class="max-w-[4rem] truncate">{chosenLocation.name}</span>
@@ -9663,6 +9722,7 @@
 																<img
 																	src="/studio/api/sheet/img/{s.id}"
 																	alt=""
+																	onerror={sheetImageMissing}
 																	class="aspect-square w-full object-cover transition-opacity hover:opacity-80 {pickKind ===
 																	'character'
 																		? 'rounded-full'

@@ -28,6 +28,7 @@
 import { error, text } from '@sveltejs/kit';
 import { absoluteGraphUrl } from '../../../../bundle.server';
 import type { RequestHandler } from './$types';
+import { env } from '$env/dynamic/private';
 
 const REPO = 'https://raw.githubusercontent.com/almoehi/auteur-library/refs/heads/main/workflows';
 
@@ -63,10 +64,16 @@ const SHEETS: Record<string, string> = {
  *  worth asking Hannes to expose.
  */
 function patchLocation(json: string, outdoor: boolean): string {
-	const graph = JSON.parse(json) as Record<string, { class_type?: string; inputs?: Record<string, unknown> }>;
+	const graph = JSON.parse(json) as Record<
+		string,
+		{ class_type?: string; inputs?: Record<string, unknown> }
+	>;
 	const node = Object.values(graph).find((n) => n?.class_type === 'OrbitSheetsLocationPrompt');
 	if (!node?.inputs) {
-		throw error(502, 'the location bundle has no OrbitSheetsLocationPrompt — it has been restructured');
+		throw error(
+			502,
+			'the location bundle has no OrbitSheetsLocationPrompt — it has been restructured'
+		);
 	}
 	if (!('space' in node.inputs) || !('wide_establishing_shot' in node.inputs)) {
 		throw error(502, 'the location prompt node no longer takes space and wide_establishing_shot');
@@ -105,8 +112,15 @@ function patchLocation(json: string, outdoor: boolean): string {
  *  the version, so naming an undeployed card does NOT quietly resolve to
  *  something cheaper — it fails at submit with a retryable error and starts a
  *  GPU downgrade ladder. A wrong value here is a slow confusing failure, not a
- *  silent demotion. */
-const PIN = 'h100';
+ *  silent demotion.
+ *
+ *  It reads AUTEUR_GPU_CARD now, so the whole studio moves on one switch. Not
+ *  for speed: the measurement below closes that question — twelve seconds of
+ *  this render is sampling and the rest is weights being read, which is why two
+ *  cards came out three per cent apart. It is so that a second hardcoded card
+ *  cannot drift away from the first. That exact drift cost an hour the day the
+ *  clip profile still said a100 under a bundle that said b200. */
+const PIN = (env.AUTEUR_GPU_CARD || 'h100').trim();
 
 /** A measurement knob, and nothing else. Set to a number to force the H3 orbit
  *  video's frame count; leave `null` to serve the workflow's own default of 124.
@@ -165,7 +179,8 @@ export const GET: RequestHandler = async ({ params, fetch, url }) => {
 		const raw = await upstream(name, 'workflow.json', fetch);
 		// The character graph goes through untouched — it is a turnaround of one
 		// person and already scripts six shots against its own six-way cut.
-		const body = params.kind === 'character' ? raw : patchLocation(raw, params.kind === 'location-outdoor');
+		const body =
+			params.kind === 'character' ? raw : patchLocation(raw, params.kind === 'location-outdoor');
 		return text(body, { headers: { 'content-type': 'application/json' } });
 	}
 	if (params.file !== 'workflow.yaml' && params.file !== 'workflow.yml') {
@@ -179,7 +194,10 @@ export const GET: RequestHandler = async ({ params, fetch, url }) => {
 	// unchanged would quietly put us back on the l40s and the only symptom would
 	// be a render that felt slow.
 	if (!/^gpu_types:\s*\[[^\]]*\]\s*$/m.test(src)) {
-		throw error(500, `${name} no longer declares gpu_types on one line — check upstream before pinning`);
+		throw error(
+			500,
+			`${name} no longer declares gpu_types on one line — check upstream before pinning`
+		);
 	}
 	let out = src.replace(/^gpu_types:\s*\[[^\]]*\]\s*$/m, `gpu_types: [${PIN}]`);
 
