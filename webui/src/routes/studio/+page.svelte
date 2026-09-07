@@ -745,14 +745,23 @@
 
 	async function stopRun() {
 		const b = launchedBrief ?? brief;
-		if (!b?.slug || stopping) return;
+		const ids = [planningWs, renderWs].filter((w): w is string => !!w);
+		// A clip run has no brief, and used to have no way out.
+		//
+		// This required a slug, which only a full production has — so on the stage
+		// the only stop was the studio's own api/stop called by hand, and the page
+		// went on counting over a render that had already been torn down. A run
+		// with a live workspace id is stoppable whether or not anything wrote a
+		// plan for it.
+		if ((!b?.slug && !ids.length) || stopping) return;
 		stopping = true;
 		try {
-			const ids = [planningWs, renderWs].filter((w): w is string => !!w);
 			const res = await fetch('/studio/api/stop', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify(ids.length ? { workspaces: ids } : { slug: b.slug })
+				// Ids when the run has them, the slug only as the planning path's
+				// fallback — and by here one of the two exists.
+				body: JSON.stringify(ids.length ? { workspaces: ids } : { slug: b!.slug })
 			});
 			const d = (await res.json()) as { ok: boolean; removed?: number; torndown?: boolean };
 
@@ -760,6 +769,15 @@
 			// message would re-report the run as alive.
 			runId += 1;
 			pollingActive = false;
+			// And the stage, which counts on its own clock. Left set, the loader
+			// carried on over a torn-down run — which is the state this whole
+			// button exists to leave.
+			stageStartedAt = 0;
+			stageWaitFrom = '';
+			stageWaitBlurUrl = '';
+			sending = false;
+			renderWs = '';
+			startedAt = 0;
 
 			pushStudio(
 				d.ok
@@ -7283,14 +7301,46 @@
 									 seconds, which is slow enough not to be watched and often
 									 enough to be believed. -->
 										<div class="stage-sweep pointer-events-none absolute inset-0"></div>
-										<div
-											class="relative flex items-center gap-3 rounded-full bg-black/45 px-4 py-2 backdrop-blur"
-										>
-											<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
-											></span>
-											<span class="font-display text-sm font-semibold text-white"
-												>Generating {stagePercent}%</span
+										<div class="relative flex flex-col items-center gap-2">
+											<div
+												class="flex items-center gap-3 rounded-full bg-black/45 px-4 py-2 backdrop-blur"
 											>
+												<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+												></span>
+												<span class="font-display text-sm font-semibold text-white"
+													>Generating {stagePercent}%</span
+												>
+											</div>
+											<!-- The way out, where the waiting is.
+											     A render is billed per second on somebody's GPU, and until
+											     now a clip run had no stop at all — the studio's own endpoint
+											     had to be called by hand, and the page went on counting over
+											     a run that had already been torn down. Quiet, and two steps,
+											     because it cannot be undone: a workspace id opens once. -->
+											{#if stopArmed}
+												<div class="flex items-center gap-1.5">
+													<button
+														type="button"
+														disabled={stopping}
+														onclick={stopRun}
+														class="cursor-pointer rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-black disabled:opacity-60"
+														>{stopping ? 'stopping…' : 'yes, stop it'}</button
+													>
+													<button
+														type="button"
+														onclick={() => (stopArmed = false)}
+														class="cursor-pointer rounded-full px-3 py-1 text-xs text-white/70 hover:text-white"
+														>keep going</button
+													>
+												</div>
+											{:else}
+												<button
+													type="button"
+													onclick={() => (stopArmed = true)}
+													class="cursor-pointer rounded-full px-3 py-1 text-xs text-white/45 transition-colors hover:text-white/80"
+													>stop</button
+												>
+											{/if}
 										</div>
 									</div>
 								{:else if stagePhase === 'round' && stageRound?.confirm}
