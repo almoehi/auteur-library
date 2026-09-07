@@ -3049,6 +3049,35 @@
 	 *  The character is usable the moment this returns: a render reads the picture,
 	 *  not the six views, and those arrive later on the card by themselves.
 	 */
+	/** Choosing to carry on with these people is the answer "Keep this person"
+	 *  was asking for, so it stops being a question.
+	 *
+	 *  It sat beside the choice as a button of its own, which made the ordinary
+	 *  path — continue, then keep — two clicks and, on a phone, a third line in a
+	 *  row that already wrapped. Either continuation answers it. A new clip does
+	 *  not: that is the one case where this person is not being carried anywhere.
+	 *
+	 *  Guarded on exactly what the button was guarded on, so this fires where the
+	 *  offer would have been made and nowhere else — the call reads five frames
+	 *  and costs a vision request, and a second one would only overwrite the
+	 *  sheet the first wrote. */
+	/** NOT WIRED UP, and this comment is why.
+	 *
+	 *  Choosing a continuation is the answer "Keep this person" asks for, so
+	 *  firing it from that choice looked free. It is not: makeCharacterFromClip
+	 *  calls /studio/api/charfromclip, which writes a sheet AND kicks off a
+	 *  turnaround — a GPU render, fire-and-forget, paid for. Tapping "Same
+	 *  person" started one, silently, and three of them were running before
+	 *  anybody noticed.
+	 *
+	 *  An automatic action may cost a request. It may not cost a render. Kept
+	 *  here so the next attempt starts from the constraint rather than from the
+	 *  idea: the marking has to happen without the turnaround, or not at all. */
+	function keepPersonForContinuation() {
+		if (!continuing || continuing.characterId || charFromClipBusy) return;
+		void makeCharacterFromClip();
+	}
+
 	async function makeCharacterFromClip() {
 		const c = continuing;
 		if (!c || charFromClipBusy) return;
@@ -9561,7 +9590,7 @@
 														contOffFor = '';
 														if (!continuing && stageContinuable) startContinue(stageContinuable);
 														pinSeam = true;
-													}}
+																						}}
 													class="flex min-h-9 cursor-pointer items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-xs transition-colors {continuing &&
 													pinSeam
 														? 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'
@@ -9587,7 +9616,7 @@
 														contOffFor = '';
 														if (!continuing && stageContinuable) startContinue(stageContinuable);
 														pinSeam = false;
-													}}
+																						}}
 													class="flex min-h-9 cursor-pointer items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-xs transition-colors {continuing &&
 													!pinSeam
 														? 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'
