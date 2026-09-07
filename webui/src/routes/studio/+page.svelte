@@ -1548,7 +1548,12 @@
 	 *
 	 *  Kept across reloads: these are how you work, not what this clip is. */
 	const SETUP_KEY = 'auteur-studio-setup';
-	let wantSeconds = $state(8);
+	/** Five seconds and 576p to start with.
+	 *  The shortest clip and the middle frame: the first send a person makes
+	 *  should be the cheapest one that still shows whether the idea works, and
+	 *  eight seconds at the old default spent half again as much to say the same
+	 *  thing. Both stay one tap from anything else. */
+	let wantSeconds = $state(5);
 	let wantOrientation = $state<'portrait' | 'landscape'>('portrait');
 	let wantRes = $state<ResKey>('576p');
 	/** What the next message makes. A clip is the default and the common case;
@@ -1592,6 +1597,106 @@
 	let pickKind = $state<null | 'character' | 'location'>(null);
 	/** Length, size and frame, folded for the same reason: all three have a
 	 *  saved default that works, so none of them blocks a first send. */
+	/** Which group in the settings row above the composer is open.
+	 *
+	 *  Empty means all of them are folded to their current value, which is the
+	 *  resting state: the row then reads as a line of facts — 5s, 288p, 9:16 —
+	 *  rather than as a wall of choices. One at a time, so the row keeps to a
+	 *  single scroll and the set being chosen is the only one expanded. */
+	let pillGrp = $state('');
+	/** Where the open panel grows from, in pixels along the settings row.
+	 *
+	 *  It opened from the row's left edge whatever was tapped, so pressing the
+	 *  frame bubble at the right-hand end produced a panel somewhere else — the
+	 *  eye had to find it, which is the one thing an animation is supposed to
+	 *  save you. `x` places the panel, `o` puts the growth origin under the
+	 *  bubble itself, so it unfolds out of the thing you pressed. */
+	let pillAt = $state({ x: 0, o: 0 });
+
+	/** Reads the tapped bubble's place in the row and opens from there.
+	 *
+	 *  Clamped to the row: a bubble near the right edge would otherwise put a
+	 *  144px panel half off the screen. When that happens the panel slides back
+	 *  inside and only the origin stays under the bubble, which is what keeps the
+	 *  movement pointing at the right place even when the box cannot. */
+	/** Same trick for the two panels that are not pill groups.
+	 *
+	 *  They opened from the composer's left edge — one as a sheet glued to the
+	 *  bottom of the screen, the other as a popover two hundred pixels from the
+	 *  bubble that summoned it. Both are now measured against the composer box
+	 *  they are positioned in, so they rise out of the control that was pressed
+	 *  like everything else in this row. */
+	let panelAt = $state({ x: 0, o: 0 });
+
+	function openPanelAt(ev: MouseEvent, which: 'fmt' | 'mode') {
+		const el = ev.currentTarget as HTMLElement;
+		const box = el.closest('.composerbox') as HTMLElement | null;
+		if (box) {
+			const b = el.getBoundingClientRect();
+			const w = box.getBoundingClientRect();
+			const PANEL = 312;
+			const raw = b.left - w.left;
+			const x = Math.max(8, Math.min(raw, w.width - PANEL - 8));
+			panelAt = { x, o: Math.max(12, Math.min(b.left - w.left - x + b.width / 2, PANEL - 12)) };
+		}
+		const open = which === 'fmt' ? !fmtOpen : !modeOpen;
+		shutMenus();
+		if (which === 'fmt') fmtOpen = open;
+		else modeOpen = open;
+	}
+
+	function openPillAt(ev: MouseEvent, id: string) {
+		const el = ev.currentTarget as HTMLElement;
+		const wrap = el.closest('.pillwrap') as HTMLElement | null;
+		if (wrap) {
+			const b = el.getBoundingClientRect();
+			const w = wrap.getBoundingClientRect();
+			const PANEL = 144;
+			const raw = b.left - w.left;
+			const x = Math.max(0, Math.min(raw, w.width - PANEL));
+			pillAt = { x, o: Math.max(8, Math.min(b.left - w.left - x + b.width / 2, PANEL - 8)) };
+		}
+		pillGrp = id;
+	}
+
+	/** The row's groups, folded or open. Built rather than written out because
+	 *  the continuation group only exists when there is something to continue,
+	 *  and because each one has to say three things — what it is set to now, what
+	 *  else it could be, and what to do about it — which is a shape, not markup. */
+	function PILL_GROUPS() {
+		const g: {
+			id: string;
+			up: boolean;
+			now: string;
+			opts: { v: string; l: string; box: string; off: boolean }[];
+			pick: (v: string) => void;
+		}[] = [];
+		if (stageContinuable) {
+			g.push({
+				id: 'next',
+				up: true,
+				now: !continuing ? 'new' : pinSeam ? 'seam' : 'same',
+				opts: [
+					{ v: 'seam', l: 'Last frame', box: '', off: false },
+					{ v: 'same', l: 'Same person', box: '', off: false },
+					{ v: 'new', l: 'New clip', box: '', off: false }
+				],
+				pick: (v: string) => {
+					if (v === 'new') {
+						contOffFor = stageContinuable?.id ?? '';
+						continuing = null;
+						spendConfirmChain();
+						return;
+					}
+					contOffFor = '';
+					if (!continuing && stageContinuable) startContinue(stageContinuable);
+					pinSeam = v === 'seam';
+				}
+			});
+		}
+		return g;
+	}
+
 	let fmtOpen = $state(false);
 	/** One clip or a full production. It used to sit in the header, where it read
 	 *  as a property of the page; it is a property of the message you are about
@@ -6002,7 +6107,14 @@
 	 *  composer stops shrinking rather than following the picture down. */
 	const COMPOSER_FLOOR = '48rem';
 	let composerCap = $derived(
-		STAGE_UI ? `max-width:max(${COMPOSER_FLOOR}, ${Math.max(stageVideoW, 0)}px)` : undefined
+		STAGE_UI
+			// min() around the floor, because the floor is a desktop measurement.
+			// 48rem is 768px and a phone is 375: without this the composer asks to be
+			// twice the window, and the "stops shrinking rather than following the
+			// picture down" rule — written for a window wider than any clip — turns
+			// into an element wider than the screen.
+			? `max-width:min(100%, max(${COMPOSER_FLOOR}, ${Math.max(stageVideoW, 0)}px))`
+			: undefined
 	);
 
 	/** A subject being made right now — a photograph going up, or a description
@@ -6286,7 +6398,16 @@
 					k?: number;
 					kk?: number;
 				};
-				if (typeof v.s === 'number' && v.s >= 4 && v.s <= 15) wantSeconds = v.s;
+				// Snapped to what the row can show. The durations were 5/6/8/10/12/15
+				// and are now 5/10/15, so a stored 6, 8 or 12 would restore a value with
+				// no pill to light up — the fold would read 5s while the send made 8. A
+				// setting the surface cannot show is a setting nobody can correct.
+				if (typeof v.s === 'number' && v.s >= 4 && v.s <= 15) {
+					const was = v.s;
+					wantSeconds = [5, 10, 15].reduce((a, b) =>
+						Math.abs(b - was) < Math.abs(a - was) ? b : a
+					);
+				}
 				if (v.o === 'portrait' || v.o === 'landscape') wantOrientation = v.o;
 				if (v.r && v.r in RESOLUTIONS) wantRes = v.r as ResKey;
 				if (v.t === 'clip' || v.t === 'character' || v.t === 'location') wantTarget = v.t;
@@ -7293,7 +7414,9 @@
 								 empty. Right rather than left because the eye starts at the
 								 picture; the chain is where you go after it, not before. -->
 							{#if showStrip}
-								<div class="absolute top-0 right-0 z-10 flex w-[5.4rem] flex-col gap-2">
+								<div
+									class="absolute right-0 bottom-0 z-10 flex w-[4.5rem] flex-col-reverse gap-2 lg:top-0 lg:bottom-auto lg:w-[5.4rem] lg:flex-col"
+								>
 									<!-- The one being made takes its place in the strip the moment it is
 								 asked for, at the top where it will land. The chain is what this
 								 column shows and the next link is already real — it is being paid
@@ -7301,7 +7424,7 @@
 								 disagree with the stage beside it. -->
 									{#if stagePhase === 'working'}
 										<div
-											class="flex aspect-video w-full items-center justify-center rounded-lg bg-[var(--st-surface)] ring-2 ring-[var(--st-text)]"
+											class="flex aspect-video w-full shrink-0 items-center justify-center rounded-lg bg-[var(--st-surface)] ring-2 ring-[var(--st-text)]"
 										>
 											<span
 												class="spin size-4 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-accent)]"
@@ -7344,7 +7467,7 @@
 															? ''
 															: t.workspace;
 												}}
-												class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-opacity {here
+												class="relative aspect-video w-full shrink-0 cursor-pointer overflow-hidden rounded-lg bg-black transition-opacity {here
 													? 'opacity-100 ring-2 ring-[var(--st-text)]'
 													: 'opacity-45 hover:opacity-75'}"
 											>
@@ -7380,7 +7503,9 @@
 								 height-bound and 16:9, the same way the video is measured. -->
 									<!-- The size the clip will be, so nothing jumps when it arrives. -->
 									<div
-										class="relative flex aspect-video h-full max-h-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--st-surface)]"
+										class="relative flex max-h-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--st-surface)] {composerShape.portrait
+											? 'h-full w-auto aspect-[9/16]'
+											: 'aspect-video w-full lg:h-full lg:w-auto'}"
 									>
 										{#if stageWaitBlurUrl}
 											<!-- svelte-ignore a11y_media_has_caption -->
@@ -7726,7 +7851,17 @@
 										<!-- Sized to the clip, not to the column: the row of actions anchors
 									 to this box, and anchored to the column it hung off the picture's
 									 edges into the black beside it. -->
-										<div class="relative h-full w-fit max-w-full">
+										<!-- Mobile fits the whole clip rather than filling the box.
+											 On a phone the picture is the surface, and a landscape clip in a
+											 portrait window has to be seen whole rather than cropped or
+											 overflowing the screen — which is what h-full did, pushing a
+											 16:9 clip past the right edge. With both dimensions capped and
+											 neither set, the element keeps its own ratio and scales down to
+											 whichever runs out first: a portrait clip fills the height, a
+											 landscape one sits centred and smaller. Desktop keeps h-full,
+											 where the window is wider than any clip and the picture should
+											 take all the height there is. -->
+										<div class="relative max-h-full w-fit max-w-full lg:h-full">
 											{#if f}
 												<!-- svelte-ignore a11y_media_has_caption -->
 												<video
@@ -7736,7 +7871,7 @@
 													loop
 													playsinline
 													bind:clientWidth={stageVideoW}
-													class="video-with-controls h-full w-auto max-w-full rounded-2xl bg-black"
+													class="video-with-controls max-h-full w-auto max-w-full rounded-2xl bg-black lg:h-full"
 												></video>
 											{/if}
 											<div
@@ -7755,7 +7890,7 @@
 																type="button"
 																onclick={() =>
 																	addClipToFilm(shownPart, stageClip?.artifact?.title ?? '')}
-																class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs font-semibold text-white backdrop-blur transition-colors hover:bg-black/75"
+																class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] font-semibold text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
 																>Add to film</button
 															>
 														{/if}
@@ -7766,13 +7901,13 @@
 														<button
 															type="button"
 															onclick={() => rate(sws, 'kept')}
-															class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
+															class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
 															>Good</button
 														>
 														<button
 															type="button"
 															onclick={() => rate(sws, 'rejected')}
-															class="cursor-pointer rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
+															class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
 															>Not good</button
 														>
 													{:else}
@@ -8664,7 +8799,7 @@
 											<div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
 												<div class="flex items-center gap-1.5">
 													<span class="mr-1 text-xs text-[var(--st-faint)]">seconds</span>
-													{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
+													{#each [5, 10, 15] as sec (sec)}
 														<button
 															type="button"
 															class="cursor-pointer rounded-md px-2 py-0.5 text-xs tabular-nums transition-colors {item
@@ -9327,7 +9462,7 @@
 					{/if}
 
 					<!-- ── the composer — pinned, outside the scrolling region ── -->
-					<div class="relative shrink-0 pt-3 pb-4">
+					<div class="composerbox relative shrink-0 pt-3 pb-4">
 						{#if !atBottom}
 							<!-- Scrolled up and reading? New messages must not yank the view.
 							 This is the way back down, the way every chat client offers it. -->
@@ -9456,8 +9591,14 @@
 									 everything else in this stack is spaced by one step. Bottom-aligned,
 									 the slack goes above it, where the picture is, and the reel keeps its
 									 own step to the chip. -->
+									<!-- The standing room is a desktop trade. Holding 4.4rem open so the
+										 picture does not jump when the reel arrives costs nothing on a wide
+										 window and seventy pixels of a phone — where it reads as an empty
+										 black band above the composer, and where those pixels are the ones
+										 the clip itself is short of. Below lg the band takes only the height
+										 of what is actually in it. -->
 									<div
-										class="flex min-h-[4.4rem] shrink-0 flex-col justify-end"
+										class="flex shrink-0 flex-col justify-end lg:min-h-[4.4rem]"
 										aria-hidden={!(film.length && filmOpen)}
 									>
 										<!-- Only when the stage is not already saying it. The character surface
@@ -9532,6 +9673,252 @@
 							{/if}
 						</div>
 						<div>
+							<!-- The settings, in the open, above the sentence.
+								 The sheet behind the slider holds the same answers and holds them
+								 better when there are many — but it costs a tap to see what is set,
+								 and on a phone the three that change most often are worth having in
+								 sight. A row rather than a wrap: everything stays on one line and the
+								 line scrolls, so a fourth group appearing never pushes the field down.
+								 Phones only; the desktop chips already say this on one line. -->
+							<!-- The row scrolls, so nothing inside it can escape it: overflow-x makes
+								 the vertical overflow non-visible too, and a panel opening upward from a
+								 bubble would be sliced off at the top. The wrapper is where it opens
+								 from instead — outside the scroller, above the row, over the picture. -->
+							<div class="pillwrap relative mb-1.5 lg:hidden">
+								{#each PILL_GROUPS().filter((x) => x.up && pillGrp === x.id) as grp (grp.id)}
+									<div
+										style="left:{pillAt.x}px; transform-origin:{pillAt.o}px bottom"
+										class="pillrise absolute bottom-full z-40 mb-1.5 flex min-w-36 flex-col gap-0.5 rounded-2xl bg-[var(--st-surface)] p-1 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+									>
+										{#each grp.opts as o, i (o.v)}
+											<button
+												type="button"
+												disabled={o.off}
+												aria-pressed={grp.now === o.v}
+												onclick={() => {
+													grp.pick(o.v);
+													pillGrp = '';
+												}}
+												style="animation-delay:{i * 45}ms"
+												title={o.off ? `over ${MAX_AT_ONCE} clips at once` : ''}
+												class="pillopen flex min-h-9 items-center gap-2 rounded-xl px-3 text-xs transition-colors {o.off
+													? 'cursor-default text-[var(--st-faint)] opacity-35'
+													: 'cursor-pointer'} {!o.off && grp.now === o.v
+													? 'bg-[var(--st-surface-2)] font-semibold text-[var(--st-text)]'
+													: !o.off
+														? 'text-[var(--st-faint)] hover:text-[var(--st-text)]'
+														: ''}"
+											>
+												{#if o.box}<span class="block rounded-[2px] border border-current {o.box}"
+													></span>{/if}
+												{o.l}
+											</button>
+										{/each}
+									</div>
+								{/each}
+								<!-- Wide between groups, tight inside them. At the same 1.5 the two gaps
+									 said the same thing, so 5s 10s 15s 288p 576p 864p read as one run of
+									 six options rather than as two questions with three answers each. The
+									 grouping is the meaning here; the space has to carry it. -->
+								<div class="railstrip flex items-center gap-3 overflow-x-auto pb-0.5">
+									<!-- One group open, the rest folded to what they are set to.
+										 Six settings side by side is a wall of options nobody asked to read,
+										 and it pushed the ones that matter off the end of the line. Folded,
+										 each bubble is a fact — 5s, 576p, 9:16 — and opening one is how you
+										 change it. Only one opens at a time, so the row never grows past a
+										 scroll and the answer you are choosing is the only set on screen. -->
+									<!-- The bubble stays whether or not anyone is cast, and this is the
+										 second time that rule has had to be learned here: gated on
+										 chosenCharacter it disappeared exactly when it was needed, because
+										 with nobody chosen there was nothing to tap to choose somebody. The
+										 empty state is an answer — "anyone" — and it is the default one.
+										 The desktop chip already says this; see the note beside it. -->
+									<button
+										type="button"
+										onclick={() => {
+											shutMenus();
+											pickKind = 'character';
+										}}
+										class="flex min-h-8 max-w-[6.75rem] shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] py-1 pr-3 pl-1 text-xs whitespace-nowrap {chosenCharacter
+											? 'text-[var(--st-text)]'
+											: 'text-[var(--st-faint)]'}"
+									>
+										{#if chosenCharacter}
+											<img
+												src="/studio/api/sheet/img/{chosenCharacter.id}"
+												alt=""
+												onerror={sheetImageMissing}
+												class="size-6 shrink-0 rounded-full object-cover"
+											/>
+											<span class="min-w-0 truncate">{chosenCharacter.name}</span>
+										{:else}
+											<!-- The same filled disc the cast chip wears when it is empty: a
+												 placeholder is the shape it stands in for, and a hairline ring
+												 at this size reads as a picture that failed to load. -->
+											<span
+												class="flex size-6 shrink-0 items-center justify-center rounded-full bg-current/10"
+											>
+												<svg
+													viewBox="0 0 16 16"
+													class="size-[11px] opacity-55"
+													fill="currentColor"
+													aria-hidden="true"
+												>
+													<circle cx="8" cy="5.9" r="2.6" />
+													<path d="M3.5 13.4c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4z" />
+												</svg>
+											</span>
+											<span>anyone</span>
+										{/if}
+										<svg
+											viewBox="0 0 10 10"
+											class="size-2.5 shrink-0 opacity-70"
+											fill="none"
+											aria-hidden="true"
+										>
+											<path
+												d="M2 4l3 3 3-3"
+												stroke="currentColor"
+												stroke-width="1.4"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+										</svg>
+									</button>
+<!-- Second, right after who is in it. What follows this clip is the
+										 question a continuation asks first — before how many and
+										 before how long — and it was last in the row, past two
+										 settings that do not change between takes. -->
+									{#each PILL_GROUPS() as grp (grp.id)}
+										<!-- Length and size stay open; the frame and the continuation fold.
+											 Two short numbers each read faster as a set than as a fact you have
+											 to tap to question — you can see at a glance that 5s is one of
+											 three, not a value out of nowhere. The other two carry a glyph and
+											 whole sentences, and unfolding those in line pushes the row off the
+											 screen, so they open upward instead. -->
+										{@const open = pillGrp === grp.id}
+										{@const cur = grp.opts.find((o) => o.v === grp.now) ?? grp.opts[0]}
+										<span
+											class="flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--st-surface)] p-0.5 whitespace-nowrap"
+										>
+											{#if !grp.up}
+												{#each grp.opts as o, i (o.v)}
+													<button
+														type="button"
+														disabled={composerShape.fixed}
+														aria-pressed={grp.now === o.v}
+														onclick={() => grp.pick(o.v)}
+														style="animation-delay:{i * 40}ms"
+														class="pillopen flex min-h-7 items-center gap-1.5 rounded-full px-3 font-mono text-xs tabular-nums transition-colors {composerShape.fixed
+															? 'cursor-default opacity-40'
+															: 'cursor-pointer'} {grp.now === o.v
+															? 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'
+															: 'text-[var(--st-faint)]'}"
+													>
+														{o.l}
+													</button>
+												{/each}
+											{:else}
+												<button
+													type="button"
+													aria-expanded={open}
+													onclick={(e) => (open ? (pillGrp = '') : openPillAt(e, grp.id))}
+													class="flex min-h-7 cursor-pointer items-center gap-1.5 rounded-full px-3 font-mono text-xs tabular-nums transition-colors {open
+														? 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'
+														: 'text-[var(--st-muted)]'}"
+												>
+													{#if cur.box}<span
+															class="block rounded-[2px] border border-current {cur.box}"
+														></span>{/if}
+													{cur.l}
+													<!-- Every control that opens says so the same way. The mode chip
+														 carried this chevron and the folded groups did not, so two things
+														 with identical behaviour looked like a control and a readout. -->
+													<svg
+														viewBox="0 0 10 10"
+														class="size-2.5 shrink-0 opacity-70 transition-transform {open
+															? 'rotate-180'
+															: ''}"
+														fill="none"
+														aria-hidden="true"
+													>
+														<path
+															d="M2 4l3 3 3-3"
+															stroke="currentColor"
+															stroke-width="1.4"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														/>
+													</svg>
+												</button>
+											{/if}
+										</span>
+									{/each}
+									<!-- What the send makes, as one bubble opening the panel desktop
+										 already uses: one clip, versions, camera angles, full production.
+										 It was two groups of my own for a moment — takes and angles side by
+										 side — which said the same thing in a worse language and left the
+										 product of the two, the number that actually costs money, nowhere on
+										 screen. One control, one panel, one place the rule lives. -->
+									<button
+										type="button"
+										aria-expanded={modeOpen}
+										onclick={(e) => openPanelAt(e, 'mode')}
+										class="flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-3 text-xs whitespace-nowrap transition-colors {modeOpen
+											? 'text-[var(--st-text)]'
+											: 'text-[var(--st-muted)]'}"
+									>
+										{mode !== 'simple' ? 'full production' : batchLabel}
+										<svg
+											viewBox="0 0 10 10"
+											class="size-2.5 shrink-0 opacity-70"
+											fill="none"
+											aria-hidden="true"
+										>
+											<path
+												d="M2 4l3 3 3-3"
+												stroke="currentColor"
+												stroke-width="1.4"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+										</svg>
+									</button>
+									<!-- Length, size and frame in one bubble, the way the desktop chip
+										 already says them. Three groups side by side was six pills and 604
+										 pixels of a 335-pixel row: everything on screen, nothing readable.
+										 One fact — 5s · 576p · 9:16 — and the panel behind it is the panel
+										 desktop opens, so the rule lives in one place. -->
+									<button
+										type="button"
+										aria-expanded={fmtOpen}
+										onclick={(e) => openPanelAt(e, 'fmt')}
+										class="flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-3 font-mono text-xs whitespace-nowrap transition-colors {fmtOpen
+											? 'text-[var(--st-text)]'
+											: 'text-[var(--st-muted)]'}"
+									>
+										{composerShape.seconds}s · {composerShape.res} · {composerShape.portrait
+											? '9:16'
+											: '16:9'}
+										<svg
+											viewBox="0 0 10 10"
+											class="size-2.5 shrink-0 opacity-70 transition-transform {fmtOpen
+												? 'rotate-180'
+												: ''}"
+											fill="none"
+											aria-hidden="true"
+										>
+											<path
+												d="M2 4l3 3 3-3"
+												stroke="currentColor"
+												stroke-width="1.4"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+										</svg>
+									</button>
+								</div>
+							</div>
 							<div
 								class="relative rounded-3xl bg-[var(--st-surface)] p-3 {STAGE_UI
 									? 'mx-auto w-full'
@@ -9582,7 +9969,7 @@
 										     wears the person it would keep, and the third wears nothing — which is
 										     not an omission, it is the answer. An empty rectangle would read as a
 										     picture that failed to load. -->
-											<div class="mt-2 flex flex-wrap items-center gap-1.5">
+											<div class="mt-2 hidden flex-wrap items-center gap-1.5 lg:flex">
 												<button
 													type="button"
 													aria-pressed={!!continuing && pinSeam}
@@ -9607,7 +9994,7 @@
 															class="h-7 w-[3.1rem] shrink-0 rounded-full bg-black object-cover"
 														></video>
 													{/if}
-													<span>From the last frame</span>
+													<span class="lg:hidden">Last frame</span><span class="hidden lg:inline">From the last frame</span>
 												</button>
 												<button
 													type="button"
@@ -9652,7 +10039,7 @@
 															</svg>
 														</span>
 													{/if}
-													<span>Same person &amp; place</span>
+													<span class="lg:hidden">Same person</span><span class="hidden lg:inline">Same person &amp; place</span>
 												</button>
 												<button
 													type="button"
@@ -9765,7 +10152,7 @@
 								 replaces showed every kept sheet whether or not you had chosen
 								 it; a chip shows what you chose and nothing else, so the answer
 								 to "who and where" is still one glance. -->
-									<div class="mb-1 flex flex-wrap items-center gap-1.5 px-1">
+									<div class="mb-1 hidden flex-wrap items-center gap-1.5 px-1 lg:flex">
 										{#if chosenCharacter}
 											<span
 												class="flex items-center gap-2 rounded-full bg-[var(--st-bg)] py-1 pr-1 pl-1 text-xs"
@@ -9908,7 +10295,7 @@
 												shutMenus();
 												fmtOpen = open;
 											}}
-											class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+											class="hidden min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-bg)] px-3 font-mono text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)] lg:flex"
 										>
 											{composerShape.seconds}s · {composerShape.res} · {composerShape.portrait
 												? '9:16'
@@ -10332,7 +10719,8 @@
 								{#if modeOpen}
 									<div
 										role="menu"
-										class="enter absolute bottom-full left-2 z-30 mb-2 w-[19.5rem] max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+										style="left:{panelAt.x}px; transform-origin:{panelAt.o}px bottom"
+										class="pillrise absolute bottom-full z-40 mb-2 w-[19.5rem] max-w-[calc(100vw-2rem)] rounded-2xl bg-[var(--st-surface)] p-2 shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)] lg:left-2! lg:z-30"
 									>
 										<!-- One list, one question — what this message makes. Two axes on
 									 it rather than two modes: versions vary the draw, angles vary
@@ -10471,9 +10859,10 @@
 								 that wrap impossible by construction. -->
 									<div
 										role="menu"
-										class="enter absolute bottom-full left-2 z-30 mb-2 w-[19.5rem] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl bg-[var(--st-surface)] shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)]"
+										style="left:{panelAt.x}px; transform-origin:{panelAt.o}px bottom"
+										class="pillrise absolute bottom-full z-40 mb-2 w-[19.5rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-[var(--st-surface)] shadow-[0_16px_44px_rgba(0,0,0,.6)] ring-1 ring-[var(--st-line)] lg:left-2! lg:z-30"
 									>
-										<div class="flex items-center gap-3 px-3 py-2.5">
+										<div class="flex items-center gap-3 px-4 py-2.5 lg:px-3">
 											<span
 												class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]"
 											>
@@ -10493,8 +10882,8 @@
 												</svg>
 												Length
 											</span>
-											<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
-												{#each [5, 6, 8, 10, 12, 15] as sec (sec)}
+											<span class="ml-auto flex gap-0.5 rounded-full p-0.5 lg:bg-[var(--st-bg)]">
+												{#each [5, 10, 15] as sec (sec)}
 													<button
 														type="button"
 														aria-pressed={wantSeconds === sec}
@@ -10505,7 +10894,7 @@
 														}}
 														class="flex min-h-7 min-w-7 cursor-pointer items-center justify-center rounded-full px-1.5 font-mono text-xs tabular-nums transition-colors {wantSeconds ===
 														sec
-															? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+															? 'font-semibold text-[var(--st-text)] lg:bg-[var(--st-surface-2)] lg:font-medium'
 															: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{sec}</button
 													>
 												{/each}
@@ -10513,7 +10902,7 @@
 										</div>
 
 										<div
-											class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]"
+											class="flex items-center gap-3 px-4 py-2.5 shadow-[inset_0_1px_0_var(--st-line)] lg:px-3"
 										>
 											<span
 												class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]"
@@ -10542,7 +10931,7 @@
 												</svg>
 												Size
 											</span>
-											<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+											<span class="ml-auto flex gap-0.5 rounded-full p-0.5 lg:bg-[var(--st-bg)]">
 												{#each RES_KEYS as r (r)}
 													{@const f = frameFor(
 														r,
@@ -10560,7 +10949,7 @@
 														class="flex min-h-7 items-center justify-center rounded-full px-2.5 font-mono text-xs tabular-nums transition-colors {composerShape.fixed
 															? 'cursor-default opacity-40'
 															: 'cursor-pointer'} {composerShape.res === r
-															? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+															? 'font-semibold text-[var(--st-text)] lg:bg-[var(--st-surface-2)] lg:font-medium'
 															: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}">{r}</button
 													>
 												{/each}
@@ -10568,7 +10957,7 @@
 										</div>
 
 										<div
-											class="flex items-center gap-3 px-3 py-2.5 shadow-[inset_0_1px_0_var(--st-line)]"
+											class="flex items-center gap-3 px-4 py-2.5 shadow-[inset_0_1px_0_var(--st-line)] lg:px-3"
 										>
 											<span
 												class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]"
@@ -10593,7 +10982,7 @@
 											</span>
 											<!-- The one place a glyph beats the label: the thing being chosen
 										 IS a shape, and two rectangles say it faster than 9:16 does. -->
-											<span class="ml-auto flex gap-0.5 rounded-full bg-[var(--st-bg)] p-0.5">
+											<span class="ml-auto flex gap-0.5 rounded-full p-0.5 lg:bg-[var(--st-bg)]">
 												{#each [['portrait', '9:16', 'h-3 w-2'], ['landscape', '16:9', 'h-2 w-3.5']] as [val, label, box] (val)}
 													<button
 														type="button"
@@ -10610,7 +10999,7 @@
 															: 'cursor-pointer'} {(composerShape.portrait
 															? 'portrait'
 															: 'landscape') === val
-															? 'bg-[var(--st-surface-2)] font-medium text-[var(--st-text)]'
+															? 'font-semibold text-[var(--st-text)] lg:bg-[var(--st-surface-2)] lg:font-medium'
 															: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
 													>
 														<span class="block rounded-[2px] border border-current {box}"></span>
@@ -10619,6 +11008,66 @@
 												{/each}
 											</span>
 										</div>
+										<!-- The fourth question, and on a phone the only place it is asked.
+									 It used to be a row of three chips above the field, which wrapped
+									 to two lines and put a decision in front of somebody who had not
+									 asked for one yet. Here it sits with the other three settings,
+									 in the same shape, and the field above stays a field.
+									 Only when there is something to continue — with no clip behind it
+									 the question has no answer, and an empty row is worse than none.
+									 Desktop keeps the chips, where the pictures they wear earn their
+									 width. -->
+										{#if stageContinuable}
+											<div
+												class="flex items-center gap-3 px-4 py-2.5 shadow-[inset_0_1px_0_var(--st-line)] lg:hidden"
+											>
+												<span
+													class="flex items-center gap-2.5 text-sm whitespace-nowrap text-[var(--st-muted)]"
+												>
+													<svg
+														viewBox="0 0 16 16"
+														class="size-[15px] shrink-0 opacity-80"
+														fill="none"
+														aria-hidden="true"
+													>
+														<path
+															d="M3 8h10M9.5 4.5L13 8l-3.5 3.5"
+															stroke="currentColor"
+															stroke-width="1.4"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														/>
+													</svg>
+													Next
+												</span>
+												<span class="ml-auto flex gap-0.5 rounded-full p-0.5 lg:bg-[var(--st-bg)]">
+													{#each [['seam', 'Last frame'], ['same', 'Same person'], ['new', 'New clip']] as [val, label] (val)}
+														{@const on =
+															val === 'new' ? !continuing : !!continuing && (val === 'seam') === pinSeam}
+														<button
+															type="button"
+															aria-pressed={on}
+															onclick={() => {
+																if (val === 'new') {
+																	contOffFor = stageContinuable?.id ?? '';
+																	continuing = null;
+																	spendConfirmChain();
+																	return;
+																}
+																contOffFor = '';
+																if (!continuing && stageContinuable) startContinue(stageContinuable);
+																pinSeam = val === 'seam';
+															}}
+															class="flex min-h-7 cursor-pointer items-center rounded-full px-2.5 text-xs transition-colors {on
+																? 'font-semibold text-[var(--st-text)] lg:bg-[var(--st-surface-2)] lg:font-medium'
+																: 'text-[var(--st-faint)] hover:text-[var(--st-text)]'}"
+														>
+															{label}
+														</button>
+													{/each}
+												</span>
+											</div>
+										{/if}
 									</div>
 								{/if}
 								{#if pendingPhoto}
@@ -10647,7 +11096,13 @@
 							 that used to sit under this in three rows of chips either became a
 							 chip above (because you chose it) or moved into the menu on the left
 							 (because you had not). -->
-								<div class="flex items-end gap-1.5">
+								<!-- Two rows on a phone, one on a desktop.
+								 The sentence is the thing; sharing a line with three controls left it
+								 a box one line tall with the placeholder clipped at the ends. Wrapped,
+								 the field takes the width and starts at the wall, and the controls sit
+								 under it where they read as what you reach for after writing rather
+								 than as furniture around the writing. -->
+								<div class="flex flex-wrap items-end gap-1.5 lg:flex-nowrap">
 									{#if mode === 'simple' && wantTarget === 'clip'}
 										<button
 											type="button"
@@ -10674,6 +11129,7 @@
 												/>
 											</svg>
 										</button>
+										
 									{:else}
 										<!-- In a creation state there is nothing to pick between, so the
 									 paperclip is the whole menu and stands on its own. -->
@@ -10725,7 +11181,7 @@
 												submit();
 											}
 										}}
-										class="block max-h-56 min-h-9 w-full flex-1 resize-none border-0 bg-transparent px-2 py-2 text-[1.05rem] leading-relaxed outline-none placeholder:text-[var(--st-faint)] focus:ring-0"
+										class="order-first block max-h-56 min-h-9 w-full flex-none basis-full resize-none border-0 bg-transparent px-1 py-2 text-[1.05rem] leading-relaxed outline-none placeholder:text-[var(--st-faint)] focus:ring-0 lg:order-none lg:flex-1 lg:basis-auto lg:px-2"
 									></textarea>
 
 									{#if mode === 'advanced' && !planningWs}
@@ -10759,7 +11215,7 @@
 										aria-label="send"
 										disabled={sending || charFromClipBusy || (!input.trim() && !pendingPhoto)}
 										onclick={submit}
-										class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+										class="ml-auto lg:ml-0 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
 									>
 										{#if sending}
 											<span class="text-xs">…</span>
@@ -11322,6 +11778,14 @@
 		display: none;
 	}
 
+	/* Same for the settings row above the composer. */
+	.railstrip {
+		scrollbar-width: none;
+	}
+	.railstrip::-webkit-scrollbar {
+		display: none;
+	}
+
 	/* A take still on the GPU. Global, because the class is only ever produced by
 	   an expression and Svelte's pruner drops what it cannot see in the markup —
 	   the same silent failure the sidebar spacer above documents. */
@@ -11607,6 +12071,45 @@
 	.enter {
 		animation: enter 0.45s cubic-bezier(0.25, 1, 0.5, 1) both;
 	}
+
+	/* A folded setting unfolding.
+	   Each option arrives from where the fold was and a beat after the one
+	   before it, so the group reads as opening rather than as being replaced —
+	   which is what an instant swap looked like, and why the row appeared to
+	   flicker when a bubble was tapped. Short: this sits under a thumb that is
+	   already moving to the next tap. */
+	.pillopen {
+		animation: pillopen 0.26s cubic-bezier(0.25, 1, 0.5, 1) both;
+	}
+
+	/* The panel growing out of the bubble that was pressed.
+	   Scale rather than a slide, and from an origin set on the element itself:
+	   a box that merely appears above the row reads as a different object,
+	   while one that grows from under your finger reads as the same one
+	   opening. The overshoot is small — it is a 144px panel, not a sheet. */
+	.pillrise {
+		animation: pillrise 0.32s cubic-bezier(0.2, 1.15, 0.4, 1) both;
+	}
+	@keyframes pillrise {
+		from {
+			opacity: 0;
+			transform: translateY(8px) scale(0.82);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+	@keyframes pillopen {
+		from {
+			opacity: 0;
+			transform: translateX(-7px) scale(0.93);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
 	@keyframes enter {
 		from {
 			opacity: 0;
@@ -11618,7 +12121,9 @@
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.enter {
+		.enter,
+		.pillopen,
+		.pillrise {
 			animation: none;
 		}
 	}
