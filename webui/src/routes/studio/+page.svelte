@@ -72,6 +72,22 @@
 	const POLL_FAST_MS = 15_000;
 	const POLL_SLOW_MS = 30_000;
 	const QUIET_CYCLES = 3;
+	/** The cadence while the answer is expected, and the share of the typical
+	 *  wait it starts at. A render moves nothing for minutes, so `quiet` always
+	 *  reaches its cap and the loop settles on POLL_SLOW_MS — which means a clip
+	 *  that has finished can sit unnoticed for a full thirty seconds.
+	 *
+	 *  Half, not three quarters. The last dozen renders in the harness log ran
+	 *  246, 254, 285, 305, 395, 426, 426, 436, 458 and 686 seconds — a median
+	 *  around 410, with the quickest finishing at 0.60 of it. A window opening at
+	 *  0.7 would therefore miss exactly the fast runs, which are the ones where a
+	 *  thirty-second tail is the largest share of the wait.
+	 *
+	 *  Eight seconds rather than five for what it costs: five would shave another
+	 *  1.5s off the average lag and ask half again as many times. See pollDelay
+	 *  for the bound at the other end. */
+	const POLL_CLOSING_MS = 8_000;
+	const CLOSING_FROM = 0.5;
 
 	// Status vocabularies differ per entity: tasks end on `success`, artifacts on
 	// `approved`, and the harness also says `completed` in places. Failure is
@@ -4680,6 +4696,44 @@
 		typicalClip = typicalWait('clip');
 	}
 
+	/** How long until the next poll.
+	 *
+	 *  A render changes nothing for minutes at a time, so `quiet` reaches
+	 *  QUIET_CYCLES early and every long run finishes on the slow cadence. The
+	 *  cost of that is not the render, it is nobody asking: measured on
+	 *  direct-mtr00ax5-5lx19, a 321s clip, the row closed 10.8s after the file
+	 *  had already landed, and on the slow cadence that gap is up to 30s.
+	 *
+	 *  So the cadence tightens where the answer is expected instead of
+	 *  everywhere. From half the learned typical wait until the run is overdue, a
+	 *  clip polls every eight seconds; outside that window nothing changes. On a
+	 *  five-minute render that is roughly thirty extra asks against one workspace
+	 *  — more than before and said plainly rather than hidden, but not the
+	 *  hammering the harness author asked us to avoid: the first half of every
+	 *  run keeps the old cadence, and a production is untouched entirely.
+	 *
+	 *  Bounded at the top on purpose. Past OVERDUE the page already says "longer
+	 *  than usual", and a run that turns out to take twenty minutes must not be
+	 *  asked every five seconds for all of them. Bounded at the bottom by the
+	 *  estimate existing at all: with no samples yet, typicalWait falls back to a
+	 *  shipped figure, and if that is absent this returns the old cadence. */
+	function pollDelay(): number {
+		if (simpleRun && startedAt > 0 && typicalClip) {
+			const elapsed = Date.now() - startedAt;
+			if (elapsed >= typicalClip * CLOSING_FROM) {
+				// Past overdue the tight window closes — but not all the way back to
+				// the slow cadence. The page is already saying "longer than usual" by
+				// then, which means somebody is watching it, and a simulation over the
+				// last dozen real durations showed the one run that went far past its
+				// estimate losing eighteen seconds to a thirty-second tick it happened
+				// to land badly on. Fifteen halves that without asking every eight
+				// seconds for a quarter of an hour.
+				return elapsed <= typicalClip * OVERDUE ? POLL_CLOSING_MS : POLL_FAST_MS;
+			}
+		}
+		return quiet >= QUIET_CYCLES ? POLL_SLOW_MS : POLL_FAST_MS;
+	}
+
 	function stopPolling() {
 		if (timer) clearTimeout(timer);
 		timer = null;
@@ -4791,10 +4845,12 @@
 			}
 		}
 
-		// End of the loop, decided only on confirmed data and only after two
-		// consecutive polls agree — there are windows (planner just finished,
-		// assembly just requested) where "all terminal" is true for one poll while
-		// new tasks are still being ingested.
+		// End of the loop, decided only on confirmed data. A production waits for
+		// two consecutive polls to agree; a simple run with its clip already in
+		// hand does not. The reasoning for both is at the settle decision below.
+		//
+		// processRender ran above, in this same tick, so an artifact carried by
+		// this poll is already a card in `chat` by the time that decision is made.
 		if (answered && fresh && target === activeWs) {
 			const ts = fresh.tasks ?? [];
 			const terminal =
@@ -4824,7 +4880,32 @@
 				finished = terminal && !chain && (allPosted || anyDead);
 			}
 			if (finished) {
-				if (sawAllDone) {
+				// Where the clip landed. Looked up before the decision below rather
+				// than inside it, because in simple mode this is also what makes the
+				// second confirming poll unnecessary.
+				const made = chat.find(
+					(c) =>
+						c.artifact?.workspace === renderWs &&
+						c.artifact?.id &&
+						c.artifact.files?.some((f) => /\.mp4$/i.test(f.name))
+				);
+				const madeFile = made?.artifact?.files?.find((f) => /\.mp4$/i.test(f.name));
+				// Two consecutive polls have to agree before a run is called finished,
+				// because there are windows — the planner just finished, assembly just
+				// requested — where "all terminal" is true for one poll while new
+				// tasks are still being ingested.
+				//
+				// Every one of those windows belongs to a production. A simple run has
+				// no planner and no assembly step, so the second poll confirms nothing
+				// and costs a whole interval: 10.8s on the run measured above, and up
+				// to 30s once the loop has settled on the slow cadence.
+				//
+				// Dropped only when the clip is already on screen, though. A task can
+				// read terminal before its artifact has been posted, and closing then
+				// would write the row without clipArtifact/clipFile — the one record a
+				// later session has of where the clip went, and the thing that took a
+				// backfill to repair last time it was missing.
+				if (sawAllDone || (simpleRun && !!made?.artifact?.id && !!madeFile)) {
 					// One clip only, and only one that worked. A full production is an
 					// order of magnitude longer, and a couple of them in the sample
 					// would make the clip estimate useless.
@@ -4838,17 +4919,11 @@
 					// because the bookkeeping call did.
 					if (renderWs) {
 						const dead = ts.some((t) => DEAD.includes(t.status));
-						// Where the clip landed, written down while it is in front of us.
-						// A session rebuilt from this log later has no other way to find
-						// it: the harness resolves an artifact only while the workspace
-						// agent is alive, and that is the thing that dies.
-						const made = chat.find(
-							(c) =>
-								c.artifact?.workspace === renderWs &&
-								c.artifact?.id &&
-								c.artifact.files?.some((f) => /\.mp4$/i.test(f.name))
-						);
-						const madeFile = made?.artifact?.files?.find((f) => /\.mp4$/i.test(f.name));
+						// `made` and `madeFile` are resolved above, before the settle
+						// decision. Written down while the clip is in front of us: a
+						// session rebuilt from this log later has no other way to find
+						// it, because the harness resolves an artifact only while the
+						// workspace agent is alive, and that is the thing that dies.
 						void fetch('/studio/api/renders', {
 							method: 'POST',
 							headers: { 'content-type': 'application/json' },
@@ -4874,7 +4949,7 @@
 		}
 
 		if (id !== runId) return;
-		timer = setTimeout(() => tick(id), quiet >= QUIET_CYCLES ? POLL_SLOW_MS : POLL_FAST_MS);
+		timer = setTimeout(() => tick(id), pollDelay());
 	}
 
 	// --- planning workspace: post documents, drive the chain reset ----------------------
