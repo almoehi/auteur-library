@@ -2606,34 +2606,36 @@
 	) {
 		if (previewBusy) return;
 		previewBusy = true;
+		// The card first, so the stage has the subject the moment the button is
+		// pressed. It carries no picture yet; the poll fills this same card in when
+		// the artifact lands, rather than posting a second one beside it.
 		const card = pushItem({
 			who: 'studio',
 			kind: 'sheet',
 			sheet: { kind, stage: 'anchor', description, why, seed, voice, launched: true }
 		});
 		try {
-			const res = await fetch('/studio/api/anchor', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ description, seed, kind })
-			});
-			const r = (await res.json()) as { ok?: boolean; job?: string; error?: string };
-			if (!r.ok || !r.job) {
+			// Through the harness, like every other render.
+			//
+			// This was the one road that went straight to a compute endpoint, on the
+			// argument that a preview has nothing to decide and the harness's work —
+			// fetching the models a graph names — had nothing to do. Measured, that
+			// saved 38 seconds on 150. Then the fleet moved: the three models the
+			// preview names are not on the compute volume, and the direct graph
+			// carries no addresses for them, so every preview died on "missing
+			// models" — while the six-view sheet, which names the same three through
+			// the harness, went on working. The one thing the harness does is the
+			// one thing that was missing. The 38 seconds buy a render that happens.
+			const ok = await launchSheetRender({ kind, description, stage: 'anchor', seed, why, voice });
+			if (!ok) {
 				card.kind = 'error';
-				card.text = r.error || 'The preview did not start.';
+				card.text = 'The preview did not start.';
 				return;
 			}
-			// Durable before the picture exists, not after it arrives.
-			//
-			// This handle is the only way back to a render that runs server-side
-			// for roughly two minutes, and it used to be written onto the card only
-			// once the loop below saw the picture land. Reload during those two
-			// minutes and the id was gone: the card came back saying "Rendering…"
-			// with its button dead, and the finished PNG sat on disk with nothing
-			// able to ask for it.
-			if (card.sheet) card.sheet.job = r.job;
+			// Durable before the picture exists: the workspace is the way back to a
+			// render that runs for two minutes whether or not this tab stays open.
+			if (card.sheet) card.sheet.workspace = renderWs;
 			persist();
-			await followPreview(card, r.job);
 		} catch (e) {
 			card.kind = 'error';
 			card.text = String(e);
@@ -2707,6 +2709,7 @@
 		stage: 'anchor' | 'sheet';
 		seed: number;
 		why?: string;
+		voice?: string;
 	}): Promise<boolean> {
 		// Guarded the same way a clip launch is, and no more strictly. There is one
 		// render slot and starting a second render retargets it — that is already
@@ -2733,8 +2736,11 @@
 				return false;
 			}
 			pendingSheet = { ...opts };
+			// On for the whole of a sheet run — renderInFlight reads it to keep the
+			// clip's loader off a render that puts no clip on the stage. It was set and
+			// unset on consecutive lines here, which is a no-op, and the loader came
+			// back for every sheet.
 			renderIsSheet = true;
-			renderIsSheet = false;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			shootsAnnounced = true;
@@ -3058,6 +3064,7 @@
 		stage: 'anchor' | 'sheet';
 		seed: number;
 		why?: string;
+		voice?: string;
 	} | null = null;
 
 	/** Keep a rendered sheet. The bytes are fetched server-side, from the harness,
@@ -5307,6 +5314,21 @@
 				const kind = pendingSheet?.kind ?? 'character';
 				const description = pendingSheet?.description ?? '';
 				const stage = pendingSheet?.stage ?? 'sheet';
+				// A preview launched from the composer already has its card — posted at
+				// the press so the stage had the subject while the harness drew it, and
+				// stamped with this workspace. Fill that one rather than standing a
+				// second beside it; a sheet run started from a card has none, and gets
+				// one here as before.
+				const waiting = chat.find(
+					(c) => c.kind === 'sheet' && c.sheet?.workspace === renderWs && !c.sheet.url
+				);
+				if (waiting?.sheet) {
+					waiting.sheet.url = fileUrl(renderWs, a.id, name);
+					waiting.sheet.artifact = a.id;
+					waiting.sheet.file = name;
+					waiting.sheet.name ??= firstWords(waiting.sheet.description ?? description, kind);
+					continue;
+				}
 				pushItem({
 					who: 'studio',
 					kind: 'sheet',
@@ -5316,6 +5338,7 @@
 						description,
 						why: pendingSheet?.why,
 						seed: pendingSheet?.seed,
+						voice: pendingSheet?.voice,
 						url: fileUrl(renderWs, a.id, name),
 						workspace: renderWs,
 						artifact: a.id,
@@ -6134,12 +6157,12 @@
 	const COMPOSER_FLOOR = '48rem';
 	let composerCap = $derived(
 		STAGE_UI
-			// min() around the floor, because the floor is a desktop measurement.
-			// 48rem is 768px and a phone is 375: without this the composer asks to be
-			// twice the window, and the "stops shrinking rather than following the
-			// picture down" rule — written for a window wider than any clip — turns
-			// into an element wider than the screen.
-			? `max-width:min(100%, max(${COMPOSER_FLOOR}, ${Math.max(stageVideoW, 0)}px))`
+			? // min() around the floor, because the floor is a desktop measurement.
+				// 48rem is 768px and a phone is 375: without this the composer asks to be
+				// twice the window, and the "stops shrinking rather than following the
+				// picture down" rule — written for a window wider than any clip — turns
+				// into an element wider than the screen.
+				`max-width:min(100%, max(${COMPOSER_FLOOR}, ${Math.max(stageVideoW, 0)}px))`
 			: undefined
 	);
 
@@ -6186,7 +6209,14 @@
 		stageClips.length
 			? null
 			: (chat
-					.filter((c) => c.kind === 'sheet' && (c.sheet?.id || c.sheet?.job || c.sheet?.url))
+					// `workspace` alone is a preview the harness is still drawing: the card
+					// is on the transcript from the launch so the stage has something to
+					// stand on while the picture is two minutes out.
+					.filter(
+						(c) =>
+							c.kind === 'sheet' &&
+							(c.sheet?.id || c.sheet?.job || c.sheet?.url || c.sheet?.workspace)
+					)
 					.at(-1) ?? null)
 	);
 
@@ -7545,7 +7575,7 @@
 									<!-- The size the clip will be, so nothing jumps when it arrives. -->
 									<div
 										class="relative flex max-h-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--st-surface)] {composerShape.portrait
-											? 'h-full w-auto aspect-[9/16]'
+											? 'aspect-[9/16] h-full w-auto'
 											: 'aspect-video w-full lg:h-full lg:w-auto'}"
 									>
 										{#if stageWaitBlurUrl}
@@ -7819,7 +7849,24 @@
 													</button>
 												{/each}
 											</div>
-											{#if !six}
+											{#if sh && !sh.url && !sh.id}
+												<!-- A preview the harness is still drawing. One picture, not six —
+													 the six-view line below would promise a turnaround this render
+													 does not make, and a wait labelled with the wrong work reads as
+													 a wait that is not moving. -->
+												<p
+													class="mt-2 flex items-center justify-center gap-2 text-xs text-[var(--st-faint)]"
+												>
+													<span
+														class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+														aria-hidden="true"
+													></span>
+													<span>
+														Rendering one picture of {sh.kind === 'location' ? 'the place' : 'them'} ·
+														about two minutes
+													</span>
+												</p>
+											{:else if !six}
 												<p class="mt-2 text-xs text-[var(--st-faint)]">
 													{turn ? 'Cutting the six views' : 'Building the six views'}{drawing
 														? ` · ${turnStatus(drawing)}`
@@ -9826,7 +9873,7 @@
 											/>
 										</svg>
 									</button>
-<!-- Second, right after who is in it. What follows this clip is the
+									<!-- Second, right after who is in it. What follows this clip is the
 										 question a continuation asks first — before how many and
 										 before how long — and it was last in the row, past two
 										 settings that do not change between takes. -->
@@ -10018,7 +10065,7 @@
 														contOffFor = '';
 														if (!continuing && stageContinuable) startContinue(stageContinuable);
 														pinSeam = true;
-																						}}
+													}}
 													class="flex min-h-9 cursor-pointer items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-xs transition-colors {continuing &&
 													pinSeam
 														? 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'
@@ -10035,7 +10082,9 @@
 															class="h-7 w-[3.1rem] shrink-0 rounded-full bg-black object-cover"
 														></video>
 													{/if}
-													<span class="lg:hidden">Last frame</span><span class="hidden lg:inline">From the last frame</span>
+													<span class="lg:hidden">Last frame</span><span class="hidden lg:inline"
+														>From the last frame</span
+													>
 												</button>
 												<button
 													type="button"
@@ -10044,7 +10093,7 @@
 														contOffFor = '';
 														if (!continuing && stageContinuable) startContinue(stageContinuable);
 														pinSeam = false;
-																						}}
+													}}
 													class="flex min-h-9 cursor-pointer items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-xs transition-colors {continuing &&
 													!pinSeam
 														? 'bg-[var(--st-text)] font-semibold text-[var(--st-bg)]'
@@ -10080,7 +10129,9 @@
 															</svg>
 														</span>
 													{/if}
-													<span class="lg:hidden">Same person</span><span class="hidden lg:inline">Same person &amp; place</span>
+													<span class="lg:hidden">Same person</span><span class="hidden lg:inline"
+														>Same person &amp; place</span
+													>
 												</button>
 												<button
 													type="button"
@@ -11084,7 +11135,9 @@
 												<span class="ml-auto flex gap-0.5 rounded-full p-0.5 lg:bg-[var(--st-bg)]">
 													{#each [['seam', 'Last frame'], ['same', 'Same person'], ['new', 'New clip']] as [val, label] (val)}
 														{@const on =
-															val === 'new' ? !continuing : !!continuing && (val === 'seam') === pinSeam}
+															val === 'new'
+																? !continuing
+																: !!continuing && (val === 'seam') === pinSeam}
 														<button
 															type="button"
 															aria-pressed={on}
@@ -11096,7 +11149,8 @@
 																	return;
 																}
 																contOffFor = '';
-																if (!continuing && stageContinuable) startContinue(stageContinuable);
+																if (!continuing && stageContinuable)
+																	startContinue(stageContinuable);
 																pinSeam = val === 'seam';
 															}}
 															class="flex min-h-7 cursor-pointer items-center rounded-full px-2.5 text-xs transition-colors {on
@@ -11170,7 +11224,6 @@
 												/>
 											</svg>
 										</button>
-										
 									{:else}
 										<!-- In a creation state there is nothing to pick between, so the
 									 paperclip is the whole menu and stands on its own. -->
@@ -11256,7 +11309,7 @@
 										aria-label="send"
 										disabled={sending || charFromClipBusy || (!input.trim() && !pendingPhoto)}
 										onclick={submit}
-										class="ml-auto lg:ml-0 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)]"
+										class="ml-auto flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--st-accent)] text-[var(--st-on-accent)] transition-colors hover:bg-[var(--st-accent-strong)] disabled:cursor-default disabled:bg-[var(--st-surface-2)] disabled:text-[var(--st-faint)] lg:ml-0"
 									>
 										{#if sending}
 											<span class="text-xs">…</span>
