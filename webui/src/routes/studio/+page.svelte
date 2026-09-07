@@ -5880,6 +5880,19 @@
 			: (chat.filter((c) => c.kind === 'sheet' && c.sheet?.id).at(-1) ?? null)
 	);
 
+	/** The character this session is drawing right now, when there is no clip to
+	 *  keep the surface busy with.
+	 *
+	 *  Without it the stage went blank between the upload and the sheet landing —
+	 *  and then, worse, the finished picture appeared as if the work were over
+	 *  while the six views were still ten minutes out. A loader for a second,
+	 *  gone, and a photograph in its place is a surface contradicting itself.
+	 *
+	 *  Only with no clip on the stage. With one, the clip stays and the sheet
+	 *  reports on its own line — the alternative is the loader that sat at 97%
+	 *  over an arrived picture for a quarter of an hour. */
+	let stageDrawing = $derived(stageClips.length ? null : (drawingHere[0] ?? null));
+
 	let stagePhase = $derived(
 		stageError
 			? 'error'
@@ -5889,7 +5902,7 @@
 					? 'working'
 					: stageClip
 						? 'ready'
-						: stageSheet
+						: stageDrawing || stageSheet
 							? 'character'
 							: 'empty'
 	);
@@ -7283,8 +7296,10 @@
 											>try it again</button
 										>
 									</div>
-								{:else if stagePhase === 'character' && stageSheet?.sheet}
-									{@const sh = stageSheet.sheet}
+								{:else if stagePhase === 'character'}
+									{@const drawing = stageDrawing}
+									{@const sh = drawing ? null : (stageSheet?.sheet ?? null)}
+									{@const shownId = sh?.id ?? drawing?.id ?? ''}
 									<!-- The character, where a clip would be.
 										 A sheet's result is a picture and this surface is for pictures; it is
 										 the same shape, the same height, and it arrives in the same place the
@@ -7294,25 +7309,50 @@
 									<div
 										class="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4"
 									>
-										{#if sh.id}
-											<img
-												src="/studio/api/sheet/img/{sh.id}"
-												alt=""
-												onerror={sheetImageMissing}
-												class="max-h-full w-auto max-w-full rounded-2xl object-contain"
-											/>
+										<!-- The picture takes what is left after the name, not everything.
+											 `max-h-full` on the image alone measures against the column, not
+											 against the room the column has once the two lines under it are
+											 placed — so a tall portrait claimed the whole height and the name was
+											 drawn over the line below the stage. Its own box takes the remainder
+											 and the picture contains itself inside that. -->
+										{#if shownId}
+											<div class="flex min-h-0 w-full flex-1 items-center justify-center">
+												<img
+													src="/studio/api/sheet/img/{shownId}"
+													alt=""
+													onerror={sheetImageMissing}
+													class="max-h-full max-w-full rounded-2xl object-contain {drawing
+														? 'opacity-70'
+														: ''}"
+												/>
+											</div>
 										{/if}
-										<div class="text-center">
+										<div class="shrink-0 text-center">
 											<p class="font-display text-base font-semibold text-[var(--st-text)]">
-												{sh.name || 'Your character'}
+												{sh?.name || drawing?.name || 'Your character'}
 											</p>
 											<!-- What changed, in one line: they are cast, so the next thing you
 												 type is about them. It is the only thing worth saying here, and
 												 saying it is the difference between a finished job and a page that
 												 went quiet. -->
-											<p class="mt-1 text-xs text-[var(--st-muted)]">
-												Kept. Describe a shot and they are in it.
-											</p>
+											<!-- While the six views draw, this says so here rather than
+										 leaving the surface to look finished. The countdown is the
+										 sheet's own, not a clip's estimate. -->
+											{#if drawing}
+												<p
+													class="mt-1 flex items-center justify-center gap-2 text-xs text-[var(--st-muted)]"
+												>
+													<span
+														class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+														aria-hidden="true"
+													></span>
+													<span>Building the six views · {turnStatus(drawing)}</span>
+												</p>
+											{:else}
+												<p class="mt-1 text-xs text-[var(--st-muted)]">
+													Kept. Describe a shot and they are in it.
+												</p>
+											{/if}
 										</div>
 									</div>
 								{:else if stagePhase === 'empty'}
@@ -9098,17 +9138,6 @@
 								     stage — with the transcript there is no height-bound picture to protect
 								     and an empty band is just a gap. -->
 								{#if STAGE_UI && mode === 'simple'}
-									{#each drawingHere as sh (sh.id)}
-										<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
-											<span
-												class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
-												aria-hidden="true"
-											></span>
-											<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
-											<span class="text-[var(--st-faint)]">·</span>
-											<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
-										</p>
-									{/each}
 									<!-- The reel sits at the BOTTOM of its standing room, not the top.
 									 Held open the band is taller than the row inside it, and a row pinned
 									 to the top left the slack between itself and the count chip under it —
@@ -9117,9 +9146,20 @@
 									 the slack goes above it, where the picture is, and the reel keeps its
 									 own step to the chip. -->
 									<div
-										class="flex h-[4.4rem] shrink-0 flex-col justify-end"
+										class="flex min-h-[4.4rem] shrink-0 flex-col justify-end"
 										aria-hidden={!(film.length && filmOpen)}
 									>
+										{#each drawingHere as sh (sh.id)}
+											<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
+												<span
+													class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+													aria-hidden="true"
+												></span>
+												<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
+												<span class="text-[var(--st-faint)]">·</span>
+												<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
+											</p>
+										{/each}
 										{#if film.length && filmOpen}
 											{@render filmReel()}
 										{/if}
