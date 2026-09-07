@@ -16,6 +16,11 @@ export default defineConfig({
 		// widen what is exposed: the bind stays on loopback, and the Docker VM was
 		// already able to reach loopback before this line existed. It only stops
 		// vite answering those requests with a 403.
-		allowedHosts: ['host.docker.internal', 'localhost', '127.0.0.1']
+		// Hosted, the renderer is not in local Docker but a Modal sandbox, and it
+		// fetches the same bundles over a cloudflare tunnel — whose hostname is
+		// new on every `cloudflared` restart, so it is matched by suffix. The
+		// bind stays on loopback; what widens the exposure is the tunnel itself,
+		// and this app has no authentication. Stop the tunnel when not rendering.
+		allowedHosts: ['host.docker.internal', 'localhost', '127.0.0.1', '.trycloudflare.com']
 	}
 });
