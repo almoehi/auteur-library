@@ -9025,7 +9025,17 @@
 								     stage — with the transcript there is no height-bound picture to protect
 								     and an empty band is just a gap. -->
 								{#if STAGE_UI && mode === 'simple'}
-									<div class="h-[4.4rem] shrink-0" aria-hidden={!(film.length && filmOpen)}>
+									<!-- The reel sits at the BOTTOM of its standing room, not the top.
+									 Held open the band is taller than the row inside it, and a row pinned
+									 to the top left the slack between itself and the count chip under it —
+									 a gap that reads as a mistake rather than as breathing room, because
+									 everything else in this stack is spaced by one step. Bottom-aligned,
+									 the slack goes above it, where the picture is, and the reel keeps its
+									 own step to the chip. -->
+									<div
+										class="flex h-[4.4rem] shrink-0 flex-col justify-end"
+										aria-hidden={!(film.length && filmOpen)}
+									>
 										{#if film.length && filmOpen}
 											{@render filmReel()}
 										{/if}
