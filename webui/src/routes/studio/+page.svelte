@@ -5864,6 +5864,22 @@
 	let stagePhaseIsWorking = $derived(!stageError && !stageRound && (stageClockFrom || sending));
 	let showStrip = $derived(stageThumbs.length > 1 || !!stagePhaseIsWorking);
 
+	/** The character this session made, when it made one and no clip.
+	 *
+	 *  A sheet is a chat item, and in simple mode the stage stands in for the
+	 *  transcript — so a finished character had nowhere to appear at all. You
+	 *  watched a line count down, the line went away, and the surface was the
+	 *  welcome screen again. The work was not lost: the sheet is in the library
+	 *  and the composer is already pointed at it. Nothing said so.
+	 *
+	 *  Only when there is no clip. A clip is what the stage is for, and a
+	 *  character made in the middle of a chain is a step in it, not the subject. */
+	let stageSheet = $derived(
+		stageClips.length
+			? null
+			: (chat.filter((c) => c.kind === 'sheet' && c.sheet?.id).at(-1) ?? null)
+	);
+
 	let stagePhase = $derived(
 		stageError
 			? 'error'
@@ -5873,7 +5889,9 @@
 					? 'working'
 					: stageClip
 						? 'ready'
-						: 'empty'
+						: stageSheet
+							? 'character'
+							: 'empty'
 	);
 
 	/** Whether the reader is parked at the latest message. Drives both the
@@ -7264,6 +7282,38 @@
 											class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-1.5 text-xs font-semibold"
 											>try it again</button
 										>
+									</div>
+								{:else if stagePhase === 'character' && stageSheet?.sheet}
+									{@const sh = stageSheet.sheet}
+									<!-- The character, where a clip would be.
+										 A sheet's result is a picture and this surface is for pictures; it is
+										 the same shape, the same height, and it arrives in the same place the
+										 thing you were waiting for always arrives. No rating row and no add to
+										 film: neither means anything about a person, and offering them was how
+										 the six views ended up looking like a clip. -->
+									<div
+										class="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4"
+									>
+										{#if sh.id}
+											<img
+												src="/studio/api/sheet/img/{sh.id}"
+												alt=""
+												onerror={sheetImageMissing}
+												class="max-h-full w-auto max-w-full rounded-2xl object-contain"
+											/>
+										{/if}
+										<div class="text-center">
+											<p class="font-display text-base font-semibold text-[var(--st-text)]">
+												{sh.name || 'Your character'}
+											</p>
+											<!-- What changed, in one line: they are cast, so the next thing you
+												 type is about them. It is the only thing worth saying here, and
+												 saying it is the difference between a finished job and a page that
+												 went quiet. -->
+											<p class="mt-1 text-xs text-[var(--st-muted)]">
+												Kept. Describe a shot and they are in it.
+											</p>
+										</div>
 									</div>
 								{:else if stagePhase === 'empty'}
 									<!-- A new production opens on what it opened on before: the greeting
