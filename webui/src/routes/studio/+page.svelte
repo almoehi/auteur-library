@@ -9149,17 +9149,24 @@
 										class="flex min-h-[4.4rem] shrink-0 flex-col justify-end"
 										aria-hidden={!(film.length && filmOpen)}
 									>
-										{#each drawingHere as sh (sh.id)}
-											<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
-												<span
-													class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
-													aria-hidden="true"
-												></span>
-												<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
-												<span class="text-[var(--st-faint)]">·</span>
-												<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
-											</p>
-										{/each}
+										<!-- Only when the stage is not already saying it. The character surface
+											 carries the same countdown under the name whenever it is what the
+											 stage is showing, and the same sentence twice on one screen reads as
+											 two things happening. Here is where it belongs when a clip has the
+											 stage and the drawing is the quieter of the two. -->
+										{#if stagePhase !== 'character'}
+											{#each drawingHere as sh (sh.id)}
+												<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
+													<span
+														class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+														aria-hidden="true"
+													></span>
+													<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
+													<span class="text-[var(--st-faint)]">·</span>
+													<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
+												</p>
+											{/each}
+										{/if}
 										{#if film.length && filmOpen}
 											{@render filmReel()}
 										{/if}
