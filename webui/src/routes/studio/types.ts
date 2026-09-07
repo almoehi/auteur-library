@@ -434,6 +434,14 @@ export interface StoredSheet {
 	 *  back into it. Absent on everything made before this existed, and absent
 	 *  means any. */
 	sessionSlug?: string;
+	/** Made from a photograph rather than from a description.
+	 *
+	 *  sheets.server.ts has stored this from the start; the page's own type did
+	 *  not carry it, so the surface could not tell the two apart — and the two
+	 *  differ in what gets made. An uploaded character gets a turnaround render
+	 *  and its six views out of that; an uploaded location gets neither, because
+	 *  the sheet workflows are text-to-image and cannot redraw a photograph. */
+	uploaded?: boolean;
 	/** Whether the six views have already been shown in that conversation. What
 	 *  the sidebar reads to tell "finished while you were elsewhere" from
 	 *  "finished and seen". */

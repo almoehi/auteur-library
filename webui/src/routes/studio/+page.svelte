@@ -7473,6 +7473,8 @@
 									{@const row = sheets.find((x) => x.id === shownId)}
 									{@const six = row?.sheet?.state === 'ready' && row.sheet.file ? shownId : ''}
 									{@const turn = row?.sheet?.clip}
+									{@const isUpload = !!row?.uploaded}
+									{@const isChar = row?.kind !== 'location'}
 									{@const view = charView || (six ? 'six' : turn ? 'turn' : 'ref')}
 									<!-- The character, and the three things the work produces, in one frame.
 										 The reference is on screen from the moment you upload it. The turnaround
@@ -7508,6 +7510,18 @@
 													controls
 													class="max-h-full max-w-full rounded-2xl bg-black object-contain"
 												></video>
+											{:else if sh?.url}
+												<!-- The preview, before it has been kept.
+													 Until it is kept the subject has no id, so the sheet endpoint below
+													 has nothing to serve and the branch fell through to the spinner —
+													 which spun over a picture that had already rendered, was already on
+													 disk and was already being served at this very url. The card has
+													 carried it since the poll finished; nothing looked. -->
+												<img
+													src={sh.url}
+													alt=""
+													class="max-h-full max-w-full rounded-2xl object-contain"
+												/>
 											{:else if shownId}
 												<img
 													src="/studio/api/sheet/img/{shownId}"
@@ -7573,13 +7587,25 @@
 													</svg>
 												</button>
 											</div>
-											<!-- The three, from the moment there is a reference: the two that are
-												 not made yet stand there disabled with a turning mark, so the wait is
-												 attached to the thing being waited for rather than announced in a
-												 sentence somewhere else. They arrive in order, and the surface
-												 follows the newest until you press one. -->
+											<!-- Only the stages that are actually coming, from the moment there is
+												 a reference. The ones not made yet stand there disabled with a
+												 turning mark, so the wait is attached to the thing being waited for
+												 rather than announced in a sentence somewhere else. They arrive in
+												 order, and the surface follows the newest until you press one.
+
+												 All three were shown for everything, and for a place that is a
+												 promise the code does not keep. A turnaround is a six-second render
+												 of the subject rotating, and api/sheet starts one only for an
+												 uploaded CHARACTER — "a room does not have a front and a back the
+												 way a person does", in its own words. A drawn subject has no
+												 turnaround either: its six views come from the sheet workflow
+												 directly. And an uploaded location gets neither, because the sheet
+												 workflows are text-to-image with no image input, so there is
+												 nothing that can redraw a photograph.
+												 A chip that spins forever is worse than one that was never
+												 offered. -->
 											<div class="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-												{#each [{ id: 'ref', label: 'Reference', ok: !!shownId }, { id: 'turn', label: 'Turnaround', ok: !!turn }, { id: 'six', label: 'Six views', ok: !!six }] as t (t.id)}
+												{#each [{ id: 'ref', label: 'Reference', ok: !!shownId || !!sh?.url, on: true }, { id: 'turn', label: 'Turnaround', ok: !!turn, on: isUpload && isChar }, { id: 'six', label: 'Six views', ok: !!six, on: !(isUpload && !isChar) }].filter((x) => x.on) as t (t.id)}
 													<button
 														type="button"
 														disabled={!t.ok}
