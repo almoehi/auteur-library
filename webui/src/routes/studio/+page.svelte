@@ -2330,6 +2330,28 @@
 		}
 	}
 
+	/** Give the character a name.
+	 *
+	 *  Saved on blur, like the voice, and for the same reason: one field, one
+	 *  line, and a button to confirm a name is a button nobody needs. */
+	async function renameCharacter(id: string, next: string) {
+		const row = sheets.find((x) => x.id === id);
+		const name = next.trim().slice(0, 80);
+		if (!row || !name || name === row.name) return;
+		try {
+			const res = await fetch('/studio/api/sheet', {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id, name })
+			});
+			const r = (await res.json()) as { ok?: boolean; sheets?: StoredSheet[]; error?: string };
+			if (r.ok && r.sheets) sheets = r.sheets;
+			else pushError(r.error || 'the name could not be saved');
+		} catch (e) {
+			pushError(`the name could not be saved — ${e}`);
+		}
+	}
+
 	async function loadSheets() {
 		try {
 			const res = await fetch('/studio/api/sheet');
@@ -7361,20 +7383,49 @@
 												 surface where the thing being named is unmistakably a person. A field
 												 shaped like the heading it replaces, so nothing moves when you click
 												 into it. -->
-											<input
-												value={row?.name ?? sh?.name ?? drawing?.name ?? ''}
-												placeholder="Name them"
-												disabled={!shownId}
-												onblur={(e) => renameCharacter(shownId, e.currentTarget.value)}
-												onkeydown={(e) => {
-													if (e.key === 'Enter') e.currentTarget.blur();
-													if (e.key === 'Escape') {
-														e.currentTarget.value = row?.name ?? '';
-														e.currentTarget.blur();
-													}
-												}}
-												class="w-full max-w-[22rem] rounded-lg border-0 bg-transparent px-2 py-0.5 text-center font-display text-base font-semibold text-[var(--st-text)] outline-none placeholder:text-[var(--st-faint)] hover:bg-[var(--st-surface)] focus:bg-[var(--st-surface)]"
-											/>
+											<!-- A field shaped like the heading it replaces gives no sign that it is
+												 one, so the mark that means "you can change this" sits beside it —
+												 faint, and solid on hover, the way the rest of this surface treats a
+												 control you have not reached for yet. It only focuses the field: the
+												 field is the control, and a second one that opened a dialog to do the
+												 same thing would be a step nobody asked for. -->
+											<div class="group mx-auto flex max-w-[24rem] items-center gap-1">
+												<input
+													value={row?.name ?? sh?.name ?? drawing?.name ?? ''}
+													placeholder="Name them"
+													disabled={!shownId}
+													onblur={(e) => renameCharacter(shownId, e.currentTarget.value)}
+													onkeydown={(e) => {
+														if (e.key === 'Enter') e.currentTarget.blur();
+														if (e.key === 'Escape') {
+															e.currentTarget.value = row?.name ?? '';
+															e.currentTarget.blur();
+														}
+													}}
+													class="min-w-0 flex-1 rounded-lg border-0 bg-transparent px-2 py-0.5 text-center font-display text-base font-semibold text-[var(--st-text)] outline-none placeholder:text-[var(--st-faint)] hover:bg-[var(--st-surface)] focus:bg-[var(--st-surface)]"
+												/>
+												<button
+													type="button"
+													aria-label="rename them"
+													disabled={!shownId}
+													onclick={(e) => {
+														const box = e.currentTarget
+															.previousElementSibling as HTMLInputElement | null;
+														box?.focus();
+														box?.select();
+													}}
+													class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[var(--st-faint)] opacity-70 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-30"
+												>
+													<svg viewBox="0 0 16 16" class="size-3.5" fill="none" aria-hidden="true">
+														<path
+															d="M11.1 2.9a1.4 1.4 0 0 1 2 2L6.4 11.6l-2.7.7.7-2.7z"
+															stroke="currentColor"
+															stroke-width="1.4"
+															stroke-linejoin="round"
+														/>
+													</svg>
+												</button>
+											</div>
 											<!-- The three, from the moment there is a reference: the two that are
 												 not made yet stand there disabled with a turning mark, so the wait is
 												 attached to the thing being waited for rather than announced in a
