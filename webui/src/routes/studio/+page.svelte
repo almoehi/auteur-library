@@ -2074,8 +2074,14 @@
 		// clip this one grows out of when it is a continuation.
 		if (STAGE_UI) {
 			stageStartedAt = Date.now();
+			// stageWaitFrom stays the newest: it is how the arrival of a NEW clip is
+			// noticed, not where this one comes from.
 			stageWaitFrom = stageNewest?.id ?? '';
-			stageWaitBlurUrl = c.continues ? (stageNewest?.artifact?.files?.[0]?.url ?? '') : '';
+			// The blur is the clip being continued, which is the one being watched
+			// and no longer necessarily the last one. Left on the newest it showed
+			// the wrong picture under the loader the moment somebody clicked back
+			// through the strip and carried on from there.
+			stageWaitBlurUrl = c.continues ? (stageContinuable?.artifact?.files?.[0]?.url ?? '') : '';
 		}
 		try {
 			// Second press: the brief already exists and was shown, changes and all.
@@ -6007,10 +6013,24 @@
 
 	/** The clip the composer would continue if asked: the newest one, when the
 	 *  chain can actually take a continuation from it. */
+	/** The clip a continuation would carry on from: the one being WATCHED, not the
+	 *  one that happened to land last.
+	 *
+	 *  The chain is a strip you can click back through, and clicking back is how
+	 *  you decide a take went wrong three clips ago. Pinned to the newest, the
+	 *  continuation ignored that: you could sit on the second clip, press "Last
+	 *  frame", and get a fifth one starting from the fourth — the surface showed
+	 *  one thing and the render used another, with nothing saying so.
+	 *
+	 *  stageClip already resolves the same way for everything else on this
+	 *  surface: the selected entry, or the newest when nothing is selected. The
+	 *  effect below re-targets whenever this changes, so switching clips in the
+	 *  strip moves the continuation with it, and contOffFor is keyed per clip so
+	 *  turning it off for one does not turn it off for the rest. */
 	let stageContinuable = $derived(
 		(() => {
-			const ws = stageNewest?.artifact?.workspace ?? '';
-			return ws && contInfo(ws).ok ? stageNewest : null;
+			const ws = stageClip?.artifact?.workspace ?? '';
+			return ws && contInfo(ws).ok ? stageClip : null;
 		})()
 	);
 	/** The clip the operator switched continuation OFF for. Without it the effect
