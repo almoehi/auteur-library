@@ -9045,47 +9045,51 @@
 						 up — pad one and not the other and they sit half a strip apart. -->
 							</div>
 						</div>
-						{#each drawingHere as sh (sh.id)}
-							<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
-								<span
-									class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
-									aria-hidden="true"
-								></span>
-								<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
-								<span class="text-[var(--st-faint)]">·</span>
-								<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
-							</p>
-						{/each}
-						{#if composerHint || film.length || (STAGE_UI && mode === 'simple')}
-							<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
-								<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
-								<span class="flex-1"></span>
-								{#if film.length}
-									<button
-										type="button"
-										aria-expanded={filmOpen}
-										ondragover={(e) => {
-											if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
-										}}
-										ondrop={(e) => dropClipIntoFilm(e)}
-										onclick={() => (filmOpen = !filmOpen)}
-										class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
-											? 'bg-[var(--st-surface-2)]'
-											: ''}"
-									>
-										<span class="reelmark" aria-hidden="true"></span>
-										<span
-											>{film.length}
-											{film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span
+						<!-- The same measure the composer keeps, so their edges line up. Outside it
+							 these two ran the width of the column over a box half as wide. -->
+						<div class={STAGE_UI ? 'mx-auto w-full' : ''} style={composerCap}>
+							{#each drawingHere as sh (sh.id)}
+								<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
+									<span
+										class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+										aria-hidden="true"
+									></span>
+									<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
+									<span class="text-[var(--st-faint)]">·</span>
+									<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
+								</p>
+							{/each}
+							{#if composerHint || film.length || (STAGE_UI && mode === 'simple')}
+								<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
+									<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
+									<span class="flex-1"></span>
+									{#if film.length}
+										<button
+											type="button"
+											aria-expanded={filmOpen}
+											ondragover={(e) => {
+												if (e.dataTransfer?.types.includes(CLIP_DRAG)) e.preventDefault();
+											}}
+											ondrop={(e) => dropClipIntoFilm(e)}
+											onclick={() => (filmOpen = !filmOpen)}
+											class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
+												? 'bg-[var(--st-surface-2)]'
+												: ''}"
 										>
-										<span
-											class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
-											>⌄</span
-										>
-									</button>
-								{/if}
-							</div>
-						{/if}
+											<span class="reelmark" aria-hidden="true"></span>
+											<span
+												>{film.length}
+												{film.length === 1 ? 'clip' : 'clips'} · {filmSeconds}s</span
+											>
+											<span
+												class="text-[0.6rem] text-[var(--st-faint)] {filmOpen ? 'rotate-180' : ''}"
+												>⌄</span
+											>
+										</button>
+									{/if}
+								</div>
+							{/if}
+						</div>
 						<div>
 							<div
 								class="relative rounded-3xl bg-[var(--st-surface)] p-3 {STAGE_UI
