@@ -6139,7 +6139,20 @@
 	);
 	let showStrip = $derived(stageThumbs.length > 1 || !!stagePhaseIsWorking);
 
-	/** The character this session made, when it made one and no clip.
+	/** The subject this session made — or is making — when there is no clip.
+	 *
+	 *  It asked for `sheet.id`, and an id only exists once the subject has been
+	 *  KEPT. That is a deadlock: keeping is a button on the card, and the card is
+	 *  what an id was required to show. A preview rendered for thirty seconds, a
+	 *  loader appeared while the request was in flight and vanished the moment it
+	 *  returned, and the finished picture landed on disk with no surface able to
+	 *  offer it. Four of those are sitting in previews/ unclaimed.
+	 *
+	 *  A job or a url is the same evidence an id is: something was started, and
+	 *  it belongs on the stage. The id then arrives on the card already there.
+	 *
+	 *  (Originally: the character this session made, when it made one and no
+	 *  clip.)
 	 *
 	 *  A sheet is a chat item, and in simple mode the stage stands in for the
 	 *  transcript — so a finished character had nowhere to appear at all. You
@@ -6152,7 +6165,9 @@
 	let stageSheet = $derived(
 		stageClips.length
 			? null
-			: (chat.filter((c) => c.kind === 'sheet' && c.sheet?.id).at(-1) ?? null)
+			: (chat
+					.filter((c) => c.kind === 'sheet' && (c.sheet?.id || c.sheet?.job || c.sheet?.url))
+					.at(-1) ?? null)
 	);
 
 	/** The character this session is drawing right now, when there is no clip to
