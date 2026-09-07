@@ -5518,10 +5518,33 @@
 	// difference between trying a new surface and betting the working one on it.
 	const STAGE_UI = true;
 
+	/** The workspaces that make a sheet rather than a clip.
+	 *
+	 *  Both prefixes are minted in exactly one place each — `turn-` in the
+	 *  turnaround route, `-sheet@` in sheetWorkspaceId — so matching on them is a
+	 *  fact about this app rather than a guess about a string. */
+	function isSheetWorkspace(ws: string): boolean {
+		return ws.startsWith('turn-') || ws.includes('-sheet@');
+	}
+
 	/** Every clip in this session, oldest first, read off the transcript the
-	 *  engine already keeps. The stage renders this rather than the cards. */
+	 *  engine already keeps. The stage renders this rather than the cards.
+	 *
+	 *  A sheet's render is not one of them, and it used to be. The six views come
+	 *  back as an mp4 — a slow orbit of the person — so it satisfied the only test
+	 *  here and landed on the stage as the newest clip, wearing "Add to film",
+	 *  "Good" and "Not good". None of those means anything about a turnaround:
+	 *  it is not a shot, it cannot be cut into a film, and rating it rates
+	 *  nothing. It also pushed the actual last clip out of the way in the middle
+	 *  of making a character, which is when you are least able to explain what
+	 *  you are looking at. The views belong to the sheet, and the sheet says so
+	 *  in its own line. */
 	let stageClips = $derived(
-		chat.filter((c) => c.artifact?.files?.some((f) => /\.mp4$/i.test(f.name)))
+		chat.filter(
+			(c) =>
+				c.artifact?.files?.some((f) => /\.mp4$/i.test(f.name)) &&
+				!isSheetWorkspace(c.artifact?.workspace ?? '')
+		)
 	);
 	/** The newest clip, which is what the stage follows on its own. */
 	let stageNewest = $derived(stageClips[stageClips.length - 1] ?? null);
@@ -9025,6 +9048,17 @@
 								     stage — with the transcript there is no height-bound picture to protect
 								     and an empty band is just a gap. -->
 								{#if STAGE_UI && mode === 'simple'}
+									{#each drawingHere as sh (sh.id)}
+										<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
+											<span
+												class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+												aria-hidden="true"
+											></span>
+											<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
+											<span class="text-[var(--st-faint)]">·</span>
+											<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
+										</p>
+									{/each}
 									<!-- The reel sits at the BOTTOM of its standing room, not the top.
 									 Held open the band is taller than the row inside it, and a row pinned
 									 to the top left the slack between itself and the count chip under it —
@@ -9058,17 +9092,6 @@
 						<!-- The same measure the composer keeps, so their edges line up. Outside it
 							 these two ran the width of the column over a box half as wide. -->
 						<div class={STAGE_UI ? 'mx-auto w-full' : ''} style={composerCap}>
-							{#each drawingHere as sh (sh.id)}
-								<p class="mb-2 flex items-center gap-2.5 text-xs text-[var(--st-muted)]">
-									<span
-										class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
-										aria-hidden="true"
-									></span>
-									<span class="min-w-0 truncate">Building the six views for {sh.name}</span>
-									<span class="text-[var(--st-faint)]">·</span>
-									<span class="shrink-0 tabular-nums">{turnStatus(sh)}</span>
-								</p>
-							{/each}
 							{#if composerHint || film.length || (STAGE_UI && mode === 'simple')}
 								<div class="mb-1.5 flex min-h-[1.6rem] items-center gap-3">
 									<p class="min-w-0 text-xs text-[var(--st-faint)]">{composerHint}</p>
@@ -9732,24 +9755,44 @@
 															}}
 															class="flex min-w-0 cursor-pointer flex-col items-center gap-1.5 rounded-xl pb-1"
 														>
-															{#if s.id}
-																<img
-																	src="/studio/api/sheet/img/{s.id}"
-																	alt=""
-																	onerror={sheetImageMissing}
-																	class="aspect-square w-full object-cover transition-opacity hover:opacity-80 {pickKind ===
-																	'character'
-																		? 'rounded-full'
-																		: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
-																/>
-															{:else}
+															<!-- The picture, over the shape it will be.
+																 A sheet's image url answers 404 until its six views land, which is the
+																 minutes right after you make the character — and hiding the broken
+																 element on its own left a hole where a face goes, with the name under
+																 nothing. The placeholder sits behind every tile rather than instead of
+																 some of them, so the tile is the same shape throughout and the picture
+																 simply arrives into it. -->
+															<span class="relative block aspect-square w-full">
 																<span
-																	class="aspect-square w-full ring-1 ring-[var(--st-line)] {pickKind ===
+																	class="absolute inset-0 flex items-center justify-center bg-[var(--st-surface-2)] {pickKind ===
 																	'character'
 																		? 'rounded-full'
 																		: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
-																></span>
-															{/if}
+																>
+																	{#if s.id}
+																		<svg
+																			viewBox="0 0 16 16"
+																			class="size-1/3 text-[var(--st-faint)] opacity-55"
+																			fill="currentColor"
+																			aria-hidden="true"
+																		>
+																			<circle cx="8" cy="5.9" r="2.6" />
+																			<path d="M3.5 13.4c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4z" />
+																		</svg>
+																	{/if}
+																</span>
+																{#if s.id}
+																	<img
+																		src="/studio/api/sheet/img/{s.id}"
+																		alt=""
+																		onerror={sheetImageMissing}
+																		class="absolute inset-0 h-full w-full object-cover transition-opacity hover:opacity-80 {pickKind ===
+																		'character'
+																			? 'rounded-full'
+																			: 'rounded-lg'} {on ? 'ring-2 ring-[var(--st-text)]' : ''}"
+																	/>
+																{/if}
+															</span>
 															<span
 																class="max-w-full truncate text-[0.7rem] leading-tight {on
 																	? 'font-medium text-[var(--st-text)]'
