@@ -5883,7 +5883,20 @@
 		STAGE_UI ? `max-width:max(${COMPOSER_FLOOR}, ${Math.max(stageVideoW, 0)}px)` : undefined
 	);
 
-	let stagePhaseIsWorking = $derived(!stageError && !stageRound && (stageClockFrom || sending));
+	/** A subject being made right now — a photograph going up, or a description
+	 *  going to the sheet writer.
+	 *
+	 *  It is a send like any other, so the stage took the clip's loader for it:
+	 *  the full 16:9 block with "Generating" on it, for a second, before the
+	 *  character surface replaced it. A picture of a video being made, over work
+	 *  that makes no video, and the swap between the two is the jump. The
+	 *  character surface owns this from the first press; the wait belongs in the
+	 *  frame the picture will land in, at the size the picture will be. */
+	let makingSubject = $derived(sending && wantTarget !== 'clip');
+
+	let stagePhaseIsWorking = $derived(
+		!stageError && !stageRound && !makingSubject && (stageClockFrom || sending)
+	);
 	let showStrip = $derived(stageThumbs.length > 1 || !!stagePhaseIsWorking);
 
 	/** The character this session made, when it made one and no clip.
@@ -5928,13 +5941,15 @@
 			? 'error'
 			: stageRound
 				? 'round'
-				: stageClockFrom || sending
-					? 'working'
-					: stageClip
-						? 'ready'
-						: stageDrawing || stageSheet
-							? 'character'
-							: 'empty'
+				: makingSubject
+					? 'character'
+					: stageClockFrom || sending
+						? 'working'
+						: stageClip
+							? 'ready'
+							: stageDrawing || stageSheet
+								? 'character'
+								: 'empty'
 	);
 
 	/** Whether the reader is parked at the latest message. Drives both the
@@ -7375,6 +7390,13 @@
 													onerror={sheetImageMissing}
 													class="max-h-full max-w-full rounded-2xl object-contain"
 												/>
+											{:else}
+												<!-- Nothing to show yet, so the wait is here rather than on a rectangle
+													 the size of a clip. The picture lands in this frame, and the mark is
+													 the size of what is coming rather than of something else entirely. -->
+												<span
+													class="spin size-6 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-muted)]"
+												></span>
 											{/if}
 										</div>
 										<div class="shrink-0 text-center">
