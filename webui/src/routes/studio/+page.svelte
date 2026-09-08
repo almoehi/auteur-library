@@ -183,9 +183,15 @@
 	 *  does, and they steer the model away from the children's-story default it
 	 *  otherwise falls into. */
 	const EXAMPLES = [
-		'a late-night confession from someone who knows exactly what they want',
-		'a slow burn between two rivals who keep pretending they are not interested',
-		'a teasing introduction to a character who is used to being adored'
+		{
+			pair: '\u2642\u2640',
+			text: 'a latino man jerking off over a naked blonde lying in front of him'
+		},
+		{ pair: '\u2642\u2642', text: 'two guys alone in the gym showers, one jerking the other off' },
+		{
+			pair: '\u2640\u2640',
+			text: "two women in their twenties, a blonde and a redhead, naked in a pool at night, one licking and groping the other's breasts"
+		}
 	];
 
 	// One set for both modes. The simple-mode trio named the act outright, which
@@ -7933,15 +7939,31 @@
 										{/each}
 									</h2>
 									<div class="grid w-full max-w-3xl gap-2.5 pt-2 sm:grid-cols-3">
-										{#each examples as ex (ex)}
+										{#each examples as ex (ex.text)}
 											<button
 												type="button"
-												class="flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
-												onclick={() => useExample(ex)}
+												class="relative flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
+												onclick={() => useExample(ex.text)}
 											>
+												<!-- Who is in it, in the one place the eye lands first. The
+													 examples are scanned for whether they are for you before a
+													 word of them is read, and two glyphs answer that in every
+													 language the operators write in — Spanish, Portuguese,
+													 Arabic, Chinese and Russian all turned up in a night. It is
+													 hidden from screen readers because the sentence beside it
+													 already says the same thing. -->
+												<span
+													class="mt-px shrink-0 text-[13px] leading-5 tracking-tight text-[var(--st-faint)]"
+													aria-hidden="true">{ex.pair}</span
+												>
+												<span class="min-w-0 pr-4">{ex.text}</span>
+												<!-- Says what the click does: it fills the box, it does not send.
+													 Out of the leading column so the pairing can have it, but
+													 kept — in a surface where every send costs money, "this only
+													 fills the field" is worth a corner. -->
 												<svg
 													viewBox="0 0 16 16"
-													class="mt-0.5 size-3.5 shrink-0 opacity-45"
+													class="absolute top-3 right-3 size-3 opacity-30"
 													fill="none"
 													aria-hidden="true"
 												>
@@ -7953,7 +7975,6 @@
 														stroke-linejoin="round"
 													/>
 												</svg>
-												<span class="min-w-0">{ex}</span>
 											</button>
 										{/each}
 									</div>
@@ -9565,16 +9586,22 @@
 							 lengths look like three unrelated things, and the longest one
 							 decided the shape of the block. -->
 								<div class="grid gap-2.5 pt-2 sm:grid-cols-3">
-									{#each examples as ex (ex)}
+									{#each examples as ex (ex.text)}
 										<button
 											type="button"
-											class="flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
-											onclick={() => useExample(ex)}
+											class="relative flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
+											onclick={() => useExample(ex.text)}
 										>
+											<!-- Who is in it. Same reasoning as the empty state's copy. -->
+											<span
+												class="mt-px shrink-0 text-[13px] leading-5 tracking-tight text-[var(--st-faint)]"
+												aria-hidden="true">{ex.pair}</span
+											>
+											<span class="min-w-0 pr-4">{ex.text}</span>
 											<!-- Says what the click does: it fills the box, it does not send. -->
 											<svg
 												viewBox="0 0 16 16"
-												class="mt-0.5 size-3.5 shrink-0 opacity-45"
+												class="absolute top-3 right-3 size-3 opacity-30"
 												fill="none"
 												aria-hidden="true"
 											>
@@ -9586,7 +9613,6 @@
 													stroke-linejoin="round"
 												/>
 											</svg>
-											<span class="min-w-0">{ex}</span>
 										</button>
 									{/each}
 								</div>
