@@ -10911,43 +10911,6 @@
 												{/if}
 											</button>
 										{/each}
-
-										<label
-											class="flex min-h-[3.125rem] w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors hover:bg-[var(--st-surface-2)]"
-										>
-											<span
-												class="flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--st-muted)] ring-1 ring-[var(--st-line)]"
-											>
-												<svg viewBox="0 0 20 20" class="size-4" fill="none" aria-hidden="true">
-													<path
-														d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
-														stroke="currentColor"
-														stroke-width="1.6"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													/>
-												</svg>
-											</span>
-											<span class="min-w-0">
-												<span class="block">Attach reference image</span>
-												<span class="mt-0.5 block text-xs text-[var(--st-faint)]"
-													>a face or a place to shoot against</span
-												>
-											</span>
-											<input
-												type="file"
-												multiple
-												accept="image/*,video/*"
-												class="hidden"
-												disabled={refBusy}
-												onchange={(e) => {
-													const el = e.currentTarget as HTMLInputElement;
-													attachRefs(el.files);
-													el.value = '';
-													shutMenus();
-												}}
-											/>
-										</label>
 									</div>
 								{/if}
 
@@ -11589,7 +11552,7 @@
 									{#if mode === 'simple' && wantTarget === 'clip'}
 										<button
 											type="button"
-											aria-label="add a character, a location or a reference image"
+											aria-label="add a character or a location"
 											aria-expanded={addOpen}
 											onclick={() => {
 												const open = !addOpen && pickKind === null;
@@ -11612,6 +11575,55 @@
 												/>
 											</svg>
 										</button>
+										<!-- Out of the menu and next to the plus.
+											 It was the third row of a list you had to open, which is two
+											 taps and a read for the one thing here that is not a decision:
+											 you either have a picture or you do not. The people who attach
+											 one are the ones who finish — sixty-three per cent of the
+											 accounts with a reference rendered something, against nine of
+											 those without — so it is the last control that should be
+											 filed away behind a menu. -->
+										<div class="group relative shrink-0">
+											<label
+												aria-label="reference image"
+												class="flex size-9 cursor-pointer items-center justify-center rounded-full text-[var(--st-muted)] transition-colors hover:bg-[var(--st-bg)] hover:text-[var(--st-text)]"
+											>
+												<svg
+													viewBox="0 0 20 20"
+													class="size-[1.05rem]"
+													fill="none"
+													aria-hidden="true"
+												>
+													<path
+														d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
+														stroke="currentColor"
+														stroke-width="1.6"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													/>
+												</svg>
+												<input
+													type="file"
+													multiple
+													accept="image/*,video/*"
+													class="hidden"
+													disabled={refBusy}
+													onchange={(e) => {
+														const el = e.currentTarget as HTMLInputElement;
+														attachRefs(el.files);
+														el.value = '';
+														shutMenus();
+													}}
+												/>
+											</label>
+											<!-- Its own label rather than `title`: the browser's takes a
+												 second to appear and arrives in the operating system's
+												 styling, which on a surface this dark reads as a fault. -->
+											<span
+												class="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 rounded-md bg-[var(--st-surface-2)] px-2 py-1 text-[11px] whitespace-nowrap text-[var(--st-text)] opacity-0 shadow-[0_6px_20px_rgba(0,0,0,.5)] transition-opacity duration-150 group-hover:opacity-100"
+												>reference image</span
+											>
+										</div>
 									{:else}
 										<!-- In a creation state there is nothing to pick between, so the
 									 paperclip is the whole menu and stands on its own. -->
