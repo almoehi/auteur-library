@@ -6684,6 +6684,14 @@
 		const audible = () =>
 			[...globalThis.document.querySelectorAll('video')].filter((v) => !v.muted);
 		const onPlay = (e: Event) => {
+			// A muted clip starting silences nothing. The rule reads "one thing
+			// talking at a time", and decoration is not talking — but the guard used
+			// to be only on the victims, never on the trigger, so any muted video
+			// beginning would stop whatever was audible. That cost nothing until the
+			// front page grew a wall of muted tiles that start themselves every four
+			// seconds: opening a film and watching it play for two and a half seconds
+			// before stopping dead was this line, every time.
+			if ((e.target as HTMLVideoElement).muted) return;
 			for (const v of audible()) if (v !== e.target) v.pause();
 		};
 		const onHidden = () => {
