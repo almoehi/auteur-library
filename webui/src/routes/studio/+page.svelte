@@ -1346,6 +1346,42 @@
 	 *  nothing can reach it. One wrong predicate, two bugs. */
 	const showExamples = $derived(!brief && !sending && chat.every((c) => c.id === welcomeId));
 
+	/** Somebody put themselves in the shot, and there is no picture of them.
+	 *
+	 *  Three quarters of the people who answered the survey want to be in the clip
+	 *  and the prompts show them trying: "me and a woman I just met", "Your
+	 *  apartment, late night", "Quero medir meu pau". What the model does with
+	 *  that is invent a person — and the measurement that matters here is that
+	 *  invented content is exactly what destroys a likeness, one made-up detail at
+	 *  a time. So the clip comes back, and it is not them, and nothing said it was
+	 *  never going to be.
+	 *
+	 *  This asks. It does not block: the button underneath still says generate and
+	 *  still works, because a person who meant "someone like me" is not wrong and
+	 *  should not have to argue with a dialog. It is an offer with the consequence
+	 *  attached, which is the only honest shape for it — the accounts that
+	 *  attached a reference rendered something 63% of the time against 9% for
+	 *  those that did not, so this is also the moment most likely to turn a
+	 *  visitor into somebody who finishes.
+	 *
+	 *  Pronouns in the four languages the operators actually write in. A false
+	 *  positive costs one tap; a missed one costs a render and a disappointment. */
+	const SELF_WORDS =
+		/(?:^|[^\p{L}])(?:i|i'm|im|me|my|myself|mine|you|you're|your|yourself|én|engem|nekem|velem|rám|rajtam|te|téged|neked|veled|rád|yo|mí|conmigo|tú|ti|contigo|eu|meu|minha|comigo|você)(?:[^\p{L}]|$)/iu;
+
+	/** Which read-back is still waiting on this question. Newest only: an older
+	 *  round has been answered by the fact that a newer one exists. */
+	let selfAnswered = $state<Record<string, boolean>>({});
+	const selfAsk = $derived.by(() => {
+		if (mode !== 'simple' || wantTarget !== 'clip') return null;
+		// A picture already on the bench, or a kept face, is the answer.
+		if (refFiles.length || chosenCharacter || continuing) return null;
+		const last = chat.filter((c) => c.kind === 'confirm' && c.confirm).at(-1);
+		const said = last?.confirm?.said ?? '';
+		if (!last || selfAnswered[last.id] || last.confirm?.sent) return null;
+		return SELF_WORDS.test(said) ? last.id : null;
+	});
+
 	const composerPlaceholder = $derived.by(() => {
 		// An instruction, not an example. A worked example belongs on the empty
 		// page, where there is room to read three of them and pick one; in the box
@@ -1354,6 +1390,10 @@
 		// field whose autosize only runs on input, so half of it was never seen.
 		// It also put explicit copy in the chrome, where it greets anyone walking
 		// past the machine before they have asked for anything.
+		// While the studio has asked something, the box says so. This is the whole
+		// signal that it can be talked to — a label under the question saying "you
+		// can reply here" would be a sign taped to a door that already opens.
+		if (selfAsk) return 'Answer, or say who they are';
 		if (mode === 'simple') {
 			if (wantTarget === 'character')
 				return currentCharacter ? 'Describe the change' : 'Describe the person, with an age';
@@ -6975,6 +7015,46 @@
 				<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
 					We adjusted this while writing it: {c.fixed.join(' · ')}
 				</p>
+			{/if}
+
+			<!-- The question, when somebody has put themselves in a shot with no
+				 picture of themselves in it. Quiet: no icon, no warning colour, no
+				 dialog — it is one sentence and two answers, and the generate button
+				 below it is untouched. An offer that has to be dismissed is not an
+				 offer.
+				 The consequence is stated because it is the only reason to care.
+				 "The model invents somebody" is what actually happens, and hearing it
+				 before the render costs nothing; hearing it after costs a clip. -->
+			{#if selfAsk === item.id && !c.streaming && c.line.trim()}
+				<div class="enter mt-3 rounded-xl bg-[var(--st-bg)] p-3.5">
+					<p class="text-sm leading-relaxed text-[var(--st-text)]">You are in this one.</p>
+					<p class="mt-1 text-xs leading-relaxed text-[var(--st-muted)]">
+						Attach a photo and the face in the clip is yours. Without one the model invents
+						somebody.
+					</p>
+					<div class="mt-3 flex flex-wrap items-center gap-2">
+						<label class="btn btn-primary cursor-pointer">
+							Add a photo of you
+							<input
+								type="file"
+								multiple
+								accept="image/*,video/*"
+								class="hidden"
+								disabled={refBusy}
+								onchange={(e) => {
+									const el = e.currentTarget as HTMLInputElement;
+									attachRefs(el.files);
+									el.value = '';
+								}}
+							/>
+						</label>
+						<button
+							type="button"
+							class="cursor-pointer rounded-full px-3 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+							onclick={() => (selfAnswered[item.id] = true)}>It is not me</button
+						>
+					</div>
+				</div>
 			{/if}
 
 			{#if canPress && !c.streaming && c.line.trim()}
