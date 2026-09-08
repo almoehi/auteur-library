@@ -1149,6 +1149,28 @@
 		return `/studio/api/file?${q.toString()}`;
 	}
 
+	/** The same url, asked to land on a frame.
+	 *
+	 *  A <video> shows its first decoded frame, and iOS Safari decodes nothing
+	 *  until something plays. `preload="metadata"` fetches the duration and
+	 *  stops, so a tile that never plays is a black rectangle — which is what
+	 *  every thumbnail here has always been on a phone, the clock in the corner
+	 *  reading 0:05 over the black to prove the file was fine all along.
+	 *
+	 *  Playing them is not the fix, because permission to play is exactly what
+	 *  gets withdrawn: Low Power Mode blocks muted autoplay outright, and a
+	 *  picture that vanishes when the battery is low is not a picture. A media
+	 *  fragment makes a frame the destination instead — the element seeks there
+	 *  on load and paints it, with or without permission to play, and the tiles
+	 *  that do autoplay still autoplay. The file route already answers ranged
+	 *  requests with 206, which is what the seek needs.
+	 *
+	 *  A tenth of a second rather than zero: on some encodes nothing is
+	 *  decodable at the very first timestamp and the seek lands on nothing. */
+	function still(url: string): string {
+		return `${url}#t=0.1`;
+	}
+
 	/** Take a copy of a clip on the server, now, while the workspace agent is
 	 *  still alive to serve it.
 	 *
@@ -5973,6 +5995,22 @@
 	 *  the width depends on the clip's aspect ratio and the height it was given, so
 	 *  no fixed number could follow it. */
 	let stageVideoW = $state(0);
+	/** The shown clip's own shape, straight off the file.
+	 *
+	 *  `max-height: 100%` only means anything when the box above it has a height
+	 *  to take the percentage of, and the picture's box is sized to the picture —
+	 *  auto height, so the limit silently evaluated to no limit. A 16:9 clip never
+	 *  notices: it runs out of width first. A 9:16 one is taller than the room it
+	 *  is given, so it draws its full height regardless and the composer, painted
+	 *  after it, ends up lying across the bottom of the picture — measured at 375
+	 *  points wide, 596 of clip in a 544-point slot.
+	 *
+	 *  Only for the shape that needs it. Given a height unconditionally, a
+	 *  landscape clip on a phone leaves its box standing full height behind a
+	 *  picture a third as tall, and the marks that ride on the picture float in
+	 *  the black above it: 335x188 of clip in a 335x572 box. */
+	let stageVidW = $state(0);
+	let stageVidH = $state(0);
 	/** Teardown for the audio rules installed on mount. */
 	let cleanupAudio: (() => void) | null = null;
 	/** The brief behind what is on the stage.
@@ -6788,7 +6826,7 @@
 				>
 					<!-- svelte-ignore a11y_media_has_caption -->
 					<video
-						src={fileUrl(c.workspace, c.artifact, c.file)}
+						src={still(fileUrl(c.workspace, c.artifact, c.file))}
 						muted
 						loop
 						playsinline
@@ -6964,7 +7002,7 @@
 		>
 			<!-- svelte-ignore a11y_media_has_caption -->
 			<video
-				src={fileUrl(run.clip.workspace, run.clip.artifact, run.clip.file)}
+				src={still(fileUrl(run.clip.workspace, run.clip.artifact, run.clip.file))}
 				muted
 				loop
 				playsinline
@@ -7327,7 +7365,7 @@
 						>
 							<!-- svelte-ignore a11y_media_has_caption -->
 							<video
-								src={fileUrl(f.workspace, f.artifact, f.file)}
+								src={still(fileUrl(f.workspace, f.artifact, f.file))}
 								muted
 								playsinline
 								preload="metadata"
@@ -7548,7 +7586,7 @@
 											>
 												<!-- svelte-ignore a11y_media_has_caption -->
 												<video
-													src={t.url}
+													src={still(t.url)}
 													muted
 													playsinline
 													preload="metadata"
@@ -7731,7 +7769,7 @@
 											{:else if view === 'turn' && turn}
 												<!-- svelte-ignore a11y_media_has_caption -->
 												<video
-													src={fileUrl(turn.workspace, turn.artifact, turn.file)}
+													src={still(fileUrl(turn.workspace, turn.artifact, turn.file))}
 													autoplay
 													loop
 													muted
@@ -7953,16 +7991,21 @@
 											 landscape one sits centred and smaller. Desktop keeps h-full,
 											 where the window is wider than any clip and the picture should
 											 take all the height there is. -->
-										<div class="relative max-h-full w-fit max-w-full lg:h-full">
+										<div
+											class="relative max-h-full w-fit max-w-full lg:h-full"
+											style={stageVidH > stageVidW ? 'height:100%' : undefined}
+										>
 											{#if f}
 												<!-- svelte-ignore a11y_media_has_caption -->
 												<video
-													src={f.url}
+													src={still(f.url)}
 													controls
 													autoplay={stageClip.id === stageAutoplayId}
 													loop
 													playsinline
 													bind:clientWidth={stageVideoW}
+													bind:videoWidth={stageVidW}
+													bind:videoHeight={stageVidH}
 													class="video-with-controls max-h-full w-auto max-w-full rounded-2xl bg-black lg:h-full"
 												></video>
 											{/if}
@@ -10024,8 +10067,17 @@
 							 below, and this band is how you know you are here and how you leave. -->
 								{#if mode === 'simple' && (continuing || (STAGE_UI && stageContinuable))}
 									{@const clipUrl = stageContinuable?.artifact?.files?.[0]?.url ?? ''}
+									<!-- On a phone, on the stage, this band holds nothing. Go through it: the
+										 continuation chips are `lg:flex`, every paragraph is `!STAGE_UI`, and
+										 STAGE_UI is true. What is left is one error. So it drew as its own
+										 padding — a black rounded bar above the field, sitting where a control
+										 should be and doing nothing. Shown only when something inside it will
+										 actually draw. -->
+									{@const bandOnPhone = !STAGE_UI || !!charFromClipError}
 									<div
-										class="mb-2 flex items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
+										class="mb-2 {bandOnPhone
+											? 'flex'
+											: 'hidden lg:flex'} items-center justify-between gap-3 rounded-2xl bg-[var(--st-bg)] px-3.5 py-2.5"
 									>
 										<div class="min-w-0">
 											{#if !STAGE_UI && continuing}
@@ -11472,7 +11524,7 @@
 				{#key filmKey(shot)}
 					<!-- svelte-ignore a11y_media_has_caption -->
 					<video
-						src={fileUrl(shot.workspace, shot.artifact, shot.file)}
+						src={still(fileUrl(shot.workspace, shot.artifact, shot.file))}
 						controls
 						autoplay
 						playsinline
@@ -11505,7 +11557,7 @@
 						>
 							<!-- svelte-ignore a11y_media_has_caption -->
 							<video
-								src={fileUrl(c.workspace, c.artifact, c.file)}
+								src={still(fileUrl(c.workspace, c.artifact, c.file))}
 								muted
 								loop
 								playsinline
@@ -11577,7 +11629,7 @@
 					{#key run.slug}
 						<!-- svelte-ignore a11y_media_has_caption -->
 						<video
-							src={fileUrl(run.clip.workspace, run.clip.artifact, run.clip.file)}
+							src={still(fileUrl(run.clip.workspace, run.clip.artifact, run.clip.file))}
 							controls
 							autoplay
 							muted
@@ -11661,7 +11713,7 @@
 		</button>
 		<!-- svelte-ignore a11y_media_has_caption -->
 		<video
-			src={fileUrl(filmPopup.workspace, filmPopup.artifact, filmPopup.file)}
+			src={still(fileUrl(filmPopup.workspace, filmPopup.artifact, filmPopup.file))}
 			controls
 			autoplay
 			playsinline
@@ -11705,7 +11757,7 @@
 				>
 					<!-- svelte-ignore a11y_media_has_caption -->
 					<video
-						src={fileUrl(f.workspace, f.artifact, f.file)}
+						src={still(fileUrl(f.workspace, f.artifact, f.file))}
 						muted
 						playsinline
 						preload="metadata"

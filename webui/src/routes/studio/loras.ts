@@ -117,8 +117,7 @@ export const BASE: Lora[] = [
 		band: [1.0, 2.0],
 		use: 'skin texture — pores, freckles, uneven tone',
 		kind: 'base'
-	}
-	,
+	},
 	{
 		key: 'mystic',
 		label: 'Mystic XXX v3',
@@ -203,7 +202,12 @@ export const CATALOGUE: Lora[] = [
 	{
 		key: 'bj',
 		label: 'Blowjob v2.1',
-		file: 'MM-H3 - Blowjob v2.1.safetensors',
+		// One string, three jobs: the download filename, the bundle entry name and
+		// the value in the graph's lora loader. It has to match the mirror bucket,
+		// where it is `MM-H3-Blowjob-v2.1.safetensors` — Civitai now answers 401
+		// without a token, and a run whose adapter cannot be fetched does not fail:
+		// it retries the download every minute and keeps billing.
+		file: 'MM-H3-Blowjob-v2.1.safetensors',
 		url: 'https://civitai.com/api/download/models/3235946?fileId=3118341',
 		sha256: 'aef6d0c6b758352fd4cfe302d3b9121fb0c18e470bde4bdb2025229e1febee6d',
 		strength: 1.2,
@@ -232,7 +236,7 @@ export const CATALOGUE: Lora[] = [
 		strength: 0.8,
 		use: 'vaginal penetration seen from above, missionary',
 		camera:
-			'POV from the penetrating partner\'s own eyeline, looking down her body. ' +
+			"POV from the penetrating partner's own eyeline, looking down her body. " +
 			'They are behind the lens and will not be in frame.',
 		kind: 'act'
 	},
@@ -333,7 +337,6 @@ export const CATALOGUE: Lora[] = [
 		use: 'a man ejaculates and that is the point. Not a female squirt — nothing in this list covers that',
 		kind: 'detail'
 	}
-
 ];
 
 const BY_KEY = new Map([...BASE, ...CATALOGUE].map((l) => [l.key, l]));
@@ -468,12 +471,18 @@ export function formatPicks(picks: Pick[]): string {
 export function catalogueForWriter(): string {
 	const line = (l: Lora) => {
 		const w = l.band ? `${l.strength} (${l.band[0]}-${l.band[1]})` : `${l.strength} fixed`;
-		return `  ${l.key.padEnd(8)}${w.padEnd(16)}${l.use}` +
+		return (
+			`  ${l.key.padEnd(8)}${w.padEnd(16)}${l.use}` +
 			(l.trigger ? `  [trigger: ${l.trigger}]` : '') +
-			(l.camera ? `\n${' '.repeat(26)}CAMERA: ${l.camera}` : '');
+			(l.camera ? `\n${' '.repeat(26)}CAMERA: ${l.camera}` : '')
+		);
 	};
-	const acts = CATALOGUE.filter((l) => l.kind === 'act').map(line).join('\n');
-	const details = CATALOGUE.filter((l) => l.kind === 'detail').map(line).join('\n');
+	const acts = CATALOGUE.filter((l) => l.kind === 'act')
+		.map(line)
+		.join('\n');
+	const details = CATALOGUE.filter((l) => l.kind === 'detail')
+		.map(line)
+		.join('\n');
 
 	return `ADAPTERS
 
