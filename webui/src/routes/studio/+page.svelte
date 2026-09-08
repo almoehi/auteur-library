@@ -7266,7 +7266,7 @@
 						     floor. Not a warning — the two numbers a person wants before
 						     they commit, in the place where committing happens. -->
 						<div
-							class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--st-line)] py-2.5 pr-3 pl-4"
+							class="relative flex flex-wrap items-center justify-between gap-3 border-t border-[var(--st-line)] py-2.5 pr-3 pl-4"
 						>
 							<span class="text-xs text-[var(--st-faint)]">
 								{composerShape.seconds}s{#if typicalClip}&nbsp;· {typicalLabel(typicalClip)}{/if}
@@ -12570,13 +12570,17 @@
 			background: color-mix(in srgb, var(--st-surface) 58%, transparent);
 			-webkit-backdrop-filter: blur(44px) saturate(1.9);
 			backdrop-filter: blur(44px) saturate(1.9);
-			/* Three edges, not one. The top catches the light, the bottom returns a
-			   little of it, and the outer shadow lifts the whole thing off what it
-			   is lying on — a pane with only a highlight reads as a decal. */
+			/* Two edges, both inside. The top catches the light and the bottom
+			   returns a little of it — that pair is what makes the pane read as a
+			   surface rather than as transparency.
+			   No outer shadow. It pooled under the card and darkened the strip the
+			   button sits in, which is the one thing here that must never be hard
+			   to see: a control that spends money should not be the dimmest thing
+			   on its own card. Depth on a dark page comes from the edge, not from
+			   a shadow nobody can see against black anyway. */
 			box-shadow:
 				inset 0 1px 0 rgba(255, 255, 255, 0.2),
-				inset 0 -1px 0 rgba(255, 255, 255, 0.05),
-				0 18px 44px rgba(0, 0, 0, 0.5);
+				inset 0 -1px 0 rgba(255, 255, 255, 0.05);
 		}
 	}
 
@@ -12940,9 +12944,16 @@
 	.btn-primary:hover:not(:disabled) {
 		background: var(--st-accent-strong);
 	}
+	/* A button that cannot be pressed still has to be readable.
+	 *
+	 *  Disabled was the faintest token on the darkest surface — the one pairing
+	 *  the contrast audit already measured at 2.51:1 — and this button spends
+	 *  money, so its busy state is exactly when somebody is staring at it waiting
+	 *  for the clock to move. Muted instead: still plainly not pressable, still
+	 *  legible while it counts. */
 	.btn-primary:disabled {
 		background: var(--st-surface-2);
-		color: var(--st-faint);
+		color: var(--st-muted);
 		opacity: 1;
 	}
 	.btn-secondary {
