@@ -7118,7 +7118,7 @@
 
 					{#if ask === 'self' || ask === 'who'}
 						<label
-							class="mt-2.5 inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs font-medium text-[var(--st-text)] transition-colors hover:bg-[var(--st-line)]"
+							class="pillglass mt-2.5 inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full px-3.5 text-xs font-medium text-[var(--st-text)] transition-colors"
 						>
 							<svg viewBox="0 0 20 20" class="size-3.5" fill="none" aria-hidden="true">
 								<path
@@ -7155,7 +7155,7 @@
 							{#each askAbout.missing as bit (bit)}
 								<button
 									type="button"
-									class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-2.5 py-1 text-[11px] text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+									class="pillglass cursor-pointer rounded-full px-2.5 py-1 text-[11px] text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
 									onclick={() => {
 										if (bit === 'character') {
 											shutMenus();
@@ -7196,7 +7196,7 @@
 				 One cannot be pressed past; the other has nothing to agree to yet, and
 				 showing an invented shot there is what started all of this. -->
 			{#if askAbout?.id !== item.id || (askAbout.kind !== 'blocked' && askAbout.kind !== 'no-words')}
-				<div class="mt-3 overflow-hidden rounded-2xl bg-white/[0.035] ring-1 ring-[var(--st-line)]">
+				<div class="shotglass mt-3 overflow-hidden rounded-2xl ring-1 ring-[var(--st-line)]">
 					<div class="p-4">
 						{#if askAbout?.id === item.id}
 							<p class="mb-1.5 text-xs text-[var(--st-faint)]">One way it could go</p>
@@ -12516,6 +12516,34 @@
 	}
 	.starterrow::-webkit-scrollbar {
 		display: none;
+	}
+
+	/** The shot card is glass too, lightly.
+	 *
+	 *  On the stage this card sits over the picture, and a solid panel there is a
+	 *  hole cut in the clip you are about to extend. Translucent, it stays a layer
+	 *  on top of the thing rather than a replacement for it. In the transcript
+	 *  there is only black behind it and the blur costs nothing — the same rule
+	 *  reads correctly in both places, which is why it is one rule.
+	 *
+	 *  The specular line along the top is the whole difference between glass and
+	 *  a grey box: it is where light would catch a real edge, and without it the
+	 *  material reads as transparency rather than as a surface. One pixel, inset,
+	 *  fourteen per cent.
+	 *
+	 *  Seventy per cent, not less. This card carries the sentence somebody is
+	 *  agreeing to and a button that spends money; anything more transparent puts
+	 *  a moving picture behind the words at the moment they matter most. */
+	.shotglass {
+		background: color-mix(in srgb, var(--st-surface) 96%, transparent);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.shotglass {
+			background: color-mix(in srgb, var(--st-surface) 70%, transparent);
+			-webkit-backdrop-filter: blur(28px) saturate(1.4);
+			backdrop-filter: blur(28px) saturate(1.4);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+		}
 	}
 
 	/** The chips are the same glass as the field under them.
