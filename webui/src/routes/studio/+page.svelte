@@ -1448,23 +1448,62 @@
 	 *  with the cursor after it, which is the one place invention is harmless,
 	 *  because nothing has been agreed and nobody has spent anything.
 	 *
-	 *  What they write is deliberately about shape rather than content. "Slow at
-	 *  first, then faster" is a turn, which is what a five-second clip needs and
-	 *  what almost none of the short prompts had; "close and handheld" is a
+	 *  The clause is written FOR the line it is being added to. It used to be one
+	 *  of two fixed phrases — true of any clip, which is exactly what was wrong
+	 *  with them: on a shot about one thing filling the frame, "slow at first,
+	 *  then faster" is filler to delete before it hurts the brief. Those two stay
+	 *  on as the fallback, because a chip that does nothing when the model is slow
+	 *  is worse than a chip that writes something generic.
+	 *
+	 *  What it adds is still shape, not content: a turn, which is what a
+	 *  five-second clip needs and what almost none of the short prompts had, or a
 	 *  camera, which sixty-five of seventy first messages never mentioned and
-	 *  which the adapter takes for itself when nobody claims it. Neither invents
-	 *  a person, a place or an act — those are the operator's, and guessing them
-	 *  is the mistake this whole mechanism exists to stop. */
-	function addMissing(bit: 'character' | 'place' | 'action' | 'camera') {
+	 *  which the adapter takes for itself when nobody claims it. Neither invents a
+	 *  person, a place or an act — those are the operator's, and guessing them is
+	 *  the mistake this whole mechanism exists to stop. */
+	const FALLBACK_CLAUSE = { action: 'slow at first, then faster', camera: 'close and handheld' };
+	let suggesting = $state<'action' | 'camera' | null>(null);
+
+	async function addMissing(bit: 'character' | 'place' | 'action' | 'camera', said = '') {
 		if (bit === 'character' || bit === 'place') {
 			shutMenus();
 			pickKind = bit === 'character' ? 'character' : 'location';
 			return;
 		}
+		if (suggesting) return;
+
+		// Everything they have written for this shot, in order: the message that
+		// raised the question, then whatever is in the box now — which after one tap
+		// holds the previous clause, so the second one is written knowing about the
+		// first instead of repeating it.
+		const basis = [said.trim(), input.trim()].filter(Boolean).join(' ').slice(0, 600);
+		let clause = FALLBACK_CLAUSE[bit];
+		if (basis) {
+			suggesting = bit;
+			// Never a hang: the chip is under a finger, and a clause that arrives after
+			// the operator has given up is worse than the generic one.
+			const stop = AbortController ? new AbortController() : null;
+			const bell = setTimeout(() => stop?.abort(), 9000);
+			try {
+				const r = await fetch('/studio/api/suggest', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ request: basis, kind: bit }),
+					signal: stop?.signal
+				});
+				const j = r.ok ? await r.json() : null;
+				if (j?.clause) clause = j.clause as string;
+			} catch {
+				/* the fixed phrase */
+			} finally {
+				clearTimeout(bell);
+				suggesting = null;
+			}
+		}
+
 		// Joined to a sentence, or standing as one. After a send the box is empty
 		// and the next thing typed is a refinement, so a clause that opens with a
 		// dash arrives as punctuation with nothing in front of it.
-		const clause = bit === 'action' ? 'slow at first, then faster' : 'close and handheld';
 		const now = input.trimEnd();
 		if (!now.toLowerCase().includes(clause.toLowerCase())) {
 			input = !now ? clause : now + (bit === 'action' ? ' — ' : ', ') + clause;
@@ -1480,6 +1519,7 @@
 	const askAbout = $derived.by<{
 		id: string;
 		kind: AskKind;
+		said: string;
 		missing: ReturnType<typeof missingBits>;
 	} | null>(() => {
 		if (mode !== 'simple' || wantTarget !== 'clip') return null;
@@ -1487,7 +1527,7 @@
 		const last = rounds.at(-1);
 		if (!last?.confirm || selfAnswered[last.id] || last.confirm.sent) return null;
 		const said = (last.confirm.said ?? '').trim();
-		const at = (kind: AskKind) => ({ id: last.id, kind, missing: missingBits(said) });
+		const at = (kind: AskKind) => ({ id: last.id, kind, said, missing: missingBits(said) });
 
 		// Refusal first, and on every round: an age does not become renderable
 		// because it arrived late in a conversation.
@@ -7244,16 +7284,20 @@
 							{#each askAbout.missing as bit (bit)}
 								<button
 									type="button"
-									class="pillglass cursor-pointer rounded-full px-2.5 py-1 text-[11px] text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-									onclick={() => addMissing(bit)}
+									class="pillglass cursor-pointer rounded-full px-2.5 py-1 text-[11px] text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-50"
+									disabled={!!suggesting}
+									aria-busy={suggesting === bit}
+									onclick={() => addMissing(bit, askAbout.said)}
 								>
-									{bit === 'character'
-										? 'a character'
-										: bit === 'place'
-											? 'a place'
-											: bit === 'action'
-												? 'what happens'
-												: 'the camera'}
+									{suggesting === bit
+										? 'writing…'
+										: bit === 'character'
+											? 'a character'
+											: bit === 'place'
+												? 'a place'
+												: bit === 'action'
+													? 'what happens'
+													: 'the camera'}
 								</button>
 							{/each}
 						</div>
@@ -8296,7 +8340,15 @@
 									? 'undercomposer -mb-32 pb-24'
 									: ''}"
 							>
-								<div class="my-auto flex w-full flex-col items-center gap-2">
+								<!-- Centred, except while it is a conversation. An empty stage and a
+									 render in progress are single objects and belong in the middle of
+									 the frame; a thread is a column that has to reach the bottom edge,
+									 and it cannot if its own wrapper has already shrunk to fit it. -->
+								<div
+									class="flex w-full flex-col items-center gap-2 {stagePhase === 'round'
+										? 'h-full min-h-0'
+										: 'my-auto'}"
+								>
 									{#if stagePhase === 'working'}
 										<!-- The percentage is honest about what it is: elapsed against the
 								 median of this machine's own finished runs. Half of all runs are
@@ -8391,21 +8443,31 @@
 									     place. -->
 										<div
 											bind:this={stageScroll}
-											class="scroller mx-auto flex min-h-0 w-full max-w-[48rem] flex-1 flex-col gap-5 overflow-y-auto px-1 pt-1"
+											class="scroller mx-auto flex min-h-0 w-full max-w-[48rem] flex-1 flex-col overflow-y-auto px-1 pt-1"
 										>
-											{#each stageThread as round (round.id)}
-												{@const said = round.confirm?.said?.trim() || roundRequest(round)}
-												{#if said}
-													<div class="flex justify-end">
-														<p
-															class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
-														>
-															{said}
-														</p>
-													</div>
-												{/if}
-												{@render confirmReply(round, round.id === stageRound.id)}
-											{/each}
+											<!-- Sat at the bottom, the way a chat sits.
+												 A short exchange pinned to the top of a tall column reads as a
+												 page that failed to fill; pinned to the bottom it reads as a
+												 conversation that has only just started, which is what it is.
+												 `mt-auto` and not `justify-end`: an auto margin gives way the
+												 moment the content is taller than the box, where `justify-end`
+												 would push the first round above the start edge, and nothing
+												 above scrollTop 0 can be scrolled back to. -->
+											<div class="mt-auto flex flex-col gap-5">
+												{#each stageThread as round (round.id)}
+													{@const said = round.confirm?.said?.trim() || roundRequest(round)}
+													{#if said}
+														<div class="flex justify-end">
+															<p
+																class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
+															>
+																{said}
+															</p>
+														</div>
+													{/if}
+													{@render confirmReply(round, round.id === stageRound.id)}
+												{/each}
+											</div>
 										</div>
 									{:else if stagePhase === 'error'}
 										<div
