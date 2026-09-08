@@ -7090,71 +7090,87 @@
 			     a sofa taking it from behind, in confident prose, with the admission
 			     that nothing had been said arriving underneath it. So the label is
 			     ours in that one case, and it says what the paragraph actually is. -->
-			{#if askAbout?.id === item.id}
-				<p class="mt-4 mb-1.5 text-xs text-[var(--st-faint)]">One way it could go</p>
-			{:else if parts.lead}
-				<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
-			{/if}
-			<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
-				{parts.said}{#if c.streaming && !parts.added}<span class="caret" aria-hidden="true"
-					></span>{/if}
-			</p>
-			{#if parts.added}
-				<!-- Ours, and it has to look it. Same size, quieter colour: it is not a
-				     footnote — it is half of what starts if the button is pressed — but
-				     it is an offer, and an offer that looks like a statement is not one. -->
-				<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
-					{parts.added}{#if c.streaming}<span class="caret" aria-hidden="true"></span>{/if}
-				</p>
-			{/if}
+			<!-- The shot is an object, and the talk around it is talk.
+				 Everything on this card used to be prose in one column — the
+				 question, the guess, the footnote and the button all the same
+				 weight, so there was nothing to agree TO, only a paragraph to
+				 read. What is being made now has an edge around it, and the two
+				 numbers you commit and the button that commits them are inside
+				 that edge rather than floating under it. You approve a thing.
 
-			{#if c.error}
-				<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">{c.error}</p>
-			{/if}
+				 The conversation above it stays unframed on purpose: a bubble or a
+				 second card around the question would make two objects out of one
+				 object and one remark. -->
+			<div class="mt-3 overflow-hidden rounded-2xl bg-white/[0.035] ring-1 ring-[var(--st-line)]">
+				<div class="p-4">
+					{#if askAbout?.id === item.id}
+						<p class="mb-1.5 text-xs text-[var(--st-faint)]">One way it could go</p>
+					{:else if parts.lead}
+						<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
+					{/if}
+					<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
+						{parts.said}{#if c.streaming && !parts.added}<span class="caret" aria-hidden="true"
+							></span>{/if}
+					</p>
+					{#if parts.added}
+						<!-- Ours, and it has to look it. Same size, quieter colour: it is not a
+						     footnote — it is half of what starts if the button is pressed — but
+						     it is an offer, and an offer that looks like a statement is not one. -->
+						<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
+							{parts.added}{#if c.streaming}<span class="caret" aria-hidden="true"></span>{/if}
+						</p>
+					{/if}
 
-			<!-- The checker had to change the brief, so this is no longer the clip that
-			     was agreed to. It says what moved and waits: sending it anyway is a
-			     decision, and it is not ours. -->
-			{#if c.fixed?.length}
-				<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
-					We adjusted this while writing it: {c.fixed.join(' · ')}
-				</p>
-			{/if}
+					{#if c.error}
+						<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">{c.error}</p>
+					{/if}
 
-			{#if canPress && !c.streaming && c.line.trim()}
-				<div
-					class="flex flex-wrap items-center gap-2.5 {askAbout?.id === item.id ? 'mt-5' : 'mt-3.5'}"
-				>
-					<button
-						type="button"
-						disabled={shotBusy[item.id]}
-						class="btn btn-primary"
-						onclick={() => {
-							selfAnsweredBySending(item.id);
-							acceptConfirm(item.id);
-						}}
-					>
-						{#if shotBusy[item.id]}
-							{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
-							{c.phase === 'writing'
-								? 'writing the brief'
-								: c.phase === 'starting'
-									? 'opening the workspace'
-									: 'starting'} ·
-							{clock(el)}
-						{:else if c.fixed?.length}
-							send it anyway
-						{:else}
-							{c.continues ? 'Continue the clip' : 'Generate the video'}
-						{/if}
-					</button>
-					<!-- The cost, next to the thing that spends it. Not a warning — just the
-					     two numbers a person wants before they commit. -->
-					<span class="text-xs text-[var(--st-faint)]">
-						{composerShape.seconds}s{#if typicalClip}&nbsp;· {typicalLabel(typicalClip)}{/if}
-					</span>
+					<!-- The checker had to change the brief, so this is no longer the clip that
+					     was agreed to. It says what moved and waits: sending it anyway is a
+					     decision, and it is not ours. -->
+					{#if c.fixed?.length}
+						<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
+							We adjusted this while writing it: {c.fixed.join(' · ')}
+						</p>
+					{/if}
 				</div>
-			{/if}
+
+				{#if canPress && !c.streaming && c.line.trim()}
+					<!-- The cost sits with the button that spends it, on the card's own
+					     floor. Not a warning — the two numbers a person wants before
+					     they commit, in the place where committing happens. -->
+					<div
+						class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--st-line)] py-2.5 pr-3 pl-4"
+					>
+						<span class="text-xs text-[var(--st-faint)]">
+							{composerShape.seconds}s{#if typicalClip}&nbsp;· {typicalLabel(typicalClip)}{/if}
+						</span>
+						<button
+							type="button"
+							disabled={shotBusy[item.id]}
+							class="btn btn-primary"
+							onclick={() => {
+								selfAnsweredBySending(item.id);
+								acceptConfirm(item.id);
+							}}
+						>
+							{#if shotBusy[item.id]}
+								{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
+								{c.phase === 'writing'
+									? 'writing the brief'
+									: c.phase === 'starting'
+										? 'opening the workspace'
+										: 'starting'} ·
+								{clock(el)}
+							{:else if c.fixed?.length}
+								send it anyway
+							{:else}
+								{c.continues ? 'Continue the clip' : 'Generate the video'}
+							{/if}
+						</button>
+					</div>
+				{/if}
+			</div>
 		</div>
 	{/if}
 {/snippet}
