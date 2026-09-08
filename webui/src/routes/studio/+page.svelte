@@ -10083,7 +10083,7 @@
 											}}
 											ondrop={(e) => dropClipIntoFilm(e)}
 											onclick={() => (filmOpen = !filmOpen)}
-											class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
+											class="pillglass flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-[var(--st-text)] tabular-nums transition-colors hover:bg-[var(--st-surface-2)] {filmOpen
 												? 'bg-[var(--st-surface-2)]'
 												: ''}"
 										>
@@ -10168,7 +10168,7 @@
 											shutMenus();
 											pickKind = 'character';
 										}}
-										class="flex min-h-8 max-w-[6.75rem] shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] py-1 pr-3 pl-1 text-xs whitespace-nowrap {chosenCharacter
+										class="pillglass flex min-h-8 max-w-[6.75rem] shrink-0 cursor-pointer items-center gap-1.5 rounded-full py-1 pr-3 pl-1 text-xs whitespace-nowrap {chosenCharacter
 											? 'text-[var(--st-text)]'
 											: 'text-[var(--st-faint)]'}"
 									>
@@ -10228,7 +10228,7 @@
 										{@const open = pillGrp === grp.id}
 										{@const cur = grp.opts.find((o) => o.v === grp.now) ?? grp.opts[0]}
 										<span
-											class="flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--st-surface)] p-0.5 whitespace-nowrap"
+											class="pillglass flex shrink-0 items-center gap-0.5 rounded-full p-0.5 whitespace-nowrap"
 										>
 											{#if !grp.up}
 												{#each grp.opts as o, i (o.v)}
@@ -10293,7 +10293,7 @@
 										type="button"
 										aria-expanded={modeOpen}
 										onclick={(e) => openPanelAt(e, 'mode')}
-										class="flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-3 text-xs whitespace-nowrap transition-colors {modeOpen
+										class="pillglass flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs whitespace-nowrap transition-colors {modeOpen
 											? 'text-[var(--st-text)]'
 											: 'text-[var(--st-muted)]'}"
 									>
@@ -10322,7 +10322,7 @@
 										type="button"
 										aria-expanded={fmtOpen}
 										onclick={(e) => openPanelAt(e, 'fmt')}
-										class="flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--st-surface)] px-3 font-mono text-xs whitespace-nowrap transition-colors {fmtOpen
+										class="pillglass flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 font-mono text-xs whitespace-nowrap transition-colors {fmtOpen
 											? 'text-[var(--st-text)]'
 											: 'text-[var(--st-muted)]'}"
 									>
@@ -12154,6 +12154,28 @@
 	 *  that dissolves just before reaching it never arrives underneath, which is
 	 *  the whole effect. A library scrolls under its own search bar and is hidden
 	 *  by it, not faded out in front of it. */
+	/** The chips are the same glass as the field under them.
+	 *
+	 *  Left solid they were six opaque lozenges floating on a translucent card —
+	 *  the one part of the bottom of the page that still read as laid on top of
+	 *  the picture rather than resting in it. Same treatment, one notch further
+	 *  open: they are small, they carry two or three words, and a chip is read in
+	 *  a glance rather than dwelt on.
+	 *
+	 *  Their hover state stays opaque on purpose. Hover is the moment a control
+	 *  says it is about to be used, and the clearest way to say it here is to
+	 *  stop being glass. */
+	.pillglass {
+		background: var(--st-surface);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.pillglass {
+			background: color-mix(in srgb, var(--st-surface) 80%, transparent);
+			-webkit-backdrop-filter: blur(18px) saturate(1.15);
+			backdrop-filter: blur(18px) saturate(1.15);
+		}
+	}
+
 	/** The field sits ON the wall, so it lets a little of it through.
 	 *
 	 *  Solid, it was a bar laid across the picture and the shelf appeared to stop
