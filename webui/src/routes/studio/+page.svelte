@@ -7839,7 +7839,10 @@
 								 be tall about. `auto` margins centre the same way and give way
 								 when there is nothing left to give. -->
 							<div
-								class="stagescroll flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto [&>*]:shrink-0"
+								class="stagescroll flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto [&>*]:shrink-0 {stagePhase ===
+									'empty' && shelf.length
+									? 'undercomposer -mb-32 pb-24'
+									: ''}"
 							>
 								<div class="my-auto flex w-full flex-col items-center gap-2">
 									{#if stagePhase === 'working'}
@@ -8224,9 +8227,7 @@
 										 fills on its own, so a tall film in one pushes its neighbours
 										 out of step and the wall stops looking like a table. -->
 										{#if shelf.length}
-											<div
-												class="w-full max-w-5xl columns-2 gap-2 pt-8 pb-2 sm:columns-3 lg:columns-4"
-											>
+											<div class="w-full max-w-3xl columns-2 gap-2 pt-8 pb-2 lg:columns-3">
 												{#each shelf as m, i (m.id)}
 													{@render mediaTile(m, i)}
 												{/each}
@@ -12136,6 +12137,28 @@
 	.stagescroll {
 		-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 4.5rem), transparent);
 		mask-image: linear-gradient(to bottom, #000 calc(100% - 4.5rem), transparent);
+	}
+
+	/** On the front page the wall does not stop above the composer, it runs under
+	 *  it. Stopping short leaves a band of empty black between the last tile and
+	 *  the field, which is the seam this was trying to lose — the picture should
+	 *  carry on behind the controls and be hidden by them, the way a library
+	 *  scrolls under its own search bar.
+	 *
+	 *  The negative margin is what does it: in a flex column it shrinks the item's
+	 *  outer box, so the column hands the element that height back and the next
+	 *  sibling — the composer — moves up over it. The padding underneath gives the
+	 *  last row somewhere to go, so it can be scrolled clear of the field rather
+	 *  than being permanently behind it.
+	 *
+	 *  And no fade on this one. The mask above exists for an edge with nothing
+	 *  past it; here there is something past it — the composer — and a picture
+	 *  that dissolves just before reaching it never arrives underneath, which is
+	 *  the whole effect. A library scrolls under its own search bar and is hidden
+	 *  by it, not faded out in front of it. */
+	.undercomposer {
+		-webkit-mask-image: none;
+		mask-image: none;
 	}
 
 	/* The one moving thing on the page, and it earns it: during a render nothing
