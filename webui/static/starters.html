@@ -1,0 +1,146 @@
+<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>Starters — three ways to keep the prompts</title>
+<style>
+:root{--bg:#08080a;--panel:#0c0c0d;--surface:#151517;--line:#232326;--text:#ececee;--muted:#9a9aa1;--faint:#6e6e76}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);padding:40px 24px 72px;
+ font:14px/1.5 -apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif}
+h1{font-size:26px;letter-spacing:-.022em;font-weight:600;margin:0 0 6px;text-align:center}
+.lede{color:var(--muted);text-align:center;max-width:52rem;margin:0 auto 34px;font-size:13.5px}
+.row{display:flex;gap:34px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+.col{width:376px}
+.hd{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.hd b{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.hd em{font-style:normal;color:var(--faint);font-size:11px;font-family:ui-monospace,Menlo,monospace}
+.why{color:var(--muted);font-size:12.5px;line-height:1.5;margin:0 0 14px;min-height:56px}
+.phone{width:376px;height:740px;border-radius:34px;background:var(--panel);border:1px solid var(--line);
+ overflow:hidden;position:relative;display:flex;flex-direction:column}
+.bar{display:flex;align-items:center;gap:12px;padding:14px 16px 6px;flex:none}
+.bar svg{opacity:.65}
+.bar span{font-weight:600;font-size:17px;letter-spacing:-.02em}
+.h2{font-size:30px;line-height:1.06;font-weight:600;letter-spacing:-.032em;text-align:center;
+ margin:8px 16px 12px;flex:none}
+.scroll{flex:1;min-height:0;overflow-y:auto;padding:0 12px;-webkit-mask-image:none}
+.wall{columns:2;column-gap:8px;padding-bottom:150px}
+.tile{display:block;width:100%;margin:0 0 8px;padding:0;border:0;background:var(--surface);
+ border-radius:12px;overflow:hidden;break-inside:avoid;cursor:pointer}
+.tile video{width:100%;height:100%;object-fit:cover;display:block}
+.dock{position:absolute;left:12px;right:12px;bottom:12px}
+.glass{background:color-mix(in srgb,var(--surface) 84%,transparent);backdrop-filter:blur(22px) saturate(1.15);
+ -webkit-backdrop-filter:blur(22px) saturate(1.15);border-radius:24px;padding:12px}
+.chips{display:flex;gap:8px;margin-bottom:8px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:6px;border:0;cursor:pointer;color:var(--muted);
+ background:color-mix(in srgb,var(--surface) 80%,transparent);backdrop-filter:blur(18px);
+ -webkit-backdrop-filter:blur(18px);border-radius:999px;padding:7px 13px;font:inherit;font-size:12.5px;white-space:nowrap}
+.field{color:var(--faint);font-size:16px;padding:4px 2px 26px}
+.glyph{color:var(--faint);font-size:12px;letter-spacing:.5px}
+/* A */
+.qt{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;margin-bottom:9px}
+.qt::-webkit-scrollbar{display:none}
+.qt button{flex:none;display:flex;gap:7px;align-items:center;border:0;cursor:pointer;font:inherit;font-size:12.5px;
+ color:var(--muted);background:color-mix(in srgb,var(--surface) 80%,transparent);border-radius:999px;padding:7px 13px;white-space:nowrap}
+/* B */
+.oneline{display:flex;align-items:center;gap:9px;margin:0 16px 12px;padding:11px 13px;border-radius:14px;
+ background:var(--surface);flex:none}
+.oneline p{margin:0;font-size:13px;line-height:1.45;color:var(--muted);flex:1;min-width:0;
+ transition:opacity .34s ease}
+.shuf{flex:none;border:0;background:transparent;color:var(--faint);cursor:pointer;padding:2px;font-size:14px}
+/* C */
+.starters{display:flex;gap:7px;margin:0 16px 12px;flex:none}
+.starters button{flex:1;min-width:0;border:0;cursor:pointer;font:inherit;background:var(--surface);
+ border-radius:13px;padding:9px 8px;color:var(--muted);text-align:left;transition:background .18s}
+.starters button:hover{background:#1c1c1f}
+.starters .g{display:block;color:var(--faint);font-size:11px;margin-bottom:3px;letter-spacing:.5px}
+.starters .w{display:block;font-size:12px;line-height:1.3;color:var(--text);overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.cost{margin-top:12px;color:var(--faint);font-size:11.5px;font-family:ui-monospace,Menlo,monospace;text-align:center}
+</style>
+<h1>Keeping the prompts, and the wall right under the headline</h1>
+<p class=lede>Today the three examples take 284 points — 35% of a phone — and push every film below the fold. They also convert at one in forty-two. Three ways to keep them without spending the first screen on them. Tap anything; all three are live.</p>
+
+<div class=row>
+
+  <div class=col>
+    <div class=hd><b>A · Above the field</b><em>0 pt at the top</em></div>
+    <p class=why>The suggestions move to where typing happens, as a scrolling row inside the composer glass — the predictive bar over an iOS keyboard. A suggestion belongs beside the thing it fills, not two screens above it.</p>
+    <div class=phone>
+      <div class=bar><svg width=18 height=18 viewBox="0 0 16 16" fill=none><path d="M2.5 4h11M2.5 8h11M2.5 12h7" stroke="currentColor" stroke-width=1.5 stroke-linecap=round/></svg><span>Auteur</span></div>
+      <div class=h2>Adult film.<br>Directed by you.</div>
+      <div class=scroll><div class=wall><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=b5ac513888349dae887f75e9a8ac5705#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=ee682b812b8d8b6d462c3aeb1950836a#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=4b1212fca2def0ce1f4f3d2098e9f697#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=68e65e80dd7b77834d5e86517f7fb837#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=27eb9fa13a93f94c4d7de08beec3c8c3#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=e10efef4215e0a1f6fe0d4e3e0efcec6#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=b2c48125014284a67a73c8778630185f#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=7b71ae48dbcff9323c2f6adc62154508#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=f7b6daa29de0aa06f752ca6081b8c413#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=5e4a97ae3dc9d19faf2ddeba7d9edf61#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=80969b7e64c12b340ab430d7ac17e2b1#t=0.1" muted playsinline preload="metadata"></video></button></div></div>
+      <div class=dock>
+        <div class=qt id=qtA></div>
+        <div class=glass>
+          <div class=chips><span class=chip>anyone</span><span class=chip>one clip</span><span class=chip>5s · 864p</span></div>
+          <div class=field id=fA>Describe one shot</div>
+        </div>
+      </div>
+    </div>
+    <div class=cost>wall starts 118 pt from the top</div>
+  </div>
+
+  <div class=col>
+    <div class=hd><b>B · One line, rotating</b><em>44 pt</em></div>
+    <p class=why>One example under the headline instead of three, changing every few seconds. One good example teaches as much as three; three at once is a menu you have to read rather than an example you absorb.</p>
+    <div class=phone>
+      <div class=bar><svg width=18 height=18 viewBox="0 0 16 16" fill=none><path d="M2.5 4h11M2.5 8h11M2.5 12h7" stroke="currentColor" stroke-width=1.5 stroke-linecap=round/></svg><span>Auteur</span></div>
+      <div class=h2>Adult film.<br>Directed by you.</div>
+      <div class=oneline><span class=glyph id=gB>&#9794;&#9792;</span><p id=pB></p><button class=shuf id=sB title="another">&#8635;</button></div>
+      <div class=scroll><div class=wall><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=b5ac513888349dae887f75e9a8ac5705#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=ee682b812b8d8b6d462c3aeb1950836a#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=4b1212fca2def0ce1f4f3d2098e9f697#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=68e65e80dd7b77834d5e86517f7fb837#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=27eb9fa13a93f94c4d7de08beec3c8c3#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=e10efef4215e0a1f6fe0d4e3e0efcec6#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=b2c48125014284a67a73c8778630185f#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=7b71ae48dbcff9323c2f6adc62154508#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=f7b6daa29de0aa06f752ca6081b8c413#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=5e4a97ae3dc9d19faf2ddeba7d9edf61#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=80969b7e64c12b340ab430d7ac17e2b1#t=0.1" muted playsinline preload="metadata"></video></button></div></div>
+      <div class=dock><div class=glass>
+        <div class=chips><span class=chip>anyone</span><span class=chip>one clip</span><span class=chip>5s · 864p</span></div>
+        <div class=field id=fB>Describe one shot</div>
+      </div></div>
+    </div>
+    <div class=cost>wall starts 162 pt from the top</div>
+  </div>
+
+  <div class=col>
+    <div class=hd><b>C · Three starters</b><em>40 pt</em></div>
+    <p class=why>All three stay, at a seventh of the height: the glyph identifies, two or three words recall. Tap and the full sentence lands in the field. Photos' filter chips, not three stacked cards.</p>
+    <div class=phone>
+      <div class=bar><svg width=18 height=18 viewBox="0 0 16 16" fill=none><path d="M2.5 4h11M2.5 8h11M2.5 12h7" stroke="currentColor" stroke-width=1.5 stroke-linecap=round/></svg><span>Auteur</span></div>
+      <div class=h2>Adult film.<br>Directed by you.</div>
+      <div class=starters id=stC></div>
+      <div class=scroll><div class=wall><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=b5ac513888349dae887f75e9a8ac5705#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=ee682b812b8d8b6d462c3aeb1950836a#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=4b1212fca2def0ce1f4f3d2098e9f697#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=68e65e80dd7b77834d5e86517f7fb837#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=27eb9fa13a93f94c4d7de08beec3c8c3#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=e10efef4215e0a1f6fe0d4e3e0efcec6#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=b2c48125014284a67a73c8778630185f#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=7b71ae48dbcff9323c2f6adc62154508#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:1/1"><video src="/studio/api/media?id=f7b6daa29de0aa06f752ca6081b8c413#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:4/3"><video src="/studio/api/media?id=5e4a97ae3dc9d19faf2ddeba7d9edf61#t=0.1" muted playsinline preload="metadata"></video></button><button class="tile" style="aspect-ratio:3/4"><video src="/studio/api/media?id=80969b7e64c12b340ab430d7ac17e2b1#t=0.1" muted playsinline preload="metadata"></video></button></div></div>
+      <div class=dock><div class=glass>
+        <div class=chips><span class=chip>anyone</span><span class=chip>one clip</span><span class=chip>5s · 864p</span></div>
+        <div class=field id=fC>Describe one shot</div>
+      </div></div>
+    </div>
+    <div class=cost>wall starts 158 pt from the top</div>
+  </div>
+
+</div>
+
+<script>
+const EX = [
+  {g:'\u2642\u2640', short:'him over her',  text:'a latino man jerking off over a naked blonde lying in front of him'},
+  {g:'\u2642\u2642', short:'gym showers',   text:'two guys alone in the gym showers, one jerking the other off'},
+  {g:'\u2640\u2640', short:'pool at night', text:"two women in their twenties, a blonde and a redhead, naked in a pool at night, one licking and groping the other's breasts"}
+];
+const fill = (id, t) => { const f=document.getElementById(id); f.textContent=t; f.style.color='var(--text)'; };
+
+// A — the row above the field
+document.getElementById('qtA').innerHTML = EX.map((e,i)=>
+  `<button data-i="${i}"><span class=glyph>${e.g}</span>${e.short}</button>`).join('');
+document.getElementById('qtA').onclick = e => { const b=e.target.closest('button'); if(b) fill('fA', EX[b.dataset.i].text); };
+
+// B — one line, rotating
+let bi = 0;
+const pB=document.getElementById('pB'), gB=document.getElementById('gB');
+function showB(){ pB.style.opacity=0; setTimeout(()=>{ pB.textContent=EX[bi].text; gB.textContent=EX[bi].g; pB.style.opacity=1; },340); }
+pB.textContent=EX[0].text; 
+setInterval(()=>{ bi=(bi+1)%EX.length; showB(); }, 5200);
+document.getElementById('sB').onclick = ()=>{ bi=(bi+1)%EX.length; showB(); };
+document.getElementById('pB').onclick = ()=> fill('fB', EX[bi].text);
+
+// C — three starters
+document.getElementById('stC').innerHTML = EX.map((e,i)=>
+  `<button data-i="${i}"><span class=g>${e.g}</span><span class=w>${e.short}</span></button>`).join('');
+document.getElementById('stC').onclick = e => { const b=e.target.closest('button'); if(b) fill('fC', EX[b.dataset.i].text); };
+
+// lazy tiles
+const eye=new IntersectionObserver(es=>{for(const x of es) if(x.isIntersecting){const v=x.target; v.src=v.dataset.s; eye.unobserve(v);}},{rootMargin:'400px'});
+document.querySelectorAll('.wall video').forEach(v=>{ v.dataset.s=v.getAttribute('src'); v.removeAttribute('src'); eye.observe(v); });
+</script>

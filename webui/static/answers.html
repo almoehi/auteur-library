@@ -1,0 +1,145 @@
+<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>What the studio answers</title>
+<style>
+:root{--bg:#08080a;--surface:#151517;--surface2:#1e1e21;--line:#232326;--text:#ececee;
+ --muted:#9a9aa1;--faint:#6e6e76;--warn:#e06c6c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);padding:40px 24px 90px;
+ font:14px/1.5 -apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif}
+h1{font-size:26px;letter-spacing:-.022em;font-weight:600;margin:0 0 6px;text-align:center}
+.lede{color:var(--muted);text-align:center;max-width:54rem;margin:0 auto 34px;font-size:13.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:26px;max-width:1240px;margin:0 auto}
+.case{background:#0c0c0d;border:1px solid var(--line);border-radius:18px;padding:18px 18px 20px}
+.tag{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.04em;
+ text-transform:uppercase;color:var(--faint);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.tag.bad{color:var(--warn);border-color:rgba(224,108,108,.35)}
+.mine{align-self:flex-end;background:var(--surface2);border-radius:16px;padding:8px 13px;font-size:13.5px;
+ max-width:86%;margin:12px 0 14px auto;width:fit-content}
+.q{font-size:14px;margin:0;line-height:1.5}
+.q.bad{color:var(--warn);font-weight:600}
+.sub{color:var(--muted);font-size:12.3px;line-height:1.55;margin:4px 0 0}
+.bits{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.bit{background:var(--surface2);border-radius:999px;padding:4px 10px;font-size:11px;color:var(--muted)}
+.attach{display:inline-flex;align-items:center;gap:7px;background:var(--surface2);border-radius:999px;
+ padding:7px 13px;font-size:12px;font-weight:500;margin-top:10px}
+.wrap{border:1px solid rgba(224,108,108,.22);background:rgba(224,108,108,.07);border-radius:12px;padding:12px 13px}
+.shot{border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:16px;overflow:hidden;margin-top:14px}
+.shot .top{padding:13px 14px}
+.shot .lead{margin:0 0 5px;color:var(--faint);font-size:11px}
+.shot p.b{margin:0;font-size:13px;line-height:1.6}
+.shot .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;
+ padding:9px 10px 9px 14px;border-top:1px solid var(--line)}
+.meta{color:var(--faint);font-size:11.5px}
+.pri{background:#f2f2f4;color:#000;border:0;border-radius:999px;padding:7px 15px;font:inherit;
+ font-size:12.5px;font-weight:600}
+.field{margin-top:14px;background:var(--surface);border-radius:16px;padding:10px 13px;color:var(--faint);font-size:13.5px}
+.field b{color:var(--muted);font-weight:400}
+.none{margin-top:14px;color:var(--faint);font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+h2{font-size:17px;font-weight:600;margin:56px 0 6px;text-align:center}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:1000px;margin:14px auto 0}
+.two .c{background:#0c0c0d;border:1px solid var(--line);border-radius:14px;padding:14px}
+.two .c.bad{border-color:rgba(224,108,108,.3)}
+.two h3{margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:.02em}
+.two h3.bad{color:var(--warn)}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.7;color:var(--muted);white-space:pre-wrap;margin:0}
+</style>
+
+<h1>What the studio answers</h1>
+<p class=lede>Six kinds of thin prompt, taken from the export of real first messages, and the answer each one now gets. Five ask a question and leave the button alone; one refuses and takes the button away. The box underneath changes its label in every case, because that is where the reply goes.</p>
+
+<div class=grid>
+
+  <div class=case>
+    <span class="tag bad">blocked · refuses</span>
+    <div class=mine>A small teen with Open mouth</div>
+    <div class=wrap>
+      <p class="q bad">Can't make this.</p>
+      <p class=sub>It describes someone under age. Write a different shot — everyone in it has to be an adult.</p>
+    </div>
+    <p class=none>no card, no button — the rule is not a suggestion</p>
+    <div class=field><b>Describe a different shot</b></div>
+  </div>
+
+  <div class=case>
+    <span class=tag>self · asks for a reference</span>
+    <div class=mine>me and a woman I just met, in a hotel room</div>
+    <p class=q>You&#39;re in this one.</p>
+    <p class=sub>Attach a photo, or the model invents a face.</p>
+    <span class=attach>📎 Add a photo of you</span>
+    <div class=shot>
+      <div class=top><p class=lead>One way it could go</p>
+        <p class=b>A hotel room at night, she straddles him on the bed and rides him with steady rhythm, the camera close and low so both faces stay in frame.</p></div>
+      <div class=foot><span class=meta>5s · about 8m</span><button class=pri>Generate the video</button></div>
+    </div>
+    <div class=field><b>Answer, or say who they are</b></div>
+  </div>
+
+  <div class=case>
+    <span class=tag>who · asks for a name</span>
+    <div class=mine>Your apartment, late night after gaming. You've been listening to him brag…</div>
+    <p class=q>Who is this?</p>
+    <p class=sub>Say who they are, or attach a picture.</p>
+    <span class=attach>📎 Add a picture of them</span>
+    <div class=shot>
+      <div class=top><p class=lead>One way it could go</p>
+        <p class=b>A dim apartment lit by a monitor, two men on the sofa, one turning to the other mid-sentence and stopping.</p></div>
+      <div class=foot><span class=meta>5s · about 8m</span><button class=pri>Generate the video</button></div>
+    </div>
+    <div class=field><b>Answer, or say who they are</b></div>
+  </div>
+
+  <div class=case>
+    <span class=tag>sheet · a person, not a shot</span>
+    <div class=mine>subject_definitions: &lt;Subject 1&gt; is Oliver, the young adult man…</div>
+    <p class=q>That&#39;s a character.</p>
+    <p class=sub>That describes a person. Say what they do, and where.</p>
+    <p class=sub style="margin-top:11px;color:var(--faint)">Add anything?</p><div class=bits><span class=bit>a character</span><span class=bit>a place</span><span class=bit>what happens</span><span class=bit>the camera</span></div>
+    <div class=shot>
+      <div class=top><p class=lead>One way it could go</p>
+        <p class=b>Oliver alone in a bare room, facing camera, undressing slowly without looking away.</p></div>
+      <div class=foot><span class=meta>5s · about 8m</span><button class=pri>Generate the video</button></div>
+    </div>
+    <div class=field><b>What happens in the shot?</b></div>
+  </div>
+
+  <div class=case>
+    <span class="tag bad">no-words · error</span>
+    <div class=mine>332323232.jpg</div>
+    <p class=q>Add a prompt.</p>
+    <p class=sub>A picture is not a shot. Say what happens in it.</p>
+    <p class=none>no card, no button — there is nothing to agree to yet</p>
+    <div class=field><b>What happens in the shot?</b></div>
+  </div>
+
+  <div class=case>
+    <span class=tag>too-short · a subject</span>
+    <div class=mine>big dick</div>
+    <p class=q>That&#39;s a subject.</p>
+    <p class=sub>Say what happens, and where.</p>
+    <p class=sub style="margin-top:11px;color:var(--faint)">Add anything?</p><div class=bits><span class=bit>a character</span><span class=bit>a place</span><span class=bit>what happens</span><span class=bit>the camera</span></div>
+    <div class=shot>
+      <div class=top><p class=lead>One way it could go</p>
+        <p class=b>A man in warm lamplight, close on him as he strokes slowly, the frame tight enough to hold only that.</p></div>
+      <div class=foot><span class=meta>5s · about 8m</span><button class=pri>Generate the video</button></div>
+    </div>
+    <div class=field><b>What happens in the shot?</b></div>
+  </div>
+
+</div>
+
+<h2>And the one that is our fault, not theirs</h2>
+<p class=lede style="margin-bottom:0">Two people sharing one verb renders as one merged body. The operator never writes the brief — we do — so this is caught in the brief, before it is sent, by a check that reads the sentence the reciprocal sits in.</p>
+<div class=two>
+  <div class="c bad"><h3 class=bad>refused · reciprocal-action</h3>
+    <p class=mono>&lt;Subject 1&gt; is a tall bearded man…
+&lt;Subject 2&gt; is a shorter man…
+
+They stand under the water and
+stroke each other slowly.</p></div>
+  <div class=c><h3>passes</h3>
+    <p class=mono>&lt;Subject 1&gt; closes his right hand
+around &lt;Subject 2&gt;'s cock;
+&lt;Subject 2&gt; braces his left palm
+on the tiles and pushes into it.</p></div>
+</div>
+<p class=lede style="margin-top:16px">"They look at each other" passes — a reciprocal only merges bodies where it touches one. Five cases tested, five correct.</p>
