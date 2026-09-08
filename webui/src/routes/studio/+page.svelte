@@ -1429,16 +1429,21 @@
 		/\b(room|bed|bedroom|kitchen|bathroom|shower|office|hotel|car|pool|beach|sofa|couch|desk|floor|stairs|garden|club|gym|street|window|wall|table|szoba|ágy|konyha|fürdő|zuhany|iroda|hotel|autó|medence|kanapé)\b/i;
 	const HAS_CAMERA =
 		/\b(camera|close[- ]?up|pov|wide|angle|shot from|behind|over the shoulder|handheld|slow|zoom|frame|lens|kamera|közeli|hátulról)\b/i;
-	function missingBits(said: string): string[] {
-		const out: string[] = [];
-		if (!HAS_PLACE.test(said)) out.push('where it happens');
-		out.push('what they do');
-		if (!HAS_CAMERA.test(said)) out.push('how it is shot');
+	function missingBits(said: string): ('character' | 'place' | 'action' | 'camera')[] {
+		const out: ('character' | 'place' | 'action' | 'camera')[] = [];
+		if (!chosenCharacter && !refFiles.length) out.push('character');
+		if (!HAS_PLACE.test(said)) out.push('place');
+		out.push('action');
+		if (!HAS_CAMERA.test(said)) out.push('camera');
 		return out;
 	}
 
 	type AskKind = 'blocked' | 'self' | 'who' | 'sheet' | 'no-words' | 'too-short';
-	const askAbout = $derived.by<{ id: string; kind: AskKind; missing: string[] } | null>(() => {
+	const askAbout = $derived.by<{
+		id: string;
+		kind: AskKind;
+		missing: ReturnType<typeof missingBits>;
+	} | null>(() => {
 		if (mode !== 'simple' || wantTarget !== 'clip') return null;
 		const rounds = chat.filter((c) => c.kind === 'confirm' && c.confirm);
 		const last = rounds.at(-1);
@@ -7070,14 +7075,12 @@
 		     the conversation rather than an order you can still place; the stage
 		     shows one round and it is always that one. -->
 		<div class="enter">
-			<!-- What the studio had to make up, asked about instead of guessed.
-				 No box, no icon, no colour — except the one case that is a refusal
-				 rather than a question, which is the only thing on this surface
-				 allowed to be red. The card it lives in is already the container,
-				 and what separates a note from its subject is space and weight.
-				 One filled button on the card and it is not this one: generating
-				 stays the loud action, and pressing it answers the question on the
-				 way past, so there is nothing here to dismiss. -->
+			<!-- What is missing, said in as few words as it takes.
+				 No box, no icon, no colour — except the refusal, which is the one
+				 thing on this surface allowed to be red. Two of the six also take
+				 the card away: a rule cannot be pressed past, and a picture with
+				 no words is not a shot to agree to. The rest ask and leave the
+				 button alone, and pressing it answers on the way past. -->
 			{#if askAbout?.id === item.id && !c.streaming && c.line.trim()}
 				{@const ask = askAbout.kind}
 				{@const bad = ask === 'blocked'}
@@ -7088,41 +7091,30 @@
 							: 'text-[var(--st-text)]'}"
 					>
 						{ask === 'blocked'
-							? 'This one cannot be made.'
+							? "Can't make this."
 							: ask === 'self'
-								? 'You are in this one.'
+								? "You're in this one."
 								: ask === 'who'
-									? 'Somebody is being spoken to.'
+									? 'Who is this?'
 									: ask === 'sheet'
-										? 'That is a character, not a shot.'
+										? "That's a character."
 										: ask === 'no-words'
-											? 'Just the picture, then.'
-											: 'That names who, not what.'}
+											? 'Add a prompt.'
+											: "That's a subject."}
 					</p>
-					<p class="mt-1 max-w-[30rem] text-xs leading-relaxed text-[var(--st-muted)]">
+					<p class="mt-1 max-w-[26rem] text-xs leading-relaxed text-[var(--st-muted)]">
 						{ask === 'blocked'
-							? 'It describes somebody under age, and nothing here will render that. Write a different shot — everyone in it has to be an adult, and saying their age is the surest way to be sure.'
+							? 'It describes someone under age. Write a different shot — everyone in it has to be an adult.'
 							: ask === 'self'
-								? 'Attach a photo and the face in the clip is yours. Without one the model invents somebody.'
+								? 'Attach a photo, or the model invents a face.'
 								: ask === 'who'
-									? 'Say who they are, or attach a picture of them. Without either, the model picks a stranger.'
+									? 'Say who they are, or attach a picture.'
 									: ask === 'sheet'
-										? 'That describes a person. Say what they do and where — the description belongs on a kept character, and this box is the shot.'
-										: 'Say what happens, and where. Everything you leave out gets invented — and invented detail is what loses a likeness.'}
+										? 'That describes a person. Say what they do, and where.'
+										: ask === 'no-words'
+											? 'A picture is not a shot. Say what happens in it.'
+											: 'Say what happens, and where.'}
 					</p>
-
-					<!-- What this particular line is missing, named. "Say more" is not
-						 help; the two or three things it does not have are. -->
-					{#if ask === 'too-short' || ask === 'no-words' || ask === 'sheet'}
-						<div class="mt-2.5 flex flex-wrap gap-1.5">
-							{#each askAbout.missing as bit (bit)}
-								<span
-									class="rounded-full bg-[var(--st-surface-2)] px-2.5 py-1 text-[11px] text-[var(--st-muted)]"
-									>{bit}</span
-								>
-							{/each}
-						</div>
-					{/if}
 
 					{#if ask === 'self' || ask === 'who'}
 						<label
@@ -7152,9 +7144,43 @@
 							/>
 						</label>
 					{/if}
+
+					<!-- The missing parts, as things to press rather than things to read.
+						 A chip that says "where it happens" is a label; one that opens the
+						 location picker is an answer. `action` has nowhere to go but the
+						 box, so it puts the cursor there. -->
+					{#if (ask === 'too-short' || ask === 'sheet') && askAbout.missing.length}
+						<p class="mt-3 text-xs text-[var(--st-faint)]">Add anything?</p>
+						<div class="mt-1.5 flex flex-wrap gap-1.5">
+							{#each askAbout.missing as bit (bit)}
+								<button
+									type="button"
+									class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-2.5 py-1 text-[11px] text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+									onclick={() => {
+										if (bit === 'character') {
+											shutMenus();
+											pickKind = 'character';
+										} else if (bit === 'place') {
+											shutMenus();
+											pickKind = 'location';
+										} else {
+											composer?.focus();
+										}
+									}}
+								>
+									{bit === 'character'
+										? 'a character'
+										: bit === 'place'
+											? 'a place'
+											: bit === 'action'
+												? 'what happens'
+												: 'the camera'}
+								</button>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{/if}
-
 			<!-- The shot is an object, and the talk around it is talk.
 				 Everything on this card used to be prose in one column — the
 				 question, the guess, the footnote and the button all the same
@@ -7166,79 +7192,84 @@
 				 The conversation above it stays unframed on purpose: a bubble or a
 				 second card around the question would make two objects out of one
 				 object and one remark. -->
-			<div class="mt-3 overflow-hidden rounded-2xl bg-white/[0.035] ring-1 ring-[var(--st-line)]">
-				<div class="p-4">
-					{#if askAbout?.id === item.id}
-						<p class="mb-1.5 text-xs text-[var(--st-faint)]">One way it could go</p>
-					{:else if parts.lead}
-						<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
-					{/if}
-					<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
-						{parts.said}{#if c.streaming && !parts.added}<span class="caret" aria-hidden="true"
-							></span>{/if}
-					</p>
-					{#if parts.added}
-						<!-- Ours, and it has to look it. Same size, quieter colour: it is not a
-						     footnote — it is half of what starts if the button is pressed — but
-						     it is an offer, and an offer that looks like a statement is not one. -->
-						<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
-							{parts.added}{#if c.streaming}<span class="caret" aria-hidden="true"></span>{/if}
+			<!-- No card under a refusal, and none under a picture with no words.
+				 One cannot be pressed past; the other has nothing to agree to yet, and
+				 showing an invented shot there is what started all of this. -->
+			{#if askAbout?.id !== item.id || (askAbout.kind !== 'blocked' && askAbout.kind !== 'no-words')}
+				<div class="mt-3 overflow-hidden rounded-2xl bg-white/[0.035] ring-1 ring-[var(--st-line)]">
+					<div class="p-4">
+						{#if askAbout?.id === item.id}
+							<p class="mb-1.5 text-xs text-[var(--st-faint)]">One way it could go</p>
+						{:else if parts.lead}
+							<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
+						{/if}
+						<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
+							{parts.said}{#if c.streaming && !parts.added}<span class="caret" aria-hidden="true"
+								></span>{/if}
 						</p>
-					{/if}
+						{#if parts.added}
+							<!-- Ours, and it has to look it. Same size, quieter colour: it is not a
+							     footnote — it is half of what starts if the button is pressed — but
+							     it is an offer, and an offer that looks like a statement is not one. -->
+							<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
+								{parts.added}{#if c.streaming}<span class="caret" aria-hidden="true"></span>{/if}
+							</p>
+						{/if}
 
-					{#if c.error}
-						<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">{c.error}</p>
-					{/if}
+						{#if c.error}
+							<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">{c.error}</p>
+						{/if}
 
-					<!-- The checker had to change the brief, so this is no longer the clip that
-					     was agreed to. It says what moved and waits: sending it anyway is a
-					     decision, and it is not ours. -->
-					{#if c.fixed?.length}
-						<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
-							We adjusted this while writing it: {c.fixed.join(' · ')}
-						</p>
+						<!-- The checker had to change the brief, so this is no longer the clip that
+						     was agreed to. It says what moved and waits: sending it anyway is a
+						     decision, and it is not ours. -->
+						{#if c.fixed?.length}
+							<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
+								We adjusted this while writing it: {c.fixed.join(' · ')}
+							</p>
+						{/if}
+					</div>
+
+					<!-- No button under a refusal. Everything else here is an offer with
+						 the press still available; this one is not, and leaving it there
+						 would say the rule is a suggestion. -->
+					{#if canPress && !c.streaming && c.line.trim() && askAbout?.kind !== 'blocked'}
+						<!-- The cost sits with the button that spends it, on the card's own
+						     floor. Not a warning — the two numbers a person wants before
+						     they commit, in the place where committing happens. -->
+						<div
+							class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--st-line)] py-2.5 pr-3 pl-4"
+						>
+							<span class="text-xs text-[var(--st-faint)]">
+								{composerShape.seconds}s{#if typicalClip}&nbsp;· {typicalLabel(typicalClip)}{/if}
+							</span>
+							<button
+								type="button"
+								disabled={shotBusy[item.id]}
+								class="btn btn-primary"
+								onclick={() => {
+									selfAnsweredBySending(item.id);
+									acceptConfirm(item.id);
+								}}
+							>
+								{#if shotBusy[item.id]}
+									{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
+									{c.phase === 'writing'
+										? 'writing the brief'
+										: c.phase === 'starting'
+											? 'opening the workspace'
+											: 'starting'} ·
+									{clock(el)}
+								{:else if c.fixed?.length}
+									send it anyway
+								{:else}
+									{c.continues ? 'Continue the clip' : 'Generate the video'}
+								{/if}
+							</button>
+						</div>
 					{/if}
 				</div>
-
-				<!-- No button under a refusal. Everything else here is an offer with
-					 the press still available; this one is not, and leaving it there
-					 would say the rule is a suggestion. -->
-				{#if canPress && !c.streaming && c.line.trim() && askAbout?.kind !== 'blocked'}
-					<!-- The cost sits with the button that spends it, on the card's own
-					     floor. Not a warning — the two numbers a person wants before
-					     they commit, in the place where committing happens. -->
-					<div
-						class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--st-line)] py-2.5 pr-3 pl-4"
-					>
-						<span class="text-xs text-[var(--st-faint)]">
-							{composerShape.seconds}s{#if typicalClip}&nbsp;· {typicalLabel(typicalClip)}{/if}
-						</span>
-						<button
-							type="button"
-							disabled={shotBusy[item.id]}
-							class="btn btn-primary"
-							onclick={() => {
-								selfAnsweredBySending(item.id);
-								acceptConfirm(item.id);
-							}}
-						>
-							{#if shotBusy[item.id]}
-								{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
-								{c.phase === 'writing'
-									? 'writing the brief'
-									: c.phase === 'starting'
-										? 'opening the workspace'
-										: 'starting'} ·
-								{clock(el)}
-							{:else if c.fixed?.length}
-								send it anyway
-							{:else}
-								{c.continues ? 'Continue the clip' : 'Generate the video'}
-							{/if}
-						</button>
-					</div>
-				{/if}
-			</div>
+			{/if}
 		</div>
 	{/if}
 {/snippet}
