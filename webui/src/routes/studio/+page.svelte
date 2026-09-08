@@ -183,15 +183,9 @@
 	 *  does, and they steer the model away from the children's-story default it
 	 *  otherwise falls into. */
 	const EXAMPLES = [
-		{
-			pair: '\u2642\u2640',
-			text: 'a latino man jerking off over a naked blonde lying in front of him'
-		},
-		{ pair: '\u2642\u2642', text: 'two guys alone in the gym showers, one jerking the other off' },
-		{
-			pair: '\u2640\u2640',
-			text: "two women in their twenties, a blonde and a redhead, naked in a pool at night, one licking and groping the other's breasts"
-		}
+		'a latino man jerking off over a naked blonde lying in front of him',
+		'two guys alone in the gym showers, one jerking the other off',
+		"two women in their twenties in a pool at night, one licking the other's breasts"
 	];
 
 	// One set for both modes. The simple-mode trio named the act outright, which
@@ -3980,7 +3974,11 @@
 	 *  is a line you might not notice changed; a row with the next card showing at
 	 *  its edge and dots underneath says "there are three" before anything moves.
 	 *  It still advances on its own, because nobody swipes a thing they have not
-	 *  been told is swipeable — but the first frame already says it is. */
+	 *  been told is swipeable — but the first frame already says it is.
+	 *
+	 *  A phone only. From `sm` up the three fit side by side as they always did,
+	 *  and the same markup lays out as a grid: no peek, no dots, no advancing.
+	 *  The carousel answers a shortage of height, and a desktop has none. */
 	let starterAt = $state(0);
 	let starterRow = $state<HTMLElement | null>(null);
 	/** Stop advancing the moment somebody takes hold of it. Nothing is more
@@ -3991,7 +3989,11 @@
 	$effect(() => {
 		const reduced =
 			typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (reduced || starterHeld || !showExamples || examples.length < 2) return;
+		// Only where it is a carousel. From `sm` up the three sit side by side and
+		// there is nothing to page — a row that scrolled itself while all of it was
+		// already on screen would be motion for its own sake.
+		const wide = typeof matchMedia === 'function' && matchMedia('(min-width: 640px)').matches;
+		if (reduced || wide || starterHeld || !showExamples || examples.length < 2) return;
 		const t = setInterval(() => showStarter((starterAt + 1) % examples.length), STARTER_MS);
 		return () => clearInterval(t);
 	});
@@ -7212,26 +7214,22 @@
 	<!-- The next card peeks past the right edge, so the row reads as a row before
 		 anything has moved. Snap, so a swipe lands on a card rather than between
 		 two of them. -->
-	<div class="w-full max-w-[34rem] pt-2">
+	<div class="w-full max-w-[34rem] pt-2 sm:max-w-3xl">
 		<div
 			bind:this={starterRow}
 			onscroll={starterScrolled}
 			onpointerdown={() => (starterHeld = true)}
-			class="starterrow flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1"
+			class="starterrow flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:gap-2.5 sm:overflow-visible sm:pb-0"
 		>
-			{#each examples as ex, i (ex.text)}
+			{#each examples as ex, i (ex)}
 				<button
 					type="button"
-					onclick={() => useExample(ex.text)}
+					onclick={() => useExample(ex)}
 					aria-label="use this example"
 					aria-current={i === starterAt}
-					class="relative flex min-h-[5.5rem] w-[86%] shrink-0 cursor-pointer snap-start items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent sm:w-[74%]"
+					class="relative flex min-h-[5.5rem] w-[86%] shrink-0 cursor-pointer snap-start items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent sm:w-full sm:shrink"
 				>
-					<span
-						class="mt-px shrink-0 text-[13px] leading-5 tracking-tight text-[var(--st-faint)]"
-						aria-hidden="true">{ex.pair}</span
-					>
-					<span class="min-w-0 pr-4">{ex.text}</span>
+					<span class="min-w-0 pr-4">{ex}</span>
 					<!-- Says what the tap does: it fills the box, it does not send. -->
 					<svg
 						viewBox="0 0 16 16"
@@ -7252,8 +7250,8 @@
 		</div>
 		<!-- How many there are, and which one this is. The dots do the telling;
 			 they are not a control, so they are not a target. -->
-		<div class="mt-2 flex justify-center gap-1.5" aria-hidden="true">
-			{#each examples as ex, i (ex.text)}
+		<div class="mt-2 flex justify-center gap-1.5 sm:hidden" aria-hidden="true">
+			{#each examples as ex, i (ex)}
 				<span
 					class="h-1.5 rounded-full transition-all duration-300 {i === starterAt
 						? 'w-4 bg-[var(--st-muted)]'
