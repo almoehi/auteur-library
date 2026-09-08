@@ -1371,23 +1371,30 @@
 
 	/** What the studio had to make up, and could ask about instead.
 	 *
-	 *  One mechanism, three shapes of the same fault: a brief that invents more
-	 *  than it was told. The measurement underneath all of them is the same —
-	 *  invented content is what destroys a likeness, one made-up detail at a time
-	 *  — and the cheapest moment to catch it is before the GPU, not after.
+	 *  One mechanism, six shapes of the same fault: a brief that invents more than
+	 *  it was told. The measurement underneath all of them is the same — invented
+	 *  content is what destroys a likeness, one made-up detail at a time — and the
+	 *  cheapest moment to catch it is before the GPU, not after.
 	 *
-	 *    self      somebody put themselves in the shot with no picture of
-	 *              themselves in it. There is an action for this one: attach.
-	 *    no-words  a picture arrived and nothing was typed, so the filename is
-	 *              the entire prompt. "332323232.jpg" became a girl riding a cock
-	 *              with her face contorting — every word of it made up.
-	 *    too-short a subject, not a shot: "big dick", "short blonde", "Hairy
-	 *              lovers fucking". Under four words there is no place, no
-	 *              action and no camera, so all three get invented.
+	 *    blocked   an age that cannot be rendered at all. Not a question: this one
+	 *              refuses, in the one place on this surface that is allowed to be
+	 *              red, and asks for a different shot.
+	 *    self      "me", "my" — themselves in it, with no picture of themselves.
+	 *              The answer is a reference, so the offer is to attach one.
+	 *    who       "you", "your" — somebody addressed, and nobody kept. The answer
+	 *              is not a photo, it is a name: who is this supposed to be.
+	 *    sheet     a character sheet typed into a shot box. Eight of a hundred and
+	 *              eighteen opened with `subject_definitions:`. It is long and it
+	 *              is third person, so nothing else here catches it.
+	 *    no-words  a picture arrived and nothing was typed, so the filename is the
+	 *              whole prompt.
+	 *    too-short a subject, not a shot: under four words there is no place, no
+	 *              action and no camera, so all three get made up.
 	 *
-	 *  Only ever on the first round. A short line later is a refinement — "faster",
-	 *  "closer" — and answering that with a question about what happens would be
-	 *  the studio failing to follow its own conversation. */
+	 *  Only on the first round, and never on a continuation — except `blocked`,
+	 *  which is not a matter of how far into a conversation anybody is. A short
+	 *  line later is a refinement ("faster", "closer"), and answering that with a
+	 *  question about what happens would be the studio failing to follow itself. */
 	let selfAnswered = $state<Record<string, boolean>>({});
 	/** Pressing generate answers it: they meant what they wrote. */
 	function selfAnsweredBySending(id: string) {
@@ -1395,28 +1402,68 @@
 	}
 
 	const FILENAME_ONLY = /^[\w .()-]+\.(?:jpe?g|png|webp|heic|gif|mp4|mov|webm)$/i;
+	const FIRST_PERSON =
+		/(?:^|[^\p{L}])(?:i|i'm|im|me|my|myself|mine|én|engem|nekem|velem|rám|yo|mí|conmigo|eu|meu|minha|comigo)(?:[^\p{L}]|$)/iu;
+	const SECOND_PERSON =
+		/(?:^|[^\p{L}])(?:you|you're|your|yourself|te|téged|neked|veled|rád|tú|ti|contigo|você|teu|tua)(?:[^\p{L}]|$)/iu;
+	const SHEET_FORMAT = /^\s*subject_definitions\b|<Subject \d>|<Picture \d>/i;
 
-	const askAbout = $derived.by<{ id: string; kind: 'self' | 'no-words' | 'too-short' } | null>(
-		() => {
-			if (mode !== 'simple' || wantTarget !== 'clip' || continuing) return null;
-			const rounds = chat.filter((c) => c.kind === 'confirm' && c.confirm);
-			const last = rounds.at(-1);
-			if (!last?.confirm || selfAnswered[last.id] || last.confirm.sent) return null;
-			const said = (last.confirm.said ?? '').trim();
+	/** An age this cannot render, in any wording.
+	 *
+	 *  Deliberately narrow and deliberately deterministic. It is the front door,
+	 *  not the lock: `minors.server.ts` still runs on the input AND the output at
+	 *  both prompt endpoints, and that is what actually refuses. What this adds is
+	 *  the answer arriving before a round trip, in words, on the screen where the
+	 *  sentence was typed — "A small teen with Open mouth" came through the real
+	 *  studio and the operator learned nothing from what happened next. */
+	const UNDER_AGE =
+		/(?:^|[^\p{L}])(?:teen|teens|teenage[rd]?|schoolgirl|schoolboy|preteen|underage|minor|child|kid|loli|jailbait|kislány|kisfiú|tini|tinédzser|serdülő|niña|niño|adolescente|menina|menino)(?:[^\p{L}]|$)|(?:^|[^\d])(?:1[0-7])\s*(?:years?[- ]old|yo|éves|años|anos)/iu;
 
-			// A picture and no words. The reference is already here, so the missing
-			// half is the only thing worth asking about.
-			if (FILENAME_ONLY.test(said)) return { id: last.id, kind: 'no-words' };
+	/** What a thin line is missing, named rather than asked for in general.
+	 *
+	 *  "Say more" is not help. What helps is the two or three things this
+	 *  particular sentence does not have — and the checks are crude on purpose,
+	 *  because a wrong suggestion costs a glance and a missing one costs a
+	 *  render. */
+	const HAS_PLACE =
+		/\b(room|bed|bedroom|kitchen|bathroom|shower|office|hotel|car|pool|beach|sofa|couch|desk|floor|stairs|garden|club|gym|street|window|wall|table|szoba|ágy|konyha|fürdő|zuhany|iroda|hotel|autó|medence|kanapé)\b/i;
+	const HAS_CAMERA =
+		/\b(camera|close[- ]?up|pov|wide|angle|shot from|behind|over the shoulder|handheld|slow|zoom|frame|lens|kamera|közeli|hátulról)\b/i;
+	function missingBits(said: string): string[] {
+		const out: string[] = [];
+		if (!HAS_PLACE.test(said)) out.push('where it happens');
+		out.push('what they do');
+		if (!HAS_CAMERA.test(said)) out.push('how it is shot');
+		return out;
+	}
 
-			// A subject with no shot around it — first round only.
-			const words = said.split(/\s+/).filter(Boolean).length;
-			if (rounds.length === 1 && words > 0 && words < 4) return { id: last.id, kind: 'too-short' };
+	type AskKind = 'blocked' | 'self' | 'who' | 'sheet' | 'no-words' | 'too-short';
+	const askAbout = $derived.by<{ id: string; kind: AskKind; missing: string[] } | null>(() => {
+		if (mode !== 'simple' || wantTarget !== 'clip') return null;
+		const rounds = chat.filter((c) => c.kind === 'confirm' && c.confirm);
+		const last = rounds.at(-1);
+		if (!last?.confirm || selfAnswered[last.id] || last.confirm.sent) return null;
+		const said = (last.confirm.said ?? '').trim();
+		const at = (kind: AskKind) => ({ id: last.id, kind, missing: missingBits(said) });
 
-			// Themselves in it, with nothing to go on.
-			if (refFiles.length || chosenCharacter) return null;
-			return SELF_WORDS.test(said) ? { id: last.id, kind: 'self' as const } : null;
-		}
-	);
+		// Refusal first, and on every round: an age does not become renderable
+		// because it arrived late in a conversation.
+		if (UNDER_AGE.test(said)) return at('blocked');
+		if (continuing) return null;
+
+		if (FILENAME_ONLY.test(said)) return at('no-words');
+		if (SHEET_FORMAT.test(said)) return at('sheet');
+
+		const words = said.split(/\s+/).filter(Boolean).length;
+		if (rounds.length === 1 && words > 0 && words < 4) return at('too-short');
+
+		// Themselves in it, or somebody addressed and nobody kept. A picture or a
+		// kept face answers the first; only a name answers the second.
+		if (refFiles.length || chosenCharacter) return null;
+		if (FIRST_PERSON.test(said)) return at('self');
+		if (SECOND_PERSON.test(said)) return at('who');
+		return null;
+	});
 
 	const composerPlaceholder = $derived.by(() => {
 		// An instruction, not an example. A worked example belongs on the empty
@@ -1430,7 +1477,11 @@
 		// signal that it can be talked to — a label under the question saying "you
 		// can reply here" would be a sign taped to a door that already opens.
 		if (askAbout)
-			return askAbout.kind === 'self' ? 'Answer, or say who they are' : 'What happens in the shot?';
+			return askAbout.kind === 'blocked'
+				? 'Describe a different shot'
+				: askAbout.kind === 'self' || askAbout.kind === 'who'
+					? 'Answer, or say who they are'
+					: 'What happens in the shot?';
 		if (mode === 'simple') {
 			if (wantTarget === 'character')
 				return currentCharacter ? 'Describe the change' : 'Describe the person, with an age';
@@ -7020,32 +7071,60 @@
 		     shows one round and it is always that one. -->
 		<div class="enter">
 			<!-- What the studio had to make up, asked about instead of guessed.
-				 No box: the card it lives in is already the container, and what
-				 separates a note from its subject is space and a change of weight.
-				 One filled button on the card and it is not this one — generating
-				 stays the loud action, because it is still what this is for. The
-				 offer is quiet, and pressing generate answers the question on the
+				 No box, no icon, no colour — except the one case that is a refusal
+				 rather than a question, which is the only thing on this surface
+				 allowed to be red. The card it lives in is already the container,
+				 and what separates a note from its subject is space and weight.
+				 One filled button on the card and it is not this one: generating
+				 stays the loud action, and pressing it answers the question on the
 				 way past, so there is nothing here to dismiss. -->
 			{#if askAbout?.id === item.id && !c.streaming && c.line.trim()}
 				{@const ask = askAbout.kind}
-				<!-- First in the card, because it is the honest order. It used to sit
-					 under three sentences of invented prose, which said the quiet part
-					 after the loud one: here is your clip, and by the way none of it
-					 came from you. -->
-				<div class="enter">
-					<p class="text-sm leading-relaxed text-[var(--st-text)]">
-						{ask === 'self'
-							? 'You are in this one.'
-							: ask === 'no-words'
-								? 'Just the picture, then.'
-								: 'That names who, not what.'}
+				{@const bad = ask === 'blocked'}
+				<div class="enter {bad ? 'rounded-xl bg-[var(--st-warn,#e06c6c)]/[0.09] p-3.5' : ''}">
+					<p
+						class="text-sm leading-relaxed {bad
+							? 'font-semibold text-[var(--st-warn,#e06c6c)]'
+							: 'text-[var(--st-text)]'}"
+					>
+						{ask === 'blocked'
+							? 'This one cannot be made.'
+							: ask === 'self'
+								? 'You are in this one.'
+								: ask === 'who'
+									? 'Somebody is being spoken to.'
+									: ask === 'sheet'
+										? 'That is a character, not a shot.'
+										: ask === 'no-words'
+											? 'Just the picture, then.'
+											: 'That names who, not what.'}
 					</p>
 					<p class="mt-1 max-w-[30rem] text-xs leading-relaxed text-[var(--st-muted)]">
-						{ask === 'self'
-							? 'Attach a photo and the face in the clip is yours. Without one the model invents somebody.'
-							: 'Say what happens, and where. Everything you leave out gets invented — and invented detail is what loses a likeness.'}
+						{ask === 'blocked'
+							? 'It describes somebody under age, and nothing here will render that. Write a different shot — everyone in it has to be an adult, and saying their age is the surest way to be sure.'
+							: ask === 'self'
+								? 'Attach a photo and the face in the clip is yours. Without one the model invents somebody.'
+								: ask === 'who'
+									? 'Say who they are, or attach a picture of them. Without either, the model picks a stranger.'
+									: ask === 'sheet'
+										? 'That describes a person. Say what they do and where — the description belongs on a kept character, and this box is the shot.'
+										: 'Say what happens, and where. Everything you leave out gets invented — and invented detail is what loses a likeness.'}
 					</p>
-					{#if ask === 'self'}
+
+					<!-- What this particular line is missing, named. "Say more" is not
+						 help; the two or three things it does not have are. -->
+					{#if ask === 'too-short' || ask === 'no-words' || ask === 'sheet'}
+						<div class="mt-2.5 flex flex-wrap gap-1.5">
+							{#each askAbout.missing as bit (bit)}
+								<span
+									class="rounded-full bg-[var(--st-surface-2)] px-2.5 py-1 text-[11px] text-[var(--st-muted)]"
+									>{bit}</span
+								>
+							{/each}
+						</div>
+					{/if}
+
+					{#if ask === 'self' || ask === 'who'}
 						<label
 							class="mt-2.5 inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs font-medium text-[var(--st-text)] transition-colors hover:bg-[var(--st-line)]"
 						>
@@ -7058,7 +7137,7 @@
 									stroke-linejoin="round"
 								/>
 							</svg>
-							Add a photo of you
+							{ask === 'self' ? 'Add a photo of you' : 'Add a picture of them'}
 							<input
 								type="file"
 								multiple
@@ -7076,20 +7155,6 @@
 				</div>
 			{/if}
 
-			<!-- What this paragraph is, and what to do with it. Without it the studio
-			     answers a request with three sentences of prose and no frame: it could
-			     be a plan, a summary, or something that already happened.
-
-			     Written by the model, not by us. A fixed label says the same eleven
-			     words to the fortieth clip as to the first.
-
-			     Except when it was given nothing to write from. Then the model's own
-			     lead — "here is your five-second clip" — states the invention as the
-			     thing that was asked for, and the paragraph under it reads as a
-			     description rather than a guess. A filename became a woman kneeling on
-			     a sofa taking it from behind, in confident prose, with the admission
-			     that nothing had been said arriving underneath it. So the label is
-			     ours in that one case, and it says what the paragraph actually is. -->
 			<!-- The shot is an object, and the talk around it is talk.
 				 Everything on this card used to be prose in one column — the
 				 question, the guess, the footnote and the button all the same
@@ -7135,7 +7200,10 @@
 					{/if}
 				</div>
 
-				{#if canPress && !c.streaming && c.line.trim()}
+				<!-- No button under a refusal. Everything else here is an offer with
+					 the press still available; this one is not, and leaving it there
+					 would say the rule is a suggestion. -->
+				{#if canPress && !c.streaming && c.line.trim() && askAbout?.kind !== 'blocked'}
 					<!-- The cost sits with the button that spends it, on the card's own
 					     floor. Not a warning — the two numbers a person wants before
 					     they commit, in the place where committing happens. -->

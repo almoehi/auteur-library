@@ -63,6 +63,11 @@ function subjects(prompt: string): { n: string; said: string }[] {
 const ROOM = /\b(interior|room|location|setting|backdrop|apartment|hallway|office)\b/i;
 /** Words that describe a body rather than name one. A subject with none of these
  *  and no picture behind it is a name with nobody attached. */
+/** A reciprocal only merges bodies where it touches one. "they look at each
+ *  other" is safe; "they stroke each other" is the fault. */
+const PHYSICAL =
+	/\b(stroking|stroke[sd]?|touch\w*|grop\w*|rub\w*|suck\w*|lick\w*|jerk\w*|wank\w*|grab\w*|grind\w*|kiss\w*|fuck\w*|hold(?:ing|s)?|hands?|fingers?|palms?|mouths?|cocks?|dicks?|penis(?:es)?|chests?|breasts?|nipples?|thighs?|hips?|arses?|asses?)\b/i;
+
 const BODY =
 	/\b(build|body|torso|skin|hair|breasts?|nude|naked|dressed|wearing|shoulders|hips|thighs|beard|stubble|years?[- ]old|thin|slim|skinny|muscular|fit|chubby|tall|short)\b/i;
 
@@ -153,7 +158,45 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 		}
 	}
 
-	// 4. Somebody arriving at a pinned seam, with nothing said about it.
+	// 4. Two people and a reciprocal, which is one instruction for two bodies.
+	//
+	//  Given "they stroke each other" the model renders a single merged body:
+	//  three arms, a hand arriving from nowhere, anatomy belonging to neither of
+	//  them. It is worst when the two look alike — same sex, same build — because
+	//  nothing in the frame says where one ends and the other begins. A reciprocal
+	//  is grammatically one action performed by a plural, and a plural has one
+	//  body; the writer has to spend two clauses, one actor and one limb each.
+	//
+	//  Only where it touches. "they look at each other" merges nothing, so the
+	//  reciprocal has to land near a body or a hand for this to fire — and the
+	//  look has to be at the SENTENCE, not a window of characters. A window wide
+	//  enough to hold a clause also reaches back into the subject definitions,
+	//  where every person is described by their chest and their build, and then
+	//  every reciprocal in the brief looks physical.
+	if (subs.filter((s) => !(ROOM.test(s.said) && !BODY.test(s.said))).length > 1) {
+		const reciprocal = /\b(?:each other|one another)(?:'s)?\b/gi;
+		for (const m of prompt.matchAll(reciprocal)) {
+			const before = prompt.slice(0, m.index);
+			const from = Math.max(before.lastIndexOf('.'), before.lastIndexOf('\n')) + 1;
+			const rest = prompt.slice(m.index);
+			const stop = rest.search(/[.\n]/);
+			const sentence = prompt.slice(from, stop < 0 ? prompt.length : m.index + stop);
+			if (!PHYSICAL.test(sentence)) continue;
+			faults.push({
+				code: 'reciprocal-action',
+				says:
+					`"${m[0]}" asks for one action performed by two people, and the model renders ` +
+					`it as one body. Write a clause for each: name the actor, the limb and what ` +
+					`it is on, and give them DIFFERENT actions rather than mirrored ones — one ` +
+					`strokes, the other braces. Anchor each by something visible (the taller one, ` +
+					`the one under the water) and repeat that anchor in every beat that moves them.`,
+				human: 'two people share one action here, which the model renders as one body'
+			});
+			break;
+		}
+	}
+
+	// 5. Somebody arriving at a pinned seam, with nothing said about it.
 	//
 	// The pinned frame holds whoever was in the prior clip and nobody else. A
 	// brief that adds a person and still says the opening instant matches that
@@ -168,7 +211,8 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 		// Without the second half this fired on half of today's continuations: the
 		// rule that made the man a <Subject> at all is what started declaring him
 		// from <Video 1>, and this read every one of those as an arrival.
-		const settled = /\b(?:already (?:established|present|there|in)|from|seen|shown)\b[^.]{0,40}<Video \d+>|<Video \d+>[^.]{0,40}\b(?:establishes|shows|contains)\b/i;
+		const settled =
+			/\b(?:already (?:established|present|there|in)|from|seen|shown)\b[^.]{0,40}<Video \d+>|<Video \d+>[^.]{0,40}\b(?:establishes|shows|contains)\b/i;
 		const arrival = people.some((s) => !/<Picture \d+>/.test(s.said) && !settled.test(s.said));
 		if (people.length > 1 && arrival && !/NOT in <Picture 3>/.test(prompt)) {
 			faults.push({
@@ -225,14 +269,17 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 	// will miss a ramp phrased another way, and the cost of that is one retry on a
 	// brief that was already fine — while the writer rule, which is the real fix,
 	// stops the fault being written in the first place.
-	const span = /\b(?:over|across|through)\s+(?:the\s+)?(?:next\s+)?(?:a\s+|half\s+a\s+|one\s+|two\s+|\d+(?:\.\d+)?\s*)?(?:second|seconds|beat|beats)\b/i;
+	const span =
+		/\b(?:over|across|through)\s+(?:the\s+)?(?:next\s+)?(?:a\s+|half\s+a\s+|one\s+|two\s+|\d+(?:\.\d+)?\s*)?(?:second|seconds|beat|beats)\b/i;
 
 	// Speech ending is not this fault. "She stops speaking, closes her mouth" is a
 	// mouth coming to rest, and closing the lips IS the deceleration — three of the
 	// four briefs this first matched were that, and none of them had the problem.
 	const speech = /\b(?:speaking|speech|talking|lips|mouth|words|line)\b/i;
 	const m = stops.exec(prompt);
-	const aboutSpeech = m ? speech.test(prompt.slice(Math.max(0, m.index - 90), m.index + 90)) : false;
+	const aboutSpeech = m
+		? speech.test(prompt.slice(Math.max(0, m.index - 90), m.index + 90))
+		: false;
 	if (m && !aboutSpeech && !span.test(prompt)) {
 		faults.push({
 			code: 'stop-without-ramp',
@@ -259,7 +306,10 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 	// The test is whether the brief acknowledges the viewpoint at all. A POV
 	// brief says so; a brief that never mentions it is describing a shot the
 	// adapter is not going to render.
-	if (opts.cameraAdapter && !/\bPOV\b|point of view|own eyeline|behind the lens|from inside/i.test(prompt)) {
+	if (
+		opts.cameraAdapter &&
+		!/\bPOV\b|point of view|own eyeline|behind the lens|from inside/i.test(prompt)
+	) {
 		faults.push({
 			code: 'camera-fights-adapter',
 			says:
