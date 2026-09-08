@@ -3859,6 +3859,41 @@
 	let filmPopup = $state<FilmRow | null>(null);
 	/** The all-media grid, opened from the shelf's last tile. */
 	let mediaOpen = $state(false);
+
+	/** Everything this studio has made, for the page you land on.
+	 *
+	 *  The film log answers "what did I finish" and is the right list for the
+	 *  shelf. It is the wrong list for a front page, because on a studio that has
+	 *  assembled nothing it is empty, and an empty front page says the tool has
+	 *  never worked. The clip cache is never empty on a studio that has run: it
+	 *  is the work itself, a hundred and eighty-eight of them here, and the only
+	 *  record that survives a transcript being thrown away.
+	 *
+	 *  Films first regardless, because a film is the thing that was finished and
+	 *  a shot is a part. Duration is what separates them — over twenty seconds is
+	 *  longer than this studio can render in one go, so it was assembled. */
+	interface MediaItem {
+		id: string;
+		seconds: number;
+		bytes: number;
+		at: number;
+	}
+	const FILM_SECONDS = 20;
+	let media = $state<MediaItem[]>([]);
+	let mediaPopup = $state<MediaItem | null>(null);
+	const mediaFilms = $derived(media.filter((m) => m.seconds > FILM_SECONDS));
+	const mediaShots = $derived(media.filter((m) => m.seconds <= FILM_SECONDS));
+	function mediaUrl(m: MediaItem): string {
+		return `/studio/api/media?id=${m.id}`;
+	}
+	async function loadMedia() {
+		try {
+			const r = (await (await fetch('/studio/api/media')).json()) as { items?: MediaItem[] };
+			if (r.items) media = r.items;
+		} catch {
+			/* the front page is a shelf; a failed list leaves the greeting alone */
+		}
+	}
 	async function loadFilms() {
 		try {
 			const r = (await (await fetch('/studio/api/films')).json()) as { films?: FilmRow[] };
@@ -6451,6 +6486,7 @@
 	onMount(() => {
 		// The shelf's contents, which outlive every session.
 		void loadFilms();
+		void loadMedia();
 
 		// One voice at a time, and none of it behind your back.
 		//
@@ -6988,6 +7024,33 @@
 	 A run still on the GPU keeps its place and its number rather than being left
 	 out: the strip is then its final shape from the first second, and nothing
 	 moves under the cursor as the takes land. -->
+<!-- One thing this studio made. Films get the wider box and the shot count
+	 the badge; a shot gets its length and nothing else, because on a grid of
+	 thirty-six the only question is which one it was. -->
+{#snippet mediaTile(m: MediaItem, film: boolean)}
+	<button
+		type="button"
+		aria-label="{film ? 'film' : 'shot'}, {clipClock(m.seconds)}"
+		onclick={() => (mediaPopup = m)}
+		class="group relative cursor-pointer overflow-hidden rounded-xl bg-[var(--st-surface)] {film
+			? 'aspect-video'
+			: 'aspect-square'}"
+	>
+		<!-- svelte-ignore a11y_media_has_caption -->
+		<video
+			src={still(mediaUrl(m))}
+			muted
+			playsinline
+			preload="metadata"
+			class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
+		></video>
+		<span
+			class="pointer-events-none absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 font-mono text-[0.65rem] leading-5 text-white backdrop-blur-sm"
+			>{clipClock(m.seconds)}</span
+		>
+	</button>
+{/snippet}
+
 {#snippet takeTile(
 	item: ChatItem,
 	run: NonNullable<ChatItem['takes']>['runs'][number],
@@ -7110,7 +7173,22 @@
 		<!-- The product's name, at a size a name is set at. It was ten pixels of
 			 letterspaced caps in the faintest colour on the page — the least legible
 			 text in the app was the thing it is called. -->
-		<h1 class="font-display text-[1.0625rem] font-semibold tracking-[-0.02em]">Auteur</h1>
+		<!-- The name is the way home. Every product with a shelf behind it works
+			 this way, and there was no way back to the front page at all: once a
+			 session had a message in it the only route to what you had made was the
+			 sidebar, and on a phone the sidebar is closed. -->
+		<button
+			type="button"
+			title="everything you have made"
+			onclick={() => {
+				reset();
+				void loadMedia();
+				if (window.innerWidth < 1024) setNavOpen(false);
+			}}
+			class="cursor-pointer font-display text-[1.0625rem] font-semibold tracking-[-0.02em] transition-opacity hover:opacity-70"
+		>
+			Auteur
+		</button>
 	</header>
 
 	<!-- ── past productions ────────────────────────────────────────────────────
@@ -7612,34 +7690,45 @@
 								</div>
 							{/if}
 
-							<div class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2">
-								{#if stagePhase === 'working'}
-									<!-- The percentage is honest about what it is: elapsed against the
+							<!-- Centred while it fits, scrolled from the top when it does not.
+								 `justify-center` alone does both jobs badly: a flex column whose
+								 content is taller than the box overflows in BOTH directions, and
+								 the part above the start edge cannot be scrolled to at all — the
+								 front page's own headline and its films sat up there,
+								 unreachable, the moment the shelf gave the column something to
+								 be tall about. `auto` margins centre the same way and give way
+								 when there is nothing left to give. -->
+							<div
+								class="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto [&>*]:shrink-0"
+							>
+								<div class="my-auto flex w-full flex-col items-center gap-2">
+									{#if stagePhase === 'working'}
+										<!-- The percentage is honest about what it is: elapsed against the
 								 median of this machine's own finished runs. Half of all runs are
 								 past a median, so it caps short of full and says so in words
 								 rather than sitting at 100 while nothing happens. -->
-									<!-- The size the clip will be, so nothing jumps when it arrives:
+										<!-- The size the clip will be, so nothing jumps when it arrives:
 								 height-bound and 16:9, the same way the video is measured. -->
-									<!-- The size the clip will be, so nothing jumps when it arrives. -->
-									<div
-										class="relative flex max-h-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--st-surface)] {composerShape.portrait
-											? 'aspect-[9/16] h-full w-auto'
-											: 'aspect-video w-full lg:h-full lg:w-auto'}"
-									>
-										{#if stageWaitBlurUrl}
-											<!-- svelte-ignore a11y_media_has_caption -->
-											<video
-												src={stageWaitBlurUrl}
-												muted
-												autoplay
-												loop
-												playsinline
-												class="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-[0.55]"
-											></video>
-										{:else}
-											<div class="stage-dots absolute inset-0"></div>
-										{/if}
-										<!-- One slow pass of light across the surface, and nothing else.
+										<!-- The size the clip will be, so nothing jumps when it arrives. -->
+										<div
+											class="relative flex max-h-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--st-surface)] {composerShape.portrait
+												? 'aspect-[9/16] h-full w-auto'
+												: 'aspect-video w-full lg:h-full lg:w-auto'}"
+										>
+											{#if stageWaitBlurUrl}
+												<!-- svelte-ignore a11y_media_has_caption -->
+												<video
+													src={stageWaitBlurUrl}
+													muted
+													autoplay
+													loop
+													playsinline
+													class="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-[0.55]"
+												></video>
+											{:else}
+												<div class="stage-dots absolute inset-0"></div>
+											{/if}
+											<!-- One slow pass of light across the surface, and nothing else.
 									 A still rectangle with a number on it cannot say whether it is
 									 working or hung, and the number is the wrong instrument for
 									 that: it is an estimate against a median, so it keeps moving
@@ -7648,57 +7737,57 @@
 									 to breathing than to a spinner. It passes about every four
 									 seconds, which is slow enough not to be watched and often
 									 enough to be believed. -->
-										<div class="stage-sweep pointer-events-none absolute inset-0"></div>
-										<div class="relative flex flex-col items-center gap-2">
-											<div
-												class="flex items-center gap-3 rounded-full bg-black/45 px-4 py-2 backdrop-blur"
-											>
-												<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
-												></span>
-												<span class="font-display text-sm font-semibold text-white"
-													>Generating {stagePercent}%</span
+											<div class="stage-sweep pointer-events-none absolute inset-0"></div>
+											<div class="relative flex flex-col items-center gap-2">
+												<div
+													class="flex items-center gap-3 rounded-full bg-black/45 px-4 py-2 backdrop-blur"
 												>
-											</div>
-											<!-- The way out, where the waiting is.
+													<span class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-accent)]"
+													></span>
+													<span class="font-display text-sm font-semibold text-white"
+														>Generating {stagePercent}%</span
+													>
+												</div>
+												<!-- The way out, where the waiting is.
 											     A render is billed per second on somebody's GPU, and until
 											     now a clip run had no stop at all — the studio's own endpoint
 											     had to be called by hand, and the page went on counting over
 											     a run that had already been torn down. Quiet, and two steps,
 											     because it cannot be undone: a workspace id opens once. -->
-											{#if stopArmed}
-												<div class="flex items-center gap-1.5">
+												{#if stopArmed}
+													<div class="flex items-center gap-1.5">
+														<button
+															type="button"
+															disabled={stopping}
+															onclick={stopRun}
+															class="cursor-pointer rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-black disabled:opacity-60"
+															>{stopping ? 'stopping…' : 'yes, stop it'}</button
+														>
+														<button
+															type="button"
+															onclick={() => (stopArmed = false)}
+															class="cursor-pointer rounded-full px-3 py-1 text-xs text-white/70 hover:text-white"
+															>keep going</button
+														>
+													</div>
+												{:else}
 													<button
 														type="button"
-														disabled={stopping}
-														onclick={stopRun}
-														class="cursor-pointer rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-black disabled:opacity-60"
-														>{stopping ? 'stopping…' : 'yes, stop it'}</button
+														onclick={() => (stopArmed = true)}
+														class="cursor-pointer rounded-full px-3 py-1 text-xs text-white/45 transition-colors hover:text-white/80"
+														>stop</button
 													>
-													<button
-														type="button"
-														onclick={() => (stopArmed = false)}
-														class="cursor-pointer rounded-full px-3 py-1 text-xs text-white/70 hover:text-white"
-														>keep going</button
-													>
-												</div>
-											{:else}
-												<button
-													type="button"
-													onclick={() => (stopArmed = true)}
-													class="cursor-pointer rounded-full px-3 py-1 text-xs text-white/45 transition-colors hover:text-white/80"
-													>stop</button
-												>
-											{/if}
+												{/if}
+											</div>
 										</div>
-									</div>
-								{:else if stagePhase === 'round' && stageRound?.confirm}
-									{@const c = stageRound.confirm}
-									<!-- The request, in the operator's own words, in the shape the transcript
+									{:else if stagePhase === 'round' && stageRound?.confirm}
+										{@const c = stageRound.confirm}
+										<!-- The request, in the operator's own words, in the shape the transcript
 									gives it. Absent on a round that answers a moved setting rather than a
 									message — there is no new sentence to show, so it keeps the one the
 									round is still about rather than leaving the reply talking to nobody. -->
-									{@const asked = c.said.trim() || roundRequest(stageRound)}
-									<!-- The round, drawn as what it is: an exchange.
+										{@const asked = c.said.trim() || roundRequest(stageRound)}
+										<!-- The round, drawn as what it is: an exchange.
 									
 									     The stage used to compose its own version of this — the same sentences,
 									     centred inside a 16:9 box the size of the clip that did not exist yet,
@@ -7711,45 +7800,47 @@
 									     Only this round. The stage shows one thing and the chain is in the strip
 									     beside it; a transcript of every round is the transcript, and it is one
 									     switch away in full production. -->
-									<div
-										class="scroller mx-auto flex min-h-0 w-full max-w-[48rem] flex-1 flex-col gap-5 overflow-y-auto px-1 pt-1"
-									>
-										{#if asked}
-											<div class="flex justify-end">
-												<p
-													class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
-												>
-													{asked}
-												</p>
-											</div>
-										{/if}
-										{@render confirmReply(stageRound, true)}
-									</div>
-								{:else if stagePhase === 'error'}
-									<div
-										class="flex aspect-video w-full max-w-3xl flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
-									>
-										<p class="text-sm leading-relaxed text-[var(--st-muted)]">{stageError?.text}</p>
-										<button
-											type="button"
-											onclick={() => {
-												if (stageError) chat = chat.filter((c) => c !== stageError);
-											}}
-											class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-1.5 text-xs font-semibold"
-											>try it again</button
+										<div
+											class="scroller mx-auto flex min-h-0 w-full max-w-[48rem] flex-1 flex-col gap-5 overflow-y-auto px-1 pt-1"
 										>
-									</div>
-								{:else if stagePhase === 'character'}
-									{@const drawing = stageDrawing}
-									{@const sh = drawing ? null : (stageSheet?.sheet ?? null)}
-									{@const shownId = sh?.id ?? drawing?.id ?? ''}
-									{@const row = sheets.find((x) => x.id === shownId)}
-									{@const six = row?.sheet?.state === 'ready' && row.sheet.file ? shownId : ''}
-									{@const turn = row?.sheet?.clip}
-									{@const isUpload = !!row?.uploaded}
-									{@const isChar = row?.kind !== 'location'}
-									{@const view = charView || (six ? 'six' : turn ? 'turn' : 'ref')}
-									<!-- The character, and the three things the work produces, in one frame.
+											{#if asked}
+												<div class="flex justify-end">
+													<p
+														class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
+													>
+														{asked}
+													</p>
+												</div>
+											{/if}
+											{@render confirmReply(stageRound, true)}
+										</div>
+									{:else if stagePhase === 'error'}
+										<div
+											class="flex aspect-video w-full max-w-3xl flex-col items-center justify-center gap-3 rounded-2xl bg-[var(--st-surface)] px-8 text-center"
+										>
+											<p class="text-sm leading-relaxed text-[var(--st-muted)]">
+												{stageError?.text}
+											</p>
+											<button
+												type="button"
+												onclick={() => {
+													if (stageError) chat = chat.filter((c) => c !== stageError);
+												}}
+												class="cursor-pointer rounded-full bg-[var(--st-surface-2)] px-4 py-1.5 text-xs font-semibold"
+												>try it again</button
+											>
+										</div>
+									{:else if stagePhase === 'character'}
+										{@const drawing = stageDrawing}
+										{@const sh = drawing ? null : (stageSheet?.sheet ?? null)}
+										{@const shownId = sh?.id ?? drawing?.id ?? ''}
+										{@const row = sheets.find((x) => x.id === shownId)}
+										{@const six = row?.sheet?.state === 'ready' && row.sheet.file ? shownId : ''}
+										{@const turn = row?.sheet?.clip}
+										{@const isUpload = !!row?.uploaded}
+										{@const isChar = row?.kind !== 'location'}
+										{@const view = charView || (six ? 'six' : turn ? 'turn' : 'ref')}
+										<!-- The character, and the three things the work produces, in one frame.
 										 The reference is on screen from the moment you upload it. The turnaround
 										 lands and plays — it is a video, so it is shown as one. Then the six
 										 views are cut from it and take the surface, because that is what was
@@ -7761,106 +7852,111 @@
 										 I not see them" was that there was nowhere to see them from. They switch
 										 here, in the frame they belong to, rather than opening a tab away from
 										 the work. -->
-									<div
-										class="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3"
-									>
-										<div class="flex min-h-0 w-full flex-1 items-center justify-center">
-											{#if view === 'six' && six}
-												<img
-													src="/studio/api/sheet/full/{six}"
-													alt=""
-													onerror={sheetImageMissing}
-													class="max-h-full max-w-full rounded-2xl object-contain"
-												/>
-											{:else if view === 'turn' && turn}
-												<!-- svelte-ignore a11y_media_has_caption -->
-												<video
-													src={still(fileUrl(turn.workspace, turn.artifact, turn.file))}
-													autoplay
-													loop
-													muted
-													playsinline
-													controls
-													class="max-h-full max-w-full rounded-2xl bg-black object-contain"
-												></video>
-											{:else if sh?.url}
-												<!-- The preview, before it has been kept.
+										<div
+											class="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3"
+										>
+											<div class="flex min-h-0 w-full flex-1 items-center justify-center">
+												{#if view === 'six' && six}
+													<img
+														src="/studio/api/sheet/full/{six}"
+														alt=""
+														onerror={sheetImageMissing}
+														class="max-h-full max-w-full rounded-2xl object-contain"
+													/>
+												{:else if view === 'turn' && turn}
+													<!-- svelte-ignore a11y_media_has_caption -->
+													<video
+														src={still(fileUrl(turn.workspace, turn.artifact, turn.file))}
+														autoplay
+														loop
+														muted
+														playsinline
+														controls
+														class="max-h-full max-w-full rounded-2xl bg-black object-contain"
+													></video>
+												{:else if sh?.url}
+													<!-- The preview, before it has been kept.
 													 Until it is kept the subject has no id, so the sheet endpoint below
 													 has nothing to serve and the branch fell through to the spinner —
 													 which spun over a picture that had already rendered, was already on
 													 disk and was already being served at this very url. The card has
 													 carried it since the poll finished; nothing looked. -->
-												<img
-													src={sh.url}
-													alt=""
-													class="max-h-full max-w-full rounded-2xl object-contain"
-												/>
-											{:else if shownId}
-												<img
-													src="/studio/api/sheet/img/{shownId}"
-													alt=""
-													onerror={sheetImageMissing}
-													class="max-h-full max-w-full rounded-2xl object-contain"
-												/>
-											{:else}
-												<!-- Nothing to show yet, so the wait is here rather than on a rectangle
+													<img
+														src={sh.url}
+														alt=""
+														class="max-h-full max-w-full rounded-2xl object-contain"
+													/>
+												{:else if shownId}
+													<img
+														src="/studio/api/sheet/img/{shownId}"
+														alt=""
+														onerror={sheetImageMissing}
+														class="max-h-full max-w-full rounded-2xl object-contain"
+													/>
+												{:else}
+													<!-- Nothing to show yet, so the wait is here rather than on a rectangle
 													 the size of a clip. The picture lands in this frame, and the mark is
 													 the size of what is coming rather than of something else entirely. -->
-												<span
-													class="spin size-6 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-muted)]"
-												></span>
-											{/if}
-										</div>
-										<div class="shrink-0 text-center">
-											<!-- Their name, and you can type it. It arrives as the first words of the
+													<span
+														class="spin size-6 rounded-full border-2 border-[var(--st-surface-2)] border-t-[var(--st-muted)]"
+													></span>
+												{/if}
+											</div>
+											<div class="shrink-0 text-center">
+												<!-- Their name, and you can type it. It arrives as the first words of the
 												 description, truncated — a label, not a name — and this is the one
 												 surface where the thing being named is unmistakably a person. A field
 												 shaped like the heading it replaces, so nothing moves when you click
 												 into it. -->
-											<!-- A field shaped like the heading it replaces gives no sign that it is
+												<!-- A field shaped like the heading it replaces gives no sign that it is
 												 one, so the mark that means "you can change this" sits beside it —
 												 faint, and solid on hover, the way the rest of this surface treats a
 												 control you have not reached for yet. It only focuses the field: the
 												 field is the control, and a second one that opened a dialog to do the
 												 same thing would be a step nobody asked for. -->
-											<div class="group mx-auto flex max-w-[24rem] items-center gap-1">
-												<input
-													value={row?.name ?? sh?.name ?? drawing?.name ?? ''}
-													placeholder="Name them"
-													disabled={!shownId}
-													onblur={(e) => renameCharacter(shownId, e.currentTarget.value)}
-													onkeydown={(e) => {
-														if (e.key === 'Enter') e.currentTarget.blur();
-														if (e.key === 'Escape') {
-															e.currentTarget.value = row?.name ?? '';
-															e.currentTarget.blur();
-														}
-													}}
-													class="min-w-0 flex-1 rounded-lg border-0 bg-transparent px-2 py-0.5 text-center font-display text-base font-semibold text-[var(--st-text)] outline-none placeholder:text-[var(--st-faint)] hover:bg-[var(--st-surface)] focus:bg-[var(--st-surface)]"
-												/>
-												<button
-													type="button"
-													aria-label="rename them"
-													disabled={!shownId}
-													onclick={(e) => {
-														const box = e.currentTarget
-															.previousElementSibling as HTMLInputElement | null;
-														box?.focus();
-														box?.select();
-													}}
-													class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[var(--st-faint)] opacity-70 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-30"
-												>
-													<svg viewBox="0 0 16 16" class="size-3.5" fill="none" aria-hidden="true">
-														<path
-															d="M11.1 2.9a1.4 1.4 0 0 1 2 2L6.4 11.6l-2.7.7.7-2.7z"
-															stroke="currentColor"
-															stroke-width="1.4"
-															stroke-linejoin="round"
-														/>
-													</svg>
-												</button>
-											</div>
-											<!-- Only the stages that are actually coming, from the moment there is
+												<div class="group mx-auto flex max-w-[24rem] items-center gap-1">
+													<input
+														value={row?.name ?? sh?.name ?? drawing?.name ?? ''}
+														placeholder="Name them"
+														disabled={!shownId}
+														onblur={(e) => renameCharacter(shownId, e.currentTarget.value)}
+														onkeydown={(e) => {
+															if (e.key === 'Enter') e.currentTarget.blur();
+															if (e.key === 'Escape') {
+																e.currentTarget.value = row?.name ?? '';
+																e.currentTarget.blur();
+															}
+														}}
+														class="min-w-0 flex-1 rounded-lg border-0 bg-transparent px-2 py-0.5 text-center font-display text-base font-semibold text-[var(--st-text)] outline-none placeholder:text-[var(--st-faint)] hover:bg-[var(--st-surface)] focus:bg-[var(--st-surface)]"
+													/>
+													<button
+														type="button"
+														aria-label="rename them"
+														disabled={!shownId}
+														onclick={(e) => {
+															const box = e.currentTarget
+																.previousElementSibling as HTMLInputElement | null;
+															box?.focus();
+															box?.select();
+														}}
+														class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[var(--st-faint)] opacity-70 transition-opacity group-hover:opacity-100 hover:text-[var(--st-text)] disabled:cursor-default disabled:opacity-30"
+													>
+														<svg
+															viewBox="0 0 16 16"
+															class="size-3.5"
+															fill="none"
+															aria-hidden="true"
+														>
+															<path
+																d="M11.1 2.9a1.4 1.4 0 0 1 2 2L6.4 11.6l-2.7.7.7-2.7z"
+																stroke="currentColor"
+																stroke-width="1.4"
+																stroke-linejoin="round"
+															/>
+														</svg>
+													</button>
+												</div>
+												<!-- Only the stages that are actually coming, from the moment there is
 												 a reference. The ones not made yet stand there disabled with a
 												 turning mark, so the wait is attached to the thing being waited for
 												 rather than announced in a sentence somewhere else. They arrive in
@@ -7877,120 +7973,156 @@
 												 nothing that can redraw a photograph.
 												 A chip that spins forever is worse than one that was never
 												 offered. -->
-											<div class="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-												{#each [{ id: 'ref', label: 'Reference', ok: !!shownId || !!sh?.url, on: true }, { id: 'turn', label: 'Turnaround', ok: !!turn, on: isUpload && isChar }, { id: 'six', label: 'Six views', ok: !!six, on: !(isUpload && !isChar) }].filter((x) => x.on) as t (t.id)}
-													<button
-														type="button"
-														disabled={!t.ok}
-														aria-pressed={view === t.id}
-														onclick={() => (charView = t.id as 'ref' | 'turn' | 'six')}
-														class="btn btn-sm {view === t.id && t.ok
-															? 'btn-primary'
-															: 'btn-secondary'}"
-													>
-														{#if !t.ok}
-															<span
-																class="spin size-3 shrink-0 rounded-full border-2 border-current/25 border-t-current"
-															></span>
-														{/if}
-														<span>{t.label}</span>
-													</button>
-												{/each}
-											</div>
-											{#if sh && !sh.url && !sh.id}
-												<!-- A preview the harness is still drawing. One picture, not six —
+												<div class="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+													{#each [{ id: 'ref', label: 'Reference', ok: !!shownId || !!sh?.url, on: true }, { id: 'turn', label: 'Turnaround', ok: !!turn, on: isUpload && isChar }, { id: 'six', label: 'Six views', ok: !!six, on: !(isUpload && !isChar) }].filter((x) => x.on) as t (t.id)}
+														<button
+															type="button"
+															disabled={!t.ok}
+															aria-pressed={view === t.id}
+															onclick={() => (charView = t.id as 'ref' | 'turn' | 'six')}
+															class="btn btn-sm {view === t.id && t.ok
+																? 'btn-primary'
+																: 'btn-secondary'}"
+														>
+															{#if !t.ok}
+																<span
+																	class="spin size-3 shrink-0 rounded-full border-2 border-current/25 border-t-current"
+																></span>
+															{/if}
+															<span>{t.label}</span>
+														</button>
+													{/each}
+												</div>
+												{#if sh && !sh.url && !sh.id}
+													<!-- A preview the harness is still drawing. One picture, not six —
 													 the six-view line below would promise a turnaround this render
 													 does not make, and a wait labelled with the wrong work reads as
 													 a wait that is not moving. -->
-												<p
-													class="mt-2 flex items-center justify-center gap-2 text-xs text-[var(--st-faint)]"
-												>
-													<span
-														class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
-														aria-hidden="true"
-													></span>
-													<span>
-														Rendering one picture of {sh.kind === 'location' ? 'the place' : 'them'} ·
-														about two minutes
-													</span>
-												</p>
-											{:else if !six}
-												<p class="mt-2 text-xs text-[var(--st-faint)]">
-													{turn ? 'Cutting the six views' : 'Building the six views'}{drawing
-														? ` · ${turnStatus(drawing)}`
-														: ''}
-												</p>
-											{:else}
-												<p class="mt-2 text-xs text-[var(--st-faint)]">
-													Kept. Describe a shot and they are in it.
-												</p>
-											{/if}
+													<p
+														class="mt-2 flex items-center justify-center gap-2 text-xs text-[var(--st-faint)]"
+													>
+														<span
+															class="beacon size-1.5 shrink-0 rounded-full bg-[var(--st-green)]"
+															aria-hidden="true"
+														></span>
+														<span>
+															Rendering one picture of {sh.kind === 'location'
+																? 'the place'
+																: 'them'} · about two minutes
+														</span>
+													</p>
+												{:else if !six}
+													<p class="mt-2 text-xs text-[var(--st-faint)]">
+														{turn ? 'Cutting the six views' : 'Building the six views'}{drawing
+															? ` · ${turnStatus(drawing)}`
+															: ''}
+													</p>
+												{:else}
+													<p class="mt-2 text-xs text-[var(--st-faint)]">
+														Kept. Describe a shot and they are in it.
+													</p>
+												{/if}
+											</div>
 										</div>
-									</div>
-								{:else if stagePhase === 'empty'}
-									<!-- A new production opens on what it opened on before: the greeting
+									{:else if stagePhase === 'empty'}
+										<!-- A new production opens on what it opened on before: the greeting
 								 and three things to try. The stage has nothing to show yet and a
 								 blank rectangle where a clip will be is not an invitation. -->
-									<h2
-										class="enter mx-auto max-w-[26rem] text-center font-display text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
-									>
-										{#each WELCOME_LINES as line, i (line)}
-											{line}{#if i === 0}<br />{/if}
-										{/each}
-									</h2>
-									<div class="grid w-full max-w-3xl gap-2.5 pt-2 sm:grid-cols-3">
-										{#each examples as ex (ex.text)}
-											<button
-												type="button"
-												class="relative flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
-												onclick={() => useExample(ex.text)}
-											>
-												<!-- Who is in it, in the one place the eye lands first. The
+										<h2
+											class="enter mx-auto max-w-[26rem] text-center font-display text-[clamp(2.25rem,6vw,3.25rem)] leading-[1.06] font-semibold tracking-[-0.042em] text-balance"
+										>
+											{#each WELCOME_LINES as line, i (line)}
+												{line}{#if i === 0}<br />{/if}
+											{/each}
+										</h2>
+										<div class="grid w-full max-w-3xl gap-2.5 pt-2 sm:grid-cols-3">
+											{#each examples as ex (ex.text)}
+												<button
+													type="button"
+													class="relative flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
+													onclick={() => useExample(ex.text)}
+												>
+													<!-- Who is in it, in the one place the eye lands first. The
 													 examples are scanned for whether they are for you before a
 													 word of them is read, and two glyphs answer that in every
 													 language the operators write in — Spanish, Portuguese,
 													 Arabic, Chinese and Russian all turned up in a night. It is
 													 hidden from screen readers because the sentence beside it
 													 already says the same thing. -->
-												<span
-													class="mt-px shrink-0 text-[13px] leading-5 tracking-tight text-[var(--st-faint)]"
-													aria-hidden="true">{ex.pair}</span
-												>
-												<span class="min-w-0 pr-4">{ex.text}</span>
-												<!-- Says what the click does: it fills the box, it does not send.
+													<span
+														class="mt-px shrink-0 text-[13px] leading-5 tracking-tight text-[var(--st-faint)]"
+														aria-hidden="true">{ex.pair}</span
+													>
+													<span class="min-w-0 pr-4">{ex.text}</span>
+													<!-- Says what the click does: it fills the box, it does not send.
 													 Out of the leading column so the pairing can have it, but
 													 kept — in a surface where every send costs money, "this only
 													 fills the field" is worth a corner. -->
-												<svg
-													viewBox="0 0 16 16"
-													class="absolute top-3 right-3 size-3 opacity-30"
-													fill="none"
-													aria-hidden="true"
+													<svg
+														viewBox="0 0 16 16"
+														class="absolute top-3 right-3 size-3 opacity-30"
+														fill="none"
+														aria-hidden="true"
+													>
+														<path
+															d="M4 12L12 4M6 4h6v6"
+															stroke="currentColor"
+															stroke-width="1.6"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														/>
+													</svg>
+												</button>
+											{/each}
+										</div>
+
+										<!-- What has already been made, under the invitation to make more.
+										 A front page that only invites is a brochure; the work is the
+										 argument, and it is sitting on the disk either way. Films first
+										 and larger — a film is what was finished, a shot is a part of
+										 one — then everything else, newest first, because the thing you
+										 are most likely to want is the thing you just made. -->
+										{#if media.length}
+											<div class="w-full max-w-5xl pt-8 pb-2">
+												{#if mediaFilms.length}
+													<h3
+														class="pb-2.5 text-[11px] font-semibold tracking-[0.14em] text-[var(--st-faint)] uppercase"
+													>
+														{mediaFilms.length}
+														{mediaFilms.length === 1 ? 'film' : 'films'}
+													</h3>
+													<div class="grid grid-cols-2 gap-2 pb-7 sm:grid-cols-3">
+														{#each mediaFilms as m (m.id)}
+															{@render mediaTile(m, true)}
+														{/each}
+													</div>
+												{/if}
+												<h3
+													class="pb-2.5 text-[11px] font-semibold tracking-[0.14em] text-[var(--st-faint)] uppercase"
 												>
-													<path
-														d="M4 12L12 4M6 4h6v6"
-														stroke="currentColor"
-														stroke-width="1.6"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													/>
-												</svg>
-											</button>
-										{/each}
-									</div>
-								{:else if stagePhase === 'ready' && stageClip}
-									{@const f = stageShownUrl ? { url: stageShownUrl } : null}
-									{@const sws = stageShownWs}
-									{@const shownPart =
-										stageShown?.artifact && stageShown?.file
-											? {
-													workspace: stageShown.workspace,
-													artifact: stageShown.artifact,
-													file: stageShown.file
-												}
-											: null}
-									{@const sv = verdict[sws]}
-									<!-- The clip takes the room it is given: this is what the operator
+													{mediaShots.length}
+													{mediaShots.length === 1 ? 'shot' : 'shots'}
+												</h3>
+												<div class="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
+													{#each mediaShots.slice(0, 36) as m (m.id)}
+														{@render mediaTile(m, false)}
+													{/each}
+												</div>
+											</div>
+										{/if}
+									{:else if stagePhase === 'ready' && stageClip}
+										{@const f = stageShownUrl ? { url: stageShownUrl } : null}
+										{@const sws = stageShownWs}
+										{@const shownPart =
+											stageShown?.artifact && stageShown?.file
+												? {
+														workspace: stageShown.workspace,
+														artifact: stageShown.artifact,
+														file: stageShown.file
+													}
+												: null}
+										{@const sv = verdict[sws]}
+										<!-- The clip takes the room it is given: this is what the operator
 								 came to look at, and a 48rem cap in the middle of a wide screen
 								 left a third of it black. Height-bound rather than width-bound, so
 								 a portrait clip and a 16:9 one both fill what there is.
@@ -7998,11 +8130,11 @@
 								 The actions ride on top of the picture rather than under it. Below
 								 the frame they pushed the clip up and competed with the composer
 								 for the same band of the screen. -->
-									<div class="flex min-h-0 w-full flex-1 items-center justify-center">
-										<!-- Sized to the clip, not to the column: the row of actions anchors
+										<div class="flex min-h-0 w-full flex-1 items-center justify-center">
+											<!-- Sized to the clip, not to the column: the row of actions anchors
 									 to this box, and anchored to the column it hung off the picture's
 									 edges into the black beside it. -->
-										<!-- Mobile fits the whole clip rather than filling the box.
+											<!-- Mobile fits the whole clip rather than filling the box.
 											 On a phone the picture is the surface, and a landscape clip in a
 											 portrait window has to be seen whole rather than cropped or
 											 overflowing the screen — which is what h-full did, pushing a
@@ -8012,71 +8144,72 @@
 											 landscape one sits centred and smaller. Desktop keeps h-full,
 											 where the window is wider than any clip and the picture should
 											 take all the height there is. -->
-										<div
-											class="relative max-h-full w-fit max-w-full lg:h-full"
-											style={stageVidH > stageVidW ? 'height:100%' : undefined}
-										>
-											{#if f}
-												<!-- svelte-ignore a11y_media_has_caption -->
-												<video
-													src={still(f.url)}
-													controls
-													autoplay={stageClip.id === stageAutoplayId}
-													loop
-													playsinline
-													bind:clientWidth={stageVideoW}
-													bind:videoWidth={stageVidW}
-													bind:videoHeight={stageVidH}
-													class="video-with-controls max-h-full w-auto max-w-full rounded-2xl bg-black lg:h-full"
-												></video>
-											{/if}
 											<div
-												class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3"
+												class="relative max-h-full w-fit max-w-full lg:h-full"
+												style={stageVidH > stageVidW ? 'height:100%' : undefined}
 											>
-												<span class="pointer-events-auto flex items-center gap-2">
-													{#if shownPart}
-														{#if film.some((x) => filmKey(x) === filmKey(shownPart))}
-															<span
-																class="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
-															>
-																<span aria-hidden="true">✓</span><span>In the film</span>
-															</span>
-														{:else}
+												{#if f}
+													<!-- svelte-ignore a11y_media_has_caption -->
+													<video
+														src={still(f.url)}
+														controls
+														autoplay={stageClip.id === stageAutoplayId}
+														loop
+														playsinline
+														bind:clientWidth={stageVideoW}
+														bind:videoWidth={stageVidW}
+														bind:videoHeight={stageVidH}
+														class="video-with-controls max-h-full w-auto max-w-full rounded-2xl bg-black lg:h-full"
+													></video>
+												{/if}
+												<div
+													class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3"
+												>
+													<span class="pointer-events-auto flex items-center gap-2">
+														{#if shownPart}
+															{#if film.some((x) => filmKey(x) === filmKey(shownPart))}
+																<span
+																	class="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
+																>
+																	<span aria-hidden="true">✓</span><span>In the film</span>
+																</span>
+															{:else}
+																<button
+																	type="button"
+																	onclick={() =>
+																		addClipToFilm(shownPart, stageClip?.artifact?.title ?? '')}
+																	class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] font-semibold text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
+																	>Add to film</button
+																>
+															{/if}
+														{/if}
+													</span>
+													<span class="pointer-events-auto flex items-center gap-1">
+														{#if !sv}
 															<button
 																type="button"
-																onclick={() =>
-																	addClipToFilm(shownPart, stageClip?.artifact?.title ?? '')}
-																class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] font-semibold text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
-																>Add to film</button
+																onclick={() => rate(sws, 'kept')}
+																class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
+																>Good</button
+															>
+															<button
+																type="button"
+																onclick={() => rate(sws, 'rejected')}
+																class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
+																>Not good</button
+															>
+														{:else}
+															<span
+																class="rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
+																>{sv === 'kept' ? 'Noted as good' : 'Noted'}</span
 															>
 														{/if}
-													{/if}
-												</span>
-												<span class="pointer-events-auto flex items-center gap-1">
-													{#if !sv}
-														<button
-															type="button"
-															onclick={() => rate(sws, 'kept')}
-															class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
-															>Good</button
-														>
-														<button
-															type="button"
-															onclick={() => rate(sws, 'rejected')}
-															class="cursor-pointer rounded-full bg-black/40 px-2.5 py-1 text-[0.6875rem] text-white/85 backdrop-blur transition-colors hover:bg-black/75 hover:text-white lg:bg-black/55 lg:px-3 lg:text-xs lg:text-white"
-															>Not good</button
-														>
-													{:else}
-														<span
-															class="rounded-full bg-black/55 px-3 py-1 text-xs text-white backdrop-blur"
-															>{sv === 'kept' ? 'Noted as good' : 'Noted'}</span
-														>
-													{/if}
-												</span>
+													</span>
+												</div>
 											</div>
 										</div>
-									</div>
-								{/if}
+									{/if}
+								</div>
 							</div>
 						</div>
 					{:else}
@@ -11722,6 +11855,41 @@
 	 Export used to end with a file on disk and a card somewhere below the fold,
 	 which is a strange way to hand somebody the thing they have been assembling
 	 all afternoon. Closing this loses nothing: it is on the shelf. -->
+<!-- One item from the front page, at the size it was made for. Nothing here
+	 edits or continues it: this is the shelf, and the shelf is for looking. -->
+{#if mediaPopup}
+	<div
+		class="fixed inset-0 z-[70] flex items-center justify-center bg-black/94 p-4 backdrop-blur-[28px] sm:p-8"
+		role="dialog"
+		aria-modal="true"
+		aria-label="clip"
+	>
+		<button
+			type="button"
+			aria-label="close"
+			onclick={() => (mediaPopup = null)}
+			class="fixed inset-0 cursor-default"
+		></button>
+		<!-- svelte-ignore a11y_media_has_caption -->
+		<video
+			src={mediaUrl(mediaPopup)}
+			controls
+			autoplay
+			loop
+			playsinline
+			class="video-with-controls relative max-h-full max-w-full rounded-2xl bg-black"
+		></video>
+		<button
+			type="button"
+			aria-label="close"
+			onclick={() => (mediaPopup = null)}
+			class="fixed top-5 right-5 z-10 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/10 text-sm text-[var(--st-text)] backdrop-blur-md transition-colors hover:bg-white/20"
+		>
+			✕
+		</button>
+	</div>
+{/if}
+
 {#if filmPopup}
 	<div
 		class="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-black/92 px-6 py-12 backdrop-blur-[28px]"
