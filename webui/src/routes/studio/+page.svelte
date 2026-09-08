@@ -7019,41 +7019,6 @@
 		     the conversation rather than an order you can still place; the stage
 		     shows one round and it is always that one. -->
 		<div class="enter">
-			<!-- What this paragraph is, and what to do with it. Without it the studio
-			     answers a request with three sentences of prose and no frame: it could
-			     be a plan, a summary, or something that already happened.
-
-			     Written by the model, not by us. A fixed label says the same eleven
-			     words to the fortieth clip as to the first. -->
-			{#if parts.lead}
-				<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
-			{/if}
-			<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
-				{parts.said}{#if c.streaming && !parts.added}<span class="caret" aria-hidden="true"
-					></span>{/if}
-			</p>
-			{#if parts.added}
-				<!-- Ours, and it has to look it. Same size, quieter colour: it is not a
-				     footnote — it is half of what starts if the button is pressed — but
-				     it is an offer, and an offer that looks like a statement is not one. -->
-				<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
-					{parts.added}{#if c.streaming}<span class="caret" aria-hidden="true"></span>{/if}
-				</p>
-			{/if}
-
-			{#if c.error}
-				<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">{c.error}</p>
-			{/if}
-
-			<!-- The checker had to change the brief, so this is no longer the clip that
-			     was agreed to. It says what moved and waits: sending it anyway is a
-			     decision, and it is not ours. -->
-			{#if c.fixed?.length}
-				<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
-					We adjusted this while writing it: {c.fixed.join(' · ')}
-				</p>
-			{/if}
-
 			<!-- What the studio had to make up, asked about instead of guessed.
 				 No box: the card it lives in is already the container, and what
 				 separates a note from its subject is space and a change of weight.
@@ -7063,7 +7028,11 @@
 				 way past, so there is nothing here to dismiss. -->
 			{#if askAbout?.id === item.id && !c.streaming && c.line.trim()}
 				{@const ask = askAbout.kind}
-				<div class="enter mt-4">
+				<!-- First in the card, because it is the honest order. It used to sit
+					 under three sentences of invented prose, which said the quiet part
+					 after the loud one: here is your clip, and by the way none of it
+					 came from you. -->
+				<div class="enter">
 					<p class="text-sm leading-relaxed text-[var(--st-text)]">
 						{ask === 'self'
 							? 'You are in this one.'
@@ -7105,6 +7074,51 @@
 						</label>
 					{/if}
 				</div>
+			{/if}
+
+			<!-- What this paragraph is, and what to do with it. Without it the studio
+			     answers a request with three sentences of prose and no frame: it could
+			     be a plan, a summary, or something that already happened.
+
+			     Written by the model, not by us. A fixed label says the same eleven
+			     words to the fortieth clip as to the first.
+
+			     Except when it was given nothing to write from. Then the model's own
+			     lead — "here is your five-second clip" — states the invention as the
+			     thing that was asked for, and the paragraph under it reads as a
+			     description rather than a guess. A filename became a woman kneeling on
+			     a sofa taking it from behind, in confident prose, with the admission
+			     that nothing had been said arriving underneath it. So the label is
+			     ours in that one case, and it says what the paragraph actually is. -->
+			{#if askAbout?.id === item.id}
+				<p class="mt-4 mb-1.5 text-xs text-[var(--st-faint)]">One way it could go</p>
+			{:else if parts.lead}
+				<p class="mb-1.5 text-xs text-[var(--st-faint)]">{parts.lead}</p>
+			{/if}
+			<p class="doc text-sm leading-relaxed text-[var(--st-text)]">
+				{parts.said}{#if c.streaming && !parts.added}<span class="caret" aria-hidden="true"
+					></span>{/if}
+			</p>
+			{#if parts.added}
+				<!-- Ours, and it has to look it. Same size, quieter colour: it is not a
+				     footnote — it is half of what starts if the button is pressed — but
+				     it is an offer, and an offer that looks like a statement is not one. -->
+				<p class="doc mt-1.5 text-sm leading-relaxed text-[var(--st-muted)]">
+					{parts.added}{#if c.streaming}<span class="caret" aria-hidden="true"></span>{/if}
+				</p>
+			{/if}
+
+			{#if c.error}
+				<p class="mt-2 text-xs leading-relaxed text-[var(--st-faint)]">{c.error}</p>
+			{/if}
+
+			<!-- The checker had to change the brief, so this is no longer the clip that
+			     was agreed to. It says what moved and waits: sending it anyway is a
+			     decision, and it is not ours. -->
+			{#if c.fixed?.length}
+				<p class="mt-3 text-xs leading-relaxed text-[var(--st-muted)]">
+					We adjusted this while writing it: {c.fixed.join(' · ')}
+				</p>
 			{/if}
 
 			{#if canPress && !c.streaming && c.line.trim()}
