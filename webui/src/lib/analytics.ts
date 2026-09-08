@@ -52,6 +52,12 @@ export function initPostHog(): Promise<PostHog | null> {
 				capture_exceptions: false,
 				disable_session_recording: true
 			});
+			// `history_change` covers a later navigation and not the load that
+			// started the session — the consumer app pairs the same setting with a
+			// first capture of its own for exactly this reason. Measured here
+			// before it was: a studio session produced a distinct id, a remote
+			// config fetch, and no event at all.
+			posthog.capture('$pageview');
 			return posthog;
 		})
 		.catch(() => null);
