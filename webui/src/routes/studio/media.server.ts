@@ -198,3 +198,58 @@ export function listFilms(): FilmItem[] {
 	}
 	return [...byId.values()].sort((a, b) => b.at - a.at);
 }
+
+// ─── pins ─────────────────────────────────────────────────────────────────────
+
+/** What is on the front page, chosen by hand.
+ *
+ *  Length was the first answer — over twenty seconds could only have been
+ *  assembled, so it must be a film — and it is a rule, not a judgement. It puts
+ *  every long thing on the wall and keeps every good short one off it, and the
+ *  front page is the one surface where the difference between "everything" and
+ *  "the ones worth showing" is the entire point.
+ *
+ *  So the shelf is a list somebody made. A file of ids beside the others, in the
+ *  order they were pinned; the page toggles them and shows what is on it.
+ */
+const PINS = join(CLIPS_PATH, '..', 'pins.json');
+
+export function readPins(): string[] {
+	try {
+		const raw = JSON.parse(readFileSync(PINS, 'utf8')) as unknown;
+		return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
+	} catch {
+		return [];
+	}
+}
+
+/** Add or remove one, and answer with the list as it now stands. */
+export function setPin(id: string, pinned: boolean): string[] {
+	const pins = readPins().filter((x) => x !== id);
+	if (pinned) pins.push(id);
+	try {
+		writeFileSync(PINS, JSON.stringify(pins, null, '\t'), 'utf8');
+	} catch {
+		/* a shelf that cannot be written is a shelf that stays as it was */
+	}
+	return pins;
+}
+
+/** The pinned items, in the order they were pinned, with their lengths.
+ *
+ *  An id whose file has gone is dropped rather than shown as a hole: the cache
+ *  is a cache, and a tile that cannot play is worse than one tile fewer. */
+export function listPinned(): FilmItem[] {
+	const all = new Map(listMedia().map((m) => [m.id, m]));
+	const logged = new Map(
+		readFilms().map((f) => [cacheId(f.workspace, f.artifact, f.file), f.parts] as const)
+	);
+	return readPins()
+		.map((id) => {
+			const m = all.get(id);
+			if (!m) return null;
+			const parts = logged.get(id);
+			return { id, seconds: m.seconds, at: m.at, ...(parts ? { parts } : {}) };
+		})
+		.filter((x): x is FilmItem => x !== null);
+}

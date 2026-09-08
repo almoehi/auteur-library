@@ -3902,6 +3902,70 @@
 		}
 	}
 
+	/** Load a video only once it is on screen.
+	 *
+	 *  The picker draws a hundred and eighty-eight of them. A browser will not
+	 *  keep that many media elements alive — Chrome stops somewhere under a
+	 *  hundred — so past the limit every tile stays black, and a picker you
+	 *  cannot see is not a picker. The src is held back until the tile scrolls
+	 *  into view and the element is then a normal one.
+	 *
+	 *  Kept once it has loaded. Tearing the src out again on the way past would
+	 *  make scrolling back up reload everything, and the elements that survive
+	 *  are the ones somebody is choosing between. */
+	function whenSeen(node: HTMLVideoElement, url: string) {
+		const eye = new IntersectionObserver(
+			(entries) => {
+				for (const e of entries) {
+					if (!e.isIntersecting) continue;
+					if (!node.src) node.src = url;
+					eye.unobserve(node);
+				}
+			},
+			{ rootMargin: '400px' }
+		);
+		eye.observe(node);
+		return { destroy: () => eye.disconnect() };
+	}
+
+	/** Everything in the cache, for choosing from. Loaded only when the picker is
+	 *  opened: it is a hundred and eighty-eight rows and the front page needs
+	 *  none of them. */
+	let pool = $state<ShelfItem[]>([]);
+	let pins = $state<string[]>([]);
+	async function loadPool() {
+		try {
+			const r = (await (await fetch('/studio/api/media?all=1')).json()) as {
+				items?: ShelfItem[];
+				pins?: string[];
+			};
+			if (r.items) pool = r.items;
+			if (r.pins) pins = r.pins;
+		} catch {
+			/* nothing to choose from is the same as not opening the picker */
+		}
+	}
+	async function togglePin(id: string) {
+		const pinned = !pins.includes(id);
+		// Moved before the answer comes back. A pin is a click on a thumbnail and
+		// the wall behind it is already drawn; waiting a round trip to redraw one
+		// ring makes a instant decision feel like a form submission.
+		pins = pinned ? [...pins, id] : pins.filter((x) => x !== id);
+		try {
+			const r = (await (
+				await fetch('/studio/api/media', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ id, pinned })
+				})
+			).json()) as { pins?: string[] };
+			if (r.pins) pins = r.pins;
+		} catch {
+			/* the optimistic move stands; the next open reads the truth */
+		}
+		void loadMedia();
+	}
+
 	/** How tall one sits in its column.
 	 *
 	 *  A longer film is more work and more to look at, so it takes more wall — and
@@ -7487,7 +7551,10 @@
 						type="button"
 						aria-label="all media"
 						title="all media"
-						onclick={() => (mediaOpen = true)}
+						onclick={() => {
+							mediaOpen = true;
+							void loadPool();
+						}}
 						class="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-[var(--st-surface)] text-[var(--st-muted)] transition-colors hover:bg-[var(--st-surface-2)] hover:text-[var(--st-text)]"
 					>
 						<svg viewBox="0 0 16 16" class="size-4" fill="none" aria-hidden="true">
@@ -8117,6 +8184,18 @@
 													{@render mediaTile(m)}
 												{/each}
 											</div>
+											<!-- Quiet: this is the studio's own housekeeping, not part of making a
+												 film. Here rather than only in the sidebar because this is the wall
+												 it edits. -->
+											<button
+												type="button"
+												onclick={() => {
+													mediaOpen = true;
+													void loadPool();
+												}}
+												class="cursor-pointer pb-1 text-xs text-[var(--st-faint)] transition-colors hover:text-[var(--st-text)]"
+												>choose what shows here</button
+											>
 										{/if}
 									{:else if stagePhase === 'ready' && stageClip}
 										{@const f = stageShownUrl ? { url: stageShownUrl } : null}
@@ -11929,11 +12008,16 @@
 
 <!-- Everything that has been finished, at once. -->
 {#if mediaOpen}
+	<!-- The picker. The front page is a list somebody made, so there has to be a
+		 place to make it — and the only honest one is everything the studio has,
+		 with a mark on what is already up. A rule cannot do this job: length says
+		 a thing was assembled, never that it was any good, and the front page is
+		 the one surface where that difference is the whole point. -->
 	<div
 		class="fixed inset-0 z-[60] overflow-y-auto bg-black/94 px-6 py-14 backdrop-blur-[28px]"
 		role="dialog"
 		aria-modal="true"
-		aria-label="all media"
+		aria-label="choose what is on the front page"
 	>
 		<button
 			type="button"
@@ -11943,36 +12027,40 @@
 		>
 			✕
 		</button>
-		<h2 class="mb-5 text-center font-display text-lg font-semibold">
-			{films.length}
-			{films.length === 1 ? 'film' : 'films'}
-		</h2>
-		<div class="mx-auto grid max-w-6xl grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-			{#each films as f (f.workspace + f.artifact + f.file)}
+		<h2 class="mb-1 text-center font-display text-lg font-semibold">Choose the front page</h2>
+		<p class="mb-5 text-center text-xs text-[var(--st-faint)]">
+			{pins.length} pinned of {pool.length}
+		</p>
+		<div class="mx-auto grid max-w-6xl grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7">
+			{#each pool as m (m.id)}
+				{@const on = pins.includes(m.id)}
 				<button
 					type="button"
-					onclick={() => {
-						filmPopup = f;
-						mediaOpen = false;
-					}}
-					class="group relative aspect-video cursor-pointer overflow-hidden rounded-xl bg-[var(--st-surface)]"
+					aria-pressed={on}
+					aria-label="{on ? 'remove from' : 'add to'} the front page"
+					onclick={() => togglePin(m.id)}
+					class="group relative aspect-square cursor-pointer overflow-hidden rounded-xl bg-[var(--st-surface)] transition-opacity {on
+						? 'opacity-100 ring-2 ring-[var(--st-text)]'
+						: 'opacity-55 hover:opacity-90'}"
 				>
 					<!-- svelte-ignore a11y_media_has_caption -->
 					<video
-						src={still(fileUrl(f.workspace, f.artifact, f.file))}
+						use:whenSeen={still(`/studio/api/media?id=${m.id}`)}
 						muted
 						playsinline
 						preload="metadata"
-						class="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
+						class="h-full w-full object-cover"
 					></video>
 					<span
-						class="pointer-events-none absolute right-1.5 bottom-1.5 rounded bg-black/65 px-1.5 font-mono text-[0.65rem] leading-5 text-white"
-						>{clipClock(f.seconds)}</span
+						class="pointer-events-none absolute right-1 bottom-1 rounded bg-black/60 px-1 font-mono text-[0.6rem] leading-4 text-white"
+						>{clipClock(m.seconds)}</span
 					>
-					<span
-						class="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 text-[0.65rem] leading-5 text-white"
-						>{f.parts} shots</span
-					>
+					{#if on}
+						<span
+							class="pointer-events-none absolute top-1 left-1 rounded-full bg-[var(--st-text)] px-1.5 text-[0.6rem] leading-4 font-semibold text-black"
+							>pinned</span
+						>
+					{/if}
 				</button>
 			{/each}
 		</div>
