@@ -11990,10 +11990,16 @@
 	 which is a strange way to hand somebody the thing they have been assembling
 	 all afternoon. Closing this loses nothing: it is on the shelf. -->
 <!-- One item from the front page, at the size it was made for. Nothing here
-	 edits or continues it: this is the shelf, and the shelf is for looking. -->
+	 edits or continues it: this is the shelf, and the shelf is for looking.
+	 The wall stays visible behind it. At ninety-four per cent black this was a
+	 page rather than a layer — you pressed a tile and the studio appeared to be
+	 gone, which is the one thing a preview must not do. Two thirds and a light
+	 blur reads as something opened ON the page: the shelf is still there,
+	 recognisably where you left it, and closing puts you back on the tile you
+	 pressed rather than somewhere you have to find again. -->
 {#if mediaPopup}
 	<div
-		class="fixed inset-0 z-[70] flex items-center justify-center bg-black/94 p-4 backdrop-blur-[28px] sm:p-8"
+		class="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-4 backdrop-blur-md sm:p-8"
 		role="dialog"
 		aria-modal="true"
 		aria-label="clip"
