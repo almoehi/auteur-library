@@ -7839,7 +7839,7 @@
 								 be tall about. `auto` margins centre the same way and give way
 								 when there is nothing left to give. -->
 							<div
-								class="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto [&>*]:shrink-0"
+								class="stagescroll flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto [&>*]:shrink-0"
 							>
 								<div class="my-auto flex w-full flex-col items-center gap-2">
 									{#if stagePhase === 'working'}
@@ -12121,6 +12121,23 @@
 {/if}
 
 <style>
+	/** The wall does not end, it runs out.
+	 *
+	 *  The column that holds it stops at a hard edge, and a tile crossing that
+	 *  edge is guillotined — half a picture, then the composer. It reads as a
+	 *  bug rather than as more content below, which is the opposite of what a
+	 *  scrolling shelf should say. A mask over the last few centimetres lets the
+	 *  bottom row dissolve instead, so the boundary says "there is more" and the
+	 *  eye goes back to the field underneath rather than to the seam.
+	 *
+	 *  Bottom only: fading the top as well would put a veil over the greeting,
+	 *  which is the first thing anybody reads here. Prefixed for Safari before
+	 *  15.4, where the unprefixed property does nothing at all. */
+	.stagescroll {
+		-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 4.5rem), transparent);
+		mask-image: linear-gradient(to bottom, #000 calc(100% - 4.5rem), transparent);
+	}
+
 	/* The one moving thing on the page, and it earns it: during a render nothing
 	   else changes for minutes, so stillness would read as a hang. Anyone who has
 	   asked the system to stop animating gets a static ring instead — the state
