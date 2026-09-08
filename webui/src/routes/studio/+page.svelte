@@ -3966,6 +3966,53 @@
 		void loadMedia();
 	}
 
+	/** The starters are a row you page through, not a stack you read.
+	 *
+	 *  Three cards took two hundred and eighty-four points — a third of a phone —
+	 *  and pushed every film below the fold on the one screen that exists to show
+	 *  them. One at a time costs a fifth of that and still teaches, which is what
+	 *  these are for: not conversion (of the accounts that only ever tapped one,
+	 *  one in forty-two rendered anything) but showing what a usable sentence
+	 *  looks like — who is in it, where, and what happens. That only works if the
+	 *  whole sentence is legible, which is why they are not shortened to labels.
+	 *
+	 *  Paged rather than swapped on a timer alone. A line that changes by itself
+	 *  is a line you might not notice changed; a row with the next card showing at
+	 *  its edge and dots underneath says "there are three" before anything moves.
+	 *  It still advances on its own, because nobody swipes a thing they have not
+	 *  been told is swipeable — but the first frame already says it is. */
+	let starterAt = $state(0);
+	let starterRow = $state<HTMLElement | null>(null);
+	/** Stop advancing the moment somebody takes hold of it. Nothing is more
+	 *  irritating than a carousel that moves while you are reading it. */
+	let starterHeld = $state(false);
+	const STARTER_MS = 5200;
+
+	$effect(() => {
+		const reduced =
+			typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (reduced || starterHeld || !showExamples || examples.length < 2) return;
+		const t = setInterval(() => showStarter((starterAt + 1) % examples.length), STARTER_MS);
+		return () => clearInterval(t);
+	});
+
+	/** Scroll the row to one card. The row is the source of truth for which card
+	 *  is showing — a swipe moves it without asking — so this only pushes it, and
+	 *  `onscroll` reads it back. */
+	function showStarter(i: number) {
+		starterAt = i;
+		const row = starterRow;
+		const card = row?.children[i] as HTMLElement | undefined;
+		if (row && card) row.scrollTo({ left: card.offsetLeft - row.offsetLeft, behavior: 'smooth' });
+	}
+
+	function starterScrolled() {
+		const row = starterRow;
+		if (!row) return;
+		const w = (row.children[0] as HTMLElement | undefined)?.clientWidth ?? 1;
+		starterAt = Math.max(0, Math.min(examples.length - 1, Math.round(row.scrollLeft / (w + 8))));
+	}
+
 	/** Two tiles at a time, moving along the wall.
 	 *
 	 *  A still wall is a folder; eleven walls playing at once is a browser with
@@ -7161,6 +7208,62 @@
 <!-- One thing this studio made. Films get the wider box and the shot count
 	 the badge; a shot gets its length and nothing else, because on a grid of
 	 thirty-six the only question is which one it was. -->
+{#snippet starters()}
+	<!-- The next card peeks past the right edge, so the row reads as a row before
+		 anything has moved. Snap, so a swipe lands on a card rather than between
+		 two of them. -->
+	<div class="w-full max-w-[34rem] pt-2">
+		<div
+			bind:this={starterRow}
+			onscroll={starterScrolled}
+			onpointerdown={() => (starterHeld = true)}
+			class="starterrow flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1"
+		>
+			{#each examples as ex, i (ex.text)}
+				<button
+					type="button"
+					onclick={() => useExample(ex.text)}
+					aria-label="use this example"
+					aria-current={i === starterAt}
+					class="relative flex min-h-[5.5rem] w-[86%] shrink-0 cursor-pointer snap-start items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent sm:w-[74%]"
+				>
+					<span
+						class="mt-px shrink-0 text-[13px] leading-5 tracking-tight text-[var(--st-faint)]"
+						aria-hidden="true">{ex.pair}</span
+					>
+					<span class="min-w-0 pr-4">{ex.text}</span>
+					<!-- Says what the tap does: it fills the box, it does not send. -->
+					<svg
+						viewBox="0 0 16 16"
+						class="absolute top-3 right-3 size-3 opacity-30"
+						fill="none"
+						aria-hidden="true"
+					>
+						<path
+							d="M4 12L12 4M6 4h6v6"
+							stroke="currentColor"
+							stroke-width="1.6"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</button>
+			{/each}
+		</div>
+		<!-- How many there are, and which one this is. The dots do the telling;
+			 they are not a control, so they are not a target. -->
+		<div class="mt-2 flex justify-center gap-1.5" aria-hidden="true">
+			{#each examples as ex, i (ex.text)}
+				<span
+					class="h-1.5 rounded-full transition-all duration-300 {i === starterAt
+						? 'w-4 bg-[var(--st-muted)]'
+						: 'w-1.5 bg-[var(--st-line)]'}"
+				></span>
+			{/each}
+		</div>
+	</div>
+{/snippet}
+
 {#snippet mediaTile(m: ShelfItem, i: number)}
 	<button
 		type="button"
@@ -8178,46 +8281,7 @@
 												{line}{#if i === 0}<br />{/if}
 											{/each}
 										</h2>
-										<div class="grid w-full max-w-3xl gap-2.5 pt-2 sm:grid-cols-3">
-											{#each examples as ex (ex.text)}
-												<button
-													type="button"
-													class="relative flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
-													onclick={() => useExample(ex.text)}
-												>
-													<!-- Who is in it, in the one place the eye lands first. The
-													 examples are scanned for whether they are for you before a
-													 word of them is read, and two glyphs answer that in every
-													 language the operators write in — Spanish, Portuguese,
-													 Arabic, Chinese and Russian all turned up in a night. It is
-													 hidden from screen readers because the sentence beside it
-													 already says the same thing. -->
-													<span
-														class="mt-px shrink-0 text-[13px] leading-5 tracking-tight text-[var(--st-faint)]"
-														aria-hidden="true">{ex.pair}</span
-													>
-													<span class="min-w-0 pr-4">{ex.text}</span>
-													<!-- Says what the click does: it fills the box, it does not send.
-													 Out of the leading column so the pairing can have it, but
-													 kept — in a surface where every send costs money, "this only
-													 fills the field" is worth a corner. -->
-													<svg
-														viewBox="0 0 16 16"
-														class="absolute top-3 right-3 size-3 opacity-30"
-														fill="none"
-														aria-hidden="true"
-													>
-														<path
-															d="M4 12L12 4M6 4h6v6"
-															stroke="currentColor"
-															stroke-width="1.6"
-															stroke-linecap="round"
-															stroke-linejoin="round"
-														/>
-													</svg>
-												</button>
-											{/each}
-										</div>
+										{@render starters()}
 
 										<!-- What has already been made, under the invitation to make more.
 										 A front page that only invites is a brochure; the work is the
@@ -9853,37 +9917,7 @@
 							 set. Stacked full-width pills made three sentences of different
 							 lengths look like three unrelated things, and the longest one
 							 decided the shape of the block. -->
-								<div class="grid gap-2.5 pt-2 sm:grid-cols-3">
-									{#each examples as ex (ex.text)}
-										<button
-											type="button"
-											class="relative flex min-h-[5.5rem] cursor-pointer items-start gap-2.5 rounded-xl p-4 text-left text-sm leading-snug text-[var(--st-muted)] ring-1 ring-[var(--st-line)] transition-colors hover:bg-[var(--st-surface)] hover:text-[var(--st-text)] hover:ring-transparent"
-											onclick={() => useExample(ex.text)}
-										>
-											<!-- Who is in it. Same reasoning as the empty state's copy. -->
-											<span
-												class="mt-px shrink-0 text-[13px] leading-5 tracking-tight text-[var(--st-faint)]"
-												aria-hidden="true">{ex.pair}</span
-											>
-											<span class="min-w-0 pr-4">{ex.text}</span>
-											<!-- Says what the click does: it fills the box, it does not send. -->
-											<svg
-												viewBox="0 0 16 16"
-												class="absolute top-3 right-3 size-3 opacity-30"
-												fill="none"
-												aria-hidden="true"
-											>
-												<path
-													d="M4 12L12 4M6 4h6v6"
-													stroke="currentColor"
-													stroke-width="1.6"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												/>
-											</svg>
-										</button>
-									{/each}
-								</div>
+								{@render starters()}
 							{/if}
 
 							<div bind:this={bottomEl}></div>
@@ -12154,6 +12188,15 @@
 	 *  that dissolves just before reaching it never arrives underneath, which is
 	 *  the whole effect. A library scrolls under its own search bar and is hidden
 	 *  by it, not faded out in front of it. */
+	/* The row scrolls but never shows a bar: the peeking card and the dots
+	   already say it moves, and a scrollbar under three cards is furniture. */
+	.starterrow {
+		scrollbar-width: none;
+	}
+	.starterrow::-webkit-scrollbar {
+		display: none;
+	}
+
 	/** The chips are the same glass as the field under them.
 	 *
 	 *  Left solid they were six opaque lozenges floating on a translucent card —
