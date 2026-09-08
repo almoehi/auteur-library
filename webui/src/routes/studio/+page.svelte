@@ -3966,6 +3966,56 @@
 		void loadMedia();
 	}
 
+	/** Two tiles at a time, moving along the wall.
+	 *
+	 *  A still wall is a folder; eleven walls playing at once is a browser with
+	 *  eleven video decoders and a fan. So a couple of them are alive at any
+	 *  moment and the pair walks, which is how a shelf of moving pictures is
+	 *  usually done — enough motion that the page is clearly not a screenshot,
+	 *  little enough that the eye is not being shouted at from six directions.
+	 *
+	 *  The two are taken from opposite ends of the list rather than side by side.
+	 *  Neighbours playing together read as one thing twitching in a corner;
+	 *  spread apart, the wall looks alive all over.
+	 *
+	 *  Off for anybody who has asked for less motion, where a page that animates
+	 *  by itself is exactly what was asked against. */
+	let tileEls = $state<Record<string, HTMLVideoElement>>({});
+	let liveAt = $state(0);
+	const STEP_MS = 4200;
+	$effect(() => {
+		const still =
+			typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (still || stagePhase !== 'empty' || shelf.length < 2) return;
+		const t = setInterval(() => (liveAt = (liveAt + 1) % shelf.length), STEP_MS);
+		return () => clearInterval(t);
+	});
+
+	/** Play the two that are up, park everything else on its first frame.
+	 *
+	 *  Parked rather than merely paused: a video left where it stopped shows a
+	 *  different frame every time it comes round, so the wall never settles into
+	 *  a picture. Back to the tenth of a second the tile was drawn on. */
+	$effect(() => {
+		const n = shelf.length;
+		if (!n) return;
+		const pair = new Set([shelf[liveAt % n]?.id, shelf[(liveAt + Math.floor(n / 2)) % n]?.id]);
+		for (const item of shelf) {
+			const el = tileEls[item.id];
+			if (!el) continue;
+			if (pair.has(item.id)) {
+				void el.play().catch(() => {});
+			} else {
+				el.pause();
+				try {
+					if (el.currentTime > 0.2) el.currentTime = 0.1;
+				} catch {
+					/* seeking before metadata throws; the next pass gets it */
+				}
+			}
+		}
+	});
+
 	/** How tall one sits in its column.
 	 *
 	 *  A longer film is more work and more to look at, so it takes more wall — and
@@ -7111,7 +7161,7 @@
 <!-- One thing this studio made. Films get the wider box and the shot count
 	 the badge; a shot gets its length and nothing else, because on a grid of
 	 thirty-six the only question is which one it was. -->
-{#snippet mediaTile(m: ShelfItem)}
+{#snippet mediaTile(m: ShelfItem, i: number)}
 	<button
 		type="button"
 		aria-label="film, {clipClock(m.seconds)}"
@@ -7120,24 +7170,21 @@
 			m.seconds
 		)}"
 	>
+		<!-- No length, no shot count, no caption. A wall of stills is looked at,
+			 not read, and a badge on every tile turns a shelf back into a file
+			 listing — which is what this stopped being. The length is still in the
+			 label for anybody navigating by voice or keyboard, where it is the only
+			 way to tell one tile from the next. -->
 		<!-- svelte-ignore a11y_media_has_caption -->
 		<video
+			bind:this={tileEls[m.id]}
 			src={still(shelfUrl(m))}
 			muted
+			loop
 			playsinline
 			preload="metadata"
 			class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
 		></video>
-		<span
-			class="pointer-events-none absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 font-mono text-[0.65rem] leading-5 text-white backdrop-blur-sm"
-			>{clipClock(m.seconds)}</span
-		>
-		{#if m.parts}
-			<span
-				class="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 text-[0.65rem] leading-5 text-white backdrop-blur-sm"
-				>{m.parts} shots</span
-			>
-		{/if}
 	</button>
 {/snippet}
 
@@ -8180,8 +8227,8 @@
 											<div
 												class="w-full max-w-5xl columns-2 gap-2 pt-8 pb-2 sm:columns-3 lg:columns-4"
 											>
-												{#each shelf as m (m.id)}
-													{@render mediaTile(m)}
+												{#each shelf as m, i (m.id)}
+													{@render mediaTile(m, i)}
 												{/each}
 											</div>
 											<!-- Quiet: this is the studio's own housekeeping, not part of making a
