@@ -32,7 +32,9 @@ import {
 	writeFileSync
 } from 'node:fs';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { CLIPS_PATH } from '../clips.server';
+import { readFilms } from './films.server';
 
 const INDEX = join(CLIPS_PATH, '..', 'media-index.json');
 
@@ -145,4 +147,54 @@ export function mediaPath(id: string): string | null {
 	if (!/^[0-9a-f]{32}$/i.test(id)) return null;
 	const path = join(CLIPS_PATH, `${id}.mp4`);
 	return existsSync(path) ? path : null;
+}
+
+/** How long a piece has to run before it can only have been assembled.
+ *
+ *  This studio renders fifteen seconds at the outside, so anything longer than
+ *  twenty is several shots joined. That is the whole test, and it is enough:
+ *  the film log only started being written this afternoon, and everything put
+ *  together before it exists on the disk and nowhere else. */
+const ASSEMBLED_SECONDS = 20;
+
+/** The same name the clip cache stores a file under.
+ *
+ *  Duplicated from `clips.server`, where it is private and should stay private —
+ *  it is that module's business how it names things. What is needed here is the
+ *  one question a shelf has to answer: is the film I have a row for the same
+ *  object as this file in the cache. Two entries for one video is worse than a
+ *  short shelf. */
+function cacheId(workspace: string, artifact: string, file: string): string {
+	return createHash('sha256').update(`${workspace} ${artifact} ${file}`).digest('hex').slice(0, 32);
+}
+
+export interface FilmItem {
+	id: string;
+	seconds: number;
+	at: number;
+	/** How many shots went in, when that is known. A film recovered from the
+	 *  cache predates the log that would have said. */
+	parts?: number;
+}
+
+/** The films, and only the films.
+ *
+ *  Two sources because there are two eras. The log is authoritative for anything
+ *  assembled since it existed; before it, the only evidence a film was ever made
+ *  is a file in the cache longer than this studio can render in one go. Merged
+ *  and deduplicated by the cache's own name, so a logged film that is also
+ *  sitting in the cache appears once.
+ */
+export function listFilms(): FilmItem[] {
+	const byId = new Map<string, FilmItem>();
+
+	for (const f of readFilms()) {
+		const id = cacheId(f.workspace, f.artifact, f.file);
+		byId.set(id, { id, seconds: f.seconds, at: f.at, parts: f.parts });
+	}
+	for (const m of listMedia()) {
+		if (m.seconds <= ASSEMBLED_SECONDS || byId.has(m.id)) continue;
+		byId.set(m.id, { id: m.id, seconds: m.seconds, at: m.at });
+	}
+	return [...byId.values()].sort((a, b) => b.at - a.at);
 }

@@ -3872,27 +3872,47 @@
 	 *  Films first regardless, because a film is the thing that was finished and
 	 *  a shot is a part. Duration is what separates them — over twenty seconds is
 	 *  longer than this studio can render in one go, so it was assembled. */
-	interface MediaItem {
+	/** The shelf, and only films are on it.
+	 *
+	 *  A shot is a part; a wall of parts is a scratch folder. What belongs on a
+	 *  front page is what was finished, and the server decides what counts —
+	 *  the film log for anything assembled since it existed, and, before it, a
+	 *  file longer than this studio can render in one go, which can only have
+	 *  been joined. Deduplicated there too: a logged film is usually also sitting
+	 *  in the cache, and two tiles for one video is worse than a short shelf.
+	 *
+	 *  So there is nothing to filter or merge here. Whatever comes back is the
+	 *  shelf, newest first. */
+	interface ShelfItem {
 		id: string;
 		seconds: number;
-		bytes: number;
-		at: number;
+		parts?: number;
 	}
-	const FILM_SECONDS = 20;
-	let media = $state<MediaItem[]>([]);
-	let mediaPopup = $state<MediaItem | null>(null);
-	const mediaFilms = $derived(media.filter((m) => m.seconds > FILM_SECONDS));
-	const mediaShots = $derived(media.filter((m) => m.seconds <= FILM_SECONDS));
-	function mediaUrl(m: MediaItem): string {
+	let shelf = $state<ShelfItem[]>([]);
+	let mediaPopup = $state<ShelfItem | null>(null);
+	function shelfUrl(m: ShelfItem): string {
 		return `/studio/api/media?id=${m.id}`;
 	}
 	async function loadMedia() {
 		try {
-			const r = (await (await fetch('/studio/api/media')).json()) as { items?: MediaItem[] };
-			if (r.items) media = r.items;
+			const r = (await (await fetch('/studio/api/media')).json()) as { items?: ShelfItem[] };
+			if (r.items) shelf = r.items;
 		} catch {
 			/* the front page is a shelf; a failed list leaves the greeting alone */
 		}
+	}
+
+	/** How tall one sits in its column.
+	 *
+	 *  A longer film is more work and more to look at, so it takes more wall — and
+	 *  a column of identical rectangles is a contact sheet. Set as a ratio rather
+	 *  than a row span because the tiles flow in columns now: each column fills
+	 *  independently, which is what staggers them against each other instead of
+	 *  ruling them into a grid. */
+	function tileRatio(seconds: number): string {
+		if (seconds >= 30) return 'aspect-[3/4]';
+		if (seconds >= 15) return 'aspect-square';
+		return 'aspect-[4/3]';
 	}
 	async function loadFilms() {
 		try {
@@ -7027,18 +7047,18 @@
 <!-- One thing this studio made. Films get the wider box and the shot count
 	 the badge; a shot gets its length and nothing else, because on a grid of
 	 thirty-six the only question is which one it was. -->
-{#snippet mediaTile(m: MediaItem, film: boolean)}
+{#snippet mediaTile(m: ShelfItem)}
 	<button
 		type="button"
-		aria-label="{film ? 'film' : 'shot'}, {clipClock(m.seconds)}"
+		aria-label="film, {clipClock(m.seconds)}"
 		onclick={() => (mediaPopup = m)}
-		class="group relative cursor-pointer overflow-hidden rounded-xl bg-[var(--st-surface)] {film
-			? 'aspect-video'
-			: 'aspect-square'}"
+		class="group relative mb-2 block w-full cursor-pointer break-inside-avoid overflow-hidden rounded-xl bg-[var(--st-surface)] {tileRatio(
+			m.seconds
+		)}"
 	>
 		<!-- svelte-ignore a11y_media_has_caption -->
 		<video
-			src={still(mediaUrl(m))}
+			src={still(shelfUrl(m))}
 			muted
 			playsinline
 			preload="metadata"
@@ -7048,6 +7068,12 @@
 			class="pointer-events-none absolute right-1.5 bottom-1.5 rounded bg-black/60 px-1.5 font-mono text-[0.65rem] leading-5 text-white backdrop-blur-sm"
 			>{clipClock(m.seconds)}</span
 		>
+		{#if m.parts}
+			<span
+				class="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 text-[0.65rem] leading-5 text-white backdrop-blur-sm"
+				>{m.parts} shots</span
+			>
+		{/if}
 	</button>
 {/snippet}
 
@@ -8078,36 +8104,18 @@
 
 										<!-- What has already been made, under the invitation to make more.
 										 A front page that only invites is a brochure; the work is the
-										 argument, and it is sitting on the disk either way. Films first
-										 and larger — a film is what was finished, a shot is a part of
-										 one — then everything else, newest first, because the thing you
-										 are most likely to want is the thing you just made. -->
-										{#if media.length}
-											<div class="w-full max-w-5xl pt-8 pb-2">
-												{#if mediaFilms.length}
-													<h3
-														class="pb-2.5 text-[11px] font-semibold tracking-[0.14em] text-[var(--st-faint)] uppercase"
-													>
-														{mediaFilms.length}
-														{mediaFilms.length === 1 ? 'film' : 'films'}
-													</h3>
-													<div class="grid grid-cols-2 gap-2 pb-7 sm:grid-cols-3">
-														{#each mediaFilms as m (m.id)}
-															{@render mediaTile(m, true)}
-														{/each}
-													</div>
-												{/if}
-												<h3
-													class="pb-2.5 text-[11px] font-semibold tracking-[0.14em] text-[var(--st-faint)] uppercase"
-												>
-													{mediaShots.length}
-													{mediaShots.length === 1 ? 'shot' : 'shots'}
-												</h3>
-												<div class="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
-													{#each mediaShots.slice(0, 36) as m (m.id)}
-														{@render mediaTile(m, false)}
-													{/each}
-												</div>
+										 argument, and it is sitting on the disk either way.
+										 Columns rather than a grid, because a grid rules everything
+										 into rows and what this wants is the offset — each column
+										 fills on its own, so a tall film in one pushes its neighbours
+										 out of step and the wall stops looking like a table. -->
+										{#if shelf.length}
+											<div
+												class="w-full max-w-5xl columns-2 gap-2 pt-8 pb-2 sm:columns-3 lg:columns-4"
+											>
+												{#each shelf as m (m.id)}
+													{@render mediaTile(m)}
+												{/each}
 											</div>
 										{/if}
 									{:else if stagePhase === 'ready' && stageClip}
@@ -11872,7 +11880,7 @@
 		></button>
 		<!-- svelte-ignore a11y_media_has_caption -->
 		<video
-			src={mediaUrl(mediaPopup)}
+			src={shelfUrl(mediaPopup)}
 			controls
 			autoplay
 			loop
