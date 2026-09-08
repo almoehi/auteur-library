@@ -8,10 +8,18 @@
 	 *
 	 *  The operator view at /ops is still there and still works; it is simply not
 	 *  advertised, because it is a debugging surface and this is a product.
+	 *
+	 *  The one thing that does live here is analytics, because this is the only
+	 *  node every surface passes through. It arms listeners and hands back their
+	 *  teardown; it renders nothing and, with no key configured, does nothing.
 	 */
+	import { onMount } from 'svelte';
+	import { armPostHog } from '$lib/analytics';
 	import '../app.css';
 
 	let { children } = $props();
+
+	onMount(armPostHog);
 </script>
 
 {@render children()}

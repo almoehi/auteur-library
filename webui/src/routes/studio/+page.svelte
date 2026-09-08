@@ -46,6 +46,7 @@
 	 */
 	// Aliased: this file already has a tick(id) of its own for the poll loop.
 	import { onMount, tick as flush, untrack } from 'svelte';
+	import { trackClipReady } from '$lib/analytics';
 	import { friendly, parseEventLog, type ActivityRow } from './activity';
 	import { recordWait, typicalWait, typicalLabel } from './timings';
 	import { renderDocument, type Block } from './render-doc';
@@ -5366,6 +5367,9 @@
 			// Before anything else is done with it — this is the one moment the
 			// clip is known to exist and the agent is known to be answering.
 			keepClip(renderWs, a.id, name);
+			// Said out loud in the same breath: a survey on /studio can only ask
+			// what someone thinks of a clip once one of them exists.
+			trackClipReady();
 			const isFinal =
 				assemblySent &&
 				(ASSEMBLE_RE.test(`${a.key} ${a.name} ${name}`) ||
