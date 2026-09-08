@@ -1372,6 +1372,10 @@
 	/** Which read-back is still waiting on this question. Newest only: an older
 	 *  round has been answered by the fact that a newer one exists. */
 	let selfAnswered = $state<Record<string, boolean>>({});
+	/** Pressing generate answers it: they meant somebody like them, not them. */
+	function selfAnsweredBySending(id: string) {
+		selfAnswered[id] = true;
+	}
 	const selfAsk = $derived.by(() => {
 		if (mode !== 'simple' || wantTarget !== 'clip') return null;
 		// A picture already on the bench, or a kept face, is the answer.
@@ -7018,52 +7022,66 @@
 			{/if}
 
 			<!-- The question, when somebody has put themselves in a shot with no
-				 picture of themselves in it. Quiet: no icon, no warning colour, no
-				 dialog — it is one sentence and two answers, and the generate button
-				 below it is untouched. An offer that has to be dismissed is not an
-				 offer.
-				 The consequence is stated because it is the only reason to care.
-				 "The model invents somebody" is what actually happens, and hearing it
-				 before the render costs nothing; hearing it after costs a clip. -->
+				 picture of themselves in it.
+				 No box around it. It sat in a filled panel that was the same black as
+				 everything behind it, so the panel did nothing but add an edge — and
+				 the card it lives in is already the container. What separates it is
+				 space and a change of weight, which is what separates a note from the
+				 thing it is attached to.
+				 One filled button on the card, and it is not this one. Attaching a
+				 photo and generating the video were both white and stacked, which put
+				 two primaries under one another and made the reader choose between
+				 two shouts. The offer is a quiet button; generating stays the loud
+				 one, because it is still the thing this whole surface is for.
+				 And no dismiss. Pressing generate IS the answer — a button whose only
+				 job is to hide a sentence is chrome standing in for a decision the
+				 next click already makes. -->
 			{#if selfAsk === item.id && !c.streaming && c.line.trim()}
-				<div class="enter mt-3 rounded-xl bg-[var(--st-bg)] p-3.5">
+				<div class="enter mt-4">
 					<p class="text-sm leading-relaxed text-[var(--st-text)]">You are in this one.</p>
-					<p class="mt-1 text-xs leading-relaxed text-[var(--st-muted)]">
+					<p class="mt-1 max-w-[30rem] text-xs leading-relaxed text-[var(--st-muted)]">
 						Attach a photo and the face in the clip is yours. Without one the model invents
 						somebody.
 					</p>
-					<div class="mt-3 flex flex-wrap items-center gap-2">
-						<label class="btn btn-primary cursor-pointer">
-							Add a photo of you
-							<input
-								type="file"
-								multiple
-								accept="image/*,video/*"
-								class="hidden"
-								disabled={refBusy}
-								onchange={(e) => {
-									const el = e.currentTarget as HTMLInputElement;
-									attachRefs(el.files);
-									el.value = '';
-								}}
+					<label
+						class="mt-2.5 inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs font-medium text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control,var(--st-line))]"
+					>
+						<svg viewBox="0 0 20 20" class="size-3.5" fill="none" aria-hidden="true">
+							<path
+								d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
+								stroke="currentColor"
+								stroke-width="1.6"
+								stroke-linecap="round"
+								stroke-linejoin="round"
 							/>
-						</label>
-						<button
-							type="button"
-							class="cursor-pointer rounded-full px-3 py-1.5 text-xs text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-							onclick={() => (selfAnswered[item.id] = true)}>It is not me</button
-						>
-					</div>
+						</svg>
+						Add a photo of you
+						<input
+							type="file"
+							multiple
+							accept="image/*,video/*"
+							class="hidden"
+							disabled={refBusy}
+							onchange={(e) => {
+								const el = e.currentTarget as HTMLInputElement;
+								attachRefs(el.files);
+								el.value = '';
+							}}
+						/>
+					</label>
 				</div>
 			{/if}
 
 			{#if canPress && !c.streaming && c.line.trim()}
-				<div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+				<div class="flex flex-wrap items-center gap-2.5 {selfAsk === item.id ? 'mt-5' : 'mt-3.5'}">
 					<button
 						type="button"
 						disabled={shotBusy[item.id]}
 						class="btn btn-primary"
-						onclick={() => acceptConfirm(item.id)}
+						onclick={() => {
+							selfAnsweredBySending(item.id);
+							acceptConfirm(item.id);
+						}}
 					>
 						{#if shotBusy[item.id]}
 							{@const el = Math.max(0, Math.round((now - (c.busySince ?? now)) / 1000))}
