@@ -1438,6 +1438,44 @@
 		return out;
 	}
 
+	/** Press a missing part and it does the thing, rather than pointing at where
+	 *  the thing could be done.
+	 *
+	 *  A character and a place are objects the studio already keeps, so those two
+	 *  open their pickers. The other two have nowhere to go but the sentence, so
+	 *  they write into it — a short clause the operator can edit, delete or send
+	 *  as it stands. It is a starting point, not a decision: it lands in the box
+	 *  with the cursor after it, which is the one place invention is harmless,
+	 *  because nothing has been agreed and nobody has spent anything.
+	 *
+	 *  What they write is deliberately about shape rather than content. "Slow at
+	 *  first, then faster" is a turn, which is what a five-second clip needs and
+	 *  what almost none of the short prompts had; "close and handheld" is a
+	 *  camera, which sixty-five of seventy first messages never mentioned and
+	 *  which the adapter takes for itself when nobody claims it. Neither invents
+	 *  a person, a place or an act — those are the operator's, and guessing them
+	 *  is the mistake this whole mechanism exists to stop. */
+	function addMissing(bit: 'character' | 'place' | 'action' | 'camera') {
+		if (bit === 'character' || bit === 'place') {
+			shutMenus();
+			pickKind = bit === 'character' ? 'character' : 'location';
+			return;
+		}
+		// Joined to a sentence, or standing as one. After a send the box is empty
+		// and the next thing typed is a refinement, so a clause that opens with a
+		// dash arrives as punctuation with nothing in front of it.
+		const clause = bit === 'action' ? 'slow at first, then faster' : 'close and handheld';
+		const now = input.trimEnd();
+		if (!now.toLowerCase().includes(clause.toLowerCase())) {
+			input = !now ? clause : now + (bit === 'action' ? ' — ' : ', ') + clause;
+		}
+		composer?.focus();
+		void flush().then(() => {
+			grow(composer);
+			composer?.setSelectionRange(input.length, input.length);
+		});
+	}
+
 	type AskKind = 'blocked' | 'self' | 'who' | 'sheet' | 'no-words' | 'too-short';
 	const askAbout = $derived.by<{
 		id: string;
@@ -7156,17 +7194,7 @@
 								<button
 									type="button"
 									class="pillglass cursor-pointer rounded-full px-2.5 py-1 text-[11px] text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
-									onclick={() => {
-										if (bit === 'character') {
-											shutMenus();
-											pickKind = 'character';
-										} else if (bit === 'place') {
-											shutMenus();
-											pickKind = 'location';
-										} else {
-											composer?.focus();
-										}
-									}}
+									onclick={() => addMissing(bit)}
 								>
 									{bit === 'character'
 										? 'a character'
@@ -12539,10 +12567,16 @@
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.shotglass {
-			background: color-mix(in srgb, var(--st-surface) 70%, transparent);
-			-webkit-backdrop-filter: blur(28px) saturate(1.4);
-			backdrop-filter: blur(28px) saturate(1.4);
-			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+			background: color-mix(in srgb, var(--st-surface) 58%, transparent);
+			-webkit-backdrop-filter: blur(44px) saturate(1.9);
+			backdrop-filter: blur(44px) saturate(1.9);
+			/* Three edges, not one. The top catches the light, the bottom returns a
+			   little of it, and the outer shadow lifts the whole thing off what it
+			   is lying on — a pane with only a highlight reads as a decal. */
+			box-shadow:
+				inset 0 1px 0 rgba(255, 255, 255, 0.2),
+				inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+				0 18px 44px rgba(0, 0, 0, 0.5);
 		}
 	}
 
@@ -12562,9 +12596,10 @@
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.pillglass {
-			background: color-mix(in srgb, var(--st-surface) 80%, transparent);
-			-webkit-backdrop-filter: blur(18px) saturate(1.15);
-			backdrop-filter: blur(18px) saturate(1.15);
+			background: color-mix(in srgb, var(--st-surface) 70%, transparent);
+			-webkit-backdrop-filter: blur(26px) saturate(1.7);
+			backdrop-filter: blur(26px) saturate(1.7);
+			box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.16);
 		}
 	}
 
