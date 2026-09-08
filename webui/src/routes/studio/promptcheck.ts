@@ -196,6 +196,40 @@ export function checkPrompt(prompt: string, opts: CheckOpts): PromptFault[] {
 		}
 	}
 
+	// 4b. The person typing, still in the brief.
+	//
+	//  "me and my girlfriend", "you take my cock" — the request arrives in the
+	//  first or second person often enough that it is one of the commonest shapes
+	//  a short prompt takes, and the model on the other end has never seen the
+	//  operator. A pronoun is not a likeness: left in, it describes nobody, and
+	//  the clip comes back with a body that belongs to no one in the shot. The
+	//  writer is told to spend a <Subject N> on them — "a man", "a woman" — and
+	//  this is the check that it did.
+	//
+	//  Speech is exempt, and has to be: "let me in" is what somebody says, not who
+	//  they are. Three ways it is written here — a <d> line, which is the one the
+	//  writer actually uses, an <Audio> line, and plain quotation marks. Measured
+	//  over 188 shipped briefs: with <d> stripped the rule fires on none of them,
+	//  and every one of the three it caught before was a spoken line.
+	const spoken = prompt
+		.replace(/<d>[\s\S]*?<\/d>/gi, ' ')
+		.replace(/^[ \t]*<Audio[^>]*>.*$/gim, ' ')
+		.replace(/"[^"]*"|\u201c[^\u201d]*\u201d/g, ' ');
+	const pronoun = spoken.match(
+		/(?:^|[^\p{L}])(I|me|my|mine|myself|you|your|yours|yourself)(?![\p{L}])/iu
+	);
+	if (pronoun) {
+		faults.push({
+			code: 'first-person',
+			says:
+				`"${pronoun[1]}" is in the brief, and the model cannot see whoever typed it. ` +
+				`Rewrite that person as an explicit adult third person — "a man", "a woman" — ` +
+				`with their own <Subject N>, build, age, hair, skin and what they are wearing. ` +
+				`Keep first person only inside quoted speech.`,
+			human: 'the brief still points at whoever wrote it, and the model cannot see them'
+		});
+	}
+
 	// 5. Somebody arriving at a pinned seam, with nothing said about it.
 	//
 	// The pinned frame holds whoever was in the prior clip and nobody else. A

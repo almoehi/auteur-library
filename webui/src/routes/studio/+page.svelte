@@ -7235,9 +7235,9 @@
 						{ask === 'blocked'
 							? 'It describes someone under age. Write a different shot — everyone in it has to be an adult.'
 							: ask === 'self'
-								? 'Attach a photo, or the model invents a face.'
+								? 'Attach a photo or pick a character — without one the prompt just says "a man" or "a woman", and it is not you.'
 								: ask === 'who'
-									? 'Say who they are, or attach a picture.'
+									? 'Attach a picture or pick a character — without one the prompt just says "a man" or "a woman".'
 									: ask === 'sheet'
 										? 'That describes a person. Say what they do, and where.'
 										: ask === 'no-words'
@@ -7245,33 +7245,51 @@
 											: 'Say what happens, and where.'}
 					</p>
 
+					<!-- Two ways to answer it, because there are two. A photograph is the
+						 likeness; a kept character is a likeness that was already made and
+						 already paid for, and leaving it out sent people back to the upload
+						 dialogue for a face they had rendered an hour ago. Neither is
+						 required — the third answer is to press the button and let it be a
+						 stranger, which is why nothing here is styled as a blocker. -->
 					{#if ask === 'self' || ask === 'who'}
-						<label
-							class="pillglass mt-2.5 inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full px-3.5 text-xs font-medium text-[var(--st-text)] transition-colors"
-						>
-							<svg viewBox="0 0 20 20" class="size-3.5" fill="none" aria-hidden="true">
-								<path
-									d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
-									stroke="currentColor"
-									stroke-width="1.6"
-									stroke-linecap="round"
-									stroke-linejoin="round"
+						<div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+							<label
+								class="pillglass inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full px-3.5 text-xs font-medium text-[var(--st-text)] transition-colors"
+							>
+								<svg viewBox="0 0 20 20" class="size-3.5" fill="none" aria-hidden="true">
+									<path
+										d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
+										stroke="currentColor"
+										stroke-width="1.6"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
+								</svg>
+								{ask === 'self' ? 'Add a photo of you' : 'Add a picture of them'}
+								<input
+									type="file"
+									multiple
+									accept="image/*,video/*"
+									class="hidden"
+									disabled={refBusy}
+									onchange={(e) => {
+										const el = e.currentTarget as HTMLInputElement;
+										attachRefs(el.files);
+										el.value = '';
+									}}
 								/>
-							</svg>
-							{ask === 'self' ? 'Add a photo of you' : 'Add a picture of them'}
-							<input
-								type="file"
-								multiple
-								accept="image/*,video/*"
-								class="hidden"
-								disabled={refBusy}
-								onchange={(e) => {
-									const el = e.currentTarget as HTMLInputElement;
-									attachRefs(el.files);
-									el.value = '';
+							</label>
+							<button
+								type="button"
+								class="pillglass inline-flex min-h-8 cursor-pointer items-center rounded-full px-3.5 text-xs font-medium text-[var(--st-muted)] transition-colors hover:text-[var(--st-text)]"
+								onclick={() => {
+									shutMenus();
+									pickKind = 'character';
 								}}
-							/>
-						</label>
+							>
+								Pick a character
+							</button>
+						</div>
 					{/if}
 
 					<!-- The missing parts, as things to press rather than things to read.

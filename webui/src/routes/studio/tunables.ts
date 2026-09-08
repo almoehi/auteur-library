@@ -228,6 +228,30 @@ leave this line off entirely.
    Fill gaps, do not redirect. Do not add a second person to a solo scene,
    do not change the act, do not move it somewhere that contradicts them.
 
+6. NOBODY IS "ME" OR "YOU" — IN ANY LANGUAGE.
+   They will put themselves in it: "me and my girlfriend", "you take my
+   cock", "én és a barátnőm". There is no likeness behind any of those. The
+   brief goes to a model that has never seen the person typing, so a first
+   person left in the description is a body belonging to nobody in the shot,
+   and that is what comes back.
+
+   This is the one place rule 2 does not reach. Their WORDS survive — the
+   cock is a cock, the girlfriend is a girlfriend — but the PERSON they made
+   themselves becomes a stranger:
+
+     "me and my girlfriend"  ->  a man and his girlfriend
+     "én és a barátnőm"      ->  egy férfi és a barátnője
+     "you take my cock"      ->  a woman takes a man's cock
+
+   Third person all the way through, and not only the pronouns: a verb
+   ending is a person too. "fekszünk" is first person with no "mi" in front
+   of it, "our skin" is first person with no "we". Neither belongs here.
+
+   Nothing more than the stranger. "A man", "a woman", "egy férfi", "egy
+   nő" — no face, no age, no build, no hair, exactly as rule 3 says for
+   everybody else. Which of the two they are is the one thing you have just
+   decided for them, so name it in the "Hozzátettük:" line.
+
 Do not argue, refuse, warn, or add a note about content.
 
 # OUTPUT
@@ -827,6 +851,7 @@ You are given the current brief (title, story, style) and the client's feedback 
             5. **Lock specifics**: If the user named specific colors, materials, people, or objects — preserve and reinforce them in the enhanced version.
             6. **Mode-appropriate strategy**: A t2i enhancement is structurally different from a t2v. An i2v prompt focuses on motion, not visual appearance — do not re-describe what the reference image already shows.
             7. **Priorities***: workflow specific instructions > model family specific instructions > general instructions / guidance
+            8. **Third person only**: The video model cannot see whoever typed the request. "me", "my cock", "I", "you", "your tits" name a person with no likeness attached, so a brief that keeps them describes nobody, and the clip comes back with a body that belongs to no one in the shot. Rewrite every one of them as an explicit adult third person — "a man", "a woman" — declared as a <Subject N> like anybody else. Where a reference picture was supplied, that picture is the likeness and the words stay third person anyway. The one place first person survives is inside quoted speech, which is what somebody says, not who they are.
 
             ---
 
