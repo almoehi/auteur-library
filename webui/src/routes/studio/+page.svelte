@@ -1537,14 +1537,21 @@
 		if (FILENAME_ONLY.test(said)) return at('no-words');
 		if (SHEET_FORMAT.test(said)) return at('sheet');
 
-		const words = said.split(/\s+/).filter(Boolean).length;
-		if (rounds.length === 1 && words > 0 && words < 4) return at('too-short');
-
 		// Themselves in it, or somebody addressed and nobody kept. A picture or a
 		// kept face answers the first; only a name answers the second.
-		if (refFiles.length || chosenCharacter) return null;
-		if (FIRST_PERSON.test(said)) return at('self');
-		if (SECOND_PERSON.test(said)) return at('who');
+		//
+		// Ahead of the thin-prompt question, because "me an you" is both and only
+		// one of them can be asked. Three words asks for detail they can add
+		// later; a missing likeness decides whose body comes back, and that one
+		// cannot be added later — it is spent at the same button. It also read as
+		// a bug: four words with a "me" in them got the likeness question and
+		// three words did not, on the same machine.
+		const mine = !refFiles.length && !chosenCharacter;
+		if (mine && FIRST_PERSON.test(said)) return at('self');
+		if (mine && SECOND_PERSON.test(said)) return at('who');
+
+		const words = said.split(/\s+/).filter(Boolean).length;
+		if (rounds.length === 1 && words > 0 && words < 4) return at('too-short');
 		return null;
 	});
 
