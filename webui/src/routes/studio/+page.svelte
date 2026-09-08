@@ -10349,9 +10349,7 @@
 								</div>
 							</div>
 							<div
-								class="relative rounded-3xl bg-[var(--st-surface)] p-3 {STAGE_UI
-									? 'mx-auto w-full'
-									: ''}"
+								class="composerglass relative rounded-3xl p-3 {STAGE_UI ? 'mx-auto w-full' : ''}"
 								style={composerCap}
 							>
 								<!-- Making a character or a location is a state you are IN, not a tab
@@ -12156,6 +12154,35 @@
 	 *  that dissolves just before reaching it never arrives underneath, which is
 	 *  the whole effect. A library scrolls under its own search bar and is hidden
 	 *  by it, not faded out in front of it. */
+	/** The field sits ON the wall, so it lets a little of it through.
+	 *
+	 *  Solid, it was a bar laid across the picture and the shelf appeared to stop
+	 *  at its top edge — which is the seam this stopped having. A touch of the
+	 *  tiles showing through says the wall carries on underneath, which is true,
+	 *  and it is the difference between a panel and a piece of glass over one.
+	 *
+	 *  Eighty-four per cent, not less: the placeholder and the chips have to stay
+	 *  legible over whatever happens to be behind them, and behind them is
+	 *  moving video. The blur is what makes that safe — it takes the detail out
+	 *  of the backdrop and leaves only its brightness, so text keeps its contrast
+	 *  no matter which tile is playing. Without the blur this would be unreadable
+	 *  every time a bright frame passed under it.
+	 *
+	 *  `color-mix` rather than an opacity modifier so the surface token stays the
+	 *  single source of the colour, and a plain background for anybody whose
+	 *  browser has no backdrop-filter — where translucency without the blur is
+	 *  exactly the unreadable case. */
+	.composerglass {
+		background: var(--st-surface);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.composerglass {
+			background: color-mix(in srgb, var(--st-surface) 84%, transparent);
+			-webkit-backdrop-filter: blur(22px) saturate(1.15);
+			backdrop-filter: blur(22px) saturate(1.15);
+		}
+	}
+
 	.undercomposer {
 		-webkit-mask-image: none;
 		mask-image: none;
