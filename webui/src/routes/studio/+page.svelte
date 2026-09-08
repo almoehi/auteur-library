@@ -1369,22 +1369,54 @@
 	const SELF_WORDS =
 		/(?:^|[^\p{L}])(?:i|i'm|im|me|my|myself|mine|you|you're|your|yourself|én|engem|nekem|velem|rám|rajtam|te|téged|neked|veled|rád|yo|mí|conmigo|tú|ti|contigo|eu|meu|minha|comigo|você)(?:[^\p{L}]|$)/iu;
 
-	/** Which read-back is still waiting on this question. Newest only: an older
-	 *  round has been answered by the fact that a newer one exists. */
+	/** What the studio had to make up, and could ask about instead.
+	 *
+	 *  One mechanism, three shapes of the same fault: a brief that invents more
+	 *  than it was told. The measurement underneath all of them is the same —
+	 *  invented content is what destroys a likeness, one made-up detail at a time
+	 *  — and the cheapest moment to catch it is before the GPU, not after.
+	 *
+	 *    self      somebody put themselves in the shot with no picture of
+	 *              themselves in it. There is an action for this one: attach.
+	 *    no-words  a picture arrived and nothing was typed, so the filename is
+	 *              the entire prompt. "332323232.jpg" became a girl riding a cock
+	 *              with her face contorting — every word of it made up.
+	 *    too-short a subject, not a shot: "big dick", "short blonde", "Hairy
+	 *              lovers fucking". Under four words there is no place, no
+	 *              action and no camera, so all three get invented.
+	 *
+	 *  Only ever on the first round. A short line later is a refinement — "faster",
+	 *  "closer" — and answering that with a question about what happens would be
+	 *  the studio failing to follow its own conversation. */
 	let selfAnswered = $state<Record<string, boolean>>({});
-	/** Pressing generate answers it: they meant somebody like them, not them. */
+	/** Pressing generate answers it: they meant what they wrote. */
 	function selfAnsweredBySending(id: string) {
 		selfAnswered[id] = true;
 	}
-	const selfAsk = $derived.by(() => {
-		if (mode !== 'simple' || wantTarget !== 'clip') return null;
-		// A picture already on the bench, or a kept face, is the answer.
-		if (refFiles.length || chosenCharacter || continuing) return null;
-		const last = chat.filter((c) => c.kind === 'confirm' && c.confirm).at(-1);
-		const said = last?.confirm?.said ?? '';
-		if (!last || selfAnswered[last.id] || last.confirm?.sent) return null;
-		return SELF_WORDS.test(said) ? last.id : null;
-	});
+
+	const FILENAME_ONLY = /^[\w .()-]+\.(?:jpe?g|png|webp|heic|gif|mp4|mov|webm)$/i;
+
+	const askAbout = $derived.by<{ id: string; kind: 'self' | 'no-words' | 'too-short' } | null>(
+		() => {
+			if (mode !== 'simple' || wantTarget !== 'clip' || continuing) return null;
+			const rounds = chat.filter((c) => c.kind === 'confirm' && c.confirm);
+			const last = rounds.at(-1);
+			if (!last?.confirm || selfAnswered[last.id] || last.confirm.sent) return null;
+			const said = (last.confirm.said ?? '').trim();
+
+			// A picture and no words. The reference is already here, so the missing
+			// half is the only thing worth asking about.
+			if (FILENAME_ONLY.test(said)) return { id: last.id, kind: 'no-words' };
+
+			// A subject with no shot around it — first round only.
+			const words = said.split(/\s+/).filter(Boolean).length;
+			if (rounds.length === 1 && words > 0 && words < 4) return { id: last.id, kind: 'too-short' };
+
+			// Themselves in it, with nothing to go on.
+			if (refFiles.length || chosenCharacter) return null;
+			return SELF_WORDS.test(said) ? { id: last.id, kind: 'self' as const } : null;
+		}
+	);
 
 	const composerPlaceholder = $derived.by(() => {
 		// An instruction, not an example. A worked example belongs on the empty
@@ -1397,7 +1429,8 @@
 		// While the studio has asked something, the box says so. This is the whole
 		// signal that it can be talked to — a label under the question saying "you
 		// can reply here" would be a sign taped to a door that already opens.
-		if (selfAsk) return 'Answer, or say who they are';
+		if (askAbout)
+			return askAbout.kind === 'self' ? 'Answer, or say who they are' : 'What happens in the shot?';
 		if (mode === 'simple') {
 			if (wantTarget === 'character')
 				return currentCharacter ? 'Describe the change' : 'Describe the person, with an age';
@@ -7021,59 +7054,63 @@
 				</p>
 			{/if}
 
-			<!-- The question, when somebody has put themselves in a shot with no
-				 picture of themselves in it.
-				 No box around it. It sat in a filled panel that was the same black as
-				 everything behind it, so the panel did nothing but add an edge — and
-				 the card it lives in is already the container. What separates it is
-				 space and a change of weight, which is what separates a note from the
-				 thing it is attached to.
-				 One filled button on the card, and it is not this one. Attaching a
-				 photo and generating the video were both white and stacked, which put
-				 two primaries under one another and made the reader choose between
-				 two shouts. The offer is a quiet button; generating stays the loud
-				 one, because it is still the thing this whole surface is for.
-				 And no dismiss. Pressing generate IS the answer — a button whose only
-				 job is to hide a sentence is chrome standing in for a decision the
-				 next click already makes. -->
-			{#if selfAsk === item.id && !c.streaming && c.line.trim()}
+			<!-- What the studio had to make up, asked about instead of guessed.
+				 No box: the card it lives in is already the container, and what
+				 separates a note from its subject is space and a change of weight.
+				 One filled button on the card and it is not this one — generating
+				 stays the loud action, because it is still what this is for. The
+				 offer is quiet, and pressing generate answers the question on the
+				 way past, so there is nothing here to dismiss. -->
+			{#if askAbout?.id === item.id && !c.streaming && c.line.trim()}
+				{@const ask = askAbout.kind}
 				<div class="enter mt-4">
-					<p class="text-sm leading-relaxed text-[var(--st-text)]">You are in this one.</p>
-					<p class="mt-1 max-w-[30rem] text-xs leading-relaxed text-[var(--st-muted)]">
-						Attach a photo and the face in the clip is yours. Without one the model invents
-						somebody.
+					<p class="text-sm leading-relaxed text-[var(--st-text)]">
+						{ask === 'self'
+							? 'You are in this one.'
+							: ask === 'no-words'
+								? 'Just the picture, then.'
+								: 'That names who, not what.'}
 					</p>
-					<label
-						class="mt-2.5 inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs font-medium text-[var(--st-text)] transition-colors hover:bg-[var(--st-line-control,var(--st-line))]"
-					>
-						<svg viewBox="0 0 20 20" class="size-3.5" fill="none" aria-hidden="true">
-							<path
-								d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
-								stroke="currentColor"
-								stroke-width="1.6"
-								stroke-linecap="round"
-								stroke-linejoin="round"
+					<p class="mt-1 max-w-[30rem] text-xs leading-relaxed text-[var(--st-muted)]">
+						{ask === 'self'
+							? 'Attach a photo and the face in the clip is yours. Without one the model invents somebody.'
+							: 'Say what happens, and where. Everything you leave out gets invented — and invented detail is what loses a likeness.'}
+					</p>
+					{#if ask === 'self'}
+						<label
+							class="mt-2.5 inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full bg-[var(--st-surface-2)] px-3.5 text-xs font-medium text-[var(--st-text)] transition-colors hover:bg-[var(--st-line)]"
+						>
+							<svg viewBox="0 0 20 20" class="size-3.5" fill="none" aria-hidden="true">
+								<path
+									d="M13 7l-5.5 5.5a2.1 2.1 0 003 3L16 10a3.5 3.5 0 00-5-5l-5.5 5.5a5 5 0 007 7L18 12"
+									stroke="currentColor"
+									stroke-width="1.6"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
+							Add a photo of you
+							<input
+								type="file"
+								multiple
+								accept="image/*,video/*"
+								class="hidden"
+								disabled={refBusy}
+								onchange={(e) => {
+									const el = e.currentTarget as HTMLInputElement;
+									attachRefs(el.files);
+									el.value = '';
+								}}
 							/>
-						</svg>
-						Add a photo of you
-						<input
-							type="file"
-							multiple
-							accept="image/*,video/*"
-							class="hidden"
-							disabled={refBusy}
-							onchange={(e) => {
-								const el = e.currentTarget as HTMLInputElement;
-								attachRefs(el.files);
-								el.value = '';
-							}}
-						/>
-					</label>
+						</label>
+					{/if}
 				</div>
 			{/if}
 
 			{#if canPress && !c.streaming && c.line.trim()}
-				<div class="flex flex-wrap items-center gap-2.5 {selfAsk === item.id ? 'mt-5' : 'mt-3.5'}">
+				<div
+					class="flex flex-wrap items-center gap-2.5 {askAbout?.id === item.id ? 'mt-5' : 'mt-3.5'}"
+				>
 					<button
 						type="button"
 						disabled={shotBusy[item.id]}
