@@ -12186,6 +12186,45 @@
 	 *  that dissolves just before reaching it never arrives underneath, which is
 	 *  the whole effect. A library scrolls under its own search bar and is hidden
 	 *  by it, not faded out in front of it. */
+	/** The scrollbar belongs to the window's edge, and should be almost invisible.
+	 *
+	 *  Two faults, one rule. It sat twenty points in from the right because the
+	 *  column it lives in is padded, so the bar floated in the middle of the page
+	 *  with content on both sides of it — a scrollbar is furniture and furniture
+	 *  goes against the wall. The negative margin pushes the scroll box out to the
+	 *  edge and the matching padding puts the content back where it was, so
+	 *  nothing moves but the bar.
+	 *
+	 *  And it was the brightest thing on a page of dark pictures. Seven points
+	 *  wide, seven per cent white, no track at all: present when you look for it,
+	 *  gone when you are looking at a film. It lifts to fourteen on hover, which
+	 *  is the only moment anybody is aiming at it.
+	 *
+	 *  Desktop only. A phone has overlay scrollbars that already do all of this
+	 *  and reserve no width, and styling them would take width away from the one
+	 *  screen that has none to give. */
+	@media (min-width: 640px) {
+		.stagescroll {
+			margin-right: -1.25rem;
+			padding-right: 1.25rem;
+			scrollbar-width: thin;
+			scrollbar-color: rgba(255, 255, 255, 0.07) transparent;
+		}
+		.stagescroll::-webkit-scrollbar {
+			width: 7px;
+		}
+		.stagescroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+		.stagescroll::-webkit-scrollbar-thumb {
+			background: rgba(255, 255, 255, 0.07);
+			border-radius: 99px;
+		}
+		.stagescroll:hover::-webkit-scrollbar-thumb {
+			background: rgba(255, 255, 255, 0.14);
+		}
+	}
+
 	/* The row scrolls but never shows a bar: the peeking card and the dots
 	   already say it moves, and a scrollbar under three cards is furniture. */
 	.starterrow {
