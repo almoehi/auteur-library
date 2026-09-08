@@ -6521,6 +6521,57 @@
 	 *  Never over a render. Once the clock is running the round has been agreed
 	 *  and the clip is what the stage is for, and a round left behind by a shot
 	 *  that went on to render is history rather than a prompt for action. */
+	/** Every round of the exchange about the shot being agreed, oldest first.
+	 *
+	 *  The stage used to show one. That is right for a picture — there is one
+	 *  clip and the chain is in the strip beside it — but this part of the stage
+	 *  is not a picture, it is a conversation, and a conversation that replaces
+	 *  itself on every reply is not one. You wrote "a woman on a sofa", it
+	 *  answered, you wrote "make it slower and closer", and the first exchange
+	 *  was simply gone: no way to see what you had asked for, or what it had
+	 *  proposed, or what your correction was correcting.
+	 *
+	 *  It runs back to the last launched round and stops there. Everything before
+	 *  that became a clip and lives on the strip; everything after it is still
+	 *  being agreed, which is what this column is for. */
+	/** The column follows the conversation down.
+	 *
+	 *  A chat that grows above the fold and leaves you looking at the middle of
+	 *  it is a chat you have to chase. Only on a new round, and only if you were
+	 *  already near the bottom — scrolling up to read what was proposed two
+	 *  rounds ago and being yanked back down is worse than not following at
+	 *  all. */
+	let stageScroll = $state<HTMLElement | null>(null);
+	let threadSeen = $state(0);
+	$effect(() => {
+		const n = stageThread.length;
+		if (!stageScroll || n === threadSeen) return;
+		const el = stageScroll;
+		const near = el.scrollHeight - el.scrollTop - el.clientHeight < 220;
+		threadSeen = n;
+		if (near || n <= 1) {
+			void flush().then(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }));
+		}
+	});
+
+	let stageThread = $derived.by(() => {
+		if (!stageRound) return [] as typeof chat;
+		const out: typeof chat = [];
+		for (const item of chat) {
+			const c = item.confirm;
+			if (!c) continue;
+			const card = c.cardId ? chat.find((x) => x.id === c.cardId) : null;
+			// A round that went on to render closes the thread behind it.
+			if (card?.shot?.launched) {
+				out.length = 0;
+				continue;
+			}
+			out.push(item);
+			if (item.id === stageRound.id) break;
+		}
+		return out;
+	});
+
 	let stageRound = $derived(
 		(() => {
 			if (stageClockFrom) return null;
@@ -8325,38 +8376,36 @@
 											</div>
 										</div>
 									{:else if stagePhase === 'round' && stageRound?.confirm}
-										{@const c = stageRound.confirm}
-										<!-- The request, in the operator's own words, in the shape the transcript
-									gives it. Absent on a round that answers a moved setting rather than a
-									message — there is no new sentence to show, so it keeps the one the
-									round is still about rather than leaving the reply talking to nobody. -->
-										{@const asked = c.said.trim() || roundRequest(stageRound)}
-										<!-- The round, drawn as what it is: an exchange.
+										<!-- The exchange, drawn as one.
 									
 									     The stage used to compose its own version of this — the same sentences,
 									     centred inside a 16:9 box the size of the clip that did not exist yet,
-									     with the button under them. It read as an alert rather than an answer,
-									     and it arrived all at once, finished, because the loader covered the
-									     whole of the writing. What the operator asked for is the transcript's
-									     own drawing: their line, then the studio's, flowing from the top of a
-									     reading column, a word at a time.
+									     with the button under them. It read as an alert rather than an answer.
+									     What the operator asked for is the transcript's own drawing: their
+									     line, then the studio's, flowing from the top of a reading column.
 									
-									     Only this round. The stage shows one thing and the chain is in the strip
-									     beside it; a transcript of every round is the transcript, and it is one
-									     switch away in full production. -->
+									     Every round of it now, not only the newest. A reply that erases what
+									     it is replying to is not a conversation, and refining a shot is
+									     nothing but replies. The button stays on the last one alone: an older
+									     round is a step in the conversation, not an order you can still
+									     place. -->
 										<div
+											bind:this={stageScroll}
 											class="scroller mx-auto flex min-h-0 w-full max-w-[48rem] flex-1 flex-col gap-5 overflow-y-auto px-1 pt-1"
 										>
-											{#if asked}
-												<div class="flex justify-end">
-													<p
-														class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
-													>
-														{asked}
-													</p>
-												</div>
-											{/if}
-											{@render confirmReply(stageRound, true)}
+											{#each stageThread as round (round.id)}
+												{@const said = round.confirm?.said?.trim() || roundRequest(round)}
+												{#if said}
+													<div class="flex justify-end">
+														<p
+															class="enter doc max-w-[85%] rounded-2xl rounded-br-md bg-[var(--st-surface-2)] px-4 py-2.5 text-[0.95rem] leading-relaxed"
+														>
+															{said}
+														</p>
+													</div>
+												{/if}
+												{@render confirmReply(round, round.id === stageRound.id)}
+											{/each}
 										</div>
 									{:else if stagePhase === 'error'}
 										<div
