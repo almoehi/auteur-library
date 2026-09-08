@@ -90,7 +90,10 @@ function facts(c: Ctx, said: string): string {
 	// A continuation. The mode is said outright, and the previous clip's last
 	// "End state:" line is read off its brief — a regex, not a model call — so
 	// a pinned seam can start from the frame it actually starts from.
-	const cont = c.continuing && typeof c.continuing === 'object' ? (c.continuing as Record<string, unknown>) : null;
+	const cont =
+		c.continuing && typeof c.continuing === 'object'
+			? (c.continuing as Record<string, unknown>)
+			: null;
 	if (cont) {
 		const free = str(cont.seam, 12) === 'free';
 		out.push(
@@ -107,14 +110,20 @@ function facts(c: Ctx, said: string): string {
 	if (makes && makes !== 'one clip') out.push(`making: ${makes}`);
 
 	const refs = Array.isArray(c.refs)
-		? c.refs.map((r) => str(r, 120)).filter(Boolean).slice(0, 6)
+		? c.refs
+				.map((r) => str(r, 120))
+				.filter(Boolean)
+				.slice(0, 6)
 		: [];
 	for (const r of refs) out.push(`attached reference: ${r}`);
 
 	// The rounds so far, oldest first, so a refinement adds to what was agreed
 	// instead of replacing it.
 	const history = Array.isArray(c.history)
-		? c.history.map((h) => str(h, 600)).filter(Boolean).slice(-HISTORY_MAX)
+		? c.history
+				.map((h) => str(h, 600))
+				.filter(Boolean)
+				.slice(-HISTORY_MAX)
 		: [];
 	if (history.length) {
 		out.push('', 'agreed so far:', ...history.map((h) => `  ${h}`));
@@ -130,7 +139,14 @@ function facts(c: Ctx, said: string): string {
 		// the model read the room and answered in English to a Hungarian operator.
 		// What language to answer in is decided by one line in the whole payload,
 		// and it works when it sits directly under that line.
-		out.push('', 'Answer in the same language as that last line, whatever it is.');
+		out.push(
+			'',
+			'Answer in the language of that last line — the one the operator just typed.',
+			'However short it is, it decides on its own: two English words after ten',
+			'Hungarian rounds means you answer in English. Never carry the language over',
+			'from the rounds above, and never take it from the labels in this payload,',
+			'which are always English.'
+		);
 	} else {
 		// A setting moved and nobody typed. There is no last line to take the
 		// language from, so it comes from what was agreed — which is the only
@@ -246,7 +262,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		const timedOut = e instanceof Error && e.name === 'TimeoutError';
 		return json({
 			ok: false,
-			error: timedOut ? `no answer within ${TIMEOUT_MS / 1000}s` : `could not reach the model — ${e}`
+			error: timedOut
+				? `no answer within ${TIMEOUT_MS / 1000}s`
+				: `could not reach the model — ${e}`
 		});
 	}
 

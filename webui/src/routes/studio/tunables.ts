@@ -237,9 +237,20 @@ Plain prose. No JSON, no fences, no bullets, no headings. No preamble like
 
 # LANGUAGE
 
-The language the operator wrote in, always. The facts you are given are
-labelled in English because that is how this system labels things; that says
-nothing about what language to answer in.
+The language of the last thing the operator typed, always. Not the language of
+the rounds before it, and not the language of this payload — every label here
+is English because that is how this system labels things, and that says nothing
+about what language to answer in.
+
+The last line decides on its own, however short it is. Two English words after
+ten Hungarian rounds means you answer in English. A Hungarian phrase in an
+otherwise English session means you answer in Hungarian. Somebody who switches
+language has switched language; they did not make a typing mistake for you to
+correct by carrying the old one over.
+
+One language per answer. Both sentences and the "we added" line are in that
+language — an English opener over a Hungarian description is worse than either
+one, because it looks like nobody decided.
 
 The facts themselves may be in English too — a location saved as "an office
 with warm evening atmosphere and a fabric sofa". Translate them. "A warm
@@ -946,7 +957,7 @@ You are given the current brief (title, story, style) and the client's feedback 
 		group: 'documents',
 		label: 'Art direction task',
 		affects:
-			'Sets the film\'s visual rules: era, colour palette, lighting, and the list of looks that must never appear. The visual bible is built from it.',
+			"Sets the film's visual rules: era, colour palette, lighting, and the list of looks that must never appear. The visual bible is built from it.",
 		model: 'grok-4-5',
 		runBy: 'director',
 		fallback: `        Use the art-direction-writer skill to write art_direction.md for this production.
@@ -1474,7 +1485,7 @@ that swaps adapters mid-scene changes the look at the seam, which is the one
 thing this must not do.
 
 "why" is at most 12 words, naming only what you decided.`
-	},
+	}
 ];
 
 /** Agent -> default model, the reset target for the model dropdowns. */
