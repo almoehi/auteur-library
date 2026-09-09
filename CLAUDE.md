@@ -116,11 +116,20 @@ climbed 220s to 460s in launch order. Do not read a cost difference as a result.
 
 ## Operations
 
-**The harness image is pinned by digest.** `almoehi/auteur:latest` moved on
-2026-08-30 to a build where the GPU renders and uploads but the harness never
-collects the artifact — the task sits at `running` forever. Run
+**The harness image comes from ECR now, not Docker Hub.**
+`ECR_FAT_IMAGE=007924089754.dkr.ecr.us-east-1.amazonaws.com/auteur-fat-image` in
+`~/auteur/.env` sets the registry, and an explicit `ECR_FAT_IMAGE` always wins
+over what `--local` would otherwise pick; `TAG` defaults to `latest`. So
+`./run.sh --local` is the whole command — no `TAG=known-good` any more. The
+build running and verified end to end is
+`auteur-fat-image@sha256:f29afaad87dc3329e82dd17244a0d4e900c377c637b1042156f0c11ce65ffaa7`
+(built 2026-09-06); it rendered a b200 clip start to finish on 2026-09-09.
+
+Do not go back to `almoehi/auteur`. That line moved on 2026-08-30 to a build
+where the GPU renders and uploads but the harness never collects the artifact —
+the task sits at `running` forever — and the pin that avoided it,
 `almoehi/auteur@sha256:701a36ff5e843b9bd20471e0faeb44dd0eeb9f79d10599ac3b56af7889032e6a`,
-tagged locally and started with `TAG=known-good ./run.sh --local`.
+is superseded by the ECR image rather than an alternative to it.
 
 **`COMFY_VERSION=0.34.0` in `~/auteur/.env`.** The harness filters compute
 endpoints by name (`comfy-compute-{gpu}-cu{N}-{version}`), so this is what
