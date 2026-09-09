@@ -1331,7 +1331,39 @@ sound dropped away in a tenth of a second. He had not moved. The picture had.
 
 Motion stopping, an act finishing, a body coming to rest: all of these stay
 inside the running frame. Cut on the camera going somewhere genuinely different,
-and on nothing else.`
+and on nothing else.
+
+TWO PEOPLE ARE TWO ACTORS, AND A RECIPROCAL IS ONE. "They stroke each other" is
+grammatically a single action performed by a plural, and a plural has one body:
+what comes back is one merged figure — three arms, a hand arriving from nowhere,
+anatomy belonging to neither of them. It is worst when the two look alike, same
+sex, same build, same skin, because nothing in the frame says where one ends and
+the other begins.
+
+Never write each other, one another, both of them, or they touch. Spend a clause
+on each person, and name three things in it: who acts, with which limb, and what
+it is on.
+
+  weak    The two men stand under the water and stroke each other, getting each
+          other hard.
+  strong  The taller one closes his right hand around the shorter one's cock and
+          works him with slow strokes; the shorter one braces his left palm flat
+          on the tiles and pushes into it, his other hand open on the taller
+          one's chest.
+
+Three things the strong version buys, and all three are load-bearing.
+
+Different actions, not mirrored ones. Two bodies doing the same thing at the
+same instant is what invites the merge — one leads, the other reacts. Symmetry
+is the failure.
+
+A visible anchor on each, repeated. The taller one, the one with the beard, the
+one under the water, the one facing camera. A subject number is not visible to
+the renderer; only a description is, and it has to come back in every beat that
+moves them or they swap.
+
+A standing arrangement. "He stands behind her, both facing the mirror" survives
+a cut. "They stand together" does not.`
 	},
 	{
 		id: 'continuation_writer',

@@ -147,8 +147,14 @@ export function mirrorCivitai(yaml: string): string {
 	if (!base) return yaml;
 	// `url:` line, then (same indent) the `filename:` line — the two are
 	// adjacent in every entry the library writes.
+	//
+	// The filename runs to the end of the line, spaces and all. `[^\s]+` missed
+	// every name with a space in it — and one adapter had one — so those entries
+	// were left pointing at Civitai while the rest were mirrored. A bundle that
+	// is mirrored in part is not mirrored: the run stops on the first entry the
+	// sandbox cannot fetch.
 	return yaml.replace(
-		/^(\s*-\s*url:\s*)https:\/\/civitai\.com\/[^\n]*\n(\s*filename:\s*)([^\s]+)\s*$/gm,
-		(_m, pre, mid, filename) => `${pre}${base}/${filename}\n${mid}${filename}`
+		/^(\s*-\s*url:\s*)https:\/\/civitai\.com\/[^\n]*\n(\s*filename:\s*)([^\n]+?)[ \t]*$/gm,
+		(_m, pre, mid, filename) => `${pre}${base}/${encodeURIComponent(filename)}\n${mid}${filename}`
 	);
 }
