@@ -33,9 +33,20 @@ import { checkPrompt } from '../../promptcheck';
  *  panel can override it. */
 const MODEL_FALLBACK = 'grok-4.5';
 
-/** Measured 23-58s across 32 calls. The ceiling is generous because the failure
- *  it guards against — a request that never returns — is worse than a slow card. */
-const TIMEOUT_MS = 120_000;
+/** Measured 23-58s across 32 calls when this was written. It is not that any
+ *  more: a live brief came back at 120.143s against the old 120s ceiling —
+ *  through by a tenth of a second — and the next one tipped over and showed the
+ *  operator "the brief could not be written" for a request that was perfectly
+ *  fine.
+ *
+ *  A ceiling the median is nowhere near but the tail crosses is the worst kind:
+ *  it fails rarely enough to look random and often enough to be the thing people
+ *  remember. Waiting is what this screen is for; an error card is not.
+ *
+ *  Four minutes, not the wall-clock budget the hosted copy carries as well —
+ *  that one exists to stay under a serverless ceiling, and this process has
+ *  none. The failure it guards against is still a request that never returns. */
+const TIMEOUT_MS = 240_000;
 
 /** The operator's request. Long enough for someone to paste a finished brief and
  *  ask for it to be tightened rather than rewritten. */
