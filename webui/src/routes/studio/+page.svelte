@@ -2856,26 +2856,56 @@
 			sheet: { kind, stage: 'anchor', description, why, seed, voice, launched: true }
 		});
 		try {
-			// Through the harness, like every other render.
+			// Drawn by Grok rather than rendered on a GPU.
 			//
-			// This was the one road that went straight to a compute endpoint, on the
-			// argument that a preview has nothing to decide and the harness's work —
-			// fetching the models a graph names — had nothing to do. Measured, that
-			// saved 38 seconds on 150. Then the fleet moved: the three models the
-			// preview names are not on the compute volume, and the direct graph
-			// carries no addresses for them, so every preview died on "missing
-			// models" — while the six-view sheet, which names the same three through
-			// the harness, went on working. The one thing the harness does is the
-			// one thing that was missing. The 38 seconds buy a render that happens.
-			const ok = await launchSheetRender({ kind, description, stage: 'anchor', seed, why, voice });
-			if (!ok) {
+			// What a subject is FOR is identity — the clip workflow gets one picture
+			// and holds the person to it — and nothing about that requires the
+			// picture to come from the model that makes the clip. The reference
+			// travels as a plain URL either way, which is how an uploaded photograph
+			// has always worked.
+			//
+			// So this no longer opens a workspace, and there is nothing to poll: the
+			// call is held open for the ~37s it takes and comes back with the subject
+			// already drawn, tiled and kept. That replaces two round trips — this
+			// preview, then the turnaround behind it — which together took the better
+			// part of ten minutes. Almost none of that was drawing: of the sheet's
+			// own ~170s, twelve seconds was sampling and the rest was ComfyUI
+			// starting and forty-five gigabytes of weights being read.
+			const res = await fetch('/studio/api/subject', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					kind,
+					description,
+					seed,
+					...(voice ? { voice } : {}),
+					...(runSlug ? { sessionSlug: runSlug } : {})
+				})
+			});
+			const r = (await res.json()) as {
+				ok?: boolean;
+				sheet?: StoredSheet;
+				sheets?: StoredSheet[];
+				error?: string;
+			};
+			if (!r.ok || !r.sheet) {
 				card.kind = 'error';
-				card.text = 'The preview did not start.';
+				card.text = r.error || 'The subject could not be drawn.';
 				return;
 			}
-			// Durable before the picture exists: the workspace is the way back to a
-			// render that runs for two minutes whether or not this tab stays open.
-			if (card.sheet) card.sheet.workspace = renderWs;
+			if (r.sheets) sheets = r.sheets;
+			// Kept the moment it arrives, like an uploaded picture and unlike a
+			// render: the route stores the subject before it answers, so there is no
+			// window in which the card shows a face that nothing owns. The card lands
+			// in the state a kept subject has always had — picture, name, no offer to
+			// keep it again.
+			if (card.sheet) {
+				card.sheet.id = r.sheet.id;
+				card.sheet.name = r.sheet.name;
+				card.sheet.url = `/studio/api/sheet/img/${r.sheet.id}`;
+			}
+			// This subject is finished; the next message describes a new one.
+			currentCharacter = null;
 			persist();
 		} catch (e) {
 			card.kind = 'error';
@@ -3003,7 +3033,12 @@
 		}
 	}
 
-	/** The location card's button: an approved description goes to the GPU. */
+	/** The location card's button: an approved description is drawn.
+	 *
+	 *  Same road the character preview takes, for the same reason — a location
+	 *  sheet is identity too, and the six views it used to cost a GPU orbit for
+	 *  are four drawn ones now. Kept on arrival, so the button does not come back
+	 *  offering to make it twice. */
 	async function renderSheet(itemId: string) {
 		const item = chat.find((c) => c.id === itemId);
 		if (!item?.sheet || item.sheet.launched || sheetBusy[itemId]) return;
@@ -3011,13 +3046,35 @@
 		if (!description.trim()) return;
 		sheetBusy[itemId] = true;
 		try {
-			const ok = await launchSheetRender({
-				kind,
-				description,
-				stage: 'sheet',
-				seed: item.sheet.seed ?? Math.floor(Math.random() * 1_000_000_000)
+			const res = await fetch('/studio/api/subject', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					kind,
+					description,
+					seed: item.sheet.seed ?? Math.floor(Math.random() * 1_000_000_000),
+					...(item.sheet.voice ? { voice: item.sheet.voice } : {}),
+					...(runSlug ? { sessionSlug: runSlug } : {})
+				})
 			});
-			if (ok) item.sheet.launched = true;
+			const r = (await res.json()) as {
+				ok?: boolean;
+				sheet?: StoredSheet;
+				sheets?: StoredSheet[];
+				error?: string;
+			};
+			if (!r.ok || !r.sheet) {
+				pushError(r.error || 'The subject could not be drawn.');
+				return;
+			}
+			if (r.sheets) sheets = r.sheets;
+			item.sheet.launched = true;
+			item.sheet.id = r.sheet.id;
+			item.sheet.name = r.sheet.name;
+			item.sheet.url = `/studio/api/sheet/img/${r.sheet.id}`;
+			persist();
+		} catch (e) {
+			pushError(String(e));
 		} finally {
 			sheetBusy[itemId] = false;
 		}
