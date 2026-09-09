@@ -24,7 +24,13 @@ export const GET: RequestHandler = async ({ url, request }) => {
 		// Ranges are not optional: iOS Safari fetches video exclusively by range and
 		// treats a 200 answer to a ranged request as a broken server.
 		const slice = serve(path, request.headers.get('range'), typeFor('clip.mp4'));
-		return new Response(slice.body, { status: slice.status, headers: slice.headers });
+		// Wrapped the way api/file wraps the same Slice: a Node Buffer is a
+		// Uint8Array at runtime but not a BodyInit to the type checker, so the
+		// route type-checked everywhere it was copied from and not here.
+		return new Response(new Uint8Array(slice.body), {
+			status: slice.status,
+			headers: slice.headers
+		});
 	}
 	if (url.searchParams.get('all') === '1') {
 		return json({ ok: true, items: listMedia(), pins: readPins() });

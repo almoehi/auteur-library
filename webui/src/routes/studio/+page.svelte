@@ -9800,9 +9800,11 @@
 											 every other setting breaks the thing it feeds is not a control. -->
 												{#if item.shot.continues}
 													<span class="text-xs text-[var(--st-faint)]"
-														>{frameFor(item.shot.resolution ?? '576p', item.shot.orientation)
-															.width}x{frameFor(
-															item.shot.resolution ?? '576p',
+														>{frameFor(
+															(item.shot.resolution ?? '576p') as ResKey,
+															item.shot.orientation
+														).width}x{frameFor(
+															(item.shot.resolution ?? '576p') as ResKey,
 															item.shot.orientation
 														).height} · follows the clip before it</span
 													>
