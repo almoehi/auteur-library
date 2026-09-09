@@ -118,3 +118,29 @@ export function typicalLabel(ms: number): string {
 	const m = Math.round(s / 60);
 	return `about ${m}m`;
 }
+
+/** How long a clip of this length takes, in milliseconds.
+ *
+ *  Measured on this stack, not guessed. Two real b200 runs anchor it: a five
+ *  second clip came back in 268 seconds, a fifteen second one in 481. Three
+ *  times the footage for 1.8 times the wait, because most of a render is fixed
+ *  — the sandbox coming up, thirty-odd gigabytes of model loading — and only
+ *  the sampling scales with length.
+ *
+ *  A straight line through those two points: about 162 seconds of setup, plus
+ *  about 21 seconds for each second of clip.
+ *
+ *      5s -> 4:28      10s -> 6:15      15s -> 8:01
+ *
+ *  A median of finished runs would be better, and `typicalWait` keeps one — but
+ *  it has no length attached to its samples, so it averages a five second clip
+ *  and a fifteen into one number that is wrong for both. Until a sample carries
+ *  its length, this is the honest answer.
+ */
+const SETUP_MS = 162_000;
+const PER_CLIP_SECOND_MS = 21_300;
+
+export function expectedClipMs(seconds: number): number {
+	const s = Number(seconds);
+	return SETUP_MS + PER_CLIP_SECOND_MS * (Number.isFinite(s) && s > 0 ? s : 5);
+}

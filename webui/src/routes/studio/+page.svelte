@@ -48,7 +48,7 @@
 	import { onMount, tick as flush, untrack } from 'svelte';
 	import { trackClipReady } from '$lib/analytics';
 	import { friendly, parseEventLog, type ActivityRow } from './activity';
-	import { recordWait, typicalWait, typicalLabel } from './timings';
+	import { expectedClipMs, recordWait, typicalWait, typicalLabel } from './timings';
 	import { renderDocument, type Block } from './render-doc';
 	import {
 		DEFAULT_VOICE,
@@ -275,13 +275,6 @@
 	 *  conversation under `cont-xxx-cont` while the sidebar looked it up as
 	 *  `cont-xxx`. Reopening one could never find what it had just saved. */
 	const simpleRun = $derived(ONE_CLIP_WS.test(renderWs));
-
-	/** Whether the live render is a sheet rather than a clip. Read off the id for
-	 *  exactly the reason simpleRun is: composeSheetWorkspace names every one of
-	 *  them `<slug>-sheet`, so no road in can forget to set it. It decides what a
-	 *  finished artifact becomes — a clip card or a sheet card — and it keeps a
-	 *  sheet run out of the shoot bookkeeping, which counts clips. */
-	const sheetRun = $derived(/-sheet@/.test(renderWs));
 
 	/** The slug this run is filed under, the same one the history sidebar shows.
 	 *  Derived rather than stored: the planning workspace is `<slug>@v` and the
@@ -2822,15 +2815,13 @@
 		}
 	}
 
-	/** A character preview, rendered without the harness.
+	/** A character, drawn.
 	 *
-	 *  The full sheet still goes through launchSheetRender and a workspace; only
-	 *  this one skips it, because only this one has nothing for the harness to
-	 *  decide. Measured, that is 112 seconds against 150.
-	 *
-	 *  The job is detached server-side and polled here, rather than the request
-	 *  being held open for two minutes: a reload during a render would otherwise
-	 *  abandon GPU time that is already being paid for.
+	 *  Neither road to a subject opens a workspace any more, so there is no GPU
+	 *  time to abandon and nothing to detach from: the request is held open for
+	 *  the ~37s it takes and comes back with the subject drawn, tiled and kept.
+	 *  What used to be here — a job polled server-side, because a reload during a
+	 *  two-minute render would otherwise strand it — went with the render.
 	 */
 	let previewBusy = $state(false);
 
@@ -2969,67 +2960,6 @@
 			if (c.kind !== 'sheet' || !sh) continue;
 			if (sh.stage !== 'anchor' || sh.url || !sh.job) continue;
 			void followPreview(c, sh.job);
-		}
-	}
-
-	/** The one road to the GPU for anything sheet-shaped. Returns true when the
-	 *  render actually started. */
-	async function launchSheetRender(opts: {
-		kind: 'character' | 'location';
-		description: string;
-		stage: 'anchor' | 'sheet';
-		seed: number;
-		why?: string;
-		voice?: string;
-	}): Promise<boolean> {
-		// Guarded the same way a clip launch is, and no more strictly. There is one
-		// render slot and starting a second render retargets it — that is already
-		// true of every clip you launch, so a sheet must not be the one thing that
-		// refuses because a finished run is still on screen.
-		if (renderLaunching) return false;
-		renderLaunching = true;
-		try {
-			const spec = {
-				slug: `sheet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-				kind: opts.kind,
-				stage: opts.stage,
-				description: opts.description,
-				seed: opts.seed
-			};
-			const res = await fetch('/studio/api/launch', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ stage: 'sheet', sheet: spec })
-			});
-			const r = (await res.json()) as { ok?: boolean; workspaceId?: string; error?: string };
-			if (!r.ok || !r.workspaceId) {
-				pushError(r.error || 'The sheet render did not start.');
-				return false;
-			}
-			pendingSheet = { ...opts };
-			// On for the whole of a sheet run — renderInFlight reads it to keep the
-			// clip's loader off a render that puts no clip on the stage. It was set and
-			// unset on consecutive lines here, which is a no-op, and the loader came
-			// back for every sheet.
-			renderIsSheet = true;
-			renderWs = r.workspaceId;
-			startedAt = Date.now();
-			shootsAnnounced = true;
-			pushStudio(
-				opts.stage === 'anchor'
-					? 'Rendering one picture of them — about a minute.'
-					: opts.kind === 'character'
-						? 'Rendering the full character sheet — six views of the same person.'
-						: 'Rendering a location sheet — six views of the same place.'
-			);
-			persist();
-			startPolling();
-			return true;
-		} catch (e) {
-			pushError(String(e));
-			return false;
-		} finally {
-			renderLaunching = false;
 		}
 	}
 
@@ -3352,19 +3282,6 @@
 	/** Sheets already shown as a card, so a later poll does not post them twice. */
 	const sheetPosted = new Set<string>();
 
-	/** What the running sheet render was asked for. The finished artifact carries
-	 *  no memory of the description that produced it, and that description is the
-	 *  most useful thing to keep beside a sheet — it is what you would edit to
-	 *  make a variant. */
-	let pendingSheet: {
-		kind: 'character' | 'location';
-		description: string;
-		stage: 'anchor' | 'sheet';
-		seed: number;
-		why?: string;
-		voice?: string;
-	} | null = null;
-
 	/** Keep a rendered sheet. The bytes are fetched server-side, from the harness,
 	 *  while this workspace is still answering. */
 	async function keepSheet(itemId: string) {
@@ -3583,7 +3500,6 @@
 					pushError(r.error || 'The continuation could not start.');
 					return false;
 				}
-				renderIsSheet = false;
 				renderWs = r.workspaceId;
 				startedAt = Date.now();
 				shootsAnnounced = true;
@@ -3623,7 +3539,6 @@
 				pushError(r.error || 'The render could not start.');
 				return false;
 			}
-			renderIsSheet = false;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			// The render poll narrates a shoot it announces first; there is no
@@ -5312,7 +5227,6 @@
 				pushError(r.offline ? OFFLINE_TEXT : r.error || 'The shooting workspace did not open.');
 				return;
 			}
-			renderIsSheet = false;
 			renderWs = r.workspaceId;
 			startedAt = Date.now();
 			now = Date.now();
@@ -5822,57 +5736,6 @@
 				// three scrolls up on a card that says "launched".
 				pushError(`A shooting step stalled: ${t.title || t.key}.`);
 			}
-		}
-
-		// A sheet run produces one image and nothing else, so it is handled first
-		// and returns — the clip bookkeeping below counts scenes and assembles
-		// films, neither of which a sheet has any business in.
-		if (sheetRun) {
-			for (const a of arts) {
-				if (a.status !== 'approved') continue;
-				const name = firstFileOfKind(a, 'image');
-				if (!name || clipPosted.has(a.id)) continue;
-				clipPosted.add(a.id);
-				const kind = pendingSheet?.kind ?? 'character';
-				const description = pendingSheet?.description ?? '';
-				const stage = pendingSheet?.stage ?? 'sheet';
-				// A preview launched from the composer already has its card — posted at
-				// the press so the stage had the subject while the harness drew it, and
-				// stamped with this workspace. Fill that one rather than standing a
-				// second beside it; a sheet run started from a card has none, and gets
-				// one here as before.
-				const waiting = chat.find(
-					(c) => c.kind === 'sheet' && c.sheet?.workspace === renderWs && !c.sheet.url
-				);
-				if (waiting?.sheet) {
-					waiting.sheet.url = fileUrl(renderWs, a.id, name);
-					waiting.sheet.artifact = a.id;
-					waiting.sheet.file = name;
-					waiting.sheet.name ??= firstWords(waiting.sheet.description ?? description, kind);
-					continue;
-				}
-				pushItem({
-					who: 'studio',
-					kind: 'sheet',
-					sheet: {
-						kind,
-						stage,
-						description,
-						why: pendingSheet?.why,
-						seed: pendingSheet?.seed,
-						voice: pendingSheet?.voice,
-						url: fileUrl(renderWs, a.id, name),
-						workspace: renderWs,
-						artifact: a.id,
-						file: name,
-						name: firstWords(description, kind),
-						// A preview is already spent — it exists to be looked at, not
-						// launched again — so it arrives latched.
-						launched: true
-					}
-				});
-			}
-			return;
 		}
 
 		// Every approved artifact with a video file becomes a clip in the chat.
@@ -6527,12 +6390,15 @@
 		stageStartedAt = 0;
 	});
 
-	/** Both halves of the wait, from this machine's own finished runs: the model
-	 *  round trip that writes the shot, then the render. Falls back to a flat guess
-	 *  until there are enough samples to have a median at all. */
 	const STAGE_ETA_FALLBACK_MS = 6 * 60 * 1000;
+	/** How long this clip should take: the writing, plus a render of THIS length.
+	 *
+	 *  The clip half used to be one median across every length ever rendered, so
+	 *  a five second clip and a fifteen second one were quoted the same number
+	 *  and it was wrong for both. The writing half is still measured — it does
+	 *  not depend on how long the clip is. */
 	let stageEtaMs = $derived(
-		(typicalWait('prompt') ?? 0) + (typicalWait('clip') ?? 0) || STAGE_ETA_FALLBACK_MS
+		(typicalWait('prompt') ?? 0) + expectedClipMs(composerShape.seconds) || STAGE_ETA_FALLBACK_MS
 	);
 	/** A render this page did not start, or started before a reload.
 	 *
@@ -6542,29 +6408,15 @@
 	 *  GPU was still working and the old one-line counter below carried on
 	 *  ticking. The clip is in flight until its own workspace is the newest thing
 	 *  on the stage. */
-	/** Whether the run holding the render slot is a sheet rather than a clip.
-	 *
-	 *  `$state`, and set at every launch rather than only at the sheet's: a flag
-	 *  that is only ever turned on stops being a fact about the current run the
-	 *  first time a clip follows a sheet. */
-	let renderIsSheet = $state(false);
-
+	/** Nothing but a clip takes the render slot now, so there is no longer a flag
+	 *  saying which kind of run holds it. A sheet used to: it took the same slot,
+	 *  set renderWs and startedAt exactly as a clip does, and then never put a
+	 *  clip on the stage — so the loader found nothing to wait for, climbed to its
+	 *  97% cap and sat there for the whole ten minutes a turnaround took,
+	 *  announcing a video that was never coming over a picture that had already
+	 *  arrived. Subjects are drawn now and open no workspace at all. */
 	let renderInFlight = $derived(
-		!!renderWs &&
-			// A sheet is not a clip, and the stage is the clip's.
-			//
-			// Sheets take the same render slot as a shot — one slot, deliberately —
-			// so launching one sets renderWs and startedAt exactly as a clip does.
-			// But this clock only stops when the newest thing on the stage IS that
-			// workspace, and a sheet never puts a clip there: it draws six views into
-			// the library. So the loader started, found nothing to wait for, climbed
-			// to its 97% cap and sat there for the whole ten minutes a turnaround
-			// takes — announcing a video that was never coming, over a picture that
-			// had already arrived. The sheet has its own line under the composer and
-			// says its own name in it.
-			!renderIsSheet &&
-			startedAt > 0 &&
-			stageNewest?.artifact?.workspace !== renderWs
+		!!renderWs && startedAt > 0 && stageNewest?.artifact?.workspace !== renderWs
 	);
 	/** Whichever clock is running. */
 	let stageClockFrom = $derived(stageStartedAt || (renderInFlight ? startedAt : 0));
@@ -8715,7 +8567,10 @@
 												 A chip that spins forever is worse than one that was never
 												 offered. -->
 												<div class="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-													{#each [{ id: 'ref', label: 'Reference', ok: !!shownId || !!sh?.url, on: true }, { id: 'turn', label: 'Turnaround', ok: !!turn, on: isUpload && isChar }, { id: 'six', label: 'Six views', ok: !!six, on: !(isUpload && !isChar) }].filter((x) => x.on) as t (t.id)}
+													<!-- "Views" rather than a count: a drawn subject has four and an
+													 uploaded character's turnaround still cuts six, and the chip is
+													 the same chip for both. -->
+													{#each [{ id: 'ref', label: 'Reference', ok: !!shownId || !!sh?.url, on: true }, { id: 'turn', label: 'Turnaround', ok: !!turn, on: isUpload && isChar }, { id: 'six', label: 'Views', ok: !!six, on: !(isUpload && !isChar) }].filter((x) => x.on) as t (t.id)}
 														<button
 															type="button"
 															disabled={!t.ok}
@@ -8735,10 +8590,10 @@
 													{/each}
 												</div>
 												{#if sh && !sh.url && !sh.id}
-													<!-- A preview the harness is still drawing. One picture, not six —
-													 the six-view line below would promise a turnaround this render
-													 does not make, and a wait labelled with the wrong work reads as
-													 a wait that is not moving. -->
+													<!-- The subject is being drawn. Four views, not six, and half a
+													 minute rather than two: this used to be a GPU render of one
+													 picture with a turnaround behind it, and a wait labelled with
+													 the wrong work reads as a wait that is not moving. -->
 													<p
 														class="mt-2 flex items-center justify-center gap-2 text-xs text-[var(--st-faint)]"
 													>
@@ -8747,9 +8602,9 @@
 															aria-hidden="true"
 														></span>
 														<span>
-															Rendering one picture of {sh.kind === 'location'
+															Drawing four views of {sh.kind === 'location'
 																? 'the place'
-																: 'them'} · about two minutes
+																: 'them'} · about half a minute
 														</span>
 													</p>
 												{:else if !six}
@@ -9316,11 +9171,9 @@
 											<span class="text-xs text-[var(--st-faint)]">
 												{item.sheet.uploaded
 													? 'your own picture — kept as it is'
-													: item.sheet.stage === 'anchor'
-														? 'one picture — say what to change, or save it'
-														: item.sheet.kind === 'character'
-															? 'front · face · profiles · rear · expression'
-															: 'six views of the same place'}
+													: item.sheet.kind === 'character'
+														? 'front · three-quarter · profile · close-up'
+														: 'four views of the same place'}
 											</span>
 										</div>
 
@@ -11101,8 +10954,8 @@
 											</p>
 											<p class="mt-0.5 text-xs leading-relaxed text-[var(--st-faint)]">
 												{wantTarget === 'character'
-													? 'Describe them — age, build, hair, what they are wearing. A picture comes back in about a minute. Or attach a photograph, and describe only what it cannot show.'
-													: 'Describe the place — six views of it to shoot against. Or attach a photograph and keep that instead.'}
+													? 'Describe them — age, build, hair, what they are wearing. Four views come back in about half a minute. Or attach a photograph, and describe only what it cannot show.'
+													: 'Describe the place — four views of it to shoot against, in about half a minute. Or attach a photograph and keep that instead.'}
 											</p>
 										</div>
 										<button
