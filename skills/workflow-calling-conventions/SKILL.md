@@ -14,10 +14,58 @@ Use this skill whenever your task asks you to produce output files (images, vide
 
 ```
 1. read_artifact(artifactId="<key>")     — load the work specification (shot list, prompts, etc.)
-2. For each shot or batch your task defines:
+2. If the wf_xxx tool exposes LoRA slot parameters (see "LoRA lookup and loading" below):
+       lora_index()                      — list the workspace LoRA catalog ONCE, pick candidates
+3. For each shot or batch your task defines:
        wf_xxx(prompt="<description>")    — generate one shot or batch of output files
-3. task_complete(summary="...")          — only AFTER every required wf_xxx call is done
+4. task_complete(summary="...")          — only AFTER every required wf_xxx call is done
 ```
+
+## LoRA lookup and loading
+
+Some `wf_xxx` tools expose optional **LoRA slot parameters** — one string parameter per slot (e.g. `lora_1`, `lora_2`, or named ports like `style_lora`) plus a matching optional `lora_<port>_strength` number. If the tool has NO such parameters, skip this section entirely — do not call `lora_index`.
+
+When LoRA slots ARE exposed:
+
+1. Call `lora_index()` once before your first render call. It lists every LoRA registered in this workspace: name, description, default strength, and **trigger words**.
+2. Compare the catalog against your prompts and pick candidates on either signal:
+   - **Trigger-word presence** — a LoRA's trigger word already appears (or belongs) in the shot's prompt, e.g. prompt says "V1nt4geStyle photograph of…" and the catalog has a LoRA with trigger `V1nt4geStyle`.
+   - **Description match** — the LoRA's description fits what the prompt is asking for, e.g. a "vintage film look" LoRA for a prompt requesting a faded 1970s photograph.
+
+   **Compatibility gate (applies to both signals): the LoRA must match the workflow's base model family.** A LoRA is trained against one base model (krea2, wan, sdxl, …) and produces garbage on any other. Each `lora_index` entry carries a `modelFamily` field; the `wf_xxx` tool's description states the workflow's model family. Only load a LoRA whose `modelFamily` matches the workflow's — when a candidate matches the prompt but not the family, leave it out. (For old entries without `modelFamily`, infer the base from the name/description.) The system also enforces this: a family-mismatched LoRA is rejected at call time before any render runs.
+3. Load a candidate by passing its **exact catalog name** as the slot parameter: `wf_xxx(prompt="...", lora_1="krea2_vintage_style")`. Names not in the catalog are rejected — never guess or invent one.
+4. **Include the trigger word in the prompt** when loading a trigger-word LoRA — most LoRAs only take effect when their trigger appears in the prompt text.
+5. Strength: omit `lora_<port>_strength` to use the catalog/port default. Only override when the task or catalog description says to.
+6. Leaving a slot unset is always safe — the workflow's built-in LoRAs still run; slots only ADD LoRAs on top.
+
+Do NOT load a LoRA just because the catalog has one: load it only when the prompt/task actually calls for its style, character, or effect. An empty `lora_index` result simply means "render without extra LoRAs".
+
+### Example
+
+Task prompt: "1970s faded polaroid of a man in a rainy piazza"
+
+```
+lora_index()
+→ [ { name: "krea2_vintage_style", modelFamily: "krea2", triggers: ["V1nt4geStyle"],
+      description: "vintage style lora for krea2" } ]
+
+wf_xxx(
+  prompt="V1nt4geStyle, 1970s faded polaroid of a man in a rainy piazza",
+  lora_1="krea2_vintage_style"
+)
+```
+
+## Verbatim prompts — when NOT to draft or enhance
+
+If the user or task explicitly asks to skip prompt drafting/enhancement, or to use their prompt verbatim / unmodified / exactly as written ("use this prompt as-is", "no prompt enhancement", "don't rewrite my prompt"), do **NOT** call `draft_prompt` or `enhance_prompt` — pass the given prompt string to `wf_xxx` unchanged, byte for byte.
+
+```
+Task: 'render one image, use this prompt verbatim: "a red bicycle leaning on a green wall"'
+
+wf_xxx(prompt="a red bicycle leaning on a green wall")     ← exact text, no drafting tools
+```
+
+The only permitted addition in that case is a LoRA trigger word when a LoRA is explicitly requested or required by the task — and only if the task doesn't forbid that too.
 
 ## Output file routing
 
@@ -112,3 +160,5 @@ read_artifact(...)
 3. Access artifact content via `read_artifact`, not `sandbox_fetch` or invented URLs.
 4. Your task description is authoritative: if it lists 27 shots, make all the `wf_xxx` calls required to cover them — do not stop early.
 5. When a single `wf_xxx` call produces multiple outputs of the same kind, pass `output_ports` explicitly rather than relying on automatic routing.
+6. If the workflow exposes LoRA slot parameters, consult `lora_index` and load matching LoRAs by their exact catalog name — only LoRAs whose base model family matches the workflow's, include the trigger word in the prompt, and leave slots unset when nothing compatible fits.
+7. When the user asks for a verbatim/unmodified prompt or to skip drafting/enhancement, do not call `draft_prompt`/`enhance_prompt` — pass the prompt to `wf_xxx` exactly as given.
