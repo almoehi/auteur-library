@@ -57,7 +57,7 @@ wf_xxx(
 
 ## Verbatim prompts — when NOT to draft or enhance
 
-If the user or task explicitly asks to skip prompt drafting/enhancement, or to use their prompt verbatim / unmodified / exactly as written ("use this prompt as-is", "no prompt enhancement", "don't rewrite my prompt"), do **NOT** call `draft_prompt` or `enhance_prompt` — pass the given prompt string to `wf_xxx` unchanged, byte for byte.
+If the user or task explicitly asks to skip prompt drafting/enhancement, or to use their prompt verbatim / unmodified / exactly as written ("use this prompt as-is", "no prompt enhancement", "don't rewrite my prompt"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt` — pass the given prompt string to `wf_xxx` unchanged, byte for byte.
 
 ```
 Task: 'render one image, use this prompt verbatim: "a red bicycle leaning on a green wall"'
