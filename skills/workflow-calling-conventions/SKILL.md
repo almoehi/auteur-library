@@ -8,14 +8,14 @@ agentType: worker
 
 ## When to use this skill
 
-Use this skill whenever your task asks you to produce output files (images, video frames, or other media) by calling `wf_xxx` workflow tools. Workflow tools are listed in your available tools and start with the prefix `wf_`.
+Use this skill whenever your task asks you to render, shoot or produce output files like images, video frames, or other media by calling `wf_xxx` workflow tools. Workflow tools are listed in your available tools and start with the prefix `wf_`.
 
 ## Correct sequence
 
 ```
 1. read_artifact(artifactId="<key>")     — load the work specification (shot list, prompts, etc.)
 2. If the wf_xxx tool exposes LoRA slot parameters (see "LoRA lookup and loading" below):
-       lora_index()                      — list the workspace LoRA catalog ONCE, pick candidates
+       lora_index()                      — list the workspace LoRA catalog ONCE, pick most relevant candidates
 3. For each shot or batch your task defines:
        wf_xxx(prompt="<description>")    — generate one shot or batch of output files
 4. task_complete(summary="...")          — only AFTER every required wf_xxx call is done
