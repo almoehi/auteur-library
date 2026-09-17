@@ -1185,6 +1185,11 @@ export interface DirectSpec {
 	 *  the name Docker knows it by. Set on the server, never accepted from the
 	 *  browser: it is a URL the harness will fetch and execute a graph from. */
 	studioOrigin: string;
+	/** False turns the harness's pre-render checks off for this render — see
+	 *  preflightLine(). Set on the server from AUTEUR_PREFLIGHT, never accepted
+	 *  from the browser: skipping the model download is not a thing a page gets
+	 *  to ask for. */
+	preflight?: boolean;
 }
 
 /** The line that tells a task its references exist.
@@ -1289,12 +1294,30 @@ export function directWorkspaceId(spec: DirectSpec): string {
  *  one — nothing written, task_complete called, the gate reporting no files, and
  *  a retry loop. If a run dies that way, this line is the first suspect and
  *  grok-4-5 is the revert. */
+/** The line that switches the harness's pre-render checks off.
+ *
+ *  Those checks are what DOWNLOAD the models. So the first render of a given
+ *  workflow has to run with them on, or the GPU starts without its weights;
+ *  once a run has succeeded the files are cached and the checks are pure
+ *  latency, which is the part this buys back. Measured on the hosted fleet, a
+ *  five-second clip spends three of its four minutes on things that are not
+ *  sampling.
+ *
+ *  Off by absence, never by default: emitted only when something says `false`
+ *  out loud. A harness that predates the key ignores an unknown field rather
+ *  than failing, so leaving it unset is also what keeps a mixed fleet working.
+ */
+function preflightLine(preflight?: boolean): string {
+	return preflight === false ? '\n      preflight: false' : '';
+}
+
 function directWorkflows(
 	origin: string,
 	picks: Pick[],
 	baseAt: Record<string, number>,
 	refNames: string[],
-	slug: string
+	slug: string,
+	preflight?: boolean
 ): string {
 	// Only the picks. The pair every clip loads is added by the endpoint that
 	// builds the bundle, and naming it here as well was not merely redundant: the
@@ -1328,7 +1351,7 @@ function directWorkflows(
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml
-      lazy: false`;
+      lazy: false${preflightLine(preflight)}`;
 }
 
 /** Resolution is a parameter here rather than a constant, because the two
@@ -1505,7 +1528,7 @@ spec:
   skills:
     - workflow-render-loop@mvp-lkg
 
-${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refNames ?? [], spec.slug)}
+${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refNames ?? [], spec.slug, spec.preflight)}
 
 ${directProfiles(spec)}
 
@@ -1557,6 +1580,11 @@ export interface SheetSpec {
 	 *  name Docker knows it by. Set on the server, never accepted from the
 	 *  browser, for the same reason the clip bundle's origin is. */
 	studioOrigin?: string;
+	/** False turns the harness's pre-render checks off for this render — see
+	 *  preflightLine(). Set on the server from AUTEUR_PREFLIGHT, never accepted
+	 *  from the browser: skipping the model download is not a thing a page gets
+	 *  to ask for. */
+	preflight?: boolean;
 	/** Plain English, passed to the workflow untouched. These two workflows take
 	 *  a description rather than a structured prompt — their own port notes say
 	 *  so — which is why no writer stands between you and them. */
@@ -1736,7 +1764,7 @@ spec:
   workflows:
     - name: ${wf.name}
       url: ${sheetUrl(spec, wf.name)}
-      lazy: false
+      lazy: false${preflightLine(spec.preflight)}
 
   profiles:
     draft:
@@ -1877,6 +1905,11 @@ export interface ContinuationSpec {
 	priorSeconds?: number;
 
 	studioOrigin?: string;
+	/** False turns the harness's pre-render checks off for this render — see
+	 *  preflightLine(). Set on the server from AUTEUR_PREFLIGHT, never accepted
+	 *  from the browser: skipping the model download is not a thing a page gets
+	 *  to ask for. */
+	preflight?: boolean;
 }
 
 export function continuationWorkspaceId(spec: ContinuationSpec): string {
@@ -2098,7 +2131,7 @@ spec:
   workflows:
     - name: minimax_h3_video_continuation
       url: ${origin}/studio/api/contwf/${encodeURIComponent(sel)}/workflow.yaml
-      lazy: false
+      lazy: false${preflightLine(spec.preflight)}
 
   profiles:
     draft:

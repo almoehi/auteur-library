@@ -330,6 +330,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// harness fetches a workflow bundle from this address, so the browser does
 		// not get a say in where that address points.
 		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
+		// AUTEUR_PREFLIGHT=0 skips the harness's pre-render checks. Server-side for
+		// the same reason the origin is, and unset means on: the checks are what
+		// fetch the models, so the first run of a workflow needs them.
+		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
 		let sheetYaml: string;
 		try {
 			sheetYaml = composeSheetWorkspace({ ...spec, card: profileCard }, yamlKey);
@@ -362,6 +366,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		if (!spec || typeof spec !== 'object') throw error(400, 'Missing continuation spec');
 		if (!spec.slug || !SLUG_RE.test(spec.slug)) throw error(400, 'Bad slug');
 		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
+		// AUTEUR_PREFLIGHT=0 skips the harness's pre-render checks. Server-side for
+		// the same reason the origin is, and unset means on: the checks are what
+		// fetch the models, so the first run of a workflow needs them.
+		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
 
 		// Cleared before anything reads them: the spec arrives from the browser and
 		// these end up in the agent's prompt as links to fetch.
@@ -553,6 +561,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// workflow graph from this address and runs it, so the browser does not
 		// get a say in where that address points.
 		spec.studioOrigin = env.AUTEUR_STUDIO_URL || 'http://host.docker.internal:5290';
+		// AUTEUR_PREFLIGHT=0 skips the harness's pre-render checks. Server-side for
+		// the same reason the origin is, and unset means on: the checks are what
+		// fetch the models, so the first run of a workflow needs them.
+		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
 		// Copied here, before openWorkspace imports them — the import clears the
 		// staging area, and the bundle generator needs these files minutes later
 		// when the harness asks for the graph. Server-side for the same reason as
