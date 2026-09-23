@@ -1,0 +1,67 @@
+{
+ "graph": {
+  "147": {
+   "inputs": {
+    "ensemble": true,
+    "dtype": "float16",
+    "batch_size": 8,
+    "clear_cache_after_n_frames": 100
+   }
+  },
+  "686": {
+   "inputs": {
+    "model": [
+     "645",
+     0
+    ]
+   }
+  },
+  "636": null,
+  "900": {
+   "class_type": "ApplyVDNH3",
+   "inputs": {
+    "model": [
+     "674",
+     0
+    ],
+    "vdn_checkpoint": "vdn-h3-int8",
+    "apply_turbo_adapter": true,
+    "strength": 1.0,
+    "lora_mode": "merge",
+    "branch_weights": "auto",
+    "retain_buffers": "auto",
+    "verbose": true,
+    "attention_backend": "grouped"
+   }
+  },
+  "126": {
+   "inputs": {
+    "model": [
+     "900",
+     0
+    ]
+   }
+  },
+  "124": {
+   "inputs": {
+    "model": [
+     "900",
+     0
+    ]
+   }
+  },
+  "674": {
+   "inputs": {
+    "lora_1": {
+     "on": false,
+     "lora": "minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
+     "strength": 0.7
+    }
+   }
+  }
+ },
+ "yamlTop": "customNodes:\n  - name: ComfyUI-VDN-Paths\n    repository: https://github.com/dszab8/ComfyUI-VDN-Paths.git\n    commitHash: 1d1d60089b45646e6694ba8708d27eda640d4fae\n  - name: ComfyUI-VDN-H3-Plus\n    repository: https://github.com/xmarre/ComfyUI-VDN-H3-Plus.git\n    commitHash: b78e94d0365ffc5059924a048af707e565d0380e\n",
+ "modelsYaml": "  - name: vdn_h3_int8_convrot_stage\n    type: diffusion_models\n    files:\n      - url: https://huggingface.co/drbaph/vdn-minimax-h3-int8-convrot-comfyui/raw/main/adapters/default/adapter_config.json\n        filename: vdn/vdn-h3-int8/adapters/default/adapter_config.json\n        sha256: 89e0ff8920b9629b826eb99ab6150cce6924a53aa445186d1b493225fd091b96\n      - url: https://huggingface.co/drbaph/vdn-minimax-h3-int8-convrot-comfyui/resolve/main/adapters/default/adapter_model.safetensors\n        filename: vdn/vdn-h3-int8/adapters/default/adapter_model.safetensors\n        sha256: 58558fef506f88bb41649242de9b9b3a365da806b51b2e96afbbe1625222058a\n      - url: https://huggingface.co/drbaph/vdn-minimax-h3-int8-convrot-comfyui/raw/main/adapters/turbo/adapter_config.json\n        filename: vdn/vdn-h3-int8/adapters/turbo/adapter_config.json\n        sha256: 627968f670747c29cd7a0d3f8c75166e501d70f9e829b5cd3242a8f14cefbc18\n      - url: https://huggingface.co/drbaph/vdn-minimax-h3-int8-convrot-comfyui/resolve/main/adapters/turbo/adapter_model.safetensors\n        filename: vdn/vdn-h3-int8/adapters/turbo/adapter_model.safetensors\n        sha256: 24fc93c82fe84dc45d0627f4e72c637bc387d282ba18f60ed3b7f8c81089392c\n      - url: https://huggingface.co/drbaph/vdn-minimax-h3-int8-convrot-comfyui/raw/main/linear_branch/config.json\n        filename: vdn/vdn-h3-int8/linear_branch/config.json\n        sha256: decb06ac7e664610f677fb445318502b3c51f9c1b8603a2cdd00b16042be5bc8\n      - url: https://huggingface.co/drbaph/vdn-minimax-h3-int8-convrot-comfyui/resolve/main/linear_branch/model_int8_convrot_comfyui.safetensors\n        filename: vdn/vdn-h3-int8/linear_branch/model_int8_convrot_comfyui.safetensors\n        sha256: 1fa18c3ebd94caa804ae3dc3a93df7ae069d8f5c363a00b6eb5288112c0f5abc\n      - url: https://huggingface.co/drbaph/vdn-minimax-h3-int8-convrot-comfyui/raw/main/metadata.json\n        filename: vdn/vdn-h3-int8/metadata.json\n        sha256: 54054ceb1c91b3fdf7fa0278e4a8841c127e8cf666b5e240d69613661f9d3e9e\n      - url: https://huggingface.co/drbaph/vdn-minimax-h3-int8-convrot-comfyui/raw/main/model_spec.json\n        filename: vdn/vdn-h3-int8/model_spec.json\n        sha256: 4171f4384e952f1f73467981a893440c03298af4956b947e2c8a857ba9f5a62b\n      - url: https://huggingface.co/multimodalart/MiniMax-H3-Pruned/resolve/main/transformer/adaln_affine.safetensors\n        filename: vdn/vdn-h3-int8/adaln_affine.safetensors\n        sha256: 34f285e7aeae741666868bf5912506ab4793098357a01a9d8358f6ce7704d532\n",
+ "preflight": true,
+ "label": "vdn-turbo"
+}

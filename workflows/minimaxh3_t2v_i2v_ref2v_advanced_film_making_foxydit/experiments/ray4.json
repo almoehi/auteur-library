@@ -1,0 +1,157 @@
+{
+ "graph": {
+  "147": {
+   "inputs": {
+    "ensemble": true,
+    "dtype": "float16",
+    "batch_size": 8,
+    "clear_cache_after_n_frames": 100
+   }
+  },
+  "900": {
+   "class_type": "RayInitializer",
+   "inputs": {
+    "ray_cluster_address": "local",
+    "ray_cluster_namespace": "default",
+    "GPU": 4,
+    "ulysses_degree": 4,
+    "ring_degree": 1,
+    "cfg_degree": 1,
+    "dp_degree": 1,
+    "sync_ulysses": true,
+    "clear_vram_after_sampling": false,
+    "FSDP": false,
+    "FSDP_CPU_OFFLOAD": false,
+    "XFuser_attention": "TORCH_FLASH",
+    "skip_comm_test": false,
+    "use_mmap": false
+   }
+  },
+  "901": {
+   "class_type": "RayLoraLoader",
+   "inputs": {
+    "lora_name": "minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
+    "strength_model": 0.7
+   }
+  },
+  "902": {
+   "class_type": "RayLoraLoader",
+   "inputs": {
+    "lora_name": "PlagueKind-tiddies-realismslider.safetensors",
+    "strength_model": 0.5,
+    "prev_ray_lora": [
+     "901",
+     0
+    ]
+   }
+  },
+  "903": {
+   "class_type": "RayLoraLoader",
+   "inputs": {
+    "lora_name": "MysticXXX_MMH3-V3.safetensors",
+    "strength_model": 0.6,
+    "prev_ray_lora": [
+     "902",
+     0
+    ]
+   }
+  },
+  "904": {
+   "class_type": "RayUNETLoader",
+   "inputs": {
+    "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+    "weight_dtype": "default",
+    "ray_actors_init": [
+     "900",
+     0
+    ],
+    "lora": [
+     "903",
+     0
+    ]
+   }
+  },
+  "905": {
+   "class_type": "RayMiniMaxH3SigmaShift",
+   "inputs": {
+    "ray_actors": [
+     "904",
+     0
+    ],
+    "shift_video": 12.0,
+    "shift_audio": 6.0
+   }
+  },
+  "906": {
+   "class_type": "RayBasicScheduler",
+   "inputs": {
+    "ray_actors": [
+     "905",
+     0
+    ],
+    "scheduler": "simple",
+    "steps": 8,
+    "denoise": 1.0
+   }
+  },
+  "907": {
+   "class_type": "RayBasicGuider",
+   "inputs": {
+    "ray_actors": [
+     "905",
+     0
+    ],
+    "conditioning": [
+     "648",
+     0
+    ]
+   }
+  },
+  "908": {
+   "class_type": "XFuserSamplerCustomAdvanced",
+   "inputs": {
+    "add_noise": true,
+    "noise_seed": [
+     "142",
+     0
+    ],
+    "guider": [
+     "907",
+     0
+    ],
+    "sampler": [
+     "123",
+     0
+    ],
+    "sigmas": [
+     "906",
+     0
+    ],
+    "latent_image": [
+     "682",
+     0
+    ]
+   }
+  },
+  "121": {
+   "inputs": {
+    "samples": [
+     "908",
+     0
+    ]
+   }
+  },
+  "158": {
+   "inputs": {
+    "anything": [
+     "908",
+     0
+    ]
+   }
+  }
+ },
+ "yamlTop": "customNodes:\n  - name: raylight\n    repository: https://github.com/dszab8/raylight.git\n    commitHash: 070a0380520f677e3db2792c55ee015f34fca60a\n",
+ "gpuCount": 4,
+ "preflight": true,
+ "label": "ray4"
+}
