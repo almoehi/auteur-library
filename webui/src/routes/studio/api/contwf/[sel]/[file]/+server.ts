@@ -345,13 +345,13 @@ function fitOurOutputShape(graph: Graph): void {
 			ckpt_name: 'rife49.pth',
 			frames: [N.videoDecode, 0],
 			multiplier: 2,
-			clear_cache_after_n_frames: 10,
+			clear_cache_after_n_frames: 100,
 			fast_mode: true,
 			ensemble: true,
 			scale_factor: 1,
-			dtype: 'float32',
+			dtype: 'float16',
 			torch_compile: false,
-			batch_size: 1
+			batch_size: 8
 		}
 	};
 	create.inputs.images = [OUR.rife, 0];
