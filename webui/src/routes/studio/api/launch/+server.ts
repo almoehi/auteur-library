@@ -263,6 +263,11 @@ async function openWorkspace(
 	return json({ ok: true, workspaceId, library, refs }, { status: 200 });
 }
 
+function gpuCountFromEnv(): number | undefined {
+	const n = Number((env.AUTEUR_GPU_COUNT ?? '').trim());
+	return [2, 4, 6].includes(n) ? n : undefined;
+}
+
 export const POST: RequestHandler = async ({ request, fetch }) => {
 	// Tuned prompts and model choices from the admin panel, if any. Read per
 	// launch so an edit between two productions takes effect on the next one
@@ -370,6 +375,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// the same reason the origin is, and unset means on: the checks are what
 		// fetch the models, so the first run of a workflow needs them.
 		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
+		// AUTEUR_GPU_COUNT picks the multi-GPU endpoint tier (2, 4 or 6). Unset or 1
+		// leaves the YAML exactly as before. Only a tier run.sh --gpu-counts deployed
+		// will bind; any other count sits at `running`.
+		spec.gpuCount = gpuCountFromEnv();
 
 		// Cleared before anything reads them: the spec arrives from the browser and
 		// these end up in the agent's prompt as links to fetch.
@@ -565,6 +574,10 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// the same reason the origin is, and unset means on: the checks are what
 		// fetch the models, so the first run of a workflow needs them.
 		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
+		// AUTEUR_GPU_COUNT picks the multi-GPU endpoint tier (2, 4 or 6). Unset or 1
+		// leaves the YAML exactly as before. Only a tier run.sh --gpu-counts deployed
+		// will bind; any other count sits at `running`.
+		spec.gpuCount = gpuCountFromEnv();
 		// Copied here, before openWorkspace imports them — the import clears the
 		// staging area, and the bundle generator needs these files minutes later
 		// when the harness asks for the graph. Server-side for the same reason as

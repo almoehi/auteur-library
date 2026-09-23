@@ -1190,6 +1190,10 @@ export interface DirectSpec {
 	 *  from the browser: skipping the model download is not a thing a page gets
 	 *  to ask for. */
 	preflight?: boolean;
+	/** GPUs per compute container — see gpuCountLine(). Set on the server from
+	 *  AUTEUR_GPU_COUNT, never from the browser: it multiplies what a render
+	 *  costs. */
+	gpuCount?: number;
 }
 
 /** The line that tells a task its references exist.
@@ -1311,13 +1315,23 @@ function preflightLine(preflight?: boolean): string {
 	return preflight === false ? '\n      preflight: false' : '';
 }
 
+/** `gpuCount` picks the endpoint tier: comfy-compute-{gpu}-x{N}-… for N > 1.
+ *  Omitted for 1 or unset, so the name stays the suffix-free one every render
+ *  has used; a count whose tier was never deployed leaves the workflow with no
+ *  endpoint and the task at `running`. ComfyUI itself is single-device unless
+ *  a node maps devices, so a count above 1 is a cost before it is a speedup. */
+function gpuCountLine(gpuCount?: number): string {
+	return gpuCount && gpuCount > 1 ? `\n      gpuCount: ${gpuCount}` : '';
+}
+
 function directWorkflows(
 	origin: string,
 	picks: Pick[],
 	baseAt: Record<string, number>,
 	refNames: string[],
 	slug: string,
-	preflight?: boolean
+	preflight?: boolean,
+	gpuCount?: number
 ): string {
 	// Only the picks. The pair every clip loads is added by the endpoint that
 	// builds the bundle, and naming it here as well was not merely redundant: the
@@ -1351,7 +1365,7 @@ function directWorkflows(
 	return `  workflows:
     - name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
       url: ${origin}/studio/api/wf/${encodeURIComponent(sel)}/workflow.yaml
-      lazy: false${preflightLine(preflight)}`;
+      lazy: false${preflightLine(preflight)}${gpuCountLine(gpuCount)}`;
 }
 
 /** Resolution is a parameter here rather than a constant, because the two
@@ -1528,7 +1542,7 @@ spec:
   skills:
     - workflow-render-loop@mvp-lkg
 
-${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refNames ?? [], spec.slug, spec.preflight)}
+${directWorkflows(spec.studioOrigin, spec.loras ?? [], spec.baseLoras ?? {}, spec.refNames ?? [], spec.slug, spec.preflight, spec.gpuCount)}
 
 ${directProfiles(spec)}
 
@@ -1910,6 +1924,10 @@ export interface ContinuationSpec {
 	 *  from the browser: skipping the model download is not a thing a page gets
 	 *  to ask for. */
 	preflight?: boolean;
+	/** GPUs per compute container — see gpuCountLine(). Set on the server from
+	 *  AUTEUR_GPU_COUNT, never from the browser: it multiplies what a render
+	 *  costs. */
+	gpuCount?: number;
 }
 
 export function continuationWorkspaceId(spec: ContinuationSpec): string {
@@ -2131,7 +2149,7 @@ spec:
   workflows:
     - name: minimax_h3_video_continuation
       url: ${origin}/studio/api/contwf/${encodeURIComponent(sel)}/workflow.yaml
-      lazy: false${preflightLine(spec.preflight)}
+      lazy: false${preflightLine(spec.preflight)}${gpuCountLine(spec.gpuCount)}
 
   profiles:
     draft:
