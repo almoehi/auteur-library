@@ -63,7 +63,11 @@ const LOADER_NODE = '674';
 const CARD = (env.AUTEUR_GPU_CARD || 'h100').trim();
 // b200 is treated as blind until a Sage build for sm100 is seen working in the
 // compute image; losing the patch costs speed, keeping it wrongly costs the render.
-const SAGE_BLIND = ['h100', 'l40s', 'b200'];
+// AUTEUR_SAGE_BLIND overrides the list (comma-separated cards) so a card can be
+// tried with Sage without a code change; unset keeps the list below.
+const SAGE_BLIND = env.AUTEUR_SAGE_BLIND !== undefined
+	? env.AUTEUR_SAGE_BLIND.split(',').map((c) => c.trim()).filter(Boolean)
+	: ['h100', 'l40s', 'b200'];
 
 const SAGE_KJ = '157';
 const SAGE_MM = '663';
