@@ -21,6 +21,7 @@
  *  bundle.
  */
 import { env } from '$env/dynamic/private';
+import { readWfPatch } from '../../wfpatch.server';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SLUG_RE, type Brief } from '../../types';
@@ -264,7 +265,7 @@ async function openWorkspace(
 }
 
 function gpuCountFromEnv(): number | undefined {
-	const n = Number((env.AUTEUR_GPU_COUNT ?? '').trim());
+	const n = Number(readWfPatch()?.gpuCount ?? (env.AUTEUR_GPU_COUNT ?? '').trim());
 	return [2, 4, 6].includes(n) ? n : undefined;
 }
 

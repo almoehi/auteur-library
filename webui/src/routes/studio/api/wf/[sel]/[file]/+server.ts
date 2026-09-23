@@ -27,6 +27,7 @@ import type { RequestHandler } from './$types';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseBaseOverrides, parsePicks, parseRunSlug, type Lora } from '../../../../loras';
+import { applyGraphPatch, readWfPatch } from '../../../../wfpatch.server';
 
 const BUNDLE = 'minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit';
 
@@ -191,6 +192,7 @@ function buildJson(entries: { lora: Lora; strength: number }[], refs: string[] =
 
 	addReferencePath(graph, refs);
 	fitSageForCard(graph);
+	applyGraphPatch(graph, readWfPatch());
 	return JSON.stringify(graph, null, 2);
 }
 
@@ -284,7 +286,8 @@ function buildYaml(entries: { lora: Lora; strength: number }[], refs: string[] =
 	const tail = src.slice(b + CLOSE.length);
 	const body =
 		`  # Generated for one clip. Edit webui/src/routes/studio/loras.ts, not this.\n` +
-		modelBlock(entries);
+		modelBlock(entries) +
+		(readWfPatch()?.modelsYaml ?? '');
 	const out = head + body + tail;
 	// Inside `ports:`, ahead of `params:` — inputs are a member of ports, which
 	// is where the base bundle would carry them if it had any. It has none: this
@@ -318,7 +321,9 @@ function buildYaml(entries: { lora: Lora; strength: number }[], refs: string[] =
 	if (!withPorts.includes('\n  outputs:')) {
 		throw error(500, 'the base bundle has no outputs: section — it has been re-exported');
 	}
-	return withPorts.replace('\n  outputs:', `\n${sagePort}  outputs:`);
+	const top = readWfPatch()?.yamlTop;
+	const done = withPorts.replace('\n  outputs:', `\n${sagePort}  outputs:`);
+	return top ? `${done.replace(/\n*$/, '\n')}${top}` : done;
 }
 
 export const GET: RequestHandler = async ({ params, url }) => {
