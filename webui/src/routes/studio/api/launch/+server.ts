@@ -340,6 +340,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// the same reason the origin is, and unset means on: the checks are what
 		// fetch the models, so the first run of a workflow needs them.
 		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
+		if (readWfPatch()?.preflight === true) spec.preflight = undefined;
 		let sheetYaml: string;
 		try {
 			sheetYaml = composeSheetWorkspace({ ...spec, card: profileCard }, yamlKey);
@@ -376,6 +377,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// the same reason the origin is, and unset means on: the checks are what
 		// fetch the models, so the first run of a workflow needs them.
 		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
+		if (readWfPatch()?.preflight === true) spec.preflight = undefined;
 		// AUTEUR_GPU_COUNT picks the multi-GPU endpoint tier (2, 4 or 6). Unset or 1
 		// leaves the YAML exactly as before. Only a tier run.sh --gpu-counts deployed
 		// will bind; any other count sits at `running`.
@@ -575,6 +577,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// the same reason the origin is, and unset means on: the checks are what
 		// fetch the models, so the first run of a workflow needs them.
 		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
+		if (readWfPatch()?.preflight === true) spec.preflight = undefined;
 		// AUTEUR_GPU_COUNT picks the multi-GPU endpoint tier (2, 4 or 6). Unset or 1
 		// leaves the YAML exactly as before. Only a tier run.sh --gpu-counts deployed
 		// will bind; any other count sits at `running`.

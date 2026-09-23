@@ -14,7 +14,8 @@
  *      },
  *      "modelsYaml": "  - name: …\n    type: lora\n    files: …\n",  // extra models: rows
  *      "yamlTop": "customNodes:\n  - name: …\n",                  // extra top-level keys
- *      "gpuCount": 2                                                // overrides AUTEUR_GPU_COUNT
+ *      "gpuCount": 2,                                               // overrides AUTEUR_GPU_COUNT
+ *      "preflight": true                                            // overrides AUTEUR_PREFLIGHT
  *    }
  *
  *  Rewiring is an inputs merge whose value is a [nodeId, slot] pair. */
@@ -29,6 +30,9 @@ export interface WfPatch {
 	modelsYaml?: string;
 	yamlTop?: string;
 	gpuCount?: number;
+	/** true forces the pre-render checks on, which a render with customNodes
+	 *  needs: the worker only clones and installs them when preflight is on. */
+	preflight?: boolean;
 }
 
 export function readWfPatch(): WfPatch | null {
