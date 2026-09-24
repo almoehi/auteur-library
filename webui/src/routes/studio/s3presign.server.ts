@@ -144,11 +144,18 @@ export function harnessEnv(): Record<string, string> {
 	return out;
 }
 
-/** The bucket config, or null when it is not configured. */
+/** The bucket config, or null when it is not configured.
+ *
+ *  AUTEUR_AWS_* first: it is the identity run.sh now hands the harness as its
+ *  app-runtime credential, widened to cover this bucket. The older AWS_ACCESS_KEY
+ *  (Sandbox-file-exchange-svc) no longer has s3:PutObject on studio-refs/ — every
+ *  reference upload came back 403 AccessDenied from 2026-09-23. */
 export function s3FromEnv(e: Record<string, string> = harnessEnv()): S3Config | null {
+	const unquote = (v?: string) => (v ?? '').trim().replace(/^["']|["']$/g, '');
+	const modern = unquote(e.AUTEUR_AWS_ACCESS_KEY_ID) && unquote(e.AUTEUR_AWS_SECRET_ACCESS_KEY);
 	const cfg = {
-		accessKey: e.AWS_ACCESS_KEY ?? '',
-		secretKey: e.AWS_SECRET_KEY ?? '',
+		accessKey: modern ? unquote(e.AUTEUR_AWS_ACCESS_KEY_ID) : (e.AWS_ACCESS_KEY ?? ''),
+		secretKey: modern ? unquote(e.AUTEUR_AWS_SECRET_ACCESS_KEY) : (e.AWS_SECRET_KEY ?? ''),
 		region: e.AWS_REGION ?? '',
 		bucket: e.S3_BUCKET ?? ''
 	};
