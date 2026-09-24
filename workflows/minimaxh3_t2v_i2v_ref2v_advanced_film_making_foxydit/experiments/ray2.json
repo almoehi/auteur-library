@@ -27,35 +27,6 @@
     "use_mmap": false
    }
   },
-  "901": {
-   "class_type": "RayLoraLoader",
-   "inputs": {
-    "lora_name": "minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
-    "strength_model": 0.7
-   }
-  },
-  "902": {
-   "class_type": "RayLoraLoader",
-   "inputs": {
-    "lora_name": "PlagueKind-tiddies-realismslider.safetensors",
-    "strength_model": 0.5,
-    "prev_ray_lora": [
-     "901",
-     0
-    ]
-   }
-  },
-  "903": {
-   "class_type": "RayLoraLoader",
-   "inputs": {
-    "lora_name": "MysticXXX_MMH3-V3.safetensors",
-    "strength_model": 0.6,
-    "prev_ray_lora": [
-     "902",
-     0
-    ]
-   }
-  },
   "904": {
    "class_type": "RayUNETLoader",
    "inputs": {
@@ -63,10 +34,6 @@
     "weight_dtype": "default",
     "ray_actors_init": [
      "900",
-     0
-    ],
-    "lora": [
-     "903",
      0
     ]
    }
@@ -153,5 +120,9 @@
  "yamlTop": "customNodes:\n  - name: raylight\n    repository: https://github.com/dszab8/raylight.git\n    commitHash: 070a0380520f677e3db2792c55ee015f34fca60a\n",
  "gpuCount": 2,
  "preflight": true,
- "label": "ray2"
+ "label": "ray2",
+ "rayLoras": {
+  "from": "674",
+  "into": "904"
+ }
 }

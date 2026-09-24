@@ -264,8 +264,11 @@ async function openWorkspace(
 	return json({ ok: true, workspaceId, library, refs }, { status: 200 });
 }
 
-function gpuCountFromEnv(): number | undefined {
-	const n = Number(readWfPatch()?.gpuCount ?? (env.AUTEUR_GPU_COUNT ?? '').trim());
+/** The experiment patch only rewrites the direct bundle (api/wf), so only a
+ *  direct render may take its GPU count — a continuation or a sheet would get
+ *  the extra GPUs with none of the graph that uses them. */
+function gpuCountFromEnv(fromPatch = false): number | undefined {
+	const n = Number((fromPatch ? readWfPatch()?.gpuCount : undefined) ?? (env.AUTEUR_GPU_COUNT ?? '').trim());
 	return [2, 4, 6].includes(n) ? n : undefined;
 }
 
@@ -340,7 +343,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// the same reason the origin is, and unset means on: the checks are what
 		// fetch the models, so the first run of a workflow needs them.
 		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
-		if (readWfPatch()?.preflight === true) spec.preflight = undefined;
 		let sheetYaml: string;
 		try {
 			sheetYaml = composeSheetWorkspace({ ...spec, card: profileCard }, yamlKey);
@@ -377,7 +379,6 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// the same reason the origin is, and unset means on: the checks are what
 		// fetch the models, so the first run of a workflow needs them.
 		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
-		if (readWfPatch()?.preflight === true) spec.preflight = undefined;
 		// AUTEUR_GPU_COUNT picks the multi-GPU endpoint tier (2, 4 or 6). Unset or 1
 		// leaves the YAML exactly as before. Only a tier run.sh --gpu-counts deployed
 		// will bind; any other count sits at `running`.
@@ -581,7 +582,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// AUTEUR_GPU_COUNT picks the multi-GPU endpoint tier (2, 4 or 6). Unset or 1
 		// leaves the YAML exactly as before. Only a tier run.sh --gpu-counts deployed
 		// will bind; any other count sits at `running`.
-		spec.gpuCount = gpuCountFromEnv();
+		spec.gpuCount = gpuCountFromEnv(true);
 		// Copied here, before openWorkspace imports them — the import clears the
 		// staging area, and the bundle generator needs these files minutes later
 		// when the harness asks for the graph. Server-side for the same reason as

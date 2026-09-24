@@ -33,6 +33,12 @@ export interface WfPatch {
 	/** true forces the pre-render checks on, which a render with customNodes
 	 *  needs: the worker only clones and installs them when preflight is on. */
 	preflight?: boolean;
+	/** Rebuild the clip's adapter stack as a RayLoraLoader chain: every active
+	 *  lora_N on node `from` (the Power Lora Loader the studio writes) becomes
+	 *  one loader, and the chain feeds `into` (the RayUNETLoader). Without it a
+	 *  Raylight graph renders with whatever adapters were hardcoded in the patch
+	 *  rather than the ones this clip picked. */
+	rayLoras?: { from: string; into: string };
 }
 
 export function readWfPatch(): WfPatch | null {
@@ -52,4 +58,29 @@ export function applyGraphPatch(graph: Graph, patch: WfPatch | null): void {
 			graph[id].inputs = { ...(graph[id].inputs ?? {}), ...(change.inputs ?? {}) };
 		}
 	}
+	applyRayLoras(graph, patch?.rayLoras);
+}
+
+const RAY_LORA_BASE = 950;
+
+function applyRayLoras(graph: Graph, spec: WfPatch['rayLoras']): void {
+	if (!spec) return;
+	const into = graph[spec.into];
+	if (!into?.inputs) throw new Error(`wf patch: rayLoras target ${spec.into} is not in the graph`);
+	const stack = Object.entries(graph[spec.from]?.inputs ?? {})
+		.filter(([k, v]) => /^lora_\d+$/.test(k) && typeof v === 'object' && v !== null)
+		.map(([k, v]) => ({ n: Number(k.slice(5)), ...(v as { on?: boolean; lora?: string; strength?: number }) }))
+		.filter((e) => e.on && e.lora)
+		.sort((a, b) => a.n - b.n);
+	let prev: [string, number] | undefined;
+	stack.forEach((e, i) => {
+		const id = String(RAY_LORA_BASE + i);
+		graph[id] = {
+			class_type: 'RayLoraLoader',
+			inputs: { lora_name: e.lora, strength_model: e.strength ?? 1.0, ...(prev ? { prev_ray_lora: prev } : {}) }
+		};
+		prev = [id, 0];
+	});
+	if (prev) into.inputs.lora = prev;
+	else delete into.inputs.lora;
 }
