@@ -5,6 +5,15 @@ Point the studio at one with `AUTEUR_WF_PATCH=<absolute path>` in `webui/.env` a
 restart it. Every patch here needs preflight on, because the worker only installs
 customNodes then; the patch forces that itself.
 
+Unless the container is still warm. With `AUTEUR_PREFLIGHT=0` and
+`AUTEUR_WARM_SKIP_PREFLIGHT_SEC=200` (under a 300 s `--compute-idle-timeout`), a
+direct render launched within 200 s of the last successful custom-node render's
+completion skips preflight. That container already has the node loaded, and the
+worker neither restarts ComfyUI nor re-links nodes when preflight is off. Measured
+2026-09-24 on 4× b200, 5 s clip, dispatch to video: 341 s cold (preflight on, the
+install), then 70 s and 62 s warm with preflight off. With preflight on it was 88 s.
+The studio log says which it picked: `[launch] direct …: 4 GPU, preflight off`.
+
 | file | what it does | measured 2026-09-23, b200, warm, ComfyUI time |
 |---|---|---|
 | `ray2.json` | Raylight sequence parallel on 2 GPUs (`gpuCount: 2`) | 5 s clip 45 s, 10 s clip 64 s (1 GPU: 44 s / 64 s) |

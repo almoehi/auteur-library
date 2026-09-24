@@ -22,6 +22,7 @@
  */
 import { env } from '$env/dynamic/private';
 import { readWfPatch } from '../../wfpatch.server';
+import { containerStillWarm, rememberCustomNodeRender } from '../../warmskip.server';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SLUG_RE, type Brief } from '../../types';
@@ -578,11 +579,20 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 		// the same reason the origin is, and unset means on: the checks are what
 		// fetch the models, so the first run of a workflow needs them.
 		if ((env.AUTEUR_PREFLIGHT ?? '').trim() === '0') spec.preflight = false;
-		if (readWfPatch()?.preflight === true) spec.preflight = undefined;
 		// AUTEUR_GPU_COUNT picks the multi-GPU endpoint tier (2, 4 or 6). Unset or 1
 		// leaves the YAML exactly as before. Only a tier run.sh --gpu-counts deployed
 		// will bind; any other count sits at `running`.
 		spec.gpuCount = gpuCountFromEnv(true);
+		// A patch with customNodes needs preflight on — unless the container that
+		// loaded them is still warm (see warmskip.server.ts).
+		const needsNodes = readWfPatch()?.preflight === true;
+		if (needsNodes && !(spec.preflight === false && (await containerStillWarm(spec.gpuCount ?? 1)))) {
+			spec.preflight = undefined;
+		}
+		console.log(
+			`[launch] direct ${spec.slug}: ${spec.gpuCount ?? 1} GPU, preflight ${spec.preflight === false ? 'off' : 'on'}` +
+				(needsNodes ? ' (custom nodes)' : '')
+		);
 		// Copied here, before openWorkspace imports them — the import clears the
 		// staging area, and the bundle generator needs these files minutes later
 		// when the harness asks for the graph. Server-side for the same reason as
@@ -715,7 +725,7 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			});
 		}
 
-		return await openWorkspace(
+		const opened = await openWorkspace(
 			directWorkspaceId(spec),
 			directYaml,
 			grokKey,
@@ -731,6 +741,8 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			},
 			{ withLibrary: true, internal: spec.internal === true }
 		);
+		if (needsNodes && opened.ok) rememberCustomNodeRender(spec.gpuCount ?? 1, directWorkspaceId(spec));
+		return opened;
 	}
 
 	const brief = payload.brief;
