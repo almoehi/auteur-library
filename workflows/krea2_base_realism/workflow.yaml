@@ -68,21 +68,45 @@ ports:
       seed: true
       required: false
       default: -1
-    # TODO: expose lora_3 and lora_4 slots on node 315 (Power Lora Loader) as optional params
-    # to allow dynamic character or style LoRA injection at call time, e.g.:
-    #   - name: character_lora
-    #     kind: string
-    #     description: "Filename of an optional character or style LoRA to load into slot 3."
-    #     binding: lora_3.lora@315
-    #     required: false
-    #   - name: character_lora_strength
-    #     kind: float
-    #     description: "Strength for the character LoRA (slot 3). Typical range 0.5–1.0."
-    #     binding: lora_3.strength@315
-    #     required: false
-    #     default: 0.8
-    # Note: Power Lora Loader uses nested object inputs (lora_3.lora, lora_3.strength, lora_3.on);
-    # verify the binding slot format is supported by the harness runtime before enabling.
+  # Node 315 (Power Lora Loader (rgthree)) carries the lora slots. bindWorkflow()
+  # (video-harness/src/render/manifest.ts) KEEPS the workflow.json-authored slots verbatim —
+  # the always-on turbo (slot lora_turbolora, 0.6) and filter-bypass (slot lora_filterbypass,
+  # 1.0) LoRAs hardcoded in workflow.json need no port declaration and can never be wiped or
+  # overwritten by these ports. Each port below that resolves to a lora (caller selection,
+  # validated against the workspace lora catalog by WorkerAgent's dispatch-time resolution /
+  # lora_index tool) is APPENDED after the authored slots at the next free numeric slot key,
+  # in declaration order.
+  #
+  # Port names are selection keys, NOT physical slot keys (named authored keys don't join the
+  # numeric allocation, so appends happen to start at physical lora_1 here — incidental, don't
+  # rely on it). `default` is deliberately left UNSET on all five: a YAML default would
+  # auto-append that lora on every render even when the caller never mentions the port —
+  # surprising behavior for opt-in style/character slots. An unresolved port appends nothing.
+  loras:
+    - name: lora_1
+      kind: lora
+      description: "Optional dynamic LoRA slot 1 (style or character). Appended after the always-on turbo and filter-bypass LoRAs baked into the workflow. Inactive unless a caller supplies a lora selection for this port. A real example compatible with this workflow's krea2 base model: 'Photographic Realism' (civitai.com/models/2777831, base model: Krea 2, file BetterRealism_krea2_c1-st6000.safetensors, sha256 e445fe5efd52003b9ae211edf72aa7847ec744ee917f01d67a49c91eb20d24ce) — trigger word 'b3tt3rr34l1sm', pushes output toward DSLR-photo realism."
+      binding: "315"
+      strength: 0.8
+      required: false
+    - name: lora_2
+      kind: lora
+      description: "Optional dynamic LoRA slot 2 (style or character). Stacks on top of the baked-in LoRAs and lora_1. Inactive unless a caller supplies a lora selection for this port."
+      binding: "315"
+      strength: 0.8
+      required: false
+    - name: lora_3
+      kind: lora
+      description: "Optional dynamic LoRA slot 3 (style or character). Stacks on top of the baked-in LoRAs and lora_1–lora_2. Inactive unless a caller supplies a lora selection for this port."
+      binding: "315"
+      strength: 0.8
+      required: false
+    - name: lora_4
+      kind: lora
+      description: "Optional dynamic LoRA slot 4 (style or character). Stacks on top of the baked-in LoRAs and lora_1–lora_3. Inactive unless a caller supplies a lora selection for this port."
+      binding: "315"
+      strength: 0.8
+      required: false
   outputs:
     - name: output_image
       kind: image
@@ -116,15 +140,19 @@ context: >
   LoRA configuration:
   - Turbo LoRA (0.6) and filter bypass LoRA (1.0) are always active and required; do not disable
     either. The filter bypass is essential for correct prompt adherence even on SFW content.
-  - Additional style or NSFW LoRAs can be stacked in the two unused LoRA slots. NSFW LoRAs also
+  - Additional style or NSFW LoRAs can be stacked via the four dynamic LoRA ports (lora_1–lora_4). NSFW LoRAs also
     improve SFW prompt adherence and are useful even for non-explicit tasks.
   - Keep the filter bypass at 1.0 when stacking other LoRAs — going above 1.0 degrades image quality.
 
   Known failure modes and fixes:
-  - Model refuses the prompt or ignores key elements (even for SFW content): increase the filter
-    bypass LoRA strength to 2–6 temporarily. Strong facial expressions and emotionally intense
-    descriptions are the most common triggers. Return to 1.0 once the model is responding correctly,
-    as higher strengths degrade quality.
+  - Model refuses the prompt or ignores key elements (even for SFW content): strong facial
+    expressions and emotionally intense descriptions are the most common triggers — rephrase or
+    soften the wording first. The filter bypass strength is fixed at 1.0 inside the workflow
+    (its slot is baked into workflow.json and is NOT tunable per render via the lora ports).
+    Do NOT select krea2filterbypass.safetensors on a dynamic lora port to boost it — that stacks
+    a SECOND copy on top of the always-on slot and degrades quality unpredictably. A persistent
+    bypass boost (the upstream author suggests 2–6 temporarily) requires editing the slot
+    strength in the workflow bundle's workflow.json, not a render parameter.
   - Blurry or low-frequency output: confirm the VAE is Wan 2.1 FP32 (not the Qwen image VAE,
     which is blurrier by design). The Wan FP32 VAE is the recommended choice for sharpness.
   - Doubled resolution artifacts (noise, ringing): do not use the optional Wan Upscale2x VAE

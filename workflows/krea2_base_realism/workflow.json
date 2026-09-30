@@ -230,12 +230,12 @@
       "PowerLoraLoaderHeaderWidget": {
         "type": "PowerLoraLoaderHeaderWidget"
       },
-      "lora_1": {
+      "lora_turbolora": {
         "on": true,
         "lora": "krea2_turbo_lora_rank_64_bf16.safetensors",
         "strength": 0.6
       },
-      "lora_2": {
+      "lora_filterbypass": {
         "on": true,
         "lora": "krea2filterbypass.safetensors",
         "strength": 1

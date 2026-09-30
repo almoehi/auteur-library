@@ -1,0 +1,144 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Original workflow: image_flux2_klein_9b_kv_image_edit
+# https://comfy.org/workflows/image_flux2_klein_9b_kv_image_edit-546732126bf6/
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# (none — every node class in this workflow is a built-in ComfyUI core node;
+#  see report.md "Custom Nodes" section)
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: flux2_image_edit
+description: >
+  Edits an existing photo per a text instruction, pulling a specific element — a garment,
+  texture, or object — from a second reference image and applying it to the subject in the
+  first. Best for garment or outfit transfer, targeted object/background swaps, and other
+  instruction-driven photo edits that preserve the subject's pose and identity. Not suitable
+  for generating an image from scratch (no reference photo) or for video/animation output.
+url: workflow.json
+workflow_type: i2i
+model_family: flux2
+gpu_types: [l40s, a100, h100, blackwell]
+ports:
+  inputs:
+    - name: subject_image
+      kind: image
+      description: "The base photo to edit — the subject, pose, and background are preserved unless the prompt says otherwise."
+      binding: image@76
+      required: true
+    - name: garment_reference_image
+      kind: image
+      description: "Reference photo supplying the element (garment, object, or texture) called out in the prompt to be applied to the subject image."
+      binding: image@81
+      required: true
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "Edit instruction. Refer to the subject photo as 'Figure 1' and the reference photo as 'Figure 2'; state only what should change — unstated details (pose, background) are generally preserved."
+      binding: text@135
+      required: true
+    - name: steps
+      kind: int
+      description: "Denoising steps. This workflow uses a step-distilled FLUX.2 model — 4 steps is the tuned default; raising it adds compute cost with diminishing quality gains."
+      binding: steps@137
+      constraints: { min: 1 }
+      required: true
+      default: 4
+    - name: cfg
+      kind: float
+      description: "Classifier-free guidance scale (prompt adherence). Default 1.0 is tuned for this model; raise toward 2-3 if the edit isn't following the prompt closely enough, but pushing too high can distort the image."
+      binding: cfg@138
+      required: false
+      default: 1
+    - name: seed
+      kind: int
+      description: "Random noise seed. Set -1 or omit for a new random seed each run; reuse a seed to reproduce an edit or to compare instructions on the same noise."
+      binding: noise_seed@125
+      seed: true
+      required: false
+      default: -1
+  outputs:
+    - name: edited_image
+      kind: image
+      description: "The edited photo with the requested change applied."
+      node_id: "94"
+      role: primary
+context: >
+  Best for instruction-driven photo edits that combine two images — e.g. dressing the subject
+  of one photo in an item from another, swapping a background, or transplanting a specific
+  object or texture into a scene while keeping everything else about the subject photo intact.
+
+  Prompting — structure: aim for Subject + Action + Style/Context in that order — put the most
+  important part of the instruction first, since earlier words carry more weight than later
+  ones. A medium-length instruction (roughly 30-80 words: one to three sentences) is the sweet
+  spot for most single-change edits; short one-liners (10-30 words) work for simple swaps, and
+  longer instructions (80+ words) are only worth it when several distinct elements need
+  separate, explicit direction.
+
+  Prompting — referencing the two photos: name the two inputs explicitly as "Figure 1"
+  (subject_image) and "Figure 2" (garment_reference_image) — this convention is confirmed to
+  work well for this workflow. You can also describe each photo by what it shows instead of
+  numbering it (e.g. "the jacket in the second photo") if that reads more naturally; both
+  styles work, but stay consistent within one instruction rather than mixing them.
+
+  Prompting — say what you want, not what you don't: there is no separate "negative prompt" —
+  everything is one instruction. State the desired outcome positively rather than negating it:
+  write "keep the background unchanged" rather than "don't change the background", and "sharp
+  focus" rather than "no blur". This also applies to preserving pose, identity, or framing —
+  say explicitly what should stay the same rather than only naming what should change.
+
+  Prompting — scope: one coherent change per instruction is more reliable than stacking many
+  unrelated edits in a single prompt (e.g. garment + background + accessory all at once).
+  If a multi-part edit is really needed, list each part as its own short clause in priority
+  order rather than one long run-on sentence.
+
+  Parameter guidance:
+  - steps: 4 (default) is tuned for this step-distilled model; there is little benefit to
+    raising it.
+  - cfg: 1.0 (default) works well for most edits; raise slightly (2-3) only if the requested
+    change is being ignored or under-applied.
+  - seed: vary it to get alternative takes of the same edit (e.g. fold or fit of a garment);
+    keep it fixed while refining the instruction so only the wording changes the result.
+
+  Known issues:
+  - Edit not applied strongly enough: increase cfg slightly, or state the instruction more
+    explicitly (name the exact garment/object and where it goes) rather than adding more cfg.
+  - Unwanted background or pose drift: add an explicit "keep the background/posture the same"
+    clause to the prompt.
+  - Edit partially ignored when several changes are requested at once: split into the single
+    most important change, or list each change as its own short clause (see "scope" above).
+
+  Examples:
+  1. Garment transfer (from the workflow author's own guide, adapted): "Have the man in
+     Figure 1 put on the clothes from Figure 2, wear a hat, and carry a bag. Then, change the
+     background environment to an African savannah while keeping the man in the same
+     posture." Source: https://comfy.org/workflows/image_flux2_klein_9b_kv_image_edit-546732126bf6/
+  2. Object swap: "Replace the handbag held by the person in Figure 1 with the bag shown in
+     Figure 2, matching the original photo's lighting and shadow direction. Keep the person's
+     pose, outfit, and the background unchanged."
+  3. Background/environment replacement: "Keep the person in Figure 1 exactly as they are —
+     same pose, outfit, and expression — but replace the background behind them with the
+     location shown in Figure 2, matching its lighting on the subject."
+  4. Texture/style transfer: "Apply the knitted texture and warm color palette from the
+     sweater in Figure 2 to the sweater worn by the person in Figure 1. Keep the sweater's
+     shape and fit, the person's pose, and the rest of the photo unchanged."
+models:
+  - name: flux-2-klein-9b-kv-fp8
+    type: diffusion_models
+    files:
+      - url: https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-kv-fp8/resolve/main/flux-2-klein-9b-kv-fp8.safetensors
+        filename: flux-2-klein-9b-kv-fp8.safetensors
+        sha256: "33f7da5625a00798349a719742999d3c7dd20c1a7eda14663922c363640728f1"
+
+  - name: qwen_3_8b_fp8mixed
+    type: clip
+    files:
+      - url: https://huggingface.co/PatrickZane/qwen_3_8b_fp8mixed.safetensors/resolve/main/qwen_3_8b_fp8mixed.safetensors
+        filename: qwen_3_8b_fp8mixed.safetensors
+        sha256: "abad16806e0cbabc54e0325d6565847443fe396d5f0be38bb3cd3fe75a1201d6"
+
+  - name: flux2-vae
+    type: vae
+    files:
+      - url: https://huggingface.co/z7umer/flux2vae/resolve/main/flux2-vae.safetensors
+        filename: flux2-vae.safetensors
+        sha256: "868fe7b343cc8f3a19dbcfcafbc3d5f888802be3f89bd81b65b3621a066ce8f3"

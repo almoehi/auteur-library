@@ -1,0 +1,149 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Original workflow: Qwen Edit 2511 Multi-Edit (8-step)
+# https://civitai.com/models/1998998/qwen-image-edit-plus-2511-8steps-multi-edit
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# Comfyui-QwenEditUtils (QwenEditConfigPreparer, QwenEditAdaptiveLongestEdge,
+#   TextEncodeQwenImageEditPlusCustom_lrzjason) — loaded dynamically via the
+#   customNodes stanza below; no nodes.lock entry needed.
+# GGUF UNet loading uses city96/ComfyUI-GGUF's UnetLoaderGGUF, already pinned in
+#   nodes.lock — the source workflow's calcuis/gguf `LoaderGGUF` node was swapped
+#   for it (see report.md): city96 already lists `qwen_image` in its supported
+#   IMG_ARCH_LIST and the UNet-loading code path is functionally identical
+#   between the two, so no new custom node dependency was needed.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: qwen_image_multi_edit
+description: >
+  Combines up to three reference images into a single edited image, guided entirely by a
+  text prompt that refers to each reference by position ("Picture 1", "Picture 2", "Picture 3").
+  Best for compositing or transferring an attribute from one photo onto another — moving an outfit,
+  a background, an object, or a style from one reference image onto the subject of another — without
+  manual masking. Not suitable for pure text-to-image generation, single-image editing, or video output.
+url: workflow.json
+workflow_type: i2i
+model_family: qwenimage
+gpu_types: [rtx3090, rtx4090, l40s]
+ports:
+  inputs:
+    - name: reference_image_1
+      kind: image
+      description: "Main/anchor reference image, referred to as \"Picture 1\" in the prompt. This image's composition and pose are preserved by default — edits described in the prompt are applied onto it."
+      binding: image@2
+      required: true
+    - name: reference_image_2
+      kind: image
+      description: "Second reference image, referred to as \"Picture 2\" in the prompt — the source of whatever attribute (clothing, object, style, etc.) the prompt says to transfer onto Picture 1."
+      binding: image@1
+      required: true
+    - name: reference_image_3
+      kind: image
+      description: "Third reference image, referred to as \"Picture 3\" in the prompt — typically used as a background or scene reference, but any attribute the prompt names can be drawn from it."
+      binding: image@24
+      required: true
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "Instruction describing how to combine the three reference images. Refer to each input image by its position — \"Picture 1\", \"Picture 2\", \"Picture 3\" — matching reference_image_1/2/3 respectively. Example: \"Replace the clothes of the woman from Picture 1 with the clothes in Picture 2, and replace the background for the scene in Picture 3.\""
+      binding: prompt@10
+      required: true
+      default: "Replace the clothes of the woman from Picture 1 with the clothes in Picture 2, and replace the background for the scene in Picture 3"
+    - name: prompt_negative
+      kind: string
+      description: "Negative prompt describing visual qualities and artifacts to avoid in the edited output."
+      binding: text@21
+      required: false
+      default: "lowres, worst quality, CGI, anime, cartoon, digital art, distorted anatomy, malformed limbs, unrealistic proportions, extra limbs, missing limbs, bad face, overprocessed skin, pixelated, compression artifact, wax figure appearance, excessive smoothing, oversharpened"
+    - name: steps
+      kind: int
+      description: "Denoising steps. This workflow is tuned for an 8-step distilled sampling schedule — 8 is the recommended value; going far below or above it degrades quality."
+      binding: steps@17
+      constraints: { min: 1, max: 20 }
+      required: true
+      default: 8
+    - name: cfg
+      kind: float
+      description: "Classifier-free guidance scale. This workflow's distilled sampling schedule is tuned for cfg=1 (no extra guidance) — raising this significantly slows convergence and can produce artifacts at only 8 steps."
+      binding: cfg@17
+      constraints: { min: 0.5, max: 3 }
+      required: false
+      default: 1
+    - name: seed
+      kind: int
+      description: "Random seed. Set -1 or omit for a random seed each run."
+      binding: seed@17
+      seed: true
+      required: false
+      default: -1
+  outputs:
+    - name: edited_image
+      kind: image
+      description: "Final edited image combining the three reference images per the prompt instructions."
+      node_id: "30"
+      role: primary
+customNodes:
+  - name: Comfyui-QwenEditUtils
+    repository: https://github.com/lrzjason/Comfyui-QwenEditUtils.git
+    commitHash: cdd4d028c6491d27a40092d7795158668cec9189
+
+context: >
+  Best for compositing edits across multiple photos in one pass: transplanting an outfit, prop,
+  background, or style from one reference image onto the subject of another, without manual
+  masking or multi-step inpainting.
+
+  Prompting: the prompt is the only control over how the three reference images combine — describe
+  the edit in plain English, referring to each input by its position: "Picture 1" = reference_image_1
+  (the main/anchor image whose subject and pose are preserved by default), "Picture 2" =
+  reference_image_2, "Picture 3" = reference_image_3. Name the specific attribute to transfer from
+  each supporting picture (e.g. "the clothes in Picture 2", "the background in Picture 3") — vague
+  prompts like "combine these images" produce inconsistent results. All three reference images are
+  required even if a prompt logically only needs two; feed a neutral/duplicate image for any unused
+  slot.
+
+  Example prompt (from the workflow author):
+  "Replace the clothes of the woman from Picture 1 with the clothes in Picture 2, and replace the
+  background for the scene in Picture 3."
+
+  Parameter guidance:
+  - steps: this workflow is tuned around an 8-step distilled sampling schedule. Keep steps at 8
+    unless deliberately experimenting — large deviations degrade output quality.
+  - cfg: the distilled schedule is tuned for cfg=1. Raising it does not reliably improve prompt
+    adherence at only 8 steps and can introduce artifacts.
+  - seed: vary this if the edit looks like a poor blend of the source images, or if fine details
+    (faces, hands) come out malformed.
+
+  Known issues:
+  - Weak or ignored edit: make the instruction explicit and reference-specific ("the clothes in
+    Picture 2", not "the second image"). The model follows literal positional references much more
+    reliably than pronouns or vague descriptions.
+  - Malformed faces/hands: try a different seed; this is inherent to the distilled 8-step model and
+    not tunable via cfg or steps alone.
+
+models:
+  - name: qwen_image_edit_2511_q4_k_s
+    type: unet
+    files:
+      - url: https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/main/qwen-image-edit-2511-Q4_K_S.gguf
+        filename: qwen-image-edit-2511-Q4_K_S.gguf
+        sha256: df952ef0d2b46463bd95d9afbb78e045ec5412316f453a7ad5a3d7bcbb111b72
+
+  - name: qwen_image_vae
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors
+        filename: qwen_image_vae.safetensors
+        sha256: a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f
+
+  - name: qwen_2.5_vl_7b_fp8_scaled
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors
+        filename: qwen_2.5_vl_7b_fp8_scaled.safetensors
+        sha256: cb5636d852a0ea6a9075ab1bef496c0db7aef13c02350571e388aea959c5c0b4
+
+  - name: qwen_image_edit_2511_lightning_8steps
+    type: lora
+    files:
+      - url: https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/main/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors
+        filename: Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors
+        sha256: a9e81a58a78f260f67b337a6f615e8fa4cd3bc79847c77b7d61a581b789b1ba8
