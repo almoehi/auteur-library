@@ -58,3 +58,17 @@ https://github.com/rgthree/rgthree-comfy.git 6b76ee6f2c5a007710b5a16f97c94330d6e
 8. Write `description` in workflow.yaml
 9. Write `context` in workflow.yaml (GPU notes, download size, etc.)
 10. Run `--validate workflows/<name>` to confirm all port bindings are correct
+
+## Update — dynamic LoRA ports (#229, design studio)
+
+Promoted from the monorepo's `release/test/workflows/krea2` (same graph, same models):
+
+- `workflow.json`: the two always-on Power Lora Loader slots on node 315 are renamed from
+  `lora_1`/`lora_2` to named keys `lora_turbolora` (0.6) and `lora_filterbypass` (1.0), so they
+  never collide with appended dynamic slots.
+- `workflow.yaml`: four optional `ports.loras` (`lora_1`–`lora_4`, strength 0.8, no `default`),
+  appended after the authored slots only when a caller selects a LoRA. The name
+  `krea2_base_realism` is unchanged and every new port is optional, so existing references and
+  calls keep working; no separate `krea2` bundle was added.
+- `e2e-test.ts` (new): the canonical bundle test, asserting the four LoRA ports and a render with
+  a `lora_1` selection.
