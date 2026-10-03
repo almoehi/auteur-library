@@ -37,7 +37,7 @@ what is missing.
 1. `read_artifact(artifactId="<artifactId>")` — confirm the file exists and is a video; note its
    file record (render provenance: the prompt and workflow that made it, when recorded).
 2. Measure the REAL clip with `get_video_info` (duration, fps, frame count, resolution, audio) on
-   the artifact URL (`get_artifact_url`). Never assume the duration the clip was requested with —
+   the artifact reference (`path_or_url="artifact://<artifactId>/<fileKey>"`; never a copied URL). Never assume the duration the clip was requested with —
    generated clips routinely differ from their target.
 3. Choose the **start offset**: the point inside the **last 1–2 seconds** of the measured clip
    where the continuation should resume. Read the chosen workflow's instructions (Phase 4) for its
