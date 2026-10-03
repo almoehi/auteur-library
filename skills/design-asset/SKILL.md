@@ -71,7 +71,8 @@ Contract reference: `release/DESIGN_GUIDE.md`.
 
 ## Phase 3 — Render the drafts
 
-For n = 1 … `initialDrafts`, one call each, in order, waiting for each result:
+Issue ALL `initialDrafts` calls in ONE response — one `wf_*` call per draft, n = 1 … `initialDrafts`
+(they render in parallel; do not wait for one before issuing the next):
 
 ```
 wf_<workflow>(prompt_positive="<prompt>", …,
@@ -81,14 +82,16 @@ wf_<workflow>(prompt_positive="<prompt>", …,
 - Same prompt for every draft; the random seed gives the variety. If the person's attributes
   suggest clear alternatives (e.g. "short or long hair"), you may vary exactly that phrase
   across drafts — say so in the summary.
-- On a render error: re-read the workflow instructions, fix the call, retry that draft once;
-  if it fails again, continue with the next draft and report it.
+- A failed draft fails only itself — the other drafts' results still arrive. For each failed
+  draft: re-read the workflow instructions, fix the call, retry that draft once (same file name);
+  if it fails again, leave it — the studio shows it as a failed take with a Retry — and report it.
 
 ## Phase 4 — Hand over
 
 Audit before completing:
 
-- [ ] every `take_draft_<n>.<ext>` exists in the artifact (re-read it) — n = 1 … initialDrafts
+- [ ] every `take_draft_<n>.<ext>` exists in the artifact (re-read it) — n = 1 … initialDrafts —
+      except drafts that failed twice (name them in the summary)
 - [ ] no other file was written; `design.json` untouched
 - [ ] every file came from a `wf_*` render (no sandbox-made images)
 
