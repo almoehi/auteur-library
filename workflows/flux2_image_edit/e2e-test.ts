@@ -222,6 +222,8 @@ try {
   check('manifest id matches', manifest.id === WF_NAME, manifest.id ?? '(null)');
   check('has subject_image input', manifest.inputs?.some((i: any) => i.name === "subject_image"), JSON.stringify(manifest.inputs?.map((i: any) => i.name)));
   check('has garment_reference_image input', manifest.inputs?.some((i: any) => i.name === "garment_reference_image"), JSON.stringify(manifest.inputs?.map((i: any) => i.name)));
+  check('garment_reference_image is optional', manifest.inputs?.find((i: any) => i.name === "garment_reference_image")?.required === false, JSON.stringify(manifest.inputs?.find((i: any) => i.name === "garment_reference_image")));
+  check('subject_image is required', manifest.inputs?.find((i: any) => i.name === "subject_image")?.required === true, JSON.stringify(manifest.inputs?.find((i: any) => i.name === "subject_image")));
   check('has primary output', manifest.outputs?.some((o: any) => o.role === 'primary'), JSON.stringify(manifest.outputs));
   const seedParam = manifest.params?.find((p: any) => p.name === 'seed');
   check('has numeric seed param (seed: true, bound to RandomNoise.noise_seed)', seedParam?.seed === true && seedParam?.kind === 'int', JSON.stringify(seedParam));
@@ -347,6 +349,36 @@ try {
     }
   } else {
     check('outputs present', (result.outputs?.length ?? 0) > 0, JSON.stringify(result.outputs));
+  }
+
+  // 7. Single-image scenario — only the required image(s) + an instruction ────
+  // Optional reference ports are omitted: bindWorkflow() strips the absent loader's edge, so the
+  // ImageStitch in front of each optional slot falls back to its neutral gray EmptyImage (see
+  // workflow.yaml `context`). Must render without any reference image and mention no absent figure.
+  console.log('\n── 7. Single-image scenario (subject_image only) ─────────────────────');
+  const singleRenderId = await agent.run(
+    JSON.stringify(RENDER_PROFILE),
+    JSON.stringify({
+    "subject_image": subjectImageUrl
+  }),
+    JSON.stringify({
+    "prompt_positive": "Change the clothing of the man in Figure 1 to a navy blazer over a white shirt. Keep his pose, face and the background unchanged.",
+    "seed": 720512742,
+    "steps": 4
+  }),
+    undefined,  // promiseId
+    undefined,  // promiseTimeoutMs
+    undefined,  // loraJson
+  );
+  check('single-image renderId non-empty', singleRenderId.length > 0, singleRenderId);
+  const singleResult = await pollUntilDone(agent, singleRenderId);
+  check('single-image render succeeded', singleResult.phase === 'succeeded', `phase=${singleResult.phase}`);
+  check('single-image returned the declared output', singleResult.outputs?.length === EXPECTED_OUTPUT_COUNT, `got ${singleResult.outputs?.length}`);
+  for (const out of singleResult.outputs ?? []) {
+    const r = await fetch(out.url);
+    check('single-image output accessible', r.ok, `HTTP ${r.status}`);
+    const raw = new Uint8Array(await r.arrayBuffer());
+    check('single-image output is image', _isPng(raw) || _isJpeg(raw), `magic=${_hexHead(raw)}`);
   }
 
   console.log(`\n=== ${failures.length === 0 ? 'ALL CHECKS PASSED ✓' : failures.length + ' CHECK(S) FAILED ✗'} ===`);

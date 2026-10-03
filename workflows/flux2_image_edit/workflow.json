@@ -229,7 +229,7 @@
       "megapixels": 1,
       "resolution_steps": 1,
       "image": [
-        "81",
+        "901",
         0
       ]
     },
@@ -350,6 +350,38 @@
     "class_type": "ReferenceLatent",
     "_meta": {
       "title": "Set Reference Latent"
+    }
+  },
+  "900": {
+    "inputs": {
+      "width": 112,
+      "height": 112,
+      "batch_size": 1,
+      "color": 8421504
+    },
+    "class_type": "EmptyImage",
+    "_meta": {
+      "title": "Neutral gray fallback (loader 81 absent)"
+    }
+  },
+  "901": {
+    "inputs": {
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 0,
+      "spacing_color": "black",
+      "image1": [
+        "900",
+        0
+      ],
+      "image2": [
+        "81",
+        0
+      ]
+    },
+    "class_type": "ImageStitch",
+    "_meta": {
+      "title": "Optional image 81: falls back to gray when absent"
     }
   }
 }

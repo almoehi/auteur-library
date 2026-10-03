@@ -9,11 +9,11 @@
 
 name: flux2_image_edit
 description: >
-  Edits an existing photo per a text instruction, pulling a specific element — a garment,
-  texture, or object — from a second reference image and applying it to the subject in the
-  first. Best for garment or outfit transfer, targeted object/background swaps, and other
-  instruction-driven photo edits that preserve the subject's pose and identity. Not suitable
-  for generating an image from scratch (no reference photo) or for video/animation output.
+  Edits an existing photo by text instruction while preserving the subject's pose and
+  identity — a single-image edit by default (change clothing, background, objects, style).
+  Optionally takes a second reference image supplying a specific element — a garment,
+  texture, or object — to apply to the subject in the first, e.g. outfit transfer. Not suitable
+  for generating an image from scratch (no photo to edit) or for video/animation output.
 url: workflow.json
 workflow_type: i2i
 model_family: flux2
@@ -27,13 +27,13 @@ ports:
       required: true
     - name: garment_reference_image
       kind: image
-      description: "Reference photo supplying the element (garment, object, or texture) called out in the prompt to be applied to the subject image."
+      description: "Optional reference photo supplying the element (garment, object, or texture) called out in the prompt to be applied to the subject image, referred to as 'Figure 2'. Omit for a plain instruction edit of the subject image; when omitted, a neutral gray image stands in internally, so do not mention 'Figure 2' in the prompt."
       binding: image@81
-      required: true
+      required: false
   params:
     - name: prompt_positive
       kind: string
-      description: "Edit instruction. Refer to the subject photo as 'Figure 1' and the reference photo as 'Figure 2'; state only what should change — unstated details (pose, background) are generally preserved."
+      description: "Edit instruction. Refer to the subject photo as 'Figure 1'; when garment_reference_image is supplied also refer to it as 'Figure 2' (omit any mention of Figure 2 otherwise). State only what should change — unstated details (pose, background) are generally preserved."
       binding: text@135
       required: true
     - name: steps
@@ -63,9 +63,16 @@ ports:
       node_id: "94"
       role: primary
 context: >
-  Best for instruction-driven photo edits that combine two images — e.g. dressing the subject
-  of one photo in an item from another, swapping a background, or transplanting a specific
-  object or texture into a scene while keeping everything else about the subject photo intact.
+  Edits the subject image (subject_image, "Figure 1") by text instruction, keeping everything
+  the instruction does not mention intact. Two modes:
+  - Single-image edit (garment_reference_image omitted): change clothing, background, objects,
+    lighting or style of the subject photo, e.g. "Change the man's jacket in Figure 1 to a
+    navy blazer. Keep his pose, face and the background unchanged." Do NOT mention Figure 2
+    in the prompt — an internal neutral gray image occupies the reference slot and carries no
+    content.
+  - Reference edit (garment_reference_image supplied, "Figure 2"): combine two images — e.g.
+    dressing the subject of one photo in an item from another, swapping a background, or
+    transplanting a specific object or texture into a scene.
 
   Prompting — structure: aim for Subject + Action + Style/Context in that order — put the most
   important part of the instruction first, since earlier words carry more weight than later
@@ -74,9 +81,9 @@ context: >
   longer instructions (80+ words) are only worth it when several distinct elements need
   separate, explicit direction.
 
-  Prompting — referencing the two photos: name the two inputs explicitly as "Figure 1"
-  (subject_image) and "Figure 2" (garment_reference_image) — this convention is confirmed to
-  work well for this workflow. You can also describe each photo by what it shows instead of
+  Prompting — referencing the photos: name the inputs explicitly as "Figure 1"
+  (subject_image) and, when supplied, "Figure 2" (garment_reference_image) — this convention
+  is confirmed to work well for this workflow. You can also describe each photo by what it shows instead of
   numbering it (e.g. "the jacket in the second photo") if that reads more naturally; both
   styles work, but stay consistent within one instruction rather than mixing them.
 

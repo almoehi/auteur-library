@@ -223,6 +223,8 @@ try {
   check('has reference_image_1 input', manifest.inputs?.some((i: any) => i.name === "reference_image_1"), JSON.stringify(manifest.inputs?.map((i: any) => i.name)));
   check('has reference_image_2 input', manifest.inputs?.some((i: any) => i.name === "reference_image_2"), JSON.stringify(manifest.inputs?.map((i: any) => i.name)));
   check('has reference_image_3 input', manifest.inputs?.some((i: any) => i.name === "reference_image_3"), JSON.stringify(manifest.inputs?.map((i: any) => i.name)));
+  for (const [port, required] of [["reference_image_1", true], ["reference_image_2", false], ["reference_image_3", false]] as const)
+    check(`${port} required=${required}`, manifest.inputs?.find((i: any) => i.name === port)?.required === required, JSON.stringify(manifest.inputs?.find((i: any) => i.name === port)));
   check('has primary output', manifest.outputs?.some((o: any) => o.role === 'primary'), JSON.stringify(manifest.outputs));
 
   // 1b. Pre-flight: verify model URLs from YAML before spending GPU budget ────
@@ -350,6 +352,38 @@ try {
     }
   } else {
     check('outputs present', (result.outputs?.length ?? 0) > 0, JSON.stringify(result.outputs));
+  }
+
+  // 7. Single-image scenario — only the required image(s) + an instruction ────
+  // Optional reference ports are omitted: bindWorkflow() strips the absent loader's edge, so the
+  // ImageStitch in front of each optional slot falls back to its neutral gray EmptyImage (see
+  // workflow.yaml `context`). Must render without any reference image and mention no absent figure.
+  console.log('\n── 7. Single-image scenario (reference_image_1 only) ─────────────────────');
+  const singleRenderId = await agent.run(
+    JSON.stringify(RENDER_PROFILE),
+    JSON.stringify({
+    "reference_image_1": reference_image_1Url
+  }),
+    JSON.stringify({
+    "prompt_positive": "Replace the clothing of the woman in Picture 1 with a red raincoat. Keep her face, pose and the background unchanged.",
+    "seed": 20252070,
+    "steps": 8,
+    "cfg": 1,
+    "prompt_negative": prompt_negativeText
+  }),
+    undefined,  // promiseId
+    undefined,  // promiseTimeoutMs
+    undefined,  // loraJson
+  );
+  check('single-image renderId non-empty', singleRenderId.length > 0, singleRenderId);
+  const singleResult = await pollUntilDone(agent, singleRenderId);
+  check('single-image render succeeded', singleResult.phase === 'succeeded', `phase=${singleResult.phase}`);
+  check('single-image returned the declared output', singleResult.outputs?.length === EXPECTED_OUTPUT_COUNT, `got ${singleResult.outputs?.length}`);
+  for (const out of singleResult.outputs ?? []) {
+    const r = await fetch(out.url);
+    check('single-image output accessible', r.ok, `HTTP ${r.status}`);
+    const raw = new Uint8Array(await r.arrayBuffer());
+    check('single-image output is image', _isPng(raw) || _isJpeg(raw), `magic=${_hexHead(raw)}`);
   }
 
   console.log(`\n=== ${failures.length === 0 ? 'ALL CHECKS PASSED ✓' : failures.length + ' CHECK(S) FAILED ✗'} ===`);

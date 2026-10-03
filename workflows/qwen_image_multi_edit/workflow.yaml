@@ -15,11 +15,12 @@
 
 name: qwen_image_multi_edit
 description: >
-  Combines up to three reference images into a single edited image, guided entirely by a
-  text prompt that refers to each reference by position ("Picture 1", "Picture 2", "Picture 3").
-  Best for compositing or transferring an attribute from one photo onto another — moving an outfit,
-  a background, an object, or a style from one reference image onto the subject of another — without
-  manual masking. Not suitable for pure text-to-image generation, single-image editing, or video output.
+  Edits a main image (Picture 1) by text instruction, optionally combining up to two further
+  reference images into one result; each image is referred to by position ("Picture 1",
+  "Picture 2", "Picture 3"). Works as a plain single-image instruction edit (only Picture 1), and
+  for compositing or transferring an attribute from one photo onto another — moving an outfit,
+  a background, an object, or a style from a reference image onto the subject of the main
+  image — without manual masking. Not suitable for pure text-to-image generation or video output.
 url: workflow.json
 workflow_type: i2i
 model_family: qwenimage
@@ -33,21 +34,21 @@ ports:
       required: true
     - name: reference_image_2
       kind: image
-      description: "Second reference image, referred to as \"Picture 2\" in the prompt — the source of whatever attribute (clothing, object, style, etc.) the prompt says to transfer onto Picture 1."
+      description: "Optional second reference image, referred to as \"Picture 2\" in the prompt — the source of whatever attribute (clothing, object, style, etc.) the prompt says to transfer onto Picture 1. Omit for a single-image edit; when omitted, a neutral gray image stands in internally, so do not mention Picture 2 in the prompt."
       binding: image@1
-      required: true
+      required: false
     - name: reference_image_3
       kind: image
-      description: "Third reference image, referred to as \"Picture 3\" in the prompt — typically used as a background or scene reference, but any attribute the prompt names can be drawn from it."
+      description: "Optional third reference image, referred to as \"Picture 3\" in the prompt — typically used as a background or scene reference, but any attribute the prompt names can be drawn from it. Omit when not needed; when omitted, a neutral gray image stands in internally, so do not mention Picture 3 in the prompt."
       binding: image@24
-      required: true
+      required: false
   params:
     - name: prompt_positive
       kind: string
-      description: "Instruction describing how to combine the three reference images. Refer to each input image by its position — \"Picture 1\", \"Picture 2\", \"Picture 3\" — matching reference_image_1/2/3 respectively. Example: \"Replace the clothes of the woman from Picture 1 with the clothes in Picture 2, and replace the background for the scene in Picture 3.\""
+      description: "Edit instruction. Refer to each supplied input image by its position — \"Picture 1\", \"Picture 2\", \"Picture 3\" — matching reference_image_1/2/3; never mention a Picture whose image was not supplied. Single-image example: \"Replace the clothing of the woman in Picture 1 with a red raincoat. Keep her face, pose and the background unchanged.\" Three-image example: \"Replace the clothes of the woman from Picture 1 with the clothes in Picture 2, and replace the background for the scene in Picture 3.\""
       binding: prompt@10
       required: true
-      default: "Replace the clothes of the woman from Picture 1 with the clothes in Picture 2, and replace the background for the scene in Picture 3"
+      default: "Replace the clothing of the woman in Picture 1 with a red raincoat. Keep her face, pose and the background unchanged."
     - name: prompt_negative
       kind: string
       description: "Negative prompt describing visual qualities and artifacts to avoid in the edited output."
@@ -87,20 +88,28 @@ customNodes:
     commitHash: cdd4d028c6491d27a40092d7795158668cec9189
 
 context: >
-  Best for compositing edits across multiple photos in one pass: transplanting an outfit, prop,
-  background, or style from one reference image onto the subject of another, without manual
-  masking or multi-step inpainting.
+  Best for instruction edits of one image and for compositing edits across up to three photos in
+  one pass: transplanting an outfit, prop, background, or style from a reference image onto the
+  subject of the main image, without manual masking or multi-step inpainting.
 
-  Prompting: the prompt is the only control over how the three reference images combine — describe
-  the edit in plain English, referring to each input by its position: "Picture 1" = reference_image_1
+  Modes: only reference_image_1 is required. Supply reference_image_2 and/or reference_image_3 only
+  when the edit draws on them. An omitted reference is replaced internally by a neutral gray
+  image that carries no content, so the numbering of the others stays stable — but NEVER mention
+  a Picture whose image was not supplied in the prompt.
+
+  Prompting: the prompt is the only control over how the images combine — describe the edit in
+  plain English, referring to each supplied input by its position: "Picture 1" = reference_image_1
   (the main/anchor image whose subject and pose are preserved by default), "Picture 2" =
   reference_image_2, "Picture 3" = reference_image_3. Name the specific attribute to transfer from
   each supporting picture (e.g. "the clothes in Picture 2", "the background in Picture 3") — vague
-  prompts like "combine these images" produce inconsistent results. All three reference images are
-  required even if a prompt logically only needs two; feed a neutral/duplicate image for any unused
-  slot.
+  prompts like "combine these images" produce inconsistent results. For a single-image edit, state
+  the change and what must stay the same.
 
-  Example prompt (from the workflow author):
+  Single-image example prompt:
+  "Replace the clothing of the woman in Picture 1 with a red raincoat. Keep her face, pose and the
+  background unchanged."
+
+  Three-image example prompt (from the workflow author):
   "Replace the clothes of the woman from Picture 1 with the clothes in Picture 2, and replace the
   background for the scene in Picture 3."
 
