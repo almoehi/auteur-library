@@ -16,7 +16,7 @@
     "inputs": {
       "max_size": 1024,
       "image": [
-        "1",
+        "901",
         0
       ]
     },
@@ -29,7 +29,7 @@
     "inputs": {
       "max_size": 1024,
       "image": [
-        "24",
+        "903",
         0
       ]
     },
@@ -133,7 +133,7 @@
       "vl_crop": "center",
       "vl_upscale": "lanczos",
       "image": [
-        "1",
+        "901",
         0
       ],
       "configs": [
@@ -152,7 +152,7 @@
   },
   "10": {
     "inputs": {
-      "prompt": "Replace the clothes of the woman from Picture 1 with the clothes in Picture 2, and replace the background for the scene in Picture 3",
+      "prompt": "Replace the clothing of the woman in Picture 1 with a red raincoat. Keep her face, pose and the background unchanged.",
       "return_full_refs_cond": true,
       "instruction": "Describe the key features of the input image (color, shape, size, texture, objects, background), then explain how the user's text instruction should alter or modify the image. Generate a new image that meets the user's requirements while maintaining consistency with the original input where appropriate.",
       "clip": [
@@ -185,7 +185,7 @@
       "vl_crop": "center",
       "vl_upscale": "lanczos",
       "image": [
-        "24",
+        "903",
         0
       ],
       "configs": [
@@ -311,6 +311,70 @@
     "class_type": "SaveImage",
     "_meta": {
       "title": "Save Image"
+    }
+  },
+  "900": {
+    "inputs": {
+      "width": 8,
+      "height": 8,
+      "batch_size": 1,
+      "color": 8421504
+    },
+    "class_type": "EmptyImage",
+    "_meta": {
+      "title": "Neutral gray fallback (loader 1 absent)"
+    }
+  },
+  "901": {
+    "inputs": {
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 0,
+      "spacing_color": "black",
+      "image1": [
+        "900",
+        0
+      ],
+      "image2": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "ImageStitch",
+    "_meta": {
+      "title": "Optional image 1: falls back to gray when absent"
+    }
+  },
+  "902": {
+    "inputs": {
+      "width": 8,
+      "height": 8,
+      "batch_size": 1,
+      "color": 8421504
+    },
+    "class_type": "EmptyImage",
+    "_meta": {
+      "title": "Neutral gray fallback (loader 24 absent)"
+    }
+  },
+  "903": {
+    "inputs": {
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 0,
+      "spacing_color": "black",
+      "image1": [
+        "902",
+        0
+      ],
+      "image2": [
+        "24",
+        0
+      ]
+    },
+    "class_type": "ImageStitch",
+    "_meta": {
+      "title": "Optional image 24: falls back to gray when absent"
     }
   }
 }
