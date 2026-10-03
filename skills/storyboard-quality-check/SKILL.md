@@ -27,8 +27,8 @@ agentType: worker
 2. Read `scene{X}_shot_prompts` artifact (the pre-written T2I prompts — to compare against)
 3. Read `visual_bible` artifact (character and location reference anchors)
 
-For each image file in the storyboard artifact: use `get_artifact_url` + `sandbox_fetch`
-to download a local copy to `/tmp/qc_scene{X}/`.
+For each image file in the storyboard artifact: use `sandbox_fetch(url="artifact://<artifactId>/<fileKey>", ...)`
+(never a copied URL) to download a local copy to `/tmp/qc_scene{X}/`.
 
 ---
 

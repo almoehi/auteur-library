@@ -79,7 +79,7 @@ A single `wf_xxx` call may produce **one or more output files** as a batch. Your
 
 When a `wf_xxx` call needs an existing workspace artifact as an input (e.g. a reference image or source clip), pass `artifact://<artifactId>/<fileKey>` directly as the tool's input-port argument — e.g. `artifact://832c9090-d97e-4e9f-89ce-4a1e61c759ab/scene_3_backdrop.png`. Use the artifact UUID from `artifact_index` and the exact filename from the task description; do NOT call `get_artifact_url` for this. The real download URL is resolved for you automatically. Do NOT download the artifact into the sandbox first — sandbox download is only for local command processing (ffmpeg/python), not for workflow-tool inputs.
 
-`get_artifact_url` still exists for other uses (e.g. downloading a file into the sandbox for `ffmpeg`/`python` processing) — just don't use it, or paste its returned URL, for `wf_xxx` input ports.
+Every tool that takes a file URL (`describe_image`, `sandbox_fetch`, `get_video_info`, `wf_xxx` input ports) accepts the same `artifact://<artifactId>/<fileKey>` reference, resolved to a fresh download URL at call time. **Never copy, retype or shorten a URL** — a single dropped character in a signed URL gives a 403 that looks like an expiry. `get_artifact_url` returns a short `url` plus that `ref`; use the `ref` with tools, and paste only the short `url` into shell commands (`curl -L`). Plain http(s) URLs are for external sources only.
 
 ## Positive example — 3 shots, one file each
 

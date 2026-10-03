@@ -106,7 +106,9 @@ The person may ask for changes in the design chat. For each request:
 1. `read_artifact` again — takes may have been added, discarded or re-ordered; read
    `design.json` for the current `primaryTakeId`, takes, LoRAs and linked designs.
 2. Pick the source image: the take the person names, else the primary (the file of
-   `primaryTakeId`), else the newest take. Pass it as `artifact://<artifact id>/<file name>`.
+   `primaryTakeId`), else the newest take. Pass it as `artifact://<artifact id>/<file name>`. Use that same
+   reference for `describe_image` and `sandbox_fetch` — never copy or retype a URL (a signed URL with
+   one dropped character fails with 403).
 3. Pick the workflow:
    - a change to an existing image ("older", "red jacket", "other background") → an
      **image-edit** (`i2i`) `wf_*` tool; write the instruction with `draft_prompt` for that

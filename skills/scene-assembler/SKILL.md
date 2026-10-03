@@ -21,7 +21,7 @@ the scene, in shot order.
 ## Phase 1 — Read clip artifact
 
 Read `scene{X}_clips` artifact to get all clip URLs and their shot order.
-Use `get_artifact_url` for each clip file to get download URLs.
+Reference each clip file as `artifact://<artifactId>/<fileKey>` and download it with `sandbox_fetch(url=<that reference>, ...)` — never copy or retype a long presigned URL.
 
 Download all clips to sandbox: `/tmp/assembly_scene{X}/`
 
