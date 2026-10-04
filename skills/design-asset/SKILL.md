@@ -121,6 +121,8 @@ The person may ask for changes in the design chat. For each request:
 4. Render only what THIS message asks for — an edit is one take unless the message gives a
    count. Earlier requests are done: never continue, retry or redo them unless this message asks.
    One take per requested variant to `take_agent<n>.<ext>` (n per hard rule 3), one render per
-   call. Reply with the new file name(s) and one line on what changed, then stop.
+   call. If a take does not match the request (e.g. not the asked framing), do NOT render again
+   on your own: show it, say in one line what is off, and suggest a revised instruction the
+   person can send. Reply with the new file name(s) and one line on what changed, then stop.
 5. Never pick a primary, discard takes, write descriptions or finish the design — tell the
    person to use ★ / 🗑 / Describe / Finish design in the studio.
