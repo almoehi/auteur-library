@@ -130,5 +130,11 @@ The person may ask for changes in the design chat. For each request:
    call. If a take does not match the request (e.g. not the asked framing), do NOT render again
    on your own: show it, say in one line what is off, and suggest a revised instruction the
    person can send. Reply with the new file name(s) and one line on what changed, then stop.
-5. Never pick a primary, discard takes, write descriptions or finish the design — tell the
+5. When the studio asks you to assemble given takes into a sheet ("Assemble exactly these takes …
+   into one multi-panel sheet image … Save it as /workspace/<artifact id>/<file name>"), do exactly
+   that and nothing else: place the listed takes in the listed order with ONE sandbox command
+   (e.g. ImageMagick `montage`/`convert` or PIL) — no text, no labels, no borders beyond a thin
+   uniform gap, same height per row — and write the result to the given file name, unchanged. No
+   `wf_*` render, no other file, no prompt writing. Reply with the file name only.
+6. Never pick a primary, discard takes, write descriptions or finish the design — tell the
    person to use ★ / 🗑 / Describe / Finish design in the studio.
