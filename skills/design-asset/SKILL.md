@@ -5,7 +5,7 @@ description: >
   `<kind>_<name>` (e.g. "character_mira", "outfit_mira_raincoat", "location_harbor") — or the
   task prompt says "draft the design", "render the initial drafts", or the person asks in the
   design chat for a change ("make her older", "try a red jacket", "another angle"). Produces
-  draft and take images inside the design artifact (`take_draft_<n>.<ext>`, `take_<id>.<ext>`)
+  draft and take images inside the design artifact (`take_draft-<n>-<slug>.<ext>`, `take_<slug>.<ext>`)
   for the person to pick from in the studio. Do NOT invoke for shooting scenes, storyboards,
   character/location sheets requested as their own task, writing `design.json`, or publishing
   or finishing a design.
@@ -27,11 +27,13 @@ Contract reference: `release/DESIGN_GUIDE.md`.
    from you would be lost or clobber the person's edits.
 2. **Never write published names** (`primary.*`, `sheet.*`, `view_*`) — "Finish design" in the
    studio creates those.
-3. **File names are flat** — `/` is forbidden. Drafts: `take_draft_<n>.<ext>` (n = 1, 2, …).
-   Chat-phase takes: `take_agent<n>.<ext>` with n = 1 + the highest n ever used for this design —
-   in the current artifact files AND every `take_agent<n>` named earlier in this conversation,
-   including takes the person has since discarded. Never reuse a number or overwrite an existing
-   file name — every render is a new take.
+3. **File names are flat** — `/` is forbidden. Drafts: `take_draft-<n>-<slug>.<ext>` (n = 1, 2, … initialDrafts; slug = a few lowercase
+   hyphenated words naming the draft's content, `[a-z0-9]+(-[a-z0-9]+)*`, no `_`).
+   Chat-phase takes: `take_<slug>.<ext>` — slug summarizes what the take shows or the change
+   (`take_profile-closeup-laughing.png`, `take_contact-sheet-six-takes.png`); never generic or
+   numbered names. Names are unique: append `-2`, `-3` … when the name exists in the current
+   artifact files OR was used earlier in this conversation, including takes the person has since
+   discarded. Never reuse a name or overwrite an existing file — every render is a new take.
 4. **Write takes into this artifact's own directory** (`/workspace/<artifact id>/<file name>`):
    generate or edit images with `wf_*` tools via `output_ports` (they carry render provenance —
    prompt, seed, LoRAs — the studio shows); derived files (e.g. a contact sheet combining
@@ -82,7 +84,7 @@ Issue ALL `initialDrafts` calls in ONE response — one `wf_*` call per draft, n
 
 ```
 wf_<workflow>(prompt_positive="<prompt>", …,
-  output_ports={"<primary output port>": "/workspace/<artifact id>/take_draft_<n>.png"})
+  output_ports={"<primary output port>": "/workspace/<artifact id>/take_draft-<n>-<slug>.png"})
 ```
 
 - Same prompt for every draft; the random seed gives the variety. If the person's attributes
@@ -96,7 +98,7 @@ wf_<workflow>(prompt_positive="<prompt>", …,
 
 Audit before completing:
 
-- [ ] every `take_draft_<n>.<ext>` exists in the artifact (re-read it) — n = 1 … initialDrafts —
+- [ ] every `take_draft-<n>-<slug>.<ext>` exists in the artifact (re-read it) — n = 1 … initialDrafts —
       except drafts that failed twice (name them in the summary)
 - [ ] no other file was written; `design.json` untouched
 - [ ] drafts came from `wf_*` renders (derived files from sandbox commands are fine in the chat phase)
@@ -124,7 +126,7 @@ The person may ask for changes in the design chat. For each request:
    - "start over / completely different" → the text-to-image workflow, as in Phase 2.
 4. Render only what THIS message asks for — an edit is one take unless the message gives a
    count. Earlier requests are done: never continue, retry or redo them unless this message asks.
-   One take per requested variant to `take_agent<n>.<ext>` (n per hard rule 3), one render per
+   One take per requested variant to `take_<slug>.<ext>` (slug and uniqueness per hard rule 3), one render per
    call. If a take does not match the request (e.g. not the asked framing), do NOT render again
    on your own: show it, say in one line what is off, and suggest a revised instruction the
    person can send. Reply with the new file name(s) and one line on what changed, then stop.
