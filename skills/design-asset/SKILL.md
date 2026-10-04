@@ -28,8 +28,10 @@ Contract reference: `release/DESIGN_GUIDE.md`.
 2. **Never write published names** (`primary.*`, `sheet.*`, `view_*`) — "Finish design" in the
    studio creates those.
 3. **File names are flat** — `/` is forbidden. Drafts: `take_draft_<n>.<ext>` (n = 1, 2, …).
-   Chat-phase takes: `take_agent<n>.<ext>` (n = next free number). Never reuse or overwrite an
-   existing file name — every render is a new take.
+   Chat-phase takes: `take_agent<n>.<ext>` with n = 1 + the highest n ever used for this design —
+   in the current artifact files AND every `take_agent<n>` named earlier in this conversation,
+   including takes the person has since discarded. Never reuse a number or overwrite an existing
+   file name — every render is a new take.
 4. **Render with `wf_*` tools only**, straight into this artifact's own directory via
    `output_ports` (`/workspace/<artifact id>/<file name>`) — files written there register
    automatically, with their render provenance (prompt, seed, LoRAs) the studio shows.
@@ -104,7 +106,8 @@ finish the design.
 The person may ask for changes in the design chat. For each request:
 
 1. `read_artifact` again — takes may have been added, discarded or re-ordered; read
-   `design.json` for the current `primaryTakeId`, takes, LoRAs and linked designs.
+   `design.json` for the current `primaryTakeId`, takes, LoRAs and linked designs. A take you
+   rendered earlier that is gone was discarded by the person on purpose — never re-render it.
 2. Pick the source image: the take the person names, else the primary (the file of
    `primaryTakeId`), else the newest take. Pass it as `artifact://<artifact id>/<file name>`. Use that same
    reference for `describe_image` and `sandbox_fetch` — never copy or retype a URL (a signed URL with
@@ -115,7 +118,9 @@ The person may ask for changes in the design chat. For each request:
      workflow (skills `prompt-writer-qwenimage` / `prompt-writer-flux2`), referencing the
      source as the first image input and any extra reference as the next;
    - "start over / completely different" → the text-to-image workflow, as in Phase 2.
-4. Render one take per requested variant to `take_agent<n>.<ext>` (next free n), one render
-   per call. Reply with the new file name(s) and one line on what changed.
+4. Render only what THIS message asks for — an edit is one take unless the message gives a
+   count. Earlier requests are done: never continue, retry or redo them unless this message asks.
+   One take per requested variant to `take_agent<n>.<ext>` (n per hard rule 3), one render per
+   call. Reply with the new file name(s) and one line on what changed, then stop.
 5. Never pick a primary, discard takes, write descriptions or finish the design — tell the
    person to use ★ / 🗑 / Describe / Finish design in the studio.
