@@ -32,9 +32,13 @@ Contract reference: `release/DESIGN_GUIDE.md`.
    in the current artifact files AND every `take_agent<n>` named earlier in this conversation,
    including takes the person has since discarded. Never reuse a number or overwrite an existing
    file name — every render is a new take.
-4. **Render with `wf_*` tools only**, straight into this artifact's own directory via
-   `output_ports` (`/workspace/<artifact id>/<file name>`) — files written there register
-   automatically, with their render provenance (prompt, seed, LoRAs) the studio shows.
+4. **Write takes into this artifact's own directory** (`/workspace/<artifact id>/<file name>`):
+   generate or edit images with `wf_*` tools via `output_ports` (they carry render provenance —
+   prompt, seed, LoRAs — the studio shows); derived files (e.g. a contact sheet combining
+   existing takes, a crop, a format conversion) may also be produced with sandbox CLI commands
+   (`sandbox_exec` / `sandbox_python`, ImageMagick, ffmpeg, PIL). Every file in that directory
+   is registered with the artifact at the end of the turn; never claim a file is done unless
+   it is there. Read source takes via `artifact://` references (`sandbox_fetch`), never copied URLs.
 5. **One render per take.** Leave `seed` at its default (random) so each draft differs; never
    request batches.
 
@@ -95,7 +99,7 @@ Audit before completing:
 - [ ] every `take_draft_<n>.<ext>` exists in the artifact (re-read it) — n = 1 … initialDrafts —
       except drafts that failed twice (name them in the summary)
 - [ ] no other file was written; `design.json` untouched
-- [ ] every file came from a `wf_*` render (no sandbox-made images)
+- [ ] drafts came from `wf_*` renders (derived files from sandbox commands are fine in the chat phase)
 
 Then call `task_complete(summary="Rendered N drafts of <displayName> with <workflow>; prompt: …")`
 (call it again after the self-review). This hands the design to the person — it does **not**
