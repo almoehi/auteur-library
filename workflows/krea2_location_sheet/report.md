@@ -109,14 +109,17 @@ Both sheet bundles (`krea2_location_sheet`, `krea2_character_sheet`) share one a
 - **`reference_image`** (input, image, optional, `image@100`): when supplied it IS the anchor image
   and the KREA-2 text-to-image stage is skipped (never executed); when absent the anchor comes from
   the prompt, as before.
-- Graph: node 100 `LoadImage` → node 101 `ComfySoftSwitchNode` (ComfyUI core; `switch=true`,
-  `on_true`=reference, `on_false`=KREA-2 `VAEDecode` node 29; both inputs lazy) → node 102
-  `ImageScale` (lanczos, 1216×672, center crop) → node 44 `first_frame`. `anchor_preview` (node 75)
-  saves node 101's output (the reference as supplied, or the generated anchor). The harness removes
-  the consumer edge of an absent optional loader (`bindWorkflow()` step 3), so `on_true` simply
-  disappears; the Soft Switch then evaluates `on_false` alone. The loader must stay the Soft
-  Switch's ONLY direct consumer — any other direct consumer would lose a required input and fail
-  validation when the port is omitted.
+- Graph: node 100 `LoadImage` → node 101 `Any Switch (rgthree)` (rgthree-comfy, pinned in
+  `serverless-comfy/nodes.lock`; `any_01` = reference, `any_02` = KREA-2 `VAEDecode` node 29; it
+  returns the first non-empty input) → node 102 `ImageScale` (lanczos, 1216×672, center crop) →
+  node 44 `first_frame`. `anchor_preview` (node 75) saves node 101's output (the reference as
+  supplied, or the generated anchor). The harness removes the consumer edge of an absent optional
+  loader (`bindWorkflow()` step 3), so `any_01` disappears and `any_02` wins; the node's inputs are
+  all optional (`FlexibleOptionalInputType`), so that stays valid. The loader must stay the switch's
+  ONLY direct consumer. **Cost:** the switch is not lazy, so the KREA-2 stage still runs in
+  reference mode (result discarded). `ComfySoftSwitchNode` (core, lazy) was rejected: the deployed
+  runtime did not register it ("missing_node_type") although `comfy_extras/nodes_logic.py` has it
+  at the pinned ComfyUI commit.
 - **No `fps` port**: `CreateVideo` keeps the H3-native 24 fps. `frames` stays (orbit coverage).
 - **`width` / `height` renamed `anchor_width` / `anchor_height`**: render profiles override params
   named `width` / `height` / `fps` / `steps` / `seed` / `cfg` / `sampler` / `sample_rate`

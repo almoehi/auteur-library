@@ -24,8 +24,8 @@
 # Node 39, 73 (LoraLoaderModelOnly): restored `Minimax/` folder prefix on LoRA
 # filenames — the converter stripped the subfolder prefix during UI→API conversion.
 # Anchor selection (optional reference_image): nodes 100/101/102 added —
-# 100 LoadImage (port reference_image, optional), 101 ComfySoftSwitchNode (ComfyUI core,
-# switch=true, on_true=reference, on_false=KREA-2 decode), 102 ImageScale (lanczos, 1216x672,
+# 100 LoadImage (port reference_image, optional), 101 Any Switch (rgthree)
+# (rgthree-comfy, pinned in nodes.lock; any_01=reference, any_02=KREA-2 decode; first non-empty wins), 102 ImageScale (lanczos, 1216x672,
 # center crop) feeding node 44 first_frame and node 75 (anchor_preview) reads node 101.
 # fps is no longer a port: CreateVideo (node 76) stays at the H3-native 24.
 # ──────────────────────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ ports:
   inputs:
     - name: reference_image
       kind: image
-      description: "Optional reference image of the location. When given it IS the anchor image: the KREA-2 text-to-image stage is skipped entirely (not even run) and the prompt is not used to generate it; the orbit starts from this image (center-cropped to 16:9, 1216×672). When omitted the anchor is generated from the prompt. 16:9 landscape images work best."
+      description: "Optional reference image of the location. When given it IS the anchor image: the reference wins over the KREA-2 text-to-image stage (the stage is still evaluated, its result is discarded) and the prompt is not used to generate it; the orbit starts from this image (center-cropped to 16:9, 1216×672). When omitted the anchor is generated from the prompt. 16:9 landscape images work best."
       binding: image@100
       required: false
   params:
@@ -154,7 +154,7 @@ context: |
   and need multiple consistent viewpoints of the same space assembled into a compact grid.
 
   Two modes (same for krea2_character_sheet): with `reference_image` the supplied image is the
-  anchor — the KREA-2 stage is skipped (it never runs) and prompt / anchor_width / anchor_height /
+  anchor — the reference wins over the KREA-2 stage (still evaluated, result discarded) and prompt / anchor_width / anchor_height /
   steps / cfg / seed are not used to generate it; without it the anchor is generated from
   `prompt_location`. The reference is center-cropped to 16:9 (1216×672) before the orbit starts.
   The orbit frame rate is fixed at the model-native 24 fps and is not configurable.

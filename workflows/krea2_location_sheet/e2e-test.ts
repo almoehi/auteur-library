@@ -6,8 +6,8 @@
  *                        (a draft-like profile with video width/height/fps overrides is applied
  *                        and must NOT change the sheet: anchor_width/anchor_height are named so
  *                        profiles cannot reach them and fps is not a port at all).
- *   B. reference mode  — reference_image supplied, no prompt: the image IS the anchor (the KREA-2
- *                        stage is skipped); anchor_preview must have the fixture's pixel size.
+ *   B. reference mode  — reference_image supplied, no prompt: the image IS the anchor (it wins over
+ *                        the KREA-2 stage, which still runs but is discarded); anchor_preview must have the fixture's pixel size.
  * Plus manifest checks (reference_image optional; no fps / width / height params).
  *
  * Cost: REAL GPU + S3 (the reference fixture is staged in S3). The script tears the endpoint down
@@ -80,6 +80,30 @@ const DRAFT_LIKE_PROFILE = {
   tier: 'draft',
   profile: { video: { width: 720, height: 480, fps: 8 }, compute: COMPUTE },
 };
+
+
+// ── Runtime node-availability guard ───────────────────────────────────────────
+// A node missing from the DEPLOYED ComfyUI only surfaces as `missing_node_type` after a paid
+// provision + render, and "present in the ComfyUI source" is not enough (ComfySoftSwitchNode is in
+// comfy_extras/nodes_logic.py at the pinned commit yet was not registered at runtime). So every
+// class_type of workflow.json must be on one of these lists, each verified against the runtime:
+//   CORE_CLASS_TYPES  — ComfyUI core at the commit of comfy_versions.json (0.34.0 = 12d52794),
+//                       defined in nodes.py or comfy_extras/*.py there.
+//   PACK_CLASS_TYPES  — registered by a pack pinned in serverless-comfy/nodes.lock.
+//   workflow.yaml `customNodes` — the OrbitSheets nodes, fetched at render time.
+// Adding a node to workflow.json fails this check until its class_type is verified and listed.
+const CORE_CLASS_TYPES = new Set([
+  'BasicGuider', 'BasicScheduler', 'CLIPLoader', 'CLIPTextEncode', 'ConditioningZeroOut', 'CreateVideo',
+  'ImageFromBatch', 'ImageScale', 'KSampler', 'KSamplerSelect', 'LoadImage', 'LoraLoaderModelOnly',
+  'MiniMaxH3ImageToVideo', 'MiniMaxH3SigmaShift', 'PreviewAny', 'PrimitiveStringMultiline', 'RandomNoise',
+  'SamplerCustomAdvanced', 'SaveAudioMP3', 'SaveImage', 'SaveVideo', 'StringConcatenate', 'UNETLoader',
+  'VAEDecode', 'VAEDecodeAudio', 'VAELoader', 'EmptyLatentImage',
+]);
+const PACK_CLASS_TYPES = new Set([
+  'Any Switch (rgthree)',   // rgthree-comfy @ 6b76ee6f (nodes.lock), py/any_switch.py: all inputs optional
+]);
+/** class_type prefixes served by the bundle's own `customNodes` (name -> class_type prefix). */
+const CUSTOM_NODE_PREFIXES: Record<string, string> = { 'ComfyUI-OrbitSheets': 'OrbitSheets' };
 
 // ── S3 fixture helper ─────────────────────────────────────────────────────────
 // Uploads fixture files to a stable, reusable S3 prefix; skips if already present.
@@ -293,6 +317,16 @@ try {
   console.log('\n── 1b. Pre-flight: verify model URLs ─────────────────────────────');
   const _yaml: { parse: (input: string) => any } = require('yaml');
   const parsedYaml = _yaml.parse(workflowYaml);
+
+  // 1a. Offline guard: every class_type must exist in the deployed runtime (see CORE_/PACK_CLASS_TYPES)
+  const graph: Record<string, { class_type: string }> = JSON.parse(workflowJson);
+  const declaredCustom: string[] = (_yaml.parse(workflowYaml).customNodes ?? []).map((c: any) => c.name);
+  const customPrefixes = declaredCustom.map(n => CUSTOM_NODE_PREFIXES[n]).filter(Boolean);
+  const unknownClassTypes = [...new Set(Object.values(graph).map(n => n.class_type))].filter(c =>
+    !CORE_CLASS_TYPES.has(c) && !PACK_CLASS_TYPES.has(c) && !customPrefixes.some(p => c.startsWith(p)));
+  check('every class_type exists in the deployed ComfyUI / nodes.lock / customNodes', unknownClassTypes.length === 0,
+    unknownClassTypes.length ? `UNVERIFIED: ${unknownClassTypes.join(', ')} — verify in ComfyUI@comfy_versions.json or nodes.lock, then list above` : `${Object.keys(graph).length} nodes ok`);
+  if (unknownClassTypes.length) throw new Error(`workflow.json uses class_type(s) not verified against the runtime: ${unknownClassTypes.join(', ')}`);
   for (const model of (parsedYaml.models ?? [])) {
     for (const f of (model.files ?? [])) {
       const url = f.url as string;
@@ -359,8 +393,8 @@ try {
   }
 
   // 5. Scenario B — reference mode (reference_image, no prompt) ──────────────
-  // The image is the anchor; the KREA-2 stage is skipped. Absent optional ports elsewhere are not
-  // involved; here the loader is bound, the soft switch picks it, anchor_preview echoes it.
+  // The image is the anchor: the loader is bound, the Any Switch (rgthree) picks it over the KREA-2
+  // decode (which still runs, discarded), and anchor_preview echoes it.
   console.log('\n── 5. Scenario B: reference mode (reference_image, no prompt) ────');
   const referenceRenderId = await agent.run(
     JSON.stringify(RENDER_PROFILE),

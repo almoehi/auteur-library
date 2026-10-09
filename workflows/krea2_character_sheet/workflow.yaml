@@ -10,8 +10,8 @@
 # MiniMaxH3ImageToVideo, MiniMaxH3SigmaShift, VAEDecodeAudio, CreateVideo,
 #   SaveVideo — ComfyUI-MiniMax-H3-Turbo (Larryvrh) — already in nodes.lock.
 # Anchor selection (optional reference_image): nodes 100/101/102 added —
-# 100 LoadImage (port reference_image, optional), 101 ComfySoftSwitchNode (ComfyUI core,
-# switch=true, on_true=reference, on_false=KREA-2 decode), 102 ImageScale (lanczos, 1216x672,
+# 100 LoadImage (port reference_image, optional), 101 Any Switch (rgthree)
+# (rgthree-comfy, pinned in nodes.lock; any_01=reference, any_02=KREA-2 decode; first non-empty wins), 102 ImageScale (lanczos, 1216x672,
 # center crop) feeding node 44 first_frame and node 75 (anchor_preview) reads node 101.
 # fps is no longer a port: CreateVideo (node 78) stays at the H3-native 24.
 # ──────────────────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ ports:
   inputs:
     - name: reference_image
       kind: image
-      description: "Optional reference image of the character. When given it IS the anchor image: the KREA-2 text-to-image stage is skipped entirely (not even run) and the prompt is not used to generate it; the orbit starts from this image (center-cropped to 16:9, 1216×672). When omitted the anchor is generated from the prompt. Best: the full-body character on a plain neutral studio backdrop, centred with margin, 16:9 landscape."
+      description: "Optional reference image of the character. When given it IS the anchor image: the reference wins over the KREA-2 text-to-image stage (the stage is still evaluated, its result is discarded) and the prompt is not used to generate it; the orbit starts from this image (center-cropped to 16:9, 1216×672). When omitted the anchor is generated from the prompt. Best: the full-body character on a plain neutral studio backdrop, centred with margin, 16:9 landscape."
       binding: image@100
       required: false
   params:
@@ -144,7 +144,7 @@ context: >
   for fashion, cosplay, concept-art, and game characters with distinctive appearance traits.
 
   Two modes (same for krea2_location_sheet): with `reference_image` the supplied image is the
-  anchor — the KREA-2 stage is skipped (it never runs) and prompt / width / height / steps /
+  anchor — the reference wins over the KREA-2 stage (still evaluated, result discarded) and prompt / width / height / steps /
   cfg / seed are not used to generate it; without it the anchor is generated from
   `prompt_character` (the neutral grey backdrop is appended to that anchor prompt only). In
   reference mode the orbit prompt still asks for a plain grey studio backdrop, so give a

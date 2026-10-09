@@ -699,17 +699,16 @@
   },
   "101": {
     "inputs": {
-      "switch": true,
-      "on_false": [
-        "29",
+      "any_01": [
+        "100",
         0
       ],
-      "on_true": [
-        "100",
+      "any_02": [
+        "29",
         0
       ]
     },
-    "class_type": "ComfySoftSwitchNode",
+    "class_type": "Any Switch (rgthree)",
     "_meta": {
       "title": "Anchor: reference image, else KREA-2"
     }
