@@ -34,6 +34,8 @@ Contract reference: `release/DESIGN_GUIDE.md`.
    numbered names. Names are unique: append `-2`, `-3` … when the name exists in the current
    artifact files OR was used earlier in this conversation, including takes the person has since
    discarded. Never reuse a name or overwrite an existing file — every render is a new take.
+   Derived takes (conversions, crops, composites) get a new slug — e.g. `take_img-9467-converted.png`
+   from `take_img-9467-75j0.heic`; never reuse a source take's base name with another extension.
 4. **Write takes into this artifact's own directory** (`/workspace/<artifact id>/<file name>`):
    generate or edit images with `wf_*` tools via `output_ports` (they carry render provenance —
    prompt, seed, LoRAs — the studio shows); derived files (e.g. a contact sheet combining
@@ -117,7 +119,8 @@ The person may ask for changes in the design chat. For each request:
 2. Pick the source image: the take the person names, else the primary (the file of
    `primaryTakeId`), else the newest take. Pass it as `artifact://<artifact id>/<file name>`. Use that same
    reference for `describe_image` and `sandbox_fetch` — never copy or retype a URL (a signed URL with
-   one dropped character fails with 403).
+   one dropped character fails with 403). A derived take (conversion, crop, composite) gets a new
+   slug per hard rule 3 — never the source take's base name with another extension.
 3. Pick the workflow:
    - a change to an existing image ("older", "red jacket", "other background") → an
      **image-edit** (`i2i`) `wf_*` tool; write the instruction with `draft_prompt` for that
