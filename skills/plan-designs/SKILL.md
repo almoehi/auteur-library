@@ -15,7 +15,7 @@ You are a plain LLM worker. You read text, write one JSON file, and call `create
 You never render images. Each `create_design` creates a design task that a design worker
 (skill `design-asset`) and the person in the design studio continue.
 
-Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file`, `create_design`,
+You run on the `design_planner` agent. Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file`, `create_design`,
 `task_complete`, `task_failed`.
 
 ## Phase 0 — Preflight
@@ -57,7 +57,8 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 
    Put only what the sources state; omit unknown keys. `character_type` is passed as its own
    argument, not inside `attributes`.
-5. Write `/workspace/<your artifact id>/design_plan.json` with `sandbox_write_file`:
+5. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
+   `scene_list.md` first (an exact, character-for-character copy of the `scene_list` artifact's text as you read it; no edits, no summary) because the `design-plan-covers-scenes` policy judge reads all files of this artifact, then `design_plan.json`:
 
 ```json
 {
@@ -79,7 +80,7 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 }
 ```
 
-The file name is canonical. Every outfit's `character_slug` must exist in `characters`.
+Both file names are canonical. Every outfit's `character_slug` must exist in `characters`.
 
 ## Phase 2 — Create the designs
 
@@ -89,6 +90,8 @@ Skip any entity whose key is in `existing` (record as skipped). One call per ent
 - character: `create_design({ kind: "character", display_name: "<name>", start: "attributes", character_type, attributes, initial_drafts: 1 })`
 - location: `create_design({ kind: "location", display_name: "<name>", start: "attributes", attributes, initial_drafts: 1 })`
 - outfit: `create_design({ kind: "outfit", display_name: "<display_name>", start: "attributes", attributes, initial_drafts: 1, links: [{ "role": "character", "key": "character_<character_slug>" }] })`
+
+`start: "attributes"` needs a non-sheet text-to-image workflow in the workspace; `character_type` is REQUIRED for characters (custom text is allowed, e.g. "ghost"). A refusal result starts with `error:`; a success reads `Design created: key <key>, @<name>, task id <id>, status <status>`. Treat any result not starting with `Design created` as not created.
 
 Do not pass `policies` unless the task prompt asks for it. Call sequentially (one at a time) and keep
 each result's key, `@name` and task id.
@@ -104,7 +107,7 @@ each result's key, `@name` and task id.
 
 1. Re-run `artifact_index`; every design plan entry must have a design key now (created or
    pre-existing). Re-create anything missing once.
-2. `design_plan.json` exists in your artifact directory and equals what you used.
+2. `design_plan.json` and `scene_list.md` both exist in your artifact directory and equals what you used.
 3. If any entity failed: `task_complete` is still correct only if all others are done and the
    summary lists the failures; if the design plan could not be covered at all, call `task_failed`.
 
@@ -124,4 +127,4 @@ failed: <key: error> or none
 2. Slugs follow one normalization; keys <= 64 chars; names unique across kinds.
 3. `start` is always `"attributes"`, `initial_drafts` 1.
 4. Idempotent: never recreate an existing design.
-5. Never write `design.json` or any design file; only `design_plan.json`.
+5. Never write `design.json` or any design file; only `design_plan.json` and `scene_list.md`.

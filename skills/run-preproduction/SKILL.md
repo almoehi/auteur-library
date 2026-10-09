@@ -34,8 +34,8 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
      `design-plan-covers-scenes`, `designs-cover-plan`
 3. **Agents.** You need a writer for the screenplay, one for the cast table, one for the scene
    list, and a plain LLM planner for `plan_designs` (a tool-capable agent without a
-   task-specific toolset, typically `planner`). Pick by objective from `available_agents`
-   (spec defaults: `screenwriter`, `casting_director`, `director`, `planner`). If no suitable
+   task-specific toolset, the agent `design_planner`, which has `create_design`). Pick by objective from `available_agents`
+   (spec defaults: `screenwriter`, `casting_director`, `director`, `design_planner`). Never use the generic `planner` for `plan_designs`. If no suitable
    agent exists, tell the user which role is missing and stop.
 4. **Idempotency.** Every task/artifact/policy that already exists is skipped, not recreated.
    If all four tasks exist, report their statuses and stop. If only a tail of the chain is missing,
@@ -43,11 +43,9 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 
 ## Step 2 — Policies
 
-Policies are attached atomically through `create_task.policies`, so they must exist first.
-For every policy in the Step 1 list that is missing, call `create_policy` (text modality,
-`Binary` grading, the model the other quality policies in `policy_index` use). The three
-quality policies normally come from the workspace spec; recreate them only if absent, with
-the intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
+All six policies are ARTIFACT policies (they judge an output artifact's files) and normally already exist in the workspace template. Check `policy_index` and call `create_policy` ONLY for those that are missing, in a workspace that lacks them with text modality,
+`Binary` grading and the model the other quality policies in `policy_index` use, with the
+intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 
 | id | intent (answer YES/NO only) |
 |---|---|
@@ -55,10 +53,10 @@ the intent below, using `{input}` and `{workspace.story.plot}` in the `evalPromp
 | `cast-quality` | every cast role of the story has a dedicated, complete profile |
 | `scenes-quality` | the scene list covers all narrative beats with numbered scenes, INT/EXT, location, one-line action |
 | `scenes-complete` | every scene row has a location slug and, for every character present, an outfit/look slug |
-| `design-plan-covers-scenes` | the judge receives BOTH the scene list (ground truth) and `design_plan.json`; YES only if every character, location (by `location_slug`) and (character, look) outfit occurring in the scene list has an entry in the design plan, and the plan has no outfit whose character is missing; otherwise NO naming the missing entries |
-| `designs-cover-plan` | the tool calls contain a successful `create_design` (or a documented skip for an already existing design) for every design plan entry |
+| `design-plan-covers-scenes` | `{input}` holds ALL files of the `design_plan` artifact: `design_plan.json` and `scene_list.md` (verbatim copy of the scene list, the ground truth). YES only if every character, location (by `location_slug`) and (character, look) outfit occurring in the scene list has an entry in the plan, and no outfit's character is missing from the plan; otherwise NO naming the missing entries |
+| `designs-cover-plan` | `{input}` holds the plan (`design_plan.json`); `{toolCalls}` the worker's calls. Count the successful `create_design` calls (result "Design created: ..."), identified by `kind` + `display_name`, and compare with the plan entries; a design that already existed and is documented as skipped counts as covered. Tool-call args may be truncated at about 200 characters, so match on `kind` and `display_name` only. YES only if every plan entry is covered |
 
-`design-plan-covers-scenes` and `designs-cover-plan` need their evidence in the prompt. For `design-plan-covers-scenes` the `evalPrompt` must contain `{input}` (the design plan) and the scene list as a labeled section (`# Scene list:` with `{artifactIndex}` or the scene list text, see `ensure-render-covers-all-scenes` in `policy_index` for the style), so the judge sees both. `designs-cover-plan` uses `{input}` plus `{toolCalls}`.
+`scenes-complete` attaches to the `scene_list` artifact; the other five likewise to the artifacts named in Step 4.
 Never edit an existing policy here (see `modify-policy`).
 
 ## Step 3 — Planning (canonical names, decided once)
@@ -68,24 +66,25 @@ Never edit an existing policy here (see `modify-policy`).
 | `write_screenplay` | `screenplay` | `screenplay.md` |
 | `character_table` | `character_table` | open artifact: one file per character, `character_<slug>.md` |
 | `create_scenes` | `scene_list` | `scene_list.md` |
-| `plan_designs` | `design_plan` | `design_plan.json` |
+| `plan_designs` | `design_plan` | `design_plan.json`, `scene_list.md` (verbatim copy) |
 
 These names are canonical. Embed them in task prompts; never rename later.
 
 ## Step 4 — Create the tasks (in this order)
 
-Each call carries its output artifact (`output_artifact_name` / `output_files`) and its
-policies in the same `create_task` call. Skip any task that already exists.
+Policies must sit on the OUTPUT ARTIFACT, not the task, and `create_task.policies` only
+attaches task policies. So for each step: first `create_artifact({id, name, description, files, policies})`
+(artifact id and files from Step 3; for the open `character_table` artifact use `files: []`),
+then `create_task({..., artifacts: ["<artifact id>"]})`. If `create_artifact` fails, stop and
+report; never create the task without its artifact. Skip any task/artifact that already exists.
 
 ### 4a. write_screenplay
-- agent: writer; `output_artifact_name: "Screenplay"` (artifact id `screenplay`), `output_files: ["screenplay.md"]`
-- `policies: ["screenplay-quality"]`
+- agent: writer; artifact `screenplay` ("Screenplay"), files `["screenplay.md"]`, artifact policies `["screenplay-quality"]`
 - prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. headings, action, dialogue); write `screenplay.md`.
 
 ### 4b. character_table
 - agent: cast writer; `requires_tasks: ["write_screenplay"]`, `requires_artifacts: ["screenplay"]`
-- `output_artifact_name: "Character Breakdown Table"`, no `output_files` (open artifact)
-- `policies: ["cast-quality"]`
+- artifact `character_table` ("Character Breakdown Table"), open (no files), artifact policies `["cast-quality"]`
 - prompt, verbatim requirements:
   - identify every cast role (speaking, named, meaningful presence; no props or walk-ons)
   - write ONE markdown file per character with `sandbox_write_file`, named `character_<slug>.md`
@@ -100,8 +99,7 @@ policies in the same `create_task` call. Skip any task that already exists.
 ### 4c. create_scenes
 - agent: director; `requires_tasks: ["write_screenplay","character_table"]`,
   `requires_artifacts: ["screenplay","character_table"]`
-- `output_artifact_name: "Scene List"`, `output_files: ["scene_list.md"]`
-- `policies: ["scenes-quality","scenes-complete"]`
+- artifact `scene_list` ("Scene List"), files `["scene_list.md"]`, artifact policies `["scenes-quality","scenes-complete"]`
 - prompt: produce ONE markdown table in `scene_list.md` with exactly these columns:
   `Scene #` | `INT/EXT` | `Location` (display name) | `location_slug` (lowercase slug, stable:
   the same place has the same slug in every scene) | `Time of day` | `Summary` (one sentence) |
@@ -113,18 +111,17 @@ policies in the same `create_task` call. Skip any task that already exists.
   Short-film default: no more than 4 scenes unless the story requires more.
 
 ### 4d. plan_designs (the orchestrator)
-- agent: the plain LLM planner; `difficulty: "hard"`
+- agent: `design_planner`; `difficulty: "hard"`
 - `requires_tasks: ["create_scenes","character_table"]`,
   `requires_artifacts: ["character_table","scene_list"]`
-- `output_artifact_name: "Design Plan"`, `output_files: ["design_plan.json"]`
-- `policies: ["design-plan-covers-scenes","designs-cover-plan"]`
+- artifact `design_plan` ("Design Plan"), files `["design_plan.json","scene_list.md"]` (the second is a verbatim copy of the scene list, so the artifact policy judge sees both), artifact policies `["design-plan-covers-scenes","designs-cover-plan"]`
 - description/prompt (the first line is exact, the worker keys on it):
 
 ```
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Output: `design_plan.json` (canonical name), then one create_design call per design plan entry.
+Output files (canonical names): `design_plan.json` and `scene_list.md` (verbatim copy of the scene list), then one create_design call per design plan entry.
 ```
 
 ## Step 5 — Verify and confirm
@@ -141,5 +138,5 @@ Call `task_index` once: all four tasks present with the expected `requires`. If 
 1. Preflight first; no plot means no tasks.
 2. Idempotent: skip existing tasks, artifacts and policies; never duplicate.
 3. Canonical ids and filenames from Step 3, identical in every prompt.
-4. Policies are created before the tasks that reference them; attach via `create_task.policies`.
+4. Policies exist before the artifacts that reference them; attach them to the output artifact via `create_artifact.policies`, then link it with `create_task.artifacts`.
 5. Do not read artifacts or run `create_design` yourself; the worker does it.
