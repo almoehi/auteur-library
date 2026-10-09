@@ -72,11 +72,30 @@ These names are canonical. Embed them in task prompts; never rename later.
 
 ## Step 4 — Create the tasks (in this order)
 
+**One call per step, strictly in order.** Issue exactly ONE `create_artifact` or `create_task`
+call per round and wait for its result before the next. Never put several of these calls in the
+same round: a later step's `requires_*` references the earlier step's result, so it cannot be
+issued before that result exists (a `create_scenes` issued before `character_table` exists fails
+with `requires.tasks references unknown task id`).
+
+**Use returned identifiers, never assumed ones.** After every `create_artifact` / `create_task`,
+read the artifact key and task id FROM THE RESULT TEXT (e.g. `key: <key>`) and use exactly those
+in later `requires_tasks` / `requires_artifacts` (the Step 3 names below are the intent; the
+result is the truth; never derive a key from a name or guess `<task>_output`). An `error:` result
+names the known artifacts/tasks: pick the right one from that list and correct the call; never
+retry an identical call.
+
+**Stop on repeated failure.** If a step fails twice, stop the chain and report precisely which
+steps were created (with the ids from their results) and which failed, with the error text. Never
+claim a task that `create_task` did not confirm.
+
 Policies must sit on the OUTPUT ARTIFACT, not the task, and `create_task.policies` only
 attaches task policies. So for each step: first `create_artifact({id, name, description, files, policies})`
 (artifact id and files from Step 3; for the open `character_table` artifact use `files: []`),
-then `create_task({..., artifacts: ["<artifact id>"]})`. If `create_artifact` fails, stop and
-report; never create the task without its artifact. Skip any task/artifact that already exists.
+then, as a separate later call, `create_task({..., artifacts: ["<artifact key from the result>"]})`.
+Do not use `output_artifact_name` for outputs that carry policies. If `create_artifact` fails
+twice, stop and report; never create the task without its artifact. Skip any task/artifact that
+already exists.
 
 ### 4a. write_screenplay
 - agent: writer; artifact `screenplay` ("Screenplay"), files `["screenplay.md"]`, artifact policies `["screenplay-quality"]`
@@ -126,8 +145,9 @@ Output files (canonical names): `design_plan.json` and `scene_list.md` (verbatim
 
 ## Step 5 — Verify and confirm
 
-Call `task_index` once: all four tasks present with the expected `requires`. If any
-`create_task` returned an error, report it; never claim success. Then tell the user:
+Call `task_index` once: all four tasks present with the expected `requires`. Report only tasks
+confirmed by `create_task` results and this index; if any step failed or is missing, say so
+precisely and do not use the success message below. Then tell the user:
 
 > "Scheduled pre-production: **Write Screenplay** -> **Create Cast List** -> **Create Scene List**
 > -> **Plan Designs**. Skipped (already existed): <list or none>. Policies created: <list or none>.
@@ -136,7 +156,8 @@ Call `task_index` once: all four tasks present with the expected `requires`. If 
 ## Key rules
 
 1. Preflight first; no plot means no tasks.
-2. Idempotent: skip existing tasks, artifacts and policies; never duplicate.
-3. Canonical ids and filenames from Step 3, identical in every prompt.
-4. Policies exist before the artifacts that reference them; attach them to the output artifact via `create_artifact.policies`, then link it with `create_task.artifacts`.
-5. Do not read artifacts or run `create_design` yourself; the worker does it.
+2. One create call per round, in order; later `requires_*` use the keys/ids returned by earlier results.
+3. Idempotent: skip existing tasks, artifacts and policies; never duplicate.
+4. Canonical ids and filenames from Step 3, identical in every prompt.
+5. Policies exist before the artifacts that reference them; attach them to the output artifact via `create_artifact.policies`, then link it with `create_task.artifacts`.
+6. Never claim an unconfirmed task. Do not read artifacts or run `create_design` yourself; the worker does it.
