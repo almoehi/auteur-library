@@ -4,7 +4,7 @@ description: >
   Trigger when the user wants the whole pre-production phase set up from the story — e.g.
   "run pre-production", "prepare the production", "set up screenplay, cast and designs",
   "get everything ready before we shoot", "start from the plot and create the designs".
-  Schedules the chain screenplay -> character table -> scene list -> design scheduling, so
+  Schedules the chain screenplay -> character table -> scene list -> design planning, so
   characters, outfits and locations end up as design-studio designs. Do NOT invoke for
   shooting or rendering scenes, storyboards, creating a single character/outfit/location
   design, or editing an existing screenplay, cast list or scene list.
@@ -14,10 +14,10 @@ agentType: workspace
 # Run Pre-production
 
 Runs in the workspace coordinator. It creates four chained tasks and makes sure the coverage
-policies exist. It does not write content itself. The last task (`schedule_designs`) is executed
-by a worker using the `schedule-designs` skill.
+policies exist. It does not write content itself. The last task (`plan_designs`) is executed
+by a worker using the `plan-designs` skill.
 
-Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `schedule_designs`.
+Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_designs`.
 
 ## Step 1 — Preflight
 
@@ -28,12 +28,12 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `schedule_d
    Create nothing.
 2. **Current state.** Call `task_index`, `artifact_index`, `policy_index`, `available_agents`.
    Remember which of these already exist (live = not failed/cancelled):
-   - tasks `write_screenplay`, `character_table`, `create_scenes`, `schedule_designs`
-   - artifacts `screenplay`, `character_table`, `scene_list`, `design_manifest`
+   - tasks `write_screenplay`, `character_table`, `create_scenes`, `plan_designs`
+   - artifacts `screenplay`, `character_table`, `scene_list`, `design_plan`
    - policies `screenplay-quality`, `cast-quality`, `scenes-quality`, `scenes-complete`,
-     `manifest-covers-scenes`, `designs-cover-manifest`
+     `design-plan-covers-scenes`, `designs-cover-plan`
 3. **Agents.** You need a writer for the screenplay, one for the cast table, one for the scene
-   list, and a plain LLM planner for `schedule_designs` (a tool-capable agent without a
+   list, and a plain LLM planner for `plan_designs` (a tool-capable agent without a
    task-specific toolset, typically `planner`). Pick by objective from `available_agents`
    (spec defaults: `screenwriter`, `casting_director`, `director`, `planner`). If no suitable
    agent exists, tell the user which role is missing and stop.
@@ -55,12 +55,10 @@ the intent below, using `{input}` and `{workspace.story.plot}` in the `evalPromp
 | `cast-quality` | every cast role of the story has a dedicated, complete profile |
 | `scenes-quality` | the scene list covers all narrative beats with numbered scenes, INT/EXT, location, one-line action |
 | `scenes-complete` | every scene row has a location slug and, for every character present, an outfit/look slug |
-| `manifest-covers-scenes` | `design_manifest.json` contains every character, location and (character, look) outfit that occurs in the scene list `{task.description}`-referenced artifact; none missing |
-| `designs-cover-manifest` | the tool calls contain a successful `create_design` (or a documented skip for an already existing design) for every manifest entry |
+| `design-plan-covers-scenes` | the judge receives BOTH the scene list (ground truth) and `design_plan.json`; YES only if every character, location (by `location_slug`) and (character, look) outfit occurring in the scene list has an entry in the design plan, and the plan has no outfit whose character is missing; otherwise NO naming the missing entries |
+| `designs-cover-plan` | the tool calls contain a successful `create_design` (or a documented skip for an already existing design) for every design plan entry |
 
-`manifest-covers-scenes` and `designs-cover-manifest` also need the evidence as context: write
-their prompts with `{input}` plus, where the engine supports them, `{artifactIndex}` and
-`{toolCalls}` (see `ensure-render-covers-all-scenes` in `policy_index` for the style).
+`design-plan-covers-scenes` and `designs-cover-plan` need their evidence in the prompt. For `design-plan-covers-scenes` the `evalPrompt` must contain `{input}` (the design plan) and the scene list as a labeled section (`# Scene list:` with `{artifactIndex}` or the scene list text, see `ensure-render-covers-all-scenes` in `policy_index` for the style), so the judge sees both. `designs-cover-plan` uses `{input}` plus `{toolCalls}`.
 Never edit an existing policy here (see `modify-policy`).
 
 ## Step 3 — Planning (canonical names, decided once)
@@ -70,7 +68,7 @@ Never edit an existing policy here (see `modify-policy`).
 | `write_screenplay` | `screenplay` | `screenplay.md` |
 | `character_table` | `character_table` | open artifact: one file per character, `character_<slug>.md` |
 | `create_scenes` | `scene_list` | `scene_list.md` |
-| `schedule_designs` | `design_manifest` | `design_manifest.json` |
+| `plan_designs` | `design_plan` | `design_plan.json` |
 
 These names are canonical. Embed them in task prompts; never rename later.
 
@@ -114,19 +112,19 @@ policies in the same `create_task` call. Skip any task that already exists.
   screenplay demands one, and say so in the summary). Every present character needs a look.
   Short-film default: no more than 4 scenes unless the story requires more.
 
-### 4d. schedule_designs (the orchestrator)
+### 4d. plan_designs (the orchestrator)
 - agent: the plain LLM planner; `difficulty: "hard"`
 - `requires_tasks: ["create_scenes","character_table"]`,
   `requires_artifacts: ["character_table","scene_list"]`
-- `output_artifact_name: "Design Manifest"`, `output_files: ["design_manifest.json"]`
-- `policies: ["manifest-covers-scenes","designs-cover-manifest"]`
+- `output_artifact_name: "Design Plan"`, `output_files: ["design_plan.json"]`
+- `policies: ["design-plan-covers-scenes","designs-cover-plan"]`
 - description/prompt (the first line is exact, the worker keys on it):
 
 ```
-Load and use skill: schedule-designs
+Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Output: `design_manifest.json` (canonical name), then one create_design call per manifest entry.
+Output: `design_plan.json` (canonical name), then one create_design call per manifest entry.
 ```
 
 ## Step 5 — Verify and confirm
@@ -135,8 +133,8 @@ Call `task_index` once: all four tasks present with the expected `requires`. If 
 `create_task` returned an error, report it; never claim success. Then tell the user:
 
 > "Scheduled pre-production: **Write Screenplay** -> **Create Cast List** -> **Create Scene List**
-> -> **Schedule Designs**. Skipped (already existed): <list or none>. Policies created: <list or none>.
-> Designs appear in the Pre-production tab once `schedule_designs` finishes."
+> -> **Plan Designs**. Skipped (already existed): <list or none>. Policies created: <list or none>.
+> Designs appear in the Pre-production tab once `plan_designs` finishes."
 
 ## Key rules
 

@@ -1,15 +1,15 @@
 ---
-name: schedule-designs
+name: plan-designs
 description: >
-  Use when your task prompt says "Load and use skill: schedule-designs" — turn the character
-  table and the scene list into a design manifest and create one studio design (character,
-  outfit, location) for every entry with create_design. Produces design_manifest.json and the
+  Use when your task prompt says "Load and use skill: plan-designs" — turn the character
+  table and the scene list into a design plan and create one studio design (character,
+  outfit, location) for every entry with create_design. Produces design_plan.json and the
   scheduled design tasks. Do NOT invoke for drafting or rendering design images (that is
   design-asset), writing screenplays or scene lists, or creating a single design on request.
 agentType: worker
 ---
 
-# Schedule Designs
+# Plan Designs
 
 You are a plain LLM worker. You read text, write one JSON file, and call `create_design`.
 You never render images. Each `create_design` creates a design task that a design worker
@@ -31,7 +31,7 @@ Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file`, `c
    `location_`, plus `task_index`. Remember them as `existing`.
 If an input is missing or unparseable: `task_failed` with a clear message naming it. Write nothing.
 
-## Phase 1 — Extraction -> design_manifest.json
+## Phase 1 — Extraction -> design_plan.json
 
 1. Build the entity lists:
    - **characters**: every `character_<slug>.md` file; plus any character named in the scene
@@ -57,7 +57,7 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 
    Put only what the sources state; omit unknown keys. `character_type` is passed as its own
    argument, not inside `attributes`.
-5. Write `/workspace/<your artifact id>/design_manifest.json` with `sandbox_write_file`:
+5. Write `/workspace/<your artifact id>/design_plan.json` with `sandbox_write_file`:
 
 ```json
 {
@@ -102,16 +102,16 @@ each result's key, `@name` and task id.
 
 ## Phase 3 — Pre-completion audit
 
-1. Re-run `artifact_index`; every manifest entry must have a design key now (created or
+1. Re-run `artifact_index`; every design plan entry must have a design key now (created or
    pre-existing). Re-create anything missing once.
-2. `design_manifest.json` exists in your artifact directory and equals what you used.
+2. `design_plan.json` exists in your artifact directory and equals what you used.
 3. If any entity failed: `task_complete` is still correct only if all others are done and the
-   summary lists the failures; if the manifest could not be covered at all, call `task_failed`.
+   summary lists the failures; if the design plan could not be covered at all, call `task_failed`.
 
 `task_complete` summary format:
 
 ```
-manifest: <n> characters, <n> locations, <n> outfits
+design plan: <n> characters, <n> locations, <n> outfits
 created: <keys>
 skipped (existing): <keys>
 renamed: <old -> new, reason>
@@ -124,4 +124,4 @@ failed: <key: error> or none
 2. Slugs follow one normalization; keys <= 64 chars; names unique across kinds.
 3. `start` is always `"attributes"`, `initial_drafts` 1.
 4. Idempotent: never recreate an existing design.
-5. Never write `design.json` or any design file; only `design_manifest.json`.
+5. Never write `design.json` or any design file; only `design_plan.json`.
