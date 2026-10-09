@@ -124,7 +124,7 @@ policies in the same `create_task` call. Skip any task that already exists.
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Output: `design_plan.json` (canonical name), then one create_design call per manifest entry.
+Output: `design_plan.json` (canonical name), then one create_design call per design plan entry.
 ```
 
 ## Step 5 — Verify and confirm
