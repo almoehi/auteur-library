@@ -80,7 +80,7 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 }
 ```
 
-Both file names are canonical. Every outfit's `character_slug` must exist in `characters`.
+Both file names are canonical: write exactly `scene_list.md` and `design_plan.json` into the `design_plan` artifact. If the files declared on the artifact differ, still write these two names and report the mismatch in the `task_complete` summary (line `file mismatch: <declared> vs scene_list.md, design_plan.json`). Every outfit's `character_slug` must exist in `characters`.
 
 ## Phase 2 — Create the designs
 
@@ -93,7 +93,7 @@ Skip any entity whose key is in `existing` (record as skipped). One call per ent
 
 `start: "attributes"` needs a non-sheet text-to-image workflow in the workspace; `character_type` is REQUIRED for characters (custom text is allowed, e.g. "ghost"). A refusal result starts with `error:`; a success reads `Design created: key <key>, @<name>, task id <id>, status <status>`. Treat any result not starting with `Design created` as not created.
 
-Do not pass `policies` unless the task prompt asks for it. Call sequentially (one at a time) and keep
+Never pass `policies` to `create_design` (the tool does not accept it; designs go through human review), even if the task prompt names checks. Call sequentially (one at a time) and keep
 each result's key, `@name` and task id.
 
 **Refusals:**
@@ -119,6 +119,7 @@ created: <keys>
 skipped (existing): <keys>
 renamed: <old -> new, reason>
 failed: <key: error> or none
+file mismatch: <declared files> or none
 ```
 
 ## Key rules
