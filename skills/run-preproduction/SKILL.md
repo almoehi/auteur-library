@@ -61,14 +61,16 @@ Never edit an existing policy here (see `modify-policy`).
 
 ## Step 3 — Planning (canonical names, decided once)
 
-| Task id | Artifact id / name | Files |
-|---|---|---|
-| `write_screenplay` | `screenplay` | `screenplay.md` |
-| `character_table` | `character_table` | open artifact: one file per character, `character_<slug>.md` |
-| `create_scenes` | `scene_list` | `scene_list.md` |
-| `plan_designs` | `design_plan` | `design_plan.json`, `scene_list.md` (verbatim copy) |
+| Task id | Agent | Output artifact key | output_files (exact) | Required tasks / artifacts | Checks on the output artifact |
+|---|---|---|---|---|---|
+| `write_screenplay` | writer | `screenplay` | `["screenplay.md"]` | none | `screenplay-quality` |
+| `character_table` | cast writer | `character_table` | open: `character_<slug>.md` per character (`files: []`) | tasks `write_screenplay`; artifacts `screenplay` | `cast-quality` |
+| `create_scenes` | director | `scene_list` | `["scene_list.md"]` | tasks `write_screenplay`, `character_table`; artifacts `screenplay`, `character_table` | `scenes-quality`, `scenes-complete` |
+| `plan_designs` | `design_planner` | `design_plan` | `["scene_list.md","design_plan.json"]` (BOTH, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan` |
 
-These names are canonical. Embed them in task prompts; never rename later.
+These names are canonical. Embed the exact output file names in each task's prompt; never rename
+later. Checks are attached ONLY through `create_artifact.policies` (never in a task's prompt or
+description, see Key rules).
 
 ## Step 4 — Create the tasks (in this order)
 
@@ -91,7 +93,7 @@ claim a task that `create_task` did not confirm.
 
 Policies must sit on the OUTPUT ARTIFACT, not the task, and `create_task.policies` only
 attaches task policies. So for each step: first `create_artifact({id, name, description, files, policies})`
-(artifact id and files from Step 3; for the open `character_table` artifact use `files: []`),
+(artifact id and output_files from the Step 3 table; for the open `character_table` artifact use `files: []`),
 then, as a separate later call, `create_task({..., artifacts: ["<artifact key from the result>"]})`.
 Do not use `output_artifact_name` for outputs that carry policies. If `create_artifact` fails
 twice, stop and report; never create the task without its artifact. Skip any task/artifact that
@@ -99,7 +101,7 @@ already exists.
 
 ### 4a. write_screenplay
 - agent: writer; artifact `screenplay` ("Screenplay"), files `["screenplay.md"]`, artifact policies `["screenplay-quality"]`
-- prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. headings, action, dialogue); write `screenplay.md`.
+- prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file).
 
 ### 4b. character_table
 - agent: cast writer; `requires_tasks: ["write_screenplay"]`, `requires_artifacts: ["screenplay"]`
@@ -114,12 +116,13 @@ already exists.
     garments, colors, material, fit, accessories | scenes where worn; look slugs are
     lowercase, `[a-z0-9]+(_[a-z0-9]+)*`, e.g. `raincoat`, `evening_dress`)
   - files are registered automatically; then `task_complete`
+  - the prompt states the output artifact `character_table` and the file pattern `character_<slug>.md`
 
 ### 4c. create_scenes
 - agent: director; `requires_tasks: ["write_screenplay","character_table"]`,
   `requires_artifacts: ["screenplay","character_table"]`
 - artifact `scene_list` ("Scene List"), files `["scene_list.md"]`, artifact policies `["scenes-quality","scenes-complete"]`
-- prompt: produce ONE markdown table in `scene_list.md` with exactly these columns:
+- prompt: write the single output file `scene_list.md`, containing ONE markdown table with exactly these columns:
   `Scene #` | `INT/EXT` | `Location` (display name) | `location_slug` (lowercase slug, stable:
   the same place has the same slug in every scene) | `Time of day` | `Summary` (one sentence) |
   `Characters present` | then per present character its outfit: `Outfits` as
@@ -133,14 +136,14 @@ already exists.
 - agent: `design_planner`; `difficulty: "hard"`
 - `requires_tasks: ["create_scenes","character_table"]`,
   `requires_artifacts: ["character_table","scene_list"]`
-- artifact `design_plan` ("Design Plan"), files `["design_plan.json","scene_list.md"]` (the second is a verbatim copy of the scene list, so the artifact policy judge sees both), artifact policies `["design-plan-covers-scenes","designs-cover-plan"]`
+- artifact `design_plan` ("Design Plan"), files `["scene_list.md","design_plan.json"]` (BOTH must be declared at `create_artifact`; `scene_list.md` is a verbatim copy of the scene list, so the artifact policy judge sees both), artifact policies `["design-plan-covers-scenes","designs-cover-plan"]`
 - description/prompt (the first line is exact, the worker keys on it):
 
 ```
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Output files (canonical names): `design_plan.json` and `scene_list.md` (verbatim copy of the scene list), then one create_design call per design plan entry.
+Output artifact `design_plan`; output files (canonical names, write exactly these): `scene_list.md` (verbatim copy of the scene list) and `design_plan.json`, then one create_design call per design plan entry.
 ```
 
 ## Step 5 — Verify and confirm
@@ -158,6 +161,7 @@ precisely and do not use the success message below. Then tell the user:
 1. Preflight first; no plot means no tasks.
 2. One create call per round, in order; later `requires_*` use the keys/ids returned by earlier results.
 3. Idempotent: skip existing tasks, artifacts and policies; never duplicate.
-4. Canonical ids and filenames from Step 3, identical in every prompt.
-5. Policies exist before the artifacts that reference them; attach them to the output artifact via `create_artifact.policies`, then link it with `create_task.artifacts`.
-6. Never claim an unconfirmed task. Do not read artifacts or run `create_design` yourself; the worker does it.
+4. Canonical ids and filenames from the Step 3 table, identical in every prompt and in every `create_artifact` call.
+5. Never write check/policy names into a task's prompt or description (a worker would pass them on, e.g. as `create_design` policies); checks are attached only through `create_artifact.policies`.
+6. Policies exist before the artifacts that reference them; attach them to the output artifact via `create_artifact.policies`, then link it with `create_task.artifacts`.
+7. Never claim an unconfirmed task. Do not read artifacts or run `create_design` yourself; the worker does it.
