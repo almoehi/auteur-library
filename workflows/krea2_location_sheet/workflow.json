@@ -1,7 +1,7 @@
 {
   "10": {
     "inputs": {
-      "value": "A moonlit stone courtyard ringed by tall cypress trees, worn flagstones, a dry central fountain"
+      "value": ""
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -281,7 +281,7 @@
         0
       ],
       "first_frame": [
-        "29",
+        "102",
         0
       ]
     },
@@ -431,7 +431,7 @@
     "inputs": {
       "filename_prefix": "anchor_image",
       "images": [
-        "29",
+        "101",
         0
       ]
     },
@@ -629,6 +629,48 @@
         "88",
         0
       ]
+    }
+  },
+  "100": {
+    "inputs": {
+      "image": "reference_image.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image (optional reference)"
+    }
+  },
+  "101": {
+    "inputs": {
+      "switch": true,
+      "on_false": [
+        "29",
+        0
+      ],
+      "on_true": [
+        "100",
+        0
+      ]
+    },
+    "class_type": "ComfySoftSwitchNode",
+    "_meta": {
+      "title": "Anchor: reference image, else KREA-2"
+    }
+  },
+  "102": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": 1216,
+      "height": 672,
+      "crop": "center",
+      "image": [
+        "101",
+        0
+      ]
+    },
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Fit anchor to orbit canvas"
     }
   }
 }

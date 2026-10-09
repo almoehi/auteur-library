@@ -23,15 +23,21 @@
 # only the linked inputs; all non-connected widget values were absent.
 # Node 39, 73 (LoraLoaderModelOnly): restored `Minimax/` folder prefix on LoRA
 # filenames — the converter stripped the subfolder prefix during UI→API conversion.
+# Anchor selection (optional reference_image): nodes 100/101/102 added —
+# 100 LoadImage (port reference_image, optional), 101 ComfySoftSwitchNode (ComfyUI core,
+# switch=true, on_true=reference, on_false=KREA-2 decode), 102 ImageScale (lanczos, 1216x672,
+# center crop) feeding node 44 first_frame and node 75 (anchor_preview) reads node 101.
+# fps is no longer a port: CreateVideo (node 76) stays at the H3-native 24.
 # ──────────────────────────────────────────────────────────────────────────────
 
 name: krea2_location_sheet
 description: >
-  Generates a six-panel location contact sheet from a plain-English place description —
-  architecturally distinct locked-off views assembled into a 2×3 grid. Best for creating
-  location reference sheets when you have a text description and need multiple consistent
-  viewpoints of the same space. Not suitable for character or person generation, continuous
-  camera motion, or workflows requiring a caller-supplied reference image.
+  Generates a six-panel location contact sheet — architecturally distinct locked-off views
+  assembled into a 2×3 grid — from EITHER an optional reference image of the place (it becomes
+  the anchor image; the prompt is not used to generate it) OR, when no reference image is given,
+  from a plain-English place description (a KREA-2 anchor image is generated first). Best for
+  location reference sheets that need multiple consistent viewpoints of the same space. Not
+  suitable for character or person generation or continuous camera motion.
 url: workflow.json
 workflow_type: t2i
 model_family: krea2
@@ -43,61 +49,60 @@ customNodes:
     commitHash: 8952eae1d3298f241c538c029a6e929509c4813f
 
 ports:
+  inputs:
+    - name: reference_image
+      kind: image
+      description: "Optional reference image of the location. When given it IS the anchor image: the KREA-2 text-to-image stage is skipped entirely (not even run) and the prompt is not used to generate it; the orbit starts from this image (center-cropped to 16:9, 1216×672). When omitted the anchor is generated from the prompt. 16:9 landscape images work best."
+      binding: image@100
+      required: false
   params:
     - name: prompt_location
       kind: string
-      description: "Plain-English description of the location — architecture, materials, lighting, atmosphere, and distinctive spatial details. Drives the KREA-2 anchor image generation."
+      description: "Plain-English description of the location — architecture, materials, lighting, atmosphere, distinctive spatial details. In prompt mode (no reference_image) it drives the KREA-2 anchor image; give it. With a reference_image omit it: the image is the anchor and the prompt is not used to generate it (any text given only serves as a short subject hint for the orbit prompt and view selector)."
       binding: value@10
-      required: true
-      default: "A moonlit stone courtyard ringed by tall cypress trees, worn flagstones, a dry central fountain"
-    - name: width
+      required: false
+      default: ""
+    - name: anchor_width
       kind: int
-      description: "Anchor image width in pixels for the KREA-2 generation stage. Does not affect the final contact sheet dimensions, which are determined by the OrbitSheets layout (512 px per panel, 2 columns)."
+      description: "Anchor image width in pixels for the KREA-2 text-to-image stage (prompt mode only; ignored when reference_image is given). Named anchor_* so quality profiles that override width/height cannot silently change the sheet. The orbit video always runs at 1216×672 and the contact sheet layout is fixed (512 px per panel, 2 columns). Multiple of 16."
       binding: width@27
-      constraints: { min: 64 }
-      required: true
+      constraints: { min: 256, max: 2048 }
+      required: false
       default: 1920
-    - name: height
+    - name: anchor_height
       kind: int
-      description: "Anchor image height in pixels for the KREA-2 generation stage. Does not affect the final contact sheet dimensions, which are determined by the OrbitSheets layout (512 px per panel, 2 columns)."
+      description: "Anchor image height in pixels for the KREA-2 text-to-image stage (prompt mode only; ignored when reference_image is given). Named anchor_* so quality profiles that override width/height cannot silently change the sheet. Multiple of 16."
       binding: height@27
-      constraints: { min: 64 }
-      required: true
+      constraints: { min: 256, max: 2048 }
+      required: false
       default: 1080
     - name: seed
       kind: int
-      description: "Random seed for the KREA-2 anchor image. Different seeds produce different location interpretations. The H3 orbit stage uses a separate fixed seed internally."
+      description: "Random seed for the KREA-2 anchor image (prompt mode only; ignored when reference_image is given). Different seeds give different interpretations. The H3 orbit stage uses a separate fixed seed internally."
       binding: seed@28
       seed: true
       required: false
       default: 0
     - name: steps
       kind: int
-      description: "Denoising steps for the KREA-2 anchor image stage. 6–10 gives good results; higher values yield more detail. The H3 orbit stage runs 8 steps internally with the turbo LoRA."
+      description: "Denoising steps for the KREA-2 anchor image (prompt mode only; ignored when reference_image is given). 6–10 gives good results. The H3 orbit stage runs 8 steps internally with the turbo LoRA."
       binding: steps@28
       constraints: { min: 1, max: 50 }
       required: false
       default: 8
     - name: cfg
       kind: float
-      description: "Classifier-free guidance scale for the KREA-2 anchor stage. Default 1.0 is recommended; increase to 2–3 for stronger prompt adherence at the cost of naturalness."
+      description: "Classifier-free guidance scale for the KREA-2 anchor stage (prompt mode only; ignored when reference_image is given). Default 1.0 is recommended; 2–3 gives stronger prompt adherence at the cost of naturalness."
       binding: cfg@28
       required: false
       default: 1.0
     - name: frames
       kind: int
-      description: "Number of frames in the H3 orbit sequence. Must satisfy (frames − 5) mod 17 = 0. Default 124 = 17×7 + 5, giving ~5.2 s at 24 FPS with enough candidates for 6 distinct locked-off views."
+      description: "Number of frames in the H3 orbit sequence (rendered at the model-native 24 fps, not configurable). Must satisfy (frames − 5) mod 17 = 0. Default 124 = 17×7 + 5, about 5.2 s, with enough candidates for 6 distinct locked-off views."
       binding: length@44
       constraints: { min: 5 }
       required: false
       default: 124
-    - name: fps
-      kind: int
-      description: "Frame rate of the intermediate orbit video in frames per second. Default 24 matches the H3 model's native rate."
-      binding: fps@76
-      constraints: { min: 1, max: 60 }
-      required: false
-      default: 24
   outputs:
     - name: location_sheet
       kind: image
@@ -111,7 +116,7 @@ ports:
       role: auxiliary
     - name: anchor_preview
       kind: image
-      description: "KREA-2 generated anchor image used as the first-frame seed for the H3 orbit stage."
+      description: "The anchor image the H3 orbit starts from: the supplied reference_image as-is, or the KREA-2 generated image when none was given."
       node_id: "75"
       role: auxiliary
     - name: view_1
@@ -148,7 +153,13 @@ context: |
   Best for location and environment reference sheets when you have a descriptive text prompt
   and need multiple consistent viewpoints of the same space assembled into a compact grid.
 
-  Prompt guidance: describe the location in physical detail — architecture type (courtyard,
+  Two modes (same for krea2_character_sheet): with `reference_image` the supplied image is the
+  anchor — the KREA-2 stage is skipped (it never runs) and prompt / anchor_width / anchor_height /
+  steps / cfg / seed are not used to generate it; without it the anchor is generated from
+  `prompt_location`. The reference is center-cropped to 16:9 (1216×672) before the orbit starts.
+  The orbit frame rate is fixed at the model-native 24 fps and is not configurable.
+
+  Prompt guidance (prompt mode): describe the location in physical detail — architecture type (courtyard,
   corridor, market, rooftop), materials (stone, glass, wood, neon), dominant light source
   and quality (midday hard sun, soft overcast fill, warm tungsten, moonlight), atmosphere
   (abandoned, intimate, bustling), and distinctive visual anchors (archways, fountains, trees,
@@ -159,11 +170,15 @@ context: |
   locked-off cuts. If panels look too similar, increase `frames`. Valid values must satisfy
   (frames − 5) mod 17 = 0: 5, 22, 39, 56, 73, 90, 107, 124, 141, 158, …
 
-  Seed: controls only the KREA-2 anchor image. Try a few seeds to find a pleasing base view
+  Seed: controls only the KREA-2 anchor image (prompt mode). Try a few seeds to find a pleasing base view
   before committing to a longer orbit generation.
 
-  Steps: 6–8 is the practical range for the KREA-2 anchor; beyond 12 yields diminishing
+  Steps: 6–8 is the practical range for the KREA-2 anchor (prompt mode); beyond 12 yields diminishing
   returns. The H3 orbit stage is fixed at 8 steps with the turbo LoRA.
+
+  Anchor size: `anchor_width` / `anchor_height` only size the KREA-2 anchor. They are named
+  anchor_* on purpose: render profiles override params called `width`/`height`/`fps`, which must
+  not silently change the sheet.
 
   Known failure modes:
   - Duplicate or low-contrast panels: very plain or monotone locations (bare white rooms,
