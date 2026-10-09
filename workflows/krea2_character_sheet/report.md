@@ -78,12 +78,13 @@
 
 | Port | Kind | Role / Default | Binding | Status |
 |---|---|---|---|---|
-| prompt_character | string | param (required) | value@10 | ✓ |
-| width | int | param (default: 1920) | width@27 | ✓ |
-| height | int | param (default: 1080) | height@27 | ✓ |
+| reference_image | image | input (optional) | image@100 | ✓ |
+| prompt_character | string | param (default: empty) | value@10 | ✓ |
+| anchor_width | int | param (default: 1920) | width@27 | ✓ |
+| anchor_height | int | param (default: 1080) | height@27 | ✓ |
 | steps | int | param (default: 8) | steps@28 | ✓ |
 | frames | int | param (default: 124) | length@44 | ✓ |
-| fps | int | param (default: 24) | fps@78 | ✓ |
+| cfg | float | param (default: 1.0) | cfg@28 | ✓ |
 | seed | int | seed (optional) | seed@28 | ✓ |
 | character_sheet | image | output (primary) | node 70 | ✓ |
 | orbit_video | video | output (auxiliary) | node 79 | ✓ |
@@ -107,7 +108,7 @@ fixed in the original workflow. H3 orbit reproducibility is controlled by the an
 `first_frame`; varying `seed` (node 28) varies the anchor and thus the orbit.
 
 **H3 orbit dimensions** (1216×672): baked in node 44, correctly not exposed as params.
-`width`/`height` params control the KREA-2 anchor frame only. Documented in port descriptions.
+`anchor_width`/`anchor_height` params control the KREA-2 anchor frame only. Documented in port descriptions.
 
 ---
 
@@ -132,3 +133,30 @@ All 9 URLs verified HTTP 200. No MODEL_KEYS gaps (all keys in standard pre-fligh
 ## Open items
 
 _(none — e2e test passed; output format fixes applied and pending re-verification run)_
+
+## Revision: optional `reference_image`, no `fps` port
+
+Both sheet bundles (`krea2_location_sheet`, `krea2_character_sheet`) share one anchor mechanism:
+
+- **`reference_image`** (input, image, optional, `image@100`): when supplied it IS the anchor image
+  and the KREA-2 text-to-image stage is skipped (never executed); when absent the anchor comes from
+  the prompt, as before.
+- Graph: node 100 `LoadImage` → node 101 `Any Switch (rgthree)` (rgthree-comfy, pinned in
+  `serverless-comfy/nodes.lock`; `any_01` = reference, `any_02` = KREA-2 `VAEDecode` node 29; it
+  returns the first non-empty input) → node 102 `ImageScale` (lanczos, 1216×672, center crop) →
+  node 44 `first_frame`. `anchor_preview` (node 75) saves node 101's output (the reference as
+  supplied, or the generated anchor). The harness removes the consumer edge of an absent optional
+  loader (`bindWorkflow()` step 3), so `any_01` disappears and `any_02` wins; the node's inputs are
+  all optional (`FlexibleOptionalInputType`), so that stays valid. The loader must stay the switch's
+  ONLY direct consumer. **Cost:** the switch is not lazy, so the KREA-2 stage still runs in
+  reference mode (result discarded). `ComfySoftSwitchNode` (core, lazy) was rejected: the deployed
+  runtime did not register it ("missing_node_type") although `comfy_extras/nodes_logic.py` has it
+  at the pinned ComfyUI commit.
+- **No `fps` port**: `CreateVideo` keeps the H3-native 24 fps. `frames` stays (orbit coverage).
+- **`width` / `height` renamed `anchor_width` / `anchor_height`**: render profiles override params
+  named `width` / `height` / `fps` / `steps` / `seed` / `cfg` / `sampler` / `sample_rate`
+  (`extractProfileOverrides()`), which would silently resize the KREA-2 anchor. The orbit stage
+  (1216×672, 8 steps, 24 fps) is hard-wired and bound to no port.
+- Prompt params (`prompt_location` / `prompt_character`) are now optional with an empty default; in
+  reference mode omit them (the OrbitSheets prompt nodes fall back to "the location" / "the
+  character"). Any text given still reaches the orbit prompt and the view selector as a subject hint.
