@@ -92,7 +92,7 @@ Skip any entity whose key is in `existing` (record as skipped). One call per ent
 - location: `create_design({ kind: "location", display_name: "<name>", start: "attributes", attributes, initial_drafts: 1 })`
 - outfit: `create_design({ kind: "outfit", display_name: "<display_name>", start: "attributes", attributes, initial_drafts: 1, links: [{ "role": "character", "key": "character_<character_slug>" }] })`
 
-`start: "attributes"` needs a non-sheet text-to-image workflow in the workspace; `character_type` is REQUIRED for characters (custom text is allowed, e.g. "ghost"). A refusal result starts with `error:`; a success reads `Design created: key <key>, @<name>, task id <id>, status <status>`. Treat any result not starting with `Design created` as not created.
+`start: "attributes"` needs a non-sheet text-to-image workflow in the workspace (an outfit needs an image-to-image one: it is drafted as edits of its character's primary, and it only starts once its character design is finished - always pass the character link); `character_type` is REQUIRED for characters (custom text is allowed, e.g. "ghost"). A refusal result starts with `error:`; a success reads `Design created: key <key>, @<name>, task id <id>, status <status>`. Treat any result not starting with `Design created` as not created.
 
 Never pass `policies` to `create_design` (the tool does not accept it; designs go through human review), even if the task prompt names checks. Call sequentially (one at a time) and keep
 each result's key, `@name` and task id.
@@ -125,7 +125,7 @@ file mismatch: <declared files> or none
 
 ## Key rules
 
-1. Characters before outfits; outfits always link `{role:"character", key:"character_<slug>"}`.
+1. Characters before outfits; outfits always link `{role:"character", key:"character_<slug>"}` (the link makes the outfit wait for its character and is drafted from the character's primary - never omit it).
 2. Slugs follow one normalization; keys <= 64 chars; names unique across kinds.
 3. `start` is always `"attributes"`, `initial_drafts` 1.
 4. Idempotent: never recreate an existing design.
