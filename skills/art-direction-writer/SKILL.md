@@ -80,6 +80,8 @@ Example: `"35mm film photograph, Italy 1930s, muted grey-blue-green palette, sof
 
 ## Phase 3 — Write art_direction.md
 
+**Format rule:** write plain Markdown to `art_direction.md`, never PDF, DOCX, RTF or any other binary/office format (downstream agents can only read text).
+
 Structure:
 ```markdown
 # Art Direction — [Production Title]

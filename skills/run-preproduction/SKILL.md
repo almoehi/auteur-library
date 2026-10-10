@@ -68,6 +68,8 @@ Never edit an existing policy here (see `modify-policy`).
 | `create_scenes` | director | `scene_list` | `["scene_list.md"]` | tasks `write_screenplay`, `character_table`; artifacts `screenplay`, `character_table` | `scenes-quality`, `scenes-complete` |
 | `plan_designs` | `design_planner` | `design_plan` | `["scene_list.md","design_plan.json"]` (BOTH, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan` |
 
+**Format rule:** every declared output file is Markdown (`.md`) or JSON (`.json`), never `.pdf`, `.docx`, `.rtf` or any other binary/office format; downstream agents cannot read those. Every task prompt below tells the worker to write Markdown.
+
 These names are canonical. Embed the exact output file names in each task's prompt; never rename
 later. Checks are attached ONLY through `create_task.policies` (never in a task's prompt or
 description, see Key rules).
@@ -90,11 +92,14 @@ create_task({ id, title, description, prompt, agent, requires_tasks, requires_ar
 - Unknown check keys are refused with the list of known keys and nothing is created: fix the
   key from that list (or create the missing policy per Step 2) and call again.
 
-**One call per step, strictly in order.** Issue exactly ONE `create_task` call per round and
-wait for its result before the next. Never put several of these calls in the same round: a later
-step's `requires_*` references the earlier step's result, so it cannot be issued before that
-result exists (a `create_scenes` issued before `character_table` exists fails with
-`requires.tasks references unknown task id`).
+**One turn, four calls, no prose.** Create ALL four tasks in the SAME turn, back to back: one
+`create_task` call per round, each issued after the previous result (a later step's `requires_*`
+references the earlier result, so never put several in one round: a `create_scenes` issued before
+`character_table` exists fails with `requires.tasks references unknown task id`). Between the
+calls write NO text: no announcements, no "let me verify", no progress notes. A text-only reply
+ENDS your turn and the rest of the chain is never created. Do not re-read or re-verify stored
+prompts; trust each `create_task` result. Only after the 4th result (or after a stop on failure,
+below) may you write your single final report (Step 5).
 
 **Use returned identifiers, never assumed ones.** `requires_tasks` / `requires_artifacts` accept
 keys (or runtime ids). After every `create_task`, read the task id and artifact key FROM THE
@@ -109,14 +114,14 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
 
 ### 4a. write_screenplay
 - agent: writer; `output_artifact_name: "screenplay"`, `output_artifact_description: "Screenplay"`, `output_files: ["screenplay.md"]`, `policies: ["screenplay-quality"]`
-- prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file).
+- prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX.
 
 ### 4b. character_table
 - agent: cast writer; `requires_tasks: ["write_screenplay"]`, `requires_artifacts: ["screenplay"]`
 - `output_artifact_name: "character_table"`, `output_artifact_description: "Character Breakdown Table"`, `output_files: []` (open), `policies: ["cast-quality"]`
 - prompt, verbatim requirements:
   - identify every cast role (speaking, named, meaningful presence; no props or walk-ons)
-  - write ONE markdown file per character with `sandbox_write_file`, named `character_<slug>.md`
+  - write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`
     where `<slug>` is the lowercase name, `[a-z0-9]+(_[a-z0-9]+)*`
   - each file has exactly these sections as `##` headings: `NAME`, `ROLE`, `PERSONALITY`,
     `VISUAL PROFILE` (character type, age, ethnicity, hair, eyes, build, distinguishing
@@ -130,7 +135,7 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
 - agent: director; `requires_tasks: ["write_screenplay","character_table"]`,
   `requires_artifacts: ["screenplay","character_table"]`
 - `output_artifact_name: "scene_list"`, `output_artifact_description: "Scene List"`, `output_files: ["scene_list.md"]`, `policies: ["scenes-quality","scenes-complete"]`
-- prompt: write the single output file `scene_list.md`, containing ONE markdown table with exactly these columns:
+- prompt: write the single output file `scene_list.md` as plain Markdown (never PDF or DOCX), containing ONE markdown table with exactly these columns:
   `Scene #` | `INT/EXT` | `Location` (display name) | `location_slug` (lowercase slug, stable:
   the same place has the same slug in every scene) | `Time of day` | `Summary` (one sentence) |
   `Characters present` | then per present character its outfit: `Outfits` as
@@ -151,7 +156,7 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Output artifact `design_plan`; output files (canonical names, write exactly these): `scene_list.md` (verbatim copy of the scene list) and `design_plan.json`, then one create_design call per design plan entry.
+Output artifact `design_plan`; output files (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`, then one create_design call per design plan entry.
 ```
 
 ## Step 5 — Verify and confirm
@@ -167,7 +172,7 @@ precisely and do not use the success message below. Then tell the user:
 ## Key rules
 
 1. Preflight first; no plot means no tasks.
-2. One `create_task` call per round, in order; later `requires_*` use the keys/ids returned by earlier results.
+2. All four `create_task` calls in the same turn, one per round, in order, no prose between them; later `requires_*` use the keys/ids returned by earlier results.
 3. Idempotent: skip existing tasks, artifacts and policies; never duplicate.
 4. Canonical ids and filenames from the Step 3 table, identical in every prompt and in every `create_task` call.
 5. Never write check/policy names into a task's prompt or description (a worker would pass them on, e.g. as `create_design` policies); checks are attached only through `create_task.policies`.
