@@ -58,7 +58,7 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
    Put only what the sources state; omit unknown keys. `character_type` is passed as its own
    argument, not inside `attributes`.
 5. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
-   `scene_list.md` first (an exact, character-for-character copy of the `scene_list` artifact's text as you read it; no edits, no summary) because the `design-plan-covers-scenes` policy judge reads all files of this artifact, then `design_plan.json`:
+   `scene_list.md` first (an exact, character-for-character copy of the `scene_list` artifact's text as you read it; no edits, no summary) because the `design-plan-covers-scenes` task check judges the contents of all your output files, then `design_plan.json`:
 
 ```json
 {
