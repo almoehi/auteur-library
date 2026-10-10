@@ -56,13 +56,18 @@ Contract reference: `release/DESIGN_GUIDE.md`.
      era, time of day, weather);
    - the **workflow** to use (a t2i workflow name) — if none is named, pick the `wf_*` tool
      whose workflow type is text-to-image and whose model family matches the one named in the
-     prompt or in `design.json`;
+     prompt or in `design.json`. **Exception — an outfit (or any design whose prompt says it is
+     drafted as image EDITS of a linked design's primary):** the workflow is an image-edit
+     (`i2i`) one, never text-to-image; the linked design's `primary:` line in the prompt's
+     "Referenced designs" block (`artifact://<id>/primary.<ext>`) is its first image input;
    - **how many drafts** (`initialDrafts`, default 4) and the **file extension** (default
      `png`).
    `design.json` (read above) holds the same attributes and may name `displayName`, `links`
    (an outfit's character) and `loras`.
-3. If the attributes are empty, or no text-to-image `wf_*` tool exists, **do not guess**:
-   render nothing and call `task_complete` with a summary that says exactly what is missing.
+3. If the attributes are empty, or no text-to-image `wf_*` tool exists (for an outfit: no
+   image-edit `wf_*` tool with an image input, or no `primary:` line for the linked character),
+   **do not guess** — never fall back to text-to-image for an outfit, that invents a different
+   person: render nothing and call `task_complete` with a summary that says exactly what is missing.
    The person continues in the studio (Generate / upload references).
 
 ## Phase 2 — Write the prompt
@@ -71,7 +76,8 @@ Contract reference: `release/DESIGN_GUIDE.md`.
 2. Draft the prompt with `draft_prompt(<workflow>, <context>)`. Pass all attributes, the
    design kind, and the goal: *a clean, well-lit reference image of one subject* — for a
    character: full body or three-quarter, neutral pose, plain background, face clearly
-   visible; for an outfit: the linked character wearing the outfit, full body; for a location:
+   visible; for an outfit: an edit instruction that dresses the person of the linked character's
+   primary image in the outfit (keep face, hair and body unchanged), full body; for a location:
    an establishing wide shot, no people. The prompt writer applies the model-family skill
    (`prompt-writer-<family>`, e.g. `prompt-writer-krea2`) automatically. If `draft_prompt` is
    not available, `load_skill("prompt-writer-<family>")` and follow it yourself.
@@ -80,6 +86,11 @@ Contract reference: `release/DESIGN_GUIDE.md`.
    `lora_index`, pass those LoRAs on the workflow's lora ports (same model family only).
 
 ## Phase 3 — Render the drafts
+
+For an outfit each call is an edit of the linked character's primary: pass the `primary:` reference
+from the prompt as the workflow's image input (the same `artifact://` reference, never a copied
+URL) and the edit instruction as the prompt; the description in the same block tells you who the
+person is, the image defines how they look.
 
 Issue ALL `initialDrafts` calls in ONE response — one `wf_*` call per draft, n = 1 … `initialDrafts`
 (they render in parallel; do not wait for one before issuing the next):
