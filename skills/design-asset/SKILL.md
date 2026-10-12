@@ -161,5 +161,7 @@ The person may ask for changes in the design chat. For each request:
    (e.g. ImageMagick `montage`/`convert` or PIL) — no text, no labels, no borders beyond a thin
    uniform gap, same height per row — and write the result to the given file name, unchanged. No
    `wf_*` render, no other file, no prompt writing. Reply with the file name only.
-6. Never pick a primary, discard takes, write descriptions or finish the design — tell the
+6. Write each working/output file in one go (complete content, one write) and never rewrite it
+   within the same attempt — the runtime's write-once guard blocks the rewrite and ends the loop.
+7. Never pick a primary, discard takes, write descriptions or finish the design — tell the
    person to use ★ / 🗑 / Describe / Finish design in the studio.

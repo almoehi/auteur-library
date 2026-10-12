@@ -44,6 +44,14 @@ per shot. The finished storyboard (`shotlist.md` + `frame_1…N` in shot order) 
 5. **One render per take.** Leave `seed` at its default; never request batches.
 6. **Never name a workflow from memory.** Choose among the `wf_*` tools you actually have, by
    capability (see "Choosing the workflow").
+7. **Write `shotlist.md` in ONE go.** Compose the complete shotlist (all shots, final ids,
+   order and fields) in reasoning first, then ONE `sandbox_write_file`. Never write a partial or
+   draft shotlist and never rewrite it within the same drafting run (the runtime's write-once
+   guard for output files blocks a rewrite and ends the attempt). In chat iteration, a change to
+   the shots is exactly ONE full rewrite. Write every other file once, complete, too.
+8. **Never end the drafting turn early.** No text-only reply and no `task_complete` before
+   every shot of the shotlist has its draft render(s) dispatched; `shotlist.md` alone is not a
+   deliverable (a storyboard handed over with 0 takes is a failure).
 
 ## Phase 1 — Preflight and shot list (LLM phase)
 
@@ -66,7 +74,8 @@ per shot. The finished storyboard (`shotlist.md` + `frame_1…N` in shot order) 
    `<character_slug>:<look_slug>` to the linked design keys `character_<slug>` and
    `outfit_<slug>_<look>` (the keys in `design.json.links` are the truth; names may carry a
    suffix).
-4. Write `/workspace/<artifact id>/shotlist.md` — **one section per shot**, exactly:
+4. Compose the whole shot list first, then write `/workspace/<artifact id>/shotlist.md` with ONE
+   write (hard rule 7) — **one section per shot**, exactly:
 
 ```
 # Scene <n> shot list
@@ -171,6 +180,8 @@ name); if it fails again, leave it (the studio shows a failed take with Retry) a
 
 Audit before completing:
 
+- [ ] `shotlist.md` written exactly once (no partial draft, no rewrite in this run)
+- [ ] every shot id of the shotlist has >= 1 dispatched `take_<shotId>-draft-<k>` render
 - [ ] `shotlist.md` exists, every shot has `## <shotId> — <title>` plus `Action`, `Camera`,
       `Characters`, `Outfits`, `Duration`; ids consecutive `s<scene>-01…`
 - [ ] every shot has `take_<shotId>-draft-<n>.<ext>` for n = 1 … drafts per shot (re-read the
