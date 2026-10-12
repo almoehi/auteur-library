@@ -6,9 +6,9 @@ description: >
   task prompt says "draft the design", "render the initial drafts", or the person asks in the
   design chat for a change ("make her older", "try a red jacket", "another angle"). Produces
   draft and take images inside the design artifact (`take_draft-<n>-<slug>.<ext>`, `take_<slug>.<ext>`)
-  for the person to pick from in the studio. Do NOT invoke for shooting scenes, storyboards,
-  character/location sheets requested as their own task, writing `design.json`, or publishing
-  or finishing a design.
+  for the person to pick from in the studio. Do NOT invoke for shooting scenes, storyboard designs
+  (`storyboard_scene_<n>` — that is `storyboard-scene`), character/location sheets requested
+  as their own task, writing `design.json`, or publishing or finishing a design.
 agentType: worker
 ---
 
@@ -54,9 +54,10 @@ Contract reference: `release/DESIGN_GUIDE.md`.
 2. From the task prompt, extract:
    - the **attributes** (e.g. hair color, age, build, wardrobe, mood; for locations: place,
      era, time of day, weather);
-   - the **workflow** to use (a t2i workflow name) — if none is named, pick the `wf_*` tool
-     whose workflow type is text-to-image and whose model family matches the one named in the
-     prompt or in `design.json`. **Exception — an outfit (or any design whose prompt says it is
+   - the **workflow** to use — chosen by CAPABILITY, never by name from memory: if the prompt
+     names one that exists among your `wf_*` tools, use it; else pick the `wf_*` tool whose
+     workflow type is text-to-image (read from its description / `get_workflow_instructions`)
+     and whose model family matches the one named in the prompt or in `design.json`. **Exception — an outfit (or any design whose prompt says it is
      drafted as image EDITS of a linked design's primary):** the workflow is an image-edit
      (`i2i`) one, never text-to-image; the linked design's `primary:` line in the prompt's
      "Referenced designs" block (`artifact://<id>/primary.<ext>`) is its first image input;
@@ -79,7 +80,7 @@ Contract reference: `release/DESIGN_GUIDE.md`.
    visible; for an outfit: an edit instruction that dresses the person of the linked character's
    primary image in the outfit (keep face, hair and body unchanged), full body; for a location:
    an establishing wide shot, no people. The prompt writer applies the model-family skill
-   (`prompt-writer-<family>`, e.g. `prompt-writer-krea2`) automatically. If `draft_prompt` is
+   (`prompt-writer-<family>`) automatically. If `draft_prompt` is
    not available, `load_skill("prompt-writer-<family>")` and follow it yourself.
 3. Keep the named attributes verbatim; add no characters, props or text not asked for.
 4. LoRAs: if `design.json.loras` lists LoRAs, or the attributes contain a trigger word from
@@ -135,8 +136,13 @@ The person may ask for changes in the design chat. For each request:
 3. Pick the workflow:
    - a change to an existing image ("older", "red jacket", "other background") → an
      **image-edit** (`i2i`) `wf_*` tool; write the instruction with `draft_prompt` for that
-     workflow (skills `prompt-writer-qwenimage` / `prompt-writer-flux2`), referencing the
-     source as the first image input and any extra reference as the next;
+     workflow (model-family skill `prompt-writer-<family>`), referencing the source as the first image
+     input and any extra reference as the next, named the way that workflow's port descriptions
+     name its images ("Picture 1", "Figure 1", …) — use each image input's declared `label` and
+     `reference_role` when the manifest has them (`subject` = the image being edited), else the
+     port descriptions; prefer a workflow declaring `capabilities` that fit (e.g.
+     `multi-reference-edit` when several images must be passed); among several i2i workflows
+     prefer the one whose image inputs and required ports fit what you have to pass;
    - "start over / completely different" → the text-to-image workflow, as in Phase 2.
 4. Render only what THIS message asks for — an edit is one take unless the message gives a
    count. Earlier requests are done: never continue, retry or redo them unless this message asks.

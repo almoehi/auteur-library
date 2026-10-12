@@ -24,11 +24,15 @@ ports:
       kind: image
       description: "The base photo to edit — the subject, pose, and background are preserved unless the prompt says otherwise."
       binding: image@76
+      reference_role: subject
+      label: "Figure 1"
       required: true
     - name: garment_reference_image
       kind: image
       description: "Optional reference photo supplying the element (garment, object, or texture) called out in the prompt to be applied to the subject image, referred to as 'Figure 2'. Omit for a plain instruction edit of the subject image; when omitted, a neutral gray image stands in internally, so do not mention 'Figure 2' in the prompt."
       binding: image@81
+      reference_role: garment
+      label: "Figure 2"
       required: false
   params:
     - name: prompt_positive

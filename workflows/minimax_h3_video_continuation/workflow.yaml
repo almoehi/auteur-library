@@ -46,6 +46,8 @@ ports:
       # drift across a chain. Referenced as <Picture 1> / <Subject 1> in the prompt.
       description: "Character identity reference sheet: a single wide image with three views of the subject (front, three-quarter profile, and full-body) horizontally concatenated. Used to lock visual identity and appearance across the continuation. Re-supply on every generation to prevent drift across a chain. Referenced as <Subject 1> in the prompt."
       binding: image@178
+      reference_role: subject
+      label: "Subject 1"
       required: true
     - name: environment_plate
       kind: image
@@ -54,6 +56,8 @@ ports:
       # Referenced as <Picture 2> / <Subject 2> in the prompt.
       description: "Empty environment plate: establishes the set, lighting, materials, and spatial layout the continuation is shot in. Must not contain any characters. The model uses this for scene consistency but does not fix the camera to its viewpoint. Referenced as <Picture 2> in the prompt."
       binding: image@170
+      reference_role: background
+      label: "Picture 2"
       required: true
     - name: ref_picture_3
       kind: image
@@ -66,6 +70,8 @@ ports:
       # in /ComfyUI/input/); omit <Picture 3> from subject_definitions so the model ignores it.
       description: "Optional extra reference: a specific pose the subject reaches, a prop present in the scene, an additional character view, or a secondary subject who enters. Omit when not needed. When supplied, add a one-line note describing its role in the subject_definitions section of the prompt (e.g. 'pose she ends in, shot from slightly below') and reference it as <Picture 3>."
       binding: image@187
+      reference_role: reference
+      label: "Picture 3"
       required: false
     - name: ref_picture_4
       kind: image
@@ -74,6 +80,8 @@ ports:
       # subject_definitions so the model ignores it.
       description: "Optional extra reference, same types as ref_picture_3. Omit when not needed. When supplied, describe its role in subject_definitions and reference it as <Picture 4>."
       binding: image@192
+      reference_role: reference
+      label: "Picture 4"
       required: false
     - name: ref_picture_5
       kind: image
@@ -82,6 +90,8 @@ ports:
       # subject_definitions so the model ignores it.
       description: "Optional extra reference, same types as ref_picture_3. Omit when not needed. When supplied, describe its role in subject_definitions and reference it as <Picture 5>."
       binding: image@193
+      reference_role: reference
+      label: "Picture 5"
       required: false
   params:
     - name: prompt_positive

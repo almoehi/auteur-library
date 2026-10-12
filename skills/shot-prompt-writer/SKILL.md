@@ -19,8 +19,8 @@ agentType: worker
 - `i2v_motion`: the I2V motion prompt (MODE B from prompt-writer skills)
 - `i2v_neg`: the negative prompt for the I2V workflow
 - `duration_sec`: clip duration in seconds (3–15)
-- `workflow_t2i`: T2I workflow name (e.g. `krea2_base_realism`)
-- `workflow_i2v`: I2V workflow name (e.g. `iamcs_wan22_svi`)
+- `workflow_t2i`: the T2I `wf_*` tool name chosen by capability from the tools you have
+- `workflow_i2v`: the I2V `wf_*` tool name chosen by capability (never a name from memory)
 
 The renderer downstream reads this JSON and calls workflow tools with these exact strings.
 The renderer does NOT write its own prompts.
@@ -127,8 +127,8 @@ Build the output JSON with all shots, write to sandbox as `scene{X}_shot_prompts
       "i2v_motion": "...",
       "i2v_neg": "...",
       "duration_sec": 4,
-      "workflow_t2i": "krea2_base_realism",
-      "workflow_i2v": "iamcs_wan22_svi"
+      "workflow_t2i": "<t2i wf_ tool>",
+      "workflow_i2v": "<i2v wf_ tool>"
     },
     ...
   }
