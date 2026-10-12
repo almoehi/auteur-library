@@ -78,9 +78,7 @@ wf_xxx(prompt="<the drafted prompt>", prompt_route="rewritten", ...)
 
 ## Verbatim prompts — the explicit-override case of the Prompt route
 
-This is the explicit override of the Prompt route above ("use my words exactly"): 
-
-If the user or task explicitly asks to skip prompt drafting/enhancement, or to use their prompt verbatim / unmodified / exactly as written ("use this prompt as-is", "no prompt enhancement", "don't rewrite my prompt"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt` — pass the given prompt string to `wf_xxx` unchanged, byte for byte.
+This is the explicit override of the Prompt route above ("use my words exactly"): if the user or task explicitly asks to skip prompt drafting/enhancement, or to use their prompt verbatim / unmodified / exactly as written ("use this prompt as-is", "no prompt enhancement", "don't rewrite my prompt"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt` — pass the given prompt string to `wf_xxx` unchanged, byte for byte.
 
 ```
 Task: 'render one image, use this prompt verbatim: "a red bicycle leaning on a green wall"'
