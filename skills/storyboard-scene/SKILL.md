@@ -91,8 +91,13 @@ For every shot, in order: bind references, write the prompt, issue the draft cal
 
 ### Choosing the workflow (capability, never name)
 
-Read each candidate `wf_*` tool's description and `get_workflow_instructions(<tool>)`: the
-workflow type (t2i, i2i, …), the number, kind and ORDER of image inputs, which ports are
+Read each candidate `wf_*` tool's description and `get_workflow_instructions(<tool>)`. **Prefer
+what the manifest declares**: `capabilities` (`multi-reference-edit` marks a multi-image edit)
+and, per image input, `reference_role` (`subject` / `garment` / `background` / `reference`:
+put the main character's outfit primary in `subject`, the location in `background`, further
+characters/outfits in `garment` / `reference`) and `label` (the exact name the prompt must use
+for that image, e.g. "Picture 2"). When they are absent, infer from the descriptions and slot
+order as follows: the workflow type (t2i, i2i, …), the number, kind and ORDER of image inputs, which ports are
 required, the port descriptions (they say how the prompt must refer to each image:
 "Picture 1", "Figure 1", "image 2" …), declared capabilities if present. Never pick by a
 tool's name or family.

@@ -24,6 +24,7 @@ description: >
 url: workflow.json
 workflow_type: i2i
 model_family: qwenimage
+capabilities: [multi-reference-edit]
 gpu_types: [rtx3090, rtx4090, l40s]
 ports:
   inputs:
@@ -31,16 +32,22 @@ ports:
       kind: image
       description: "Main/anchor reference image, referred to as \"Picture 1\" in the prompt. This image's composition and pose are preserved by default — edits described in the prompt are applied onto it."
       binding: image@2
+      reference_role: subject
+      label: "Picture 1"
       required: true
     - name: reference_image_2
       kind: image
       description: "Optional second reference image, referred to as \"Picture 2\" in the prompt — the source of whatever attribute (clothing, object, style, etc.) the prompt says to transfer onto Picture 1. Omit for a single-image edit; when omitted, a neutral gray image stands in internally, so do not mention Picture 2 in the prompt."
       binding: image@1
+      reference_role: reference
+      label: "Picture 2"
       required: false
     - name: reference_image_3
       kind: image
       description: "Optional third reference image, referred to as \"Picture 3\" in the prompt — typically used as a background or scene reference, but any attribute the prompt names can be drawn from it. Omit when not needed; when omitted, a neutral gray image stands in internally, so do not mention Picture 3 in the prompt."
       binding: image@24
+      reference_role: background
+      label: "Picture 3"
       required: false
   params:
     - name: prompt_positive
