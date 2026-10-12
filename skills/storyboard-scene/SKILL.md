@@ -190,11 +190,15 @@ one response). A take that passes needs no tool call. If it misses:
    `take_s3-01-draft-1-r2.png`). Keep the missed take (never delete or overwrite it). Batch the
    retries of several takes into ONE `draft_prompts_batch` and ONE render response; file names
    stay write-once.
+   The automatic retry takes the REWRITE route (`prompt_route: "rewritten"`, Prompt route rule of
+   `workflow-calling-conventions`): pass the person's original instruction, if any, as `instruction` so it stays LOCKED.
 2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better of the
    two takes: `file` = its file name (`take_s3-02-wide-rain-r2.png`), `instruction` = one
    concrete corrective edit instruction (what to change and what to keep, max ~1000 chars),
    `reason` = one line on what is off (max ~300 chars). Report both takes in chat and stop. The
    tool is fire-and-forget: its result is a short confirmation, wait for nothing.
+   A suggested fix the person sends from the Edit box is a person's explicit instruction: pass it through
+   (`prompt_route: "verbatim"`) when it meets the Prompt route conditions.
 3. Never retry more than once: a `-r2` take is never retried; its own miss goes straight to
    `suggest_edit`.
 
