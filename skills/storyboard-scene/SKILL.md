@@ -85,9 +85,27 @@ Duration: 5
    except by a rewrite the person asked for. The `Characters`/`Outfits` lines name only
    characters/looks that are linked designs (others: mention them in `Action` only).
 
-## Phase 2 — Render the initial drafts
+## Phase 2 — Render the initial drafts (fan out across ALL shots)
 
-For every shot, in order: bind references, write the prompt, issue the draft calls.
+Never loop shot by shot: single `draft_prompt` / `review_prompt` / `enhance_prompt` calls are
+serialized by the runtime (one LLM round each), the `*_prompts_batch` tools run their items in
+parallel. Four steps, about 3–4 LLM rounds for prompting plus one for renders, independent of
+the shot count:
+
+1. **Bind references for every shot** (reasoning only, no tool calls): per shot choose the
+   workflow ("Choosing the workflow"), the reference list in priority order and the slot map.
+2. **ONE drafting round**: `draft_prompts_batch(workflow_name, items=[{context}, …])`, one
+   item per shot ("Prompt"). `workflow_name` is per CALL: group the shots by their chosen
+   workflow (normally all share one) and issue one batch per workflow, all in the SAME
+   response. No item limit is declared; if a call is refused for size, split into the fewest
+   batches, again all in one response.
+3. **Review once**: at most ONE `review_prompts_batch` over all shots' prompts (per workflow
+   group, same response). Then, only for the items it flagged, at most ONE
+   `enhance_prompts_batch` with the review feedback as `additional_context` (or a second
+   `draft_prompts_batch` for flagged items). Never call the single-item tools for several
+   shots; do not loop once a prompt passes.
+4. **ONE render round**: issue ALL `wf_*` calls for ALL shots — `initialDrafts` per shot ×
+   shots — in ONE response ("Render").
 
 ### Choosing the workflow (capability, never name)
 
@@ -123,21 +141,22 @@ disqualified. Remember the choice and say it in the summary, with the reason.
 
 ### Prompt
 
-`draft_prompt(<workflow>, <context>)` once per shot with: the shot's Action and Camera, the
+Each `draft_prompts_batch` item's `context` (one item per shot) holds: the shot's Action and Camera, the
 location, time of day and mood, each present character with outfit (from the linked
 descriptions), and the goal: *a single cinematic keyframe of this shot, consistent with the
 reference images — keep every person's face, hair, build and outfit and the place's look
-exactly; compose as the camera line says; no text, no captions, no panels*. Tell it how each
-reference is named in the chosen workflow's prompt ("Picture 1 is Mira in her raincoat,
-Picture 2 is the harbor …" using the port descriptions' wording). The prompt writer applies the
-model-family skill (`prompt-writer-<family>`) automatically; without `draft_prompt`,
+exactly; compose as the camera line says; no text, no captions, no panels*. Include the slot map: name
+each image by its port label as the chosen workflow's prompt must ("Picture 1 is Mira in her
+raincoat, Picture 2 is the harbor …" using the port descriptions' wording). The prompt writer applies the
+model-family skill (`prompt-writer-<family>`) automatically; without the batch tool,
 `load_skill("prompt-writer-<family>")` and follow it. If `design.json.loras` lists LoRAs, pass
 those of the same model family on the lora ports.
 
 ### Render
 
-Issue all draft calls of ONE shot in one response (they run in parallel); then move to the
-next shot. Drafts per shot = `initialDrafts` — never more:
+Issue the render calls of ALL shots in ONE response (they run concurrently, subject to the
+stack's render parallelism); never wait for one shot before issuing the next. Drafts per shot =
+`initialDrafts` — never more:
 
 ```
 wf_<tool>(prompt_positive="<prompt>", <image ports with artifact:// refs>, …,
@@ -145,7 +164,7 @@ wf_<tool>(prompt_positive="<prompt>", <image ports with artifact:// refs>, …,
 ```
 
 Same prompt for all drafts of a shot; the random seed varies them. A failed draft fails only
-itself: re-read the workflow instructions, fix the call, retry that draft once (same file
+its own take: re-read the workflow instructions, fix the call, retry that draft once (same file
 name); if it fails again, leave it (the studio shows a failed take with Retry) and report it.
 
 ## Phase 3 — Hand over
@@ -158,6 +177,10 @@ Audit before completing:
       artifact), except drafts that failed twice (name them)
 - [ ] no other file written; `design.json` untouched; no published names
 - [ ] drafts came from `wf_*` renders
+- [ ] batch pattern used: prompts came from `draft_prompts_batch` (one item per shot, one call
+      per workflow group), at most one `review_prompts_batch` and one `enhance_prompts_batch`,
+      NO single `draft_prompt` / `review_prompt` / `enhance_prompt` call for several shots, and
+      all renders of all shots went out in one response
 
 Then `task_complete(summary="Storyboard scene <n>: <N> shots, <drafts> draft(s) each with
 <workflow type, slot count and why>; failed: …")`. This hands the design to the person; it
@@ -176,13 +199,15 @@ For each message:
    their file names — tell the person that takes of a moved/renumbered shot stay under their
    old shot id and must be re-rendered if the numbering matters, offer to render the new
    shot's keyframe, and render nothing unless asked or the shot is new (a new shot gets its
-   drafts as in Phase 2, named with its new id).
+   drafts as in Phase 2, named with its new id; several new shots → one batch).
 3. **Re-render a shot** ("another angle for shot 4", "make it night"): one new take
    `take_<shotId>-<slug>.<ext>`. Source: the take the person names, else the shot's selected
    take, else its newest take. A change to an existing take is an **i2i edit with that take as
    the FIRST image** (+ further references the workflow can hold, by the priority list);
    "start over" re-renders from the references as in Phase 2. Choose the workflow by
-   capability as above; write the instruction with `draft_prompt`.
+   capability as above; write the instruction with `draft_prompts_batch` — a message touching
+   SEVERAL shots ("redo shots 2 and 5") is ONE batch (one item per take) and ONE response of
+   renders; a single `draft_prompt` only when it touches exactly one shot.
 4. Render only what THIS message asks — one take unless it names a count. If a take misses the
    request, do NOT retry on your own: show it, say in one line what is off, suggest a revised
    instruction. Reply with the new file name(s) and one line on what changed, then stop.

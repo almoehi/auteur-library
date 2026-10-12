@@ -68,17 +68,22 @@ With the storyboard source the frames are ready; skip this step.
 
 ## 4. Draft prompts
 
-For each shot, call `draft_prompt(workflow_name, context)` once per prompt parameter the
-workflow expects. Pass the full shot context (action, camera, characters, outfits, location,
-mood, duration) and which path (a/b/c) is used. For path (a) describe only the motion from the
-start frame; for path (b) name the references the way the port descriptions do ("Figure 1",
-"Picture 1" …). The prompt text per clip goes to its declared prompt file(s).
+Fan out across ALL shots — single `draft_prompt` / `review_prompt` / `enhance_prompt` calls are
+serialized by the runtime, the `*_prompts_batch` tools run their items in parallel:
+
+1. Bind the path (a/b/c), frames and references for every shot (reasoning only).
+2. ONE `draft_prompts_batch(workflow_name, items=[{context}, …])`, one item per shot (and per
+   prompt parameter the workflow expects). `workflow_name` is per call: one batch per distinct
+   workflow, issued in the same response. Each `context`: the full shot context (action,
+   camera, characters, outfits, location, mood, duration) and the path used. For path (a)
+   describe only the motion from the start frame; for path (b) name the references the way the
+   port descriptions do ("Figure 1", "Picture 1" …). The prompt text per clip goes to its
+   declared prompt file(s).
+3. Optionally audit with at most ONE `review_prompts_batch` over all prompts; if it flags gaps,
+   at most ONE `enhance_prompts_batch` for the flagged items only. No per-shot loops.
 
 Draft a shared negative prompt once and reuse it across all shots (only when the workflow has a
 negative prompt port).
-
-Optionally audit each drafted prompt with `review_prompt`; if it finds gaps, `enhance_prompt`,
-then re-check only what was flagged — do not loop once a prompt passes review.
 
 Complete prompts for all shots before rendering.
 
