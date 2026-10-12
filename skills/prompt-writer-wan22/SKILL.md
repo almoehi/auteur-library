@@ -272,3 +272,12 @@ Spatial relationships: `standing at distance from camera` / `facing camera at 45
 | Claymation | `claymation`, `stop-motion texture` |
 | 3D Cinematic | `Pixar style`, `3D game engine render` |
 | Cyberpunk | `neon-lit`, `cyberpunk aesthetic` |
+
+## Short prompts per workflow kind
+
+- **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
+- **EDIT workflows** (if one uses this family): the change first, at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
+
+## Fidelity
+
+When an `instruction` is supplied it is LOCKED: never drop or alter any element of it, never add states that were not asked for (no invented poses, sleep, etc.), and keep the prompt free of internal contradictions. You may only add image naming/order and the syntax this family requires.

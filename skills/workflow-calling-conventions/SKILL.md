@@ -1,7 +1,7 @@
 ---
 name: workflow-calling-conventions
-description: "Producing output files with wf_xxx workflow tools — correct call sequence, batch handling, and completion contract."
-agentType: worker
+description: "Producing output files with wf_xxx workflow tools — correct call sequence, prompt route (pass the person's instruction through or rewrite it), batch handling, and completion contract."
+agentType: all
 ---
 
 # Rendering Output Files with Workflow Tools
@@ -16,8 +16,9 @@ Use this skill whenever your task asks you to render, shoot or produce output fi
 1. read_artifact(artifactId="<key>")     — load the work specification (shot list, prompts, etc.)
 2. If the wf_xxx tool exposes LoRA slot parameters (see "LoRA lookup and loading" below):
        lora_index()                      — list the workspace LoRA catalog ONCE, pick most relevant candidates
-3. For each shot or batch your task defines:
-       wf_xxx(prompt="<description>")    — generate one shot or batch of output files
+3. For each shot or batch your task defines, decide the prompt route (see "Prompt route"):
+       wf_xxx(prompt="<description>", prompt_route="verbatim" | "rewritten")
+                                         — generate one shot or batch of output files
 4. task_complete(summary="...")          — only AFTER every required wf_xxx call is done
 ```
 
@@ -55,9 +56,29 @@ wf_xxx(
 )
 ```
 
-## Verbatim prompts — when NOT to draft or enhance
+### Prompt route — pass the person's instruction through, or rewrite it
 
-If the user or task explicitly asks to skip prompt drafting/enhancement, or to use their prompt verbatim / unmodified / exactly as written ("use this prompt as-is", "no prompt enhancement", "don't rewrite my prompt"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt` — pass the given prompt string to `wf_xxx` unchanged, byte for byte.
+Decide for EVERY prompted wf_xxx call and state the decision with the `prompt_route` argument (`"verbatim"` or `"rewritten"`).
+
+- **PASS THROUGH (`prompt_route: "verbatim"`)** only when ALL of these hold: the text comes from the person (chat or studio); it is an explicit, concrete instruction (an imperative change or motion); it is short (about 300 characters or a few clauses); it states what and where without ambiguity; nothing needs adapting to the workflow beyond naming the supplied images. Then the prompt is the person's text VERBATIM, plus one sentence naming the supplied images by the workflow's port labels (for example "Picture 1 is the frame to edit; Picture 2 is Detective Raccoon (outfit).") and at most ONE short keep clause, only if the person did not say what to keep. Do NOT call draft_prompt, review_prompt or enhance_prompt.
+- **REWRITE with the prompt writer (`prompt_route: "rewritten"`)** for agent-derived briefs (scene lists, shotlists, design attributes, initial drafts), long, unstructured or vague requests, text-to-image and text-to-video generation, diversity variations and automatic retries after a miss. Pass the person's text, if any, in the `instruction` argument of draft_prompt / enhance_prompt / review_prompt (never only inside `context`): the prompt writer keeps it LOCKED.
+- **Explicit overrides**: "use my words exactly" means pass through; "improve the prompt" means rewrite.
+
+Examples (the person typed "make the raccoon look left" in the studio chat on an edit workflow):
+
+```
+# verbatim: short, explicit, concrete -> the person's text + image naming, no prompt-writer tools
+wf_xxx(prompt="Make the raccoon look left. Picture 1 is the frame to edit.",
+       prompt_route="verbatim", ...)
+
+# rewritten: vague or agent-derived -> the person's text goes in `instruction`, the writer keeps it LOCKED
+draft_prompt(workflow_name="<wf>", instruction="make it feel more menacing", context="<scene brief>")
+wf_xxx(prompt="<the drafted prompt>", prompt_route="rewritten", ...)
+```
+
+## Verbatim prompts — the explicit-override case of the Prompt route
+
+This is the explicit override of the Prompt route above ("use my words exactly"): if the user or task explicitly asks to skip prompt drafting/enhancement, or to use their prompt verbatim / unmodified / exactly as written ("use this prompt as-is", "no prompt enhancement", "don't rewrite my prompt"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt` — pass the given prompt string to `wf_xxx` unchanged, byte for byte.
 
 ```
 Task: 'render one image, use this prompt verbatim: "a red bicycle leaning on a green wall"'
@@ -162,3 +183,4 @@ read_artifact(...)
 5. When a single `wf_xxx` call produces multiple outputs of the same kind, pass `output_ports` explicitly rather than relying on automatic routing.
 6. If the workflow exposes LoRA slot parameters, consult `lora_index` and load matching LoRAs by their exact catalog name — only LoRAs whose base model family matches the workflow's, include the trigger word in the prompt, and leave slots unset when nothing compatible fits.
 7. When the user asks for a verbatim/unmodified prompt or to skip drafting/enhancement, do not call `draft_prompt`/`enhance_prompt` — pass the prompt to `wf_xxx` exactly as given.
+8. Decide the prompt route for every prompted `wf_xxx` call and pass `prompt_route` (`"verbatim"` or `"rewritten"`); a short, explicit, concrete instruction from the person is passed through, everything else is rewritten with the person's text in `instruction` (see "Prompt route").

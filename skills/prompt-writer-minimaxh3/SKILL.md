@@ -377,3 +377,12 @@ Observable positioning: describe physical spatial relationship to environment â€
 
 **Style labels** (place at start of [Shot 1]):
 `Cinematic, live-action` | `2D-animated` | `3D CG` | `claymation` | `watercolor` | `vintage film` | `Wes Anderson-inspired 35mm` | `film noir` | `photoreal cinematic`
+
+## Short prompts per workflow kind
+
+- **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
+- **EDIT workflows** (if one uses this family): the change first, at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
+
+## Fidelity
+
+When an `instruction` is supplied it is LOCKED: never drop or alter any element of it, never add states that were not asked for (no invented poses, sleep, etc.), and keep the prompt free of internal contradictions. You may only add image naming/order and the syntax this family requires.

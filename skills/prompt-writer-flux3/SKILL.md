@@ -223,3 +223,12 @@ CHANGES SUMMARY:
 - Spatial anchor: `"low ground-level view of hiking boots"` / `"overhead drift over crowd"`
 - Environmental framing: `"framed through soft out-of-focus branches"` / `"emerging from between parked vehicles"`
 - Motion direction: `"swings through toward camera"` / `"powers past frame left to right"`
+
+## Short prompts per workflow kind
+
+- **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
+- **EDIT workflows** (if one uses this family): the change first, at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
+
+## Fidelity
+
+When an `instruction` is supplied it is LOCKED: never drop or alter any element of it, never add states that were not asked for (no invented poses, sleep, etc.), and keep the prompt free of internal contradictions. You may only add image naming/order and the syntax this family requires.

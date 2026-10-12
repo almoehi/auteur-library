@@ -68,6 +68,8 @@ With the storyboard source the frames are ready; skip this step.
 
 ## 4. Draft prompts
 
+Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call and pass `prompt_route`. Typical here: scene and shot briefs are agent-derived, so they are rewritten (`draft_prompts_batch`); only a short explicit user instruction qualifies as verbatim.
+
 Fan out across ALL shots — single `draft_prompt` / `review_prompt` / `enhance_prompt` calls are
 serialized by the runtime, the `*_prompts_batch` tools run their items in parallel:
 
