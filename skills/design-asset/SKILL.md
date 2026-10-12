@@ -112,6 +112,27 @@ wf_<workflow>(prompt_positive="<prompt>", …,
   draft: re-read the workflow instructions, fix the call, retry that draft once (same file name);
   if it fails again, leave it — the studio shows it as a failed take with a Retry — and report it.
 
+## Check, retry once, suggest
+
+For EVERY take you render (initial drafts and chat-requested edits / re-renders): verify it
+against the request with `describe_image` on its `artifact://<artifact id>/<file>` ref (batch
+the checks of one round in one response). A take that passes needs no tool call. If it misses:
+
+1. Retry ONCE, automatically: revise the prompt to fix exactly what is off and render again from
+   the SAME source (not from the missed take) as a NEW take named the original's base + `-r2`
+   (`take_profile-closeup.png` -> `take_profile-closeup-r2.png`). For an agent draft
+   `take_draft-<k>-<slug>.<ext>` the retry is `take_<slug>-draft-<k>-r2.<ext>` — it must NOT
+   start with `take_draft-`, so it never collides with the draft id `draft_<k>`. Keep the missed
+   take (never delete or overwrite it). Batch the retries of several takes into ONE
+   `draft_prompts_batch` and ONE render response; file names stay write-once.
+2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better of the
+   two takes: `file` = its file name (`take_profile-closeup-r2.png`), `instruction` = one
+   concrete corrective edit instruction (what to change and what to keep, max ~1000 chars),
+   `reason` = one line on what is off (max ~300 chars). Report both takes in chat and stop. The
+   tool is fire-and-forget: its result is a short confirmation, wait for nothing.
+3. Never retry more than once: a retry take is never retried; its own miss goes straight to
+   `suggest_edit`. A derived file from a sandbox command (crop, conversion, sheet) is not checked.
+
 ## Phase 4 — Hand over
 
 Audit before completing:
@@ -119,6 +140,9 @@ Audit before completing:
 - [ ] every `take_draft-<n>-<slug>.<ext>` exists in the artifact (re-read it) — n = 1 … initialDrafts —
       except drafts that failed twice (name them in the summary)
 - [ ] no other file was written; `design.json` untouched
+- [ ] every rendered take was checked with `describe_image`; at most one retry per take, named
+      `<base>-r2` (drafts: `take_<slug>-draft-<k>-r2.<ext>`); `suggest_edit` called exactly for
+      takes whose retry also missed
 - [ ] drafts came from `wf_*` renders (derived files from sandbox commands are fine in the chat phase)
 
 Then call `task_complete(summary="Rendered N drafts of <displayName> with <workflow>; prompt: …")`
@@ -152,9 +176,8 @@ The person may ask for changes in the design chat. For each request:
 4. Render only what THIS message asks for — an edit is one take unless the message gives a
    count. Earlier requests are done: never continue, retry or redo them unless this message asks.
    One take per requested variant to `take_<slug>.<ext>` (slug and uniqueness per hard rule 3), one render per
-   call. If a take does not match the request (e.g. not the asked framing), do NOT render again
-   on your own: show it, say in one line what is off, and suggest a revised instruction the
-   person can send. Reply with the new file name(s) and one line on what changed, then stop.
+   call. Check every take you render as in "Check, retry once, suggest" below. Reply with the new
+   file name(s) and one line on what changed, then stop.
 5. When the studio asks you to assemble given takes into a sheet ("Assemble exactly these takes …
    into one multi-panel sheet image … Save it as /workspace/<artifact id>/<file name>"), do exactly
    that and nothing else: place the listed takes in the listed order with ONE sandbox command
