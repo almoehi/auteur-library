@@ -31,8 +31,10 @@ scene.
 
 ## 2. Select a workflow (by capability, never by name)
 
-Read the descriptions and `get_workflow_instructions` of your video `wf_*` tools: the workflow
-type (i2v, flf2v, ref2v, t2v …), the image / video inputs (number, kind, order), which ports
+Read the descriptions and `get_workflow_instructions` of your video `wf_*` tools. Prefer what
+the manifest declares — `capabilities` and, per image input, `reference_role` (`subject`,
+`background`, `reference`, `garment`) and `label` (how the prompt names that image, e.g.
+"Subject 1") — and otherwise infer from the descriptions and port order: the workflow type (i2v, flf2v, ref2v, t2v …), the image / video inputs (number, kind, order), which ports
 are REQUIRED, the port descriptions, declared capabilities. A workflow with a required input
 you cannot supply (e.g. a prior-clip or video input for the first clip, a mask) is
 **disqualified**. The task description's `workflow:` is a preference — use it if it qualifies.

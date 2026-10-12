@@ -138,8 +138,11 @@ The person may ask for changes in the design chat. For each request:
      **image-edit** (`i2i`) `wf_*` tool; write the instruction with `draft_prompt` for that
      workflow (model-family skill `prompt-writer-<family>`), referencing the source as the first image
      input and any extra reference as the next, named the way that workflow's port descriptions
-     name its images ("Picture 1", "Figure 1", …); among several i2i workflows prefer the one
-     whose image inputs and required ports fit what you have to pass;
+     name its images ("Picture 1", "Figure 1", …) — use each image input's declared `label` and
+     `reference_role` when the manifest has them (`subject` = the image being edited), else the
+     port descriptions; prefer a workflow declaring `capabilities` that fit (e.g.
+     `multi-reference-edit` when several images must be passed); among several i2i workflows
+     prefer the one whose image inputs and required ports fit what you have to pass;
    - "start over / completely different" → the text-to-image workflow, as in Phase 2.
 4. Render only what THIS message asks for — an edit is one take unless the message gives a
    count. Earlier requests are done: never continue, retry or redo them unless this message asks.
