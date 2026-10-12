@@ -96,6 +96,8 @@ Duration: 5
 
 ## Phase 2 — Render the initial drafts (fan out across ALL shots)
 
+Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call and pass `prompt_route`. Typical here: initial keyframes from the shot list are rewritten; a short user-typed chat edit ("add a close-up") on an edit workflow is a verbatim candidate.
+
 Never loop shot by shot: single `draft_prompt` / `review_prompt` / `enhance_prompt` calls are
 serialized by the runtime (one LLM round each), the `*_prompts_batch` tools run their items in
 parallel. Four steps, about 3–4 LLM rounds for prompting plus one for renders, independent of

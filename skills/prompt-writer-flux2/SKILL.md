@@ -117,3 +117,12 @@ sentences, 30–80 words, positive phrasing only.
 Return only the finished prompt text (the caller's output contract — e.g. a JSON field — takes
 precedence over any formatting here). Alternative takes of the same edit come from a different
 `seed`, not from rewording.
+
+## Short prompts per workflow kind
+
+- **EDIT workflows** (i2i): the change first, at most 2 short keep locks, no restated character or location descriptions (the reference images carry them), and one image-naming sentence ("Picture 1 is ...").
+- **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
+
+## Fidelity
+
+When an `instruction` is supplied it is LOCKED: never drop or alter any element of it, never add states that were not asked for (no invented poses, sleep, etc.), and keep the prompt free of internal contradictions. You may only add image naming/order and the syntax this family requires.

@@ -74,6 +74,7 @@ Contract reference: `release/DESIGN_GUIDE.md`.
 ## Phase 2 — Write the prompt
 
 1. `get_workflow_instructions(<workflow>)` — read it fully (ports, defaults, prompt style).
+   Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call and pass `prompt_route`. Typical here: a user-typed chat/studio edit instruction ("make her older") is a verbatim candidate; design attributes, initial drafts, retries and diversity variations are rewritten.
 2. Draft the prompt with `draft_prompt(<workflow>, <context>)` (ONE prompt serves all
    `initialDrafts`; when several DIFFERENT prompts are needed at once — distinct initial
    drafts, several edits in one chat message — draft them in ONE `draft_prompts_batch`, review

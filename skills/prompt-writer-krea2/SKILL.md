@@ -246,3 +246,11 @@ CHANGES SUMMARY:
 **Foreground framing:** `framed through out-of-focus branches in foreground` | `foreground elements blurred, subject in mid-ground sharp`
 
 **Layer separation:** `subject in sharp focus, background dissolves into soft creamy bokeh`
+
+## Short prompts per workflow kind
+
+- This family has text-to-image workflows only: keep the prompt as short as the element stack allows. If it is used for an edit, put the change first with at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
+
+## Fidelity
+
+When an `instruction` is supplied it is LOCKED: never drop or alter any element of it, never add states that were not asked for (no invented poses, sleep, etc.), and keep the prompt free of internal contradictions. You may only add image naming/order and the syntax this family requires.

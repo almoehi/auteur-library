@@ -71,6 +71,8 @@ what is missing.
 
 ## Phase 5 — Write the prompt
 
+Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call and pass `prompt_route`. Typical here: the brief is agent-derived and rewritten; the person's optional instructions are passed in `instruction`, or verbatim only when short, explicit and concrete.
+
 Load the prompt-writer skill of the chosen workflow's **model family** (`prompt-writer-<family>`
 — the one matching the workflow's base model; `draft_prompt` applies it automatically when
 available, else `load_skill` it and follow it). Give it: the brief, the prior clip's measured
