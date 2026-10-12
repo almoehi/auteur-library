@@ -176,6 +176,26 @@ Same prompt for all drafts of a shot; the random seed varies them. A failed draf
 its own take: re-read the workflow instructions, fix the call, retry that draft once (same file
 name); if it fails again, leave it (the studio shows a failed take with Retry) and report it.
 
+## Check, retry once, suggest
+
+For EVERY take you render (initial drafts and chat takes): verify it against the request with
+`describe_image` on its `artifact://<artifact id>/<file>` ref (batch the checks of one round in
+one response). A take that passes needs no tool call. If it misses:
+
+1. Retry ONCE, automatically: revise the prompt to fix exactly what is off and render again from
+   the SAME source (not from the missed take) as a NEW take named the original's base + `-r2`
+   (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-r2.png`; `take_s3-01-draft-1.png` ->
+   `take_s3-01-draft-1-r2.png`). Keep the missed take (never delete or overwrite it). Batch the
+   retries of several takes into ONE `draft_prompts_batch` and ONE render response; file names
+   stay write-once.
+2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better of the
+   two takes: `file` = its file name (`take_s3-02-wide-rain-r2.png`), `instruction` = one
+   concrete corrective edit instruction (what to change and what to keep, max ~1000 chars),
+   `reason` = one line on what is off (max ~300 chars). Report both takes in chat and stop. The
+   tool is fire-and-forget: its result is a short confirmation, wait for nothing.
+3. Never retry more than once: a `-r2` take is never retried; its own miss goes straight to
+   `suggest_edit`.
+
 ## Phase 3 — Hand over
 
 Audit before completing:
@@ -187,6 +207,8 @@ Audit before completing:
 - [ ] every shot has `take_<shotId>-draft-<n>.<ext>` for n = 1 … drafts per shot (re-read the
       artifact), except drafts that failed twice (name them)
 - [ ] no other file written; `design.json` untouched; no published names
+- [ ] every rendered take was checked with `describe_image`; at most one retry per take, named
+      `<base>-r2`; `suggest_edit` called exactly for takes whose retry also missed
 - [ ] drafts came from `wf_*` renders
 - [ ] batch pattern used: prompts came from `draft_prompts_batch` (one item per shot, one call
       per workflow group), at most one `review_prompts_batch` and one `enhance_prompts_batch`,
@@ -219,8 +241,8 @@ For each message:
    capability as above; write the instruction with `draft_prompts_batch` — a message touching
    SEVERAL shots ("redo shots 2 and 5") is ONE batch (one item per take) and ONE response of
    renders; a single `draft_prompt` only when it touches exactly one shot.
-4. Render only what THIS message asks — one take unless it names a count. If a take misses the
-   request, do NOT retry on your own: show it, say in one line what is off, suggest a revised
-   instruction. Reply with the new file name(s) and one line on what changed, then stop.
+4. Render only what THIS message asks — one take unless it names a count. Check every take you
+   render (drafts and chat takes) as in "Check, retry once, suggest" below. Reply with the new
+   file name(s) and one line on what changed, then stop.
 5. Never pick a primary / frame, discard takes, write descriptions, or finish the design —
    point the person to the studio controls (★ / 🗑 / Finish design).
