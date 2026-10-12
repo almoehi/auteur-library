@@ -5,9 +5,10 @@ description: >
   "run pre-production", "prepare the production", "set up screenplay, cast and designs",
   "get everything ready before we shoot", "start from the plot and create the designs".
   Schedules the chain screenplay -> character table -> scene list -> design planning, so
-  characters, outfits and locations end up as design-studio designs. Do NOT invoke for
-  shooting or rendering scenes, storyboards, creating a single character/outfit/location
-  design, or editing an existing screenplay, cast list or scene list.
+  characters, outfits, locations and one storyboard per scene end up as design-studio designs.
+  Do NOT invoke for shooting or rendering video clips, creating a single
+  character/outfit/location/storyboard design, or editing an existing screenplay, cast list or
+  scene list.
 agentType: workspace
 ---
 
@@ -31,7 +32,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
    - tasks `write_screenplay`, `character_table`, `create_scenes`, `plan_designs`
    - artifacts `screenplay`, `character_table`, `scene_list`, `design_plan`
    - policies `screenplay-quality`, `cast-quality`, `scenes-quality`, `scenes-complete`,
-     `design-plan-covers-scenes`, `designs-cover-plan`
+     `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes`
 3. **Agents.** You need a writer for the screenplay, one for the cast table, one for the scene
    list, and a plain LLM planner for `plan_designs` (a tool-capable agent without a
    task-specific toolset, the agent `design_planner`, which has `create_design`). Pick by objective from `available_agents`
@@ -43,7 +44,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 
 ## Step 2 — Policies
 
-All six policies are attached as TASK checks (`create_task.policies`). In a task check, `{input}` is the contents of the task's output files and `{toolCalls}` the task's tool calls. They normally already exist in the workspace template. Check `policy_index` and call `create_policy` ONLY for those that are missing, in a workspace that lacks them with text modality,
+All seven policies are attached as TASK checks (`create_task.policies`). In a task check, `{input}` is the contents of the task's output files and `{toolCalls}` the task's tool calls. They normally already exist in the workspace template. Check `policy_index` and call `create_policy` ONLY for those that are missing, in a workspace that lacks them with text modality,
 `Binary` grading and the model the other quality policies in `policy_index` use, with the
 intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 
@@ -55,6 +56,7 @@ intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 | `scenes-complete` | `{input}` holds `scene_list.md`: every scene row has a location slug and, for every character present, an outfit/look slug |
 | `design-plan-covers-scenes` | `{input}` holds ALL output files of the task: `design_plan.json` and `scene_list.md` (verbatim copy of the scene list, the ground truth). YES only if every character, location (by `location_slug`) and (character, look) outfit occurring in the scene list has an entry in the plan, and no outfit's character is missing from the plan; otherwise NO naming the missing entries |
 | `designs-cover-plan` | `{input}` holds the plan (`design_plan.json`); `{toolCalls}` the task's tool calls (the worker's calls). Count the successful `create_design` calls (result "Design created: ..."), identified by `kind` + `display_name`, and compare with the plan entries; a design that already existed and is documented as skipped counts as covered. Tool-call args may be truncated at about 200 characters, so match on `kind` and `display_name` only. YES only if every plan entry is covered |
+| `storyboards-cover-scenes` | `{input}` holds ALL output files of the task: `scene_list.md` (verbatim copy of the scene list, the ground truth) and `design_plan.json`; `{toolCalls}` the task's tool calls. Count the successful `create_design` calls with `kind` `storyboard` (result "Design created: ..."); a storyboard that already existed (`storyboard_scene_<n>`) and is documented as skipped counts as covered. Tool-call args may be truncated at about 200 characters, so match on `kind` and `display_name` ("Scene <n>"). YES only if every scene number of the scene list has a storyboard; otherwise NO naming the scenes without one |
 
 Each check is attached to the task named in the Step 3 table and judges that task's output files.
 Never edit an existing policy here (see `modify-policy`).
@@ -66,7 +68,7 @@ Never edit an existing policy here (see `modify-policy`).
 | `write_screenplay` | writer | `screenplay` | `["screenplay.md"]` | none | `screenplay-quality` |
 | `character_table` | cast writer | `character_table` | open: `character_<slug>.md` per character (`files: []`) | tasks `write_screenplay`; artifacts `screenplay` | `cast-quality` |
 | `create_scenes` | director | `scene_list` | `["scene_list.md"]` | tasks `write_screenplay`, `character_table`; artifacts `screenplay`, `character_table` | `scenes-quality`, `scenes-complete` |
-| `plan_designs` | `design_planner` | `design_plan` | `["scene_list.md","design_plan.json"]` (BOTH, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan` |
+| `plan_designs` | `design_planner` | `design_plan` | `["scene_list.md","design_plan.json"]` (BOTH, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
 
 **Format rule:** every declared output file is Markdown (`.md`) or JSON (`.json`), never `.pdf`, `.docx`, `.rtf` or any other binary/office format; downstream agents cannot read those. Every task prompt below tells the worker to write Markdown.
 
@@ -149,14 +151,14 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
 - agent: `design_planner`; `difficulty: "hard"`
 - `requires_tasks: ["create_scenes","character_table"]`,
   `requires_artifacts: ["character_table","scene_list"]`
-- `output_artifact_name: "design_plan"`, `output_artifact_description: "Design Plan"`, `output_files: ["scene_list.md","design_plan.json"]` (BOTH must be declared in this call; `scene_list.md` is a verbatim copy of the scene list, so the task check judge sees both in `{input}`), `policies: ["design-plan-covers-scenes","designs-cover-plan"]`
+- `output_artifact_name: "design_plan"`, `output_artifact_description: "Design Plan"`, `output_files: ["scene_list.md","design_plan.json"]` (BOTH must be declared in this call; `scene_list.md` is a verbatim copy of the scene list, so the task check judge sees both in `{input}`), X
 - description/prompt (the first line is exact, the worker keys on it):
 
 ```
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Output artifact `design_plan`; output files (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`, then one create_design call per design plan entry.
+Output artifact `design_plan`; output files (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`, then one create_design call per design plan entry, then one storyboard design per scene (`kind: "storyboard"`, see the skill).
 ```
 
 ## Step 5 — Verify and confirm
@@ -167,7 +169,8 @@ precisely and do not use the success message below. Then tell the user:
 
 > "Scheduled pre-production: **Write Screenplay** -> **Create Cast List** -> **Create Scene List**
 > -> **Plan Designs**. Skipped (already existed): <list or none>. Policies created: <list or none>.
-> Designs appear in the Pre-production tab once `plan_designs` finishes."
+> Characters, outfits, locations and one storyboard per scene appear in the Pre-production tab
+> once `plan_designs` finishes; each storyboard starts after its linked designs are finished."
 
 ## Key rules
 

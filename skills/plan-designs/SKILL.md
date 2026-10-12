@@ -3,9 +3,10 @@ name: plan-designs
 description: >
   Use when your task prompt says "Load and use skill: plan-designs" — turn the character
   table and the scene list into a design plan and create one studio design (character,
-  outfit, location) for every entry with create_design. Produces design_plan.json and the
-  scheduled design tasks. Do NOT invoke for drafting or rendering design images (that is
-  design-asset), writing screenplays or scene lists, or creating a single design on request.
+  outfit, location) for every entry with create_design, then one storyboard design per scene.
+  Produces design_plan.json and the scheduled design tasks. Do NOT invoke for drafting or
+  rendering design images (design-asset) or storyboard keyframes (storyboard-scene), writing
+  screenplays or scene lists, or creating a single design on request.
 agentType: worker
 ---
 
@@ -14,7 +15,7 @@ agentType: worker
 You are a plain LLM worker. You read text, write one JSON file, and call `create_design`.
 Your output files are plain text only: `scene_list.md` (Markdown) and `design_plan.json` (JSON), never PDF, DOCX or any other binary/office format.
 You never render images. Each `create_design` creates a design task that a design worker
-(skill `design-asset`) and the person in the design studio continue.
+(skill `design-asset`, for storyboards `storyboard-scene`) and the person in the design studio continue.
 
 You run on the `design_planner` agent. Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file`, `create_design`,
 `task_complete`, `task_failed`.
@@ -29,7 +30,7 @@ You run on the `design_planner` agent. Tools: `artifact_index`, `task_index`, `r
 3. Read the character table files (pass `artifact_file`): `character_<slug>.md`, each with
    `VISUAL PROFILE` and `WARDROBE TRACKER`.
 4. Existing designs (idempotency): `artifact_index` keys starting `character_`, `outfit_`,
-   `location_`, plus `task_index`. Remember them as `existing`.
+   `location_`, `storyboard_`, plus `task_index`. Remember them as `existing`.
 If an input is missing or unparseable: `task_failed` with a clear message naming it. Write nothing.
 
 ## Phase 1 — Extraction -> design_plan.json
@@ -85,7 +86,7 @@ Both file names are canonical: write exactly `scene_list.md` and `design_plan.js
 
 ## Phase 2 — Create the designs
 
-Order: all characters first, then locations, then outfits (an outfit links to its character).
+Order: all characters first, then locations, then outfits (an outfit links to its character), then the storyboards (they link to the designs created before).
 Skip any entity whose key is in `existing` (record as skipped). One call per entity:
 
 - character: `create_design({ kind: "character", display_name: "<name>", start: "attributes", character_type, attributes, initial_drafts: 1 })`
@@ -97,6 +98,39 @@ Skip any entity whose key is in `existing` (record as skipped). One call per ent
 Never pass `policies` to `create_design` (the tool does not accept it; designs go through human review), even if the task prompt names checks. Call sequentially (one at a time) and keep
 each result's key, `@name` and task id.
 
+**Keep a registry of the ACTUAL keys** while you go (`<slug> -> key` per kind, from each
+`Design created: key <key>` result, or the existing/reused key on a skip or "already used by"
+reuse, or the renamed key after a suffixed retry). Never derive a key from a slug again later.
+
+### Storyboards (after all outfits)
+
+One storyboard per scene of the scene list (`Scene #` = `<n>`), skipping scenes whose key
+`storyboard_scene_<n>` is in `existing`. `display_name` is `Scene <n>` (the design name is its
+slug, so the key becomes `storyboard_scene_<n>`; check the result's key). Links come from the
+registry, mapped from the scene's row:
+
+- `location`: the key of the scene's `location_slug` design (exactly one);
+- `characters`: the keys of every slug in `Characters present` (one link each);
+- `outfits`: the keys of every `<character_slug>:<look_slug>` pair of the `Outfits` column
+  (one link each; a pair whose outfit design failed or does not exist is dropped and noted).
+
+```
+create_design({ kind: "storyboard", display_name: "Scene <n>", start: "attributes",
+  attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<Summary of the scene, optional>" } ],
+  initial_drafts: 1,
+  links: [ { role: "location", key: "<location key>" },
+           { role: "character", key: "<character key>" }, …one per character…
+           { role: "outfit", key: "<outfit key>" }, …one per outfit… ] })
+```
+
+(`initial_drafts` = drafts PER SHOT, default 1. A role is repeated once per linked design; if the
+tool refuses a role name, use the role names its error or description lists.) Every given link is required: the storyboard
+task waits until those designs are finished, so never link a design you did not create or
+find; if a link key is refused as unknown, re-check the registry and the `artifact_index`
+for the renamed key, retry once, then drop only that link and note it. The storyboard also
+needs the `scene_list` artifact (it is approved). The storyboard's duplicate-name refusal
+(`already used by "storyboard_scene_<n>"`) means it exists: skip.
+
 **Refusals:**
 - `design name "<n>" is already used by "<key>"`: same kind as yours -> reuse it (skipped,
   noted); different kind -> retry once with a suffixed display name (`<name> (place)` / slug
@@ -107,7 +141,8 @@ each result's key, `@name` and task id.
 ## Phase 3 — Pre-completion audit
 
 1. Re-run `artifact_index`; every design plan entry must have a design key now (created or
-   pre-existing). Re-create anything missing once.
+   pre-existing), and every scene must have a `storyboard_scene_<n>`. Re-create anything
+   missing once.
 2. `design_plan.json` and `scene_list.md` both exist in your artifact directory and equals what you used.
 3. If any entity failed: `task_complete` is still correct only if all others are done and the
    summary lists the failures; if the design plan could not be covered at all, call `task_failed`.
@@ -115,7 +150,7 @@ each result's key, `@name` and task id.
 `task_complete` summary format:
 
 ```
-design plan: <n> characters, <n> locations, <n> outfits
+design plan: <n> characters, <n> locations, <n> outfits, <n> storyboards
 created: <keys>
 skipped (existing): <keys>
 renamed: <old -> new, reason>
@@ -130,3 +165,6 @@ file mismatch: <declared files> or none
 3. `start` is always `"attributes"`, `initial_drafts` 1.
 4. Idempotent: never recreate an existing design.
 5. Never write `design.json` or any design file; only `design_plan.json` and `scene_list.md`.
+6. One storyboard per scene (`storyboard_scene_<n>`), created last, linked by the ACTUAL
+   design keys from the create results; existing storyboards are skipped. Storyboards are not
+   part of `design_plan.json`.

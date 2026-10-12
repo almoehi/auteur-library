@@ -16,8 +16,8 @@ agentType: worker,render
 ## When this skill applies
 
 Use this skill for an **image edit** (`workflow_type: i2i`) whose workflow has
-`model_family: qwenimage` — e.g. the `qwen_image_multi_edit` bundle (Qwen-Image-Edit 2511,
-up to three reference images). The prompt is an **instruction** that tells the model what to
+`model_family: qwenimage` — Qwen-Image-Edit (2511), which takes up to three reference images (check the
+workflow's own ports for the actual count). The prompt is an **instruction** that tells the model what to
 change in existing images, not a description of a new picture.
 
 ---

@@ -3,7 +3,7 @@ name: prompt-writer-flux2
 description: >
   Trigger when asked to write, enhance, or review a prompt for a FLUX.2 workflow (model family
   flux2), above all an image edit — e.g. "dress her in the coat from the reference photo",
-  "write an edit instruction for flux2_image_edit", "swap the handbag using figure 2",
+  "write an edit instruction for the FLUX.2 edit workflow", "swap the handbag using figure 2",
   "make the jacket red in this take". Produces a concise, instruction-style image-edit prompt
   that names the inputs as "Figure 1" / "Figure 2" and states what to keep.
   Do NOT invoke for Qwen-Image-Edit (qwenimage), KREA-2, FLUX 3 video, or any video/animation
@@ -16,8 +16,7 @@ agentType: worker,render
 ## When this skill applies
 
 Use this skill for workflows with `model_family: flux2` — primarily **image edits**
-(`workflow_type: i2i`, e.g. the `flux2_image_edit` bundle: FLUX.2 Klein 9B-KV, a subject photo
-plus one reference photo). The prompt is one **instruction**; there is no negative prompt.
+(`workflow_type: i2i`, FLUX.2 Klein: a subject photo plus one reference photo). The prompt is one **instruction**; there is no negative prompt.
 
 For a FLUX.2 **text-to-image** workflow (no image inputs) see "t2i mode" at the end.
 
