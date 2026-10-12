@@ -74,7 +74,11 @@ Contract reference: `release/DESIGN_GUIDE.md`.
 ## Phase 2 — Write the prompt
 
 1. `get_workflow_instructions(<workflow>)` — read it fully (ports, defaults, prompt style).
-2. Draft the prompt with `draft_prompt(<workflow>, <context>)`. Pass all attributes, the
+2. Draft the prompt with `draft_prompt(<workflow>, <context>)` (ONE prompt serves all
+   `initialDrafts`; when several DIFFERENT prompts are needed at once — distinct initial
+   drafts, several edits in one chat message — draft them in ONE `draft_prompts_batch`, review
+   with at most one `review_prompts_batch`, never a per-prompt `draft_prompt` / `review_prompt`
+   loop). Pass all attributes, the
    design kind, and the goal: *a clean, well-lit reference image of one subject* — for a
    character: full body or three-quarter, neutral pose, plain background, face clearly
    visible; for an outfit: an edit instruction that dresses the person of the linked character's
@@ -135,7 +139,8 @@ The person may ask for changes in the design chat. For each request:
    slug per hard rule 3 — never the source take's base name with another extension.
 3. Pick the workflow:
    - a change to an existing image ("older", "red jacket", "other background") → an
-     **image-edit** (`i2i`) `wf_*` tool; write the instruction with `draft_prompt` for that
+     **image-edit** (`i2i`) `wf_*` tool; write the instruction with `draft_prompt` (several edits in one message: one
+     `draft_prompts_batch`, then all renders in one response) for that
      workflow (model-family skill `prompt-writer-<family>`), referencing the source as the first image
      input and any extra reference as the next, named the way that workflow's port descriptions
      name its images ("Picture 1", "Figure 1", …) — use each image input's declared `label` and
@@ -156,5 +161,7 @@ The person may ask for changes in the design chat. For each request:
    (e.g. ImageMagick `montage`/`convert` or PIL) — no text, no labels, no borders beyond a thin
    uniform gap, same height per row — and write the result to the given file name, unchanged. No
    `wf_*` render, no other file, no prompt writing. Reply with the file name only.
-6. Never pick a primary, discard takes, write descriptions or finish the design — tell the
+6. Write each working/output file in one go (complete content, one write) and never rewrite it
+   within the same attempt — the runtime's write-once guard blocks the rewrite and ends the loop.
+7. Never pick a primary, discard takes, write descriptions or finish the design — tell the
    person to use ★ / 🗑 / Describe / Finish design in the studio.
