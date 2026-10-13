@@ -102,6 +102,43 @@ When a `wf_xxx` call needs an existing workspace artifact as an input (e.g. a re
 
 Every tool that takes a file URL (`describe_image`, `sandbox_fetch`, `get_video_info`, `wf_xxx` input ports) accepts the same `artifact://<artifactId>/<fileKey>` reference, resolved to a fresh download URL at call time. **Never copy, retype or shorten a URL** — a single dropped character in a signed URL gives a 403 that looks like an expiry. `get_artifact_url` returns a short `url` plus that `ref`; use the `ref` with tools, and paste only the short `url` into shell commands (`curl -L`). Plain http(s) URLs are for external sources only.
 
+## Check, retry once, suggest
+
+The generic procedure for EVERY take or render you produce with a `wf_xxx` tool (initial drafts, chat-requested edits and re-renders). Skills that render takes reference this section and add only their own file naming and audit lines.
+
+The studio's server runs the same check for takes made with studio buttons (Generate, Edit, Variations). Never re-check a take you did not render yourself.
+
+Verify each take against the request with `describe_image` on its `artifact://<artifactId>/<file>` ref (batch the checks of one round in one response), using this rubric as the question. The server uses the byte-identical text — do not reword it:
+
+```
+Check the image against the request. Judge only what can be seen in the image; ignore story, motives, dialogue and anything that is not visual.
+- Subjects: every subject the request names is present and recognisable.
+- Changes: every change the request asks for is visible, and nothing else was changed.
+- Composition: framing, camera angle, layout and positions match the request.
+- Style: the requested medium and style are kept, not replaced by another look.
+- Invented or contradicted: nothing was added that the request does not ask for, and nothing the request rules out is shown.
+PASS when every point holds. Otherwise MISS. Be strict about what the request names and lenient about what it leaves open.
+Answer in exactly this form:
+VERDICT: PASS or MISS
+FINDING: one line on what is missing, contradicted or invented (MISS only)
+FIX: one concrete corrective instruction - what to change and what to keep (MISS only)
+```
+
+A take that passes needs no further tool call. On a MISS:
+
+1. Retry ONCE, automatically: fold the finding into a revised prompt that fixes exactly what is off, and render again from the SAME source (not from the missed take) as a NEW take named the original's base + `-r2` (`take_wide-rain.png` -> `take_wide-rain-r2.png`). The skill that owns the file naming may define a variant for its own pattern. Keep the missed take (never delete or overwrite it). Batch the retries of several takes into ONE `draft_prompts_batch` and ONE render response; file names stay write-once. The automatic retry takes the REWRITE route (`prompt_route: "rewritten"`, see "Prompt route"): pass the person's original instruction, if any, as `instruction` so it stays LOCKED.
+2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better of the two takes: `file` = its file name, `instruction` = one concrete corrective edit instruction (what to change and what to keep, max ~1000 chars), `reason` = one line on what is off (max ~300 chars). Report both takes in chat and stop. The tool is fire-and-forget: its result is a short confirmation, wait for nothing. A suggested fix the person sends from the Edit box is a person's explicit instruction: pass it through (`prompt_route: "verbatim"`) when it meets the Prompt route conditions.
+3. Never retry more than once: a `-r2` take is never retried; its own miss goes straight to `suggest_edit`. A derived file from a sandbox command (crop, conversion, sheet) is not checked.
+
+## Anchor (Picture 1) by intent
+
+For multi-reference image workflows, the first image is the anchor — the model keeps its framing and look most faithfully. Choose it by intent:
+
+- **EDIT intent** (change an existing image): the image being edited is the anchor — Picture 1, or the `subject`-style first image port. Other references (a person, an outfit, an object) follow as further pictures, and the prompt names them by the workflow's port labels.
+- **COMPOSE intent** (build a NEW scene from references): the ENVIRONMENT (location / background image) is the anchor = Picture 1. People and objects fill the remaining reference slots in priority order.
+
+Never anchor a composed scene on an outfit or character image.
+
 ## Positive example — 3 shots, one file each
 
 Task: render shots s2_01.png, s2_02.png, s2_03.png
@@ -184,3 +221,4 @@ read_artifact(...)
 6. If the workflow exposes LoRA slot parameters, consult `lora_index` and load matching LoRAs by their exact catalog name — only LoRAs whose base model family matches the workflow's, include the trigger word in the prompt, and leave slots unset when nothing compatible fits.
 7. When the user asks for a verbatim/unmodified prompt or to skip drafting/enhancement, do not call `draft_prompt`/`enhance_prompt` — pass the prompt to `wf_xxx` exactly as given.
 8. Decide the prompt route for every prompted `wf_xxx` call and pass `prompt_route` (`"verbatim"` or `"rewritten"`); a short, explicit, concrete instruction from the person is passed through, everything else is rewritten with the person's text in `instruction` (see "Prompt route").
+9. Check every take you render and retry at most once, as in "Check, retry once, suggest"; place multi-reference images as in "Anchor (Picture 1) by intent".

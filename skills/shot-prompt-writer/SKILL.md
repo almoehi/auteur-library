@@ -97,7 +97,9 @@ Use the `prompt-writer-wan22` skill guidance:
 
 **3d. Write negative prompt**
 
-Always include: `blurry, low quality, compression artifacts, watermark, text overlay, distorted proportions, overexposed, underexposed, flickering, inconsistent lighting, duplicate frames, static image`
+**Negative prompt rule:** Negative prompt = quality defects (blur, artifacts, deformed anatomy, text/watermark) plus what the brief explicitly excludes. NEVER negate the medium or style the brief asks for (an illustrated, comic, anime, painted or stylised brief must not get CGI/anime/cartoon/illustration/digital-art negatives). If the brief states no exclusions, keep it to the quality defects. Skip the negative entirely for models that take none.
+
+Quality defects to draw from: `blurry, low quality, compression artifacts, watermark, text overlay, distorted proportions, flickering, inconsistent lighting, duplicate frames, static image`
 
 Add from character drift risks in visual_bible: e.g. `summer dress, long hair, glasses, modern hotel, bright saturated colours`
 

@@ -242,9 +242,11 @@ ENHANCED PROMPT:
 [Complete enhanced prompt — plain text, ready to paste directly into the workflow]
 
 NEGATIVE PROMPT:
-morphing, warping, distortion, blurry, low quality, face deformation, flickering, jittering, inconsistent lighting, extra fingers, poorly drawn hands, deformed, bad anatomy, watermark, text, oversaturated
+[quality defects for video, e.g. morphing, warping, blurry, low quality, flickering, jittering, extra fingers, deformed, bad anatomy, watermark, text — plus the brief's explicit exclusions]
 [append: eye distortion, identity drift, changing face — for portraits]
 [append: motion blur artifacts, smearing, strobing — for action]
+
+**Negative prompt rule:** Negative prompt = quality defects (blur, artifacts, deformed anatomy, text/watermark) plus what the brief explicitly excludes. NEVER negate the medium or style the brief asks for (an illustrated, comic, anime, painted or stylised brief must not get CGI/anime/cartoon/illustration/digital-art negatives). If the brief states no exclusions, keep it to the quality defects. Skip the negative entirely for models that take none.
 
 CHANGES SUMMARY:
 • [What was added or restructured — 3–5 concise bullets]

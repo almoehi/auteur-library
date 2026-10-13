@@ -64,7 +64,9 @@ what is missing.
 3. Gather every **reference image** the workflow's ports require or allow: character sheets and
    environment / location plates of finished designs (`artifact_index`: artifacts keyed
    `character_*`, `location_*`, `outfit_*`), else approved artifacts that show the subject. Pass
-   them as `artifact://<artifactId>/<file>` (never paste URLs). If a required reference
+   them as `artifact://<artifactId>/<file>` (never paste URLs), placed per "Anchor (Picture 1)
+   by intent" of `workflow-calling-conventions` (continuation is COMPOSE intent: the place
+   first, then the characters). If a required reference
    is unavailable and cannot be derived from the prior clip, do not guess: if your task has a
    chat with the person (an `llm+hitl` task) ask them which images to use; otherwise
    `task_complete` with a `BLOCKED:` summary naming the missing references.
@@ -94,7 +96,8 @@ Measure the new clip with `get_video_info` and check:
 - [ ] it is a video, from a `wf_*` render (not made in the sandbox) at exactly the canonical path
 - [ ] its duration is plausible for the workflow and not an empty / frozen result
 - [ ] **continuity** — compare its first frames with the prior clip's last frames
-      (same subject, place, lighting); if it clearly breaks, redo the prompt once
+      (same subject, place, lighting); if it clearly breaks, redo the prompt once (at most one retry,
+      keep the first clip — see "Check, retry once, suggest" of `workflow-calling-conventions`)
 - [ ] no other file was written; the prior clip and its artifact are untouched
 
 Then call `task_complete(summary=...)`: the workflow used, the measured prior duration, the start
