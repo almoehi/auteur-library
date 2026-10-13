@@ -82,7 +82,14 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
    `workflow-calling-conventions`) verbatim into every `context`. "Clean reference image" is
    composition, never a photographic medium: no photography wording unless the story asks for a
    photograph. Keep named attributes verbatim; add no characters, props or text not asked for.
-4. LoRAs: if `design.json.loras` lists LoRAs, or the attributes contain a trigger word from
+4. **People are always fully clothed.** A character or any person in a design is depicted
+   clothed: use the `wardrobe` attribute (outfit: the garments); with no wardrobe, state simple,
+   plain everyday clothing ("wearing simple, plain everyday clothing, fully clothed") in the
+   `context` — never leave clothing unsaid, a model then draws the figure nude (a child included).
+   Always put `nudity, nude, naked` in the negative prompt of every render of a person (the
+   workflow's negative-prompt port, when it has one; keep its default text before these terms),
+   including chat-phase edits and variations.
+5. LoRAs: if `design.json.loras` lists LoRAs, or the attributes contain a trigger word from
    `lora_index`, pass them on the workflow's lora ports (same model family only).
 
 ## Phase 3 — Render the drafts
