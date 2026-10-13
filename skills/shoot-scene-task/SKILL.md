@@ -117,6 +117,8 @@ If a `character_table` artifact exists and is approved, read the `character_<slu
 of the characters present; they improve motion prompt quality. Do not require any other
 pre-production artifact.
 
+Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "Medium / style is kept" in `workflow-calling-conventions`) into every `context`, verbatim; never drop it. Put it into the task description of every clip so the worker carries it into each prompt.
+
 ---
 
 ## Step 3 — Planning

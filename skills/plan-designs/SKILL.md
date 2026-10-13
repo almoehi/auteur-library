@@ -49,6 +49,7 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
    slug must not equal a character slug (suffix `_place` to the location if it does).
 3. **Merge duplicates and variants** ("Mira", "MIRA", "young Mira" = same slug `mira`; a
    different age or costume is an outfit/look, not a new character).
+   Style is not an attribute: never add the story's medium/style as a design attribute; `design-asset` carries it from `{workspace.story.plot}` into every prompt.
 4. **Map attributes** to registry keys (values are short comma-joined descriptors, never sentences):
 
 | kind | `character_type` (create_design field) / attribute keys |

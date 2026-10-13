@@ -87,7 +87,7 @@ Contract reference: `release/DESIGN_GUIDE.md`.
    an establishing wide shot, no people. The prompt writer applies the model-family skill
    (`prompt-writer-<family>`) automatically. If `draft_prompt` is
    not available, `load_skill("prompt-writer-<family>")` and follow it yourself.
-3. Keep the named attributes verbatim; add no characters, props or text not asked for.
+3. Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "Medium / style is kept" in `workflow-calling-conventions`) into every `context`, verbatim; never drop it. The goal "clean reference image" (plain background, neutral pose) is composition, never a photographic medium: no photography wording unless the story asks for a photograph. Keep the named attributes verbatim; add no characters, props or text not asked for.
 4. LoRAs: if `design.json.loras` lists LoRAs, or the attributes contain a trigger word from
    `lora_index`, pass those LoRAs on the workflow's lora ports (same model family only).
 

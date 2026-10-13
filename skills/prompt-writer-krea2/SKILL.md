@@ -30,6 +30,10 @@ Use this skill when asked to write or enhance a prompt targeting:
 
 ---
 
+## Medium / style rule — overrides every other ordering in this skill
+
+When the brief, context or instruction names a MEDIUM or STYLE (comic, cartoon, illustration, cel-shaded, watercolor, anime, 3D render, painting, ...), that medium IS the Style element: state it FIRST and VERBATIM as the medium of the prompt (for example "Children's comic illustration, bold ink outlines, flat colors, cel shading: ..."). Never write photography language (photo, photograph, lens, focal length, depth of field, film stock, "studio photography") unless the brief explicitly asks for a photograph. A "reference portrait" or "plain studio backdrop" framing is composition, not a photographic medium. A medium named by the person stays inside the locked `instruction`; a rewrite or retry never drops it. Keep the negative-prompt rule: never negate the requested medium.
+
 ## Step 1 — Parse the Input
 
 Extract from the input:
@@ -136,7 +140,7 @@ Cinematic modifiers: `luminous shadows with cool blue undertones` | `high contra
 
 ### Element 5 — Style / Medium / Aesthetic
 
-**Photography styles:** `documentary photography` | `editorial fashion photography` | `street photography` | `folk horror photography` | `cinematic film still` | `product photography` | `macro photograph` | `liminal photography`
+**Photography styles** (only when the brief asks for a photograph; a brief that names any non-photo medium overrides this ordering, see "Medium / style rule"): `documentary photography` | `editorial fashion photography` | `street photography` | `folk horror photography` | `cinematic film still` | `product photography` | `macro photograph` | `liminal photography`
 
 **Film / texture:** `35mm film grain` | `analog grain` | `lo-fi snapshot quality` | `visible film halation` | `slight underexposure` | `low dynamic range`
 
