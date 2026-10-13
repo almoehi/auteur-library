@@ -76,7 +76,7 @@ serialized by the runtime, the `*_prompts_batch` tools run their items in parall
 1. Bind the path (a/b/c), frames and references for every shot (reasoning only).
 2. ONE `draft_prompts_batch(workflow_name, items=[{context}, …])`, one item per shot (and per
    prompt parameter the workflow expects). `workflow_name` is per call: one batch per distinct
-   workflow, issued in the same response. Each `context`: the full shot context (action,
+   workflow, issued in the same response. Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "Medium / style is kept" in `workflow-calling-conventions`) into every `context`, verbatim; never drop it. Each `context`: the full shot context (action,
    camera, characters, outfits, location, mood, duration) and the path used. For path (a)
    describe only the motion from the start frame; for path (b) name the references the way the
    port descriptions do ("Figure 1", "Picture 1" …). The prompt text per clip goes to its

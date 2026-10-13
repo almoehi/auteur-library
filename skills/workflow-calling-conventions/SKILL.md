@@ -102,6 +102,10 @@ When a `wf_xxx` call needs an existing workspace artifact as an input (e.g. a re
 
 Every tool that takes a file URL (`describe_image`, `sandbox_fetch`, `get_video_info`, `wf_xxx` input ports) accepts the same `artifact://<artifactId>/<fileKey>` reference, resolved to a fresh download URL at call time. **Never copy, retype or shorten a URL** — a single dropped character in a signed URL gives a 403 that looks like an expiry. `get_artifact_url` returns a short `url` plus that `ref`; use the `ref` with tools, and paste only the short `url` into shell commands (`curl -L`). Plain http(s) URLs are for external sources only.
 
+## Medium / style is kept
+
+The workspace's stated medium or style (comic, cartoon, illustration, cel-shaded, watercolor, anime, 3D render, painting, ...) lives in the story brief `{workspace.story.plot}` (the "Workspace facts" block `load_skill` appends) and in the design brief. For EVERY prompted `wf_xxx` call, carry it into the `context` of `draft_prompt` / `draft_prompts_batch` / `enhance_prompt` (and keep it inside the locked `instruction` when it came from the person) - never drop it, whatever the design kind or workflow. The prompt writers state a named medium FIRST and VERBATIM and never use photography language unless the brief asks for a photograph. A take in a different medium than stated is a MISS (see "Check, retry once, suggest").
+
 ## Check, retry once, suggest
 
 The generic procedure for EVERY take or render you produce with a `wf_xxx` tool (initial drafts, chat-requested edits and re-renders). Skills that render takes reference this section and add only their own file naming and audit lines.
@@ -115,7 +119,7 @@ Check the image against the request. Judge only what can be seen in the image; i
 - Subjects: every subject the request names is present and recognisable.
 - Changes: every change the request asks for is visible, and nothing else was changed.
 - Composition: framing, camera angle, layout and positions match the request.
-- Style: the requested medium and style are kept, not replaced by another look.
+- Style: the requested medium and style (the request's, else the workspace's stated style) are kept. An image in a different medium or style than requested (photoreal instead of comic, a render instead of a painting) is a MISS.
 - Invented or contradicted: nothing was added that the request does not ask for, and nothing the request rules out is shown.
 PASS when every point holds. Otherwise MISS. Be strict about what the request names and lenient about what it leaves open.
 Answer in exactly this form:
@@ -126,7 +130,7 @@ FIX: one concrete corrective instruction - what to change and what to keep (MISS
 
 A take that passes needs no further tool call. On a MISS:
 
-1. Retry ONCE, automatically: fold the finding into a revised prompt that fixes exactly what is off, and render again from the SAME source (not from the missed take) as a NEW take named the original's base + `-r2` (`take_wide-rain.png` -> `take_wide-rain-r2.png`). The skill that owns the file naming may define a variant for its own pattern. Keep the missed take (never delete or overwrite it). Batch the retries of several takes into ONE `draft_prompts_batch` and ONE render response; file names stay write-once. The automatic retry takes the REWRITE route (`prompt_route: "rewritten"`, see "Prompt route"): pass the person's original instruction, if any, as `instruction` so it stays LOCKED.
+1. Retry ONCE, automatically: fold the finding into a revised prompt that fixes exactly what is off, and render again from the SAME source (not from the missed take) as a NEW take named the original's base + `-r2` (`take_wide-rain.png` -> `take_wide-rain-r2.png`). The skill that owns the file naming may define a variant for its own pattern. Keep the missed take (never delete or overwrite it). Batch the retries of several takes into ONE `draft_prompts_batch` and ONE render response; file names stay write-once. The retry keeps the original prompt's medium/style and every lock VERBATIM and changes only what the finding names - never re-derive the style from scratch (the person's `instruction`, the medium and the workspace style stay as they were; pass the original prompt in `context`). The automatic retry takes the REWRITE route (`prompt_route: "rewritten"`, see "Prompt route"): pass the person's original instruction, if any, as `instruction` so it stays LOCKED.
 2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better of the two takes: `file` = its file name, `instruction` = one concrete corrective edit instruction (what to change and what to keep, max ~1000 chars), `reason` = one line on what is off (max ~300 chars). Report both takes in chat and stop. The tool is fire-and-forget: its result is a short confirmation, wait for nothing. A suggested fix the person sends from the Edit box is a person's explicit instruction: pass it through (`prompt_route: "verbatim"`) when it meets the Prompt route conditions.
 3. Never retry more than once: a `-r2` take is never retried; its own miss goes straight to `suggest_edit`. A derived file from a sandbox command (crop, conversion, sheet) is not checked.
 

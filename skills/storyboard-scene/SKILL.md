@@ -165,7 +165,7 @@ descriptions), and the goal: *a single cinematic keyframe of this shot, consiste
 reference images — keep every person's face, hair, build and outfit and the place's look
 exactly; compose as the camera line says; no text, no captions, no panels*. Include the slot map: name
 each image by its port label as the chosen workflow's prompt must ("Picture 1 is Mira in her
-raincoat, Picture 2 is the harbor …" using the port descriptions' wording). The prompt writer applies the
+raincoat, Picture 2 is the harbor …" using the port descriptions' wording). Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "Medium / style is kept" in `workflow-calling-conventions`) into every `context`, verbatim; never drop it. The prompt writer applies the
 model-family skill (`prompt-writer-<family>`) automatically; without the batch tool,
 `load_skill("prompt-writer-<family>")` and follow it. If `design.json.loras` lists LoRAs, pass
 those of the same model family on the lora ports.

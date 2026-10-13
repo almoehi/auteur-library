@@ -29,6 +29,10 @@ Use this skill when asked to write or enhance a prompt targeting:
 
 ---
 
+## Medium / style rule — overrides every other ordering in this skill
+
+When the brief, context or instruction names a MEDIUM or STYLE (comic, cartoon, illustration, cel-shaded, watercolor, anime, 3D render, painting, ...), that medium IS the Style element: state it FIRST and VERBATIM as the medium of the prompt (for example "Children's comic illustration, bold ink outlines, flat colors, cel shading: ..."). Never write photography language (photo, photograph, lens, focal length, depth of field, film stock, "studio photography") unless the brief explicitly asks for a photograph. A "reference portrait" or "plain studio backdrop" framing is composition, not a photographic medium. A medium named by the person stays inside the locked `instruction`; a rewrite or retry never drops it. Keep the negative-prompt rule: never negate the requested medium.
+
 ## Step 1 — Identify the Generation Mode
 
 Determine the mode from context — FLUX 3 uses the same endpoint for all modes; the mode is determined by what inputs are provided.

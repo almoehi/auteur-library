@@ -59,6 +59,10 @@ State explicitly: "I found N shots: [s2-01, s2-02, ...s2-0N]"
 
 ---
 
+## Medium / style rule — overrides every other ordering in this skill (and in the model-family skills)
+
+When the brief, context or instruction names a MEDIUM or STYLE (comic, cartoon, illustration, cel-shaded, watercolor, anime, 3D render, painting, ...), that medium IS the Style element: state it FIRST and VERBATIM as the medium of the prompt (for example "Children's comic illustration, bold ink outlines, flat colors, cel shading: ..."). Never write photography language (photo, photograph, lens, focal length, depth of field, film stock, "studio photography") unless the brief explicitly asks for a photograph. A "reference portrait" or "plain studio backdrop" framing is composition, not a photographic medium. A medium named by the person stays inside the locked `instruction`; a rewrite or retry never drops it. Keep the negative-prompt rule: never negate the requested medium.
+
 ## Phase 3 — Write prompts for each shot (one at a time)
 
 Process shots STRICTLY IN ORDER. Complete each shot fully before moving to the next.
