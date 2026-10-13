@@ -25,6 +25,8 @@
 # filenames — the converter stripped the subfolder prefix during UI→API conversion.
 # NSFW variant: node 110 (LoraLoaderModelOnly, KNPV4.1_pre @ 0.9) sits between the KREA-2 UNETLoader
 # (20) and the anchor KSampler (28); the MiniMax-H3 video chain is untouched.
+# Realism LoRA: node 111 (LoraLoaderModelOnly, Krea2-realism-V1 @ 1.0) sits between the NSFW LoRA (110) and the anchor
+# KSampler (28); the MiniMax-H3 video chain is untouched.
 # Anchor selection (optional reference_image): nodes 100/101/102 added —
 # 100 LoadImage (port reference_image, optional), 101 Any Switch (rgthree)
 # (rgthree-comfy, pinned in nodes.lock; any_01=reference, any_02=KREA-2 decode; first non-empty wins), 102 ImageScale (lanczos, 1216x672,
@@ -247,6 +249,13 @@ models:
   - name: KNPV4.1_pre
     type: lora
     files:
-      - url: https://huggingface.co/diobrando0/krea2_loras_public/resolve/main/KNPV4.1_pre.safetensors
+      - url: https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/lora/c4adb98f6d014ee2b15f79661b3ae0ffd08bae1fe6d0e02865fcde040157772e/KNPV4.1_pre.safetensors
         filename: KNPV4.1_pre.safetensors
         sha256: c4adb98f6d014ee2b15f79661b3ae0ffd08bae1fe6d0e02865fcde040157772e
+
+  - name: Krea2-realism-V1
+    type: lora
+    files:
+      - url: https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/lora/b77b27a4fe5186d518d6cefdb75a4aa79318cb77ad21b81102a156a6d4889744/Krea2-realism-V1.safetensors
+        filename: Krea2-realism-V1.safetensors
+        sha256: b77b27a4fe5186d518d6cefdb75a4aa79318cb77ad21b81102a156a6d4889744

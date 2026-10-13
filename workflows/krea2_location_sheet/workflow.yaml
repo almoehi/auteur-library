@@ -23,6 +23,8 @@
 # only the linked inputs; all non-connected widget values were absent.
 # Node 39, 73 (LoraLoaderModelOnly): restored `Minimax/` folder prefix on LoRA
 # filenames — the converter stripped the subfolder prefix during UI→API conversion.
+# Realism LoRA: node 111 (LoraLoaderModelOnly, Krea2-realism-V1 @ 1.0) sits between the KREA-2 UNETLoader
+# (20) and the anchor KSampler (28); the MiniMax-H3 video chain is untouched.
 # Anchor selection (optional reference_image): nodes 100/101/102 added —
 # 100 LoadImage (port reference_image, optional), 101 Any Switch (rgthree)
 # (rgthree-comfy, pinned in nodes.lock; any_01=reference, any_02=KREA-2 decode; first non-empty wins), 102 ImageScale (lanczos, 1216x672,
@@ -241,3 +243,10 @@ models:
       - url: https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/loras/minimax_h3_ref_lora_rank_256_bf16.safetensors
         filename: Minimax/minimax_h3_ref_lora_rank_256_bf16.safetensors
         sha256: "7979fb9e5ac8f8c165cfe78b2c57d471cc5dbd0f62dac5ebd07f864b404a9c87"
+
+  - name: Krea2-realism-V1
+    type: lora
+    files:
+      - url: https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/lora/b77b27a4fe5186d518d6cefdb75a4aa79318cb77ad21b81102a156a6d4889744/Krea2-realism-V1.safetensors
+        filename: Krea2-realism-V1.safetensors
+        sha256: b77b27a4fe5186d518d6cefdb75a4aa79318cb77ad21b81102a156a6d4889744

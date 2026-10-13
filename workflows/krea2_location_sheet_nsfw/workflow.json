@@ -216,6 +216,20 @@
       "title": "Krea2 NSFW LoRA (KNPV4.1)"
     }
   },
+  "111": {
+    "inputs": {
+      "lora_name": "Krea2-realism-V1.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "110",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Krea2 realism LoRA (Krea2-realism-V1)"
+    }
+  },
   "28": {
     "inputs": {
       "seed": 0,
@@ -225,7 +239,7 @@
       "scheduler": "simple",
       "denoise": 1.0,
       "model": [
-        "110",
+        "111",
         0
       ],
       "positive": [
