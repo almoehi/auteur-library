@@ -1,0 +1,244 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Original workflow by lumosai8 (OrbitSheets)
+# https://github.com/lumosai8/ComfyUI-OrbitSheets
+# https://www.reddit.com/r/StableDiffusion/comments/1vov6jb/create_full_character_location_sheets_in_seconds/
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# ComfyUI-OrbitSheets (OrbitSheetsCharacterPrompt, OrbitSheetsFrameSelect,
+#   OrbitSheetsContactSheet, OrbitSheetsAttentionBackend) — loaded dynamically
+#   via the customNodes stanza below; no nodes.lock entry needed.
+# MiniMaxH3ImageToVideo, MiniMaxH3SigmaShift, VAEDecodeAudio, CreateVideo,
+#   SaveVideo — ComfyUI-MiniMax-H3-Turbo (Larryvrh) — already in nodes.lock.
+# NSFW variant: node 110 (LoraLoaderModelOnly, KNPV4.1_pre @ 0.9) sits between the KREA-2 UNETLoader
+# (20) and the anchor KSampler (28); the MiniMax-H3 video chain is untouched.
+# Anchor selection (optional reference_image): nodes 100/101/102 added —
+# 100 LoadImage (port reference_image, optional), 101 Any Switch (rgthree)
+# (rgthree-comfy, pinned in nodes.lock; any_01=reference, any_02=KREA-2 decode; first non-empty wins), 102 ImageScale (lanczos, 1216x672,
+# center crop) feeding node 44 first_frame and node 75 (anchor_preview) reads node 101.
+# fps is no longer a port: CreateVideo (node 78) stays at the H3-native 24.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: krea2_character_sheet_nsfw
+description: >
+  Generates a six-panel character turnaround contact sheet — front full-body, face close-up,
+  left profile, right profile, rear, and a frightened expression — from EITHER an optional
+  reference image of the character (it becomes the anchor image; the prompt is not used to
+  generate it) OR, when no reference image is given, from a plain-English description (a KREA-2
+  anchor image is generated first). Best for character references in fashion, game art, concept
+  art, and cosplay. Not suitable for scene or location sheets or single-image output.
+url: workflow.json
+workflow_type: t2i
+model_family: krea2
+capabilities: [character-sheet]
+gpu_types: [l40s, a100, h100]
+ports:
+  inputs:
+    - name: reference_image
+      kind: image
+      description: "Optional reference image of the character. When given it IS the anchor image: the reference wins over the KREA-2 text-to-image stage (the stage is still evaluated, its result is discarded) and the prompt is not used to generate it; the orbit starts from this image (center-cropped to 16:9, 1216×672). When omitted the anchor is generated from the prompt. Best: the full-body character on a plain neutral studio backdrop, centred with margin, 16:9 landscape."
+      binding: image@100
+      required: false
+  params:
+    - name: prompt_character
+      kind: string
+      description: "Character description for the turnaround sheet — physical appearance, clothing, expression in plain English. Do not include backdrop or background instructions; a neutral grey studio backdrop is applied automatically. In prompt mode (no reference_image) it drives the KREA-2 anchor image; give it. With a reference_image omit it: the image is the anchor and the prompt is not used to generate it (any text given only serves as a short subject hint for the orbit prompt and view selector)."
+      binding: value@10
+      required: false
+      default: ""
+    - name: anchor_width
+      kind: int
+      description: "Anchor image width in pixels for the KREA-2 text-to-image stage (prompt mode only; ignored when reference_image is given). Named anchor_* so quality profiles that override width/height cannot silently change the sheet. The orbit video always runs at 1216×672 and the contact sheet layout is fixed (512 px per panel, 2 columns). Multiple of 16."
+      binding: width@27
+      constraints: { min: 256, max: 2048 }
+      required: false
+      default: 1920
+    - name: anchor_height
+      kind: int
+      description: "Anchor image height in pixels for the KREA-2 text-to-image stage (prompt mode only; ignored when reference_image is given). Named anchor_* so quality profiles that override width/height cannot silently change the sheet. Multiple of 16."
+      binding: height@27
+      constraints: { min: 256, max: 2048 }
+      required: false
+      default: 1080
+    - name: seed
+      kind: int
+      description: "Random seed for the KREA-2 anchor image (prompt mode only; ignored when reference_image is given). Different seeds give different interpretations. The H3 orbit stage uses a separate fixed seed internally."
+      binding: seed@28
+      seed: true
+      required: false
+      default: -1
+    - name: steps
+      kind: int
+      description: "Denoising steps for the KREA-2 anchor image (prompt mode only; ignored when reference_image is given). 6–10 gives good results. The H3 orbit stage runs 8 steps internally with the turbo LoRA."
+      binding: steps@28
+      constraints: { min: 1, max: 50 }
+      required: false
+      default: 8
+    - name: cfg
+      kind: float
+      description: "Classifier-free guidance scale for the KREA-2 anchor stage (prompt mode only; ignored when reference_image is given). Default 1.0 is recommended; 2–3 gives stronger prompt adherence at the cost of naturalness."
+      binding: cfg@28
+      required: false
+      default: 1.0
+    - name: frames
+      kind: int
+      description: "Number of frames in the H3 orbit sequence (rendered at the model-native 24 fps, not configurable). 124 frames covers six shots at 0.75 s each (plus the final frightened-face shot running to clip end)."
+      binding: length@44
+      constraints: { min: 5 }
+      required: false
+      default: 124
+  outputs:
+    - name: character_sheet
+      kind: image
+      description: "Six-panel character turnaround contact sheet assembled from CLIP-selected canonical views (front, face close-up, left profile, right profile, rear, frightened expression)."
+      node_id: "70"
+      role: primary
+    - name: orbit_video
+      kind: video
+      description: "Full orbit video generated by MiniMax H3 FL2VA before frame selection — useful for inspecting the full turnaround motion and troubleshooting sheet quality."
+      node_id: "79"
+      role: auxiliary
+    - name: voice_track
+      kind: audio
+      description: "AI-generated voice audio track produced alongside the orbit video by H3 FL2VA using the baked-in spoken line."
+      node_id: "72"
+      role: auxiliary
+    - name: anchor_preview
+      kind: image
+      description: "The anchor image the H3 orbit starts from: the supplied reference_image as-is, or the KREA-2 generated frame when none was given — useful for verifying the base character."
+      node_id: "75"
+      role: auxiliary
+    - name: pose_front
+      kind: image
+      description: "Individual selected pose frame, front full-body view. Best-effort — may occasionally not match the intended shot."
+      node_id: "82"
+      role: auxiliary
+    - name: pose_face_closeup
+      kind: image
+      description: "Individual selected pose frame, tight face close-up view. Best-effort — may occasionally not match the intended shot."
+      node_id: "84"
+      role: auxiliary
+    - name: pose_left_profile
+      kind: image
+      description: "Individual selected pose frame, left side profile view. Best-effort — may occasionally not match the intended shot."
+      node_id: "86"
+      role: auxiliary
+    - name: pose_right_profile
+      kind: image
+      description: "Individual selected pose frame, right side profile view. Best-effort — may occasionally not match the intended shot."
+      node_id: "88"
+      role: auxiliary
+    - name: pose_rear
+      kind: image
+      description: "Individual selected pose frame, rear view. Best-effort — may occasionally not match the intended shot."
+      node_id: "90"
+      role: auxiliary
+    - name: pose_frightened
+      kind: image
+      description: "Individual selected pose frame, frightened-expression close-up. Best-effort — may occasionally not match the intended shot."
+      node_id: "92"
+      role: auxiliary
+customNodes:
+  - name: ComfyUI-OrbitSheets
+    repository: https://github.com/lumosai8/ComfyUI-OrbitSheets.git
+    commitHash: 8952eae1d3298f241c538c029a6e929509c4813f
+
+context: >
+  Best for character reference sheets when you have a clear physical description. Works well
+  for fashion, cosplay, concept-art, and game characters with distinctive appearance traits.
+
+  Two modes (same for krea2_location_sheet): with `reference_image` the supplied image is the
+  anchor — the reference wins over the KREA-2 stage (still evaluated, result discarded) and prompt / width / height / steps /
+  cfg / seed are not used to generate it; without it the anchor is generated from
+  `prompt_character` (the neutral grey backdrop is appended to that anchor prompt only). In
+  reference mode the orbit prompt still asks for a plain grey studio backdrop, so give a
+  full-body, centred character on a plain neutral backdrop for the best sheet; the image is
+  center-cropped to 16:9 (1216×672). The frame rate is fixed at the model-native 24 fps.
+
+  Prompting (prompt mode): describe physical appearance, clothing, and posture only. A neutral grey studio
+  backdrop is applied automatically — do not include backdrop or environment instructions; they
+  will conflict. A frightened expression view is always included regardless of prompt content.
+
+  Parameter guidance:
+  - steps: 6–10 gives good quality; 8 is the recommended default.
+  - frames: controls orbit coverage; 124 (default) reliably captures all six canonical views.
+    Reduce for faster iteration; increase if a view gets cut short.
+  - seed: controls the KREA-2 anchor image (prompt mode). Vary this if panels are blurry or duplicate
+    angles appear.
+  - anchor_width / anchor_height: control the KREA-2 anchor image resolution only (prompt mode).
+    The orbit video always runs at 1216×672 regardless. Named anchor_* on purpose: a render
+    profile that overrides `width`/`height` must not silently change the sheet.
+
+  Known issues:
+  - Duplicate or blurry panels: shot durations vary per run. Change the seed.
+  - Sheet missing an expected view: increase frames (default 124 covers all six in most runs).
+
+models:
+  - name: Krea2_Turbo_convrot_int8mixed
+    type: unet
+    files:
+      - url: https://huggingface.co/Kutches/Kr3a/resolve/main/Krea2_Turbo_convrot_int8mixed.safetensors
+        filename: Krea2/Krea2_Turbo_convrot_int8mixed.safetensors
+        sha256: c5e6d712e41a20ed2120531893bab0d7036099af12fb8836e3fe1113a8f3751f
+
+  - name: qwen3vl_4b_fp8_scaled
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors
+        filename: qwen3vl_4b_fp8_scaled.safetensors
+        sha256: 54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094
+
+  - name: qwen_image_vae
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors
+        filename: qwen_image_vae.safetensors
+        sha256: a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f
+
+  - name: minimax_h3_fl2va_pruned_int8_convrot
+    type: unet
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+        filename: MinimaxH3/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+        sha256: e889202c41dafb67b10d67b97f0d8541508036a6090af23425a5c2615d03c47a
+
+  - name: qwen3vl_32b_minimax_h3_nvfp4_awq
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+        filename: qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+        sha256: 35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6
+
+  - name: minimax_h3_video_vae_fp16
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+        filename: h3/minimax_h3_video_vae_fp16.safetensors
+        sha256: 7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522
+
+  - name: minimax_h3_audio_vae_fp32
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+        filename: h3/minimax_h3_audio_vae_fp32.safetensors
+        sha256: 8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48
+
+  - name: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy
+    type: lora
+    files:
+      - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        filename: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        sha256: fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1
+
+  - name: minimax_h3_ref_lora_rank_256_bf16
+    type: lora
+    files:
+      - url: https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/loras/minimax_h3_ref_lora_rank_256_bf16.safetensors
+        filename: minimax_h3_ref_lora_rank_256_bf16.safetensors
+        sha256: 7979fb9e5ac8f8c165cfe78b2c57d471cc5dbd0f62dac5ebd07f864b404a9c87
+
+  - name: KNPV4.1_pre
+    type: lora
+    files:
+      - url: https://huggingface.co/diobrando0/krea2_loras_public/resolve/main/KNPV4.1_pre.safetensors
+        filename: KNPV4.1_pre.safetensors
+        sha256: c4adb98f6d014ee2b15f79661b3ae0ffd08bae1fe6d0e02865fcde040157772e
