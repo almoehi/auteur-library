@@ -58,7 +58,15 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 | outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` |
 | location | `place`, `era`, `time_of_day`, `weather`, `lighting`, `mood` |
 
-   Put only what the sources state; omit unknown keys. `character_type` is passed as its own
+   Every character gets a base `wardrobe` (their default look, e.g. "school uniform", "worn
+   leather jacket, jeans") even when their looks are separate outfit designs; when the sources
+   state none, give a plain everyday one ("simple, plain everyday clothing"). Follow the
+   workspace content policy (`{workspace.contentPolicy.nudity}`; absent or empty = forbidden):
+   when it is `forbidden` - or ALWAYS for a minor (a child, teen or anyone under 18) whatever
+   the policy - depict people fully clothed (use the wardrobe attribute, else simple everyday
+   clothing) and put 'nudity, nude, naked' in the negative prompt; when it is `allowed`, follow
+   the brief (do not add clothing or a nudity negative on your own).
+   Put only what the sources state; omit unknown keys (except the base `wardrobe`). `character_type` is passed as its own
    argument, not inside `attributes`.
 5. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
    `scene_list.md` first (an exact, character-for-character copy of the `scene_list` artifact's text as you read it; no edits, no summary) because the `design-plan-covers-scenes` task check judges the contents of all your output files, then `design_plan.json`:
