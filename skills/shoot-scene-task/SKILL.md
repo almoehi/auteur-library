@@ -217,7 +217,7 @@ files:   [every .mp4 and every .txt from Step 3b — list individually, no omiss
 
 ## Step 5 — Confirm to user
 
-After `create_artifact` succeeds:
+After `create_artifact` succeeds (keep it short, see "Short visible replies" in `workflow-calling-conventions`):
 
 > "Scheduled: **Shoot <Scene Name>**
 > — <N> clips: <list canonical .mp4 filenames>

@@ -148,7 +148,7 @@ needs the `scene_list` artifact (it is approved). The storyboard's duplicate-nam
 3. If any entity failed: `task_complete` is still correct only if all others are done and the
    summary lists the failures; if the design plan could not be covered at all, call `task_failed`.
 
-`task_complete` summary format:
+Keep replies short (see "Short visible replies" in `workflow-calling-conventions`). `task_complete` summary format:
 
 ```
 design plan: <n> characters, <n> locations, <n> outfits, <n> storyboards

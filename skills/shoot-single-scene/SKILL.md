@@ -112,4 +112,4 @@ After each render, write all prompt outputs to their declared paths.
   fail — do not call `task_complete` until every path matches. Call the wf_* tool again
   targeting the declared path if needed.
 
-Then call `task_complete` (summary: the path (a/b/c) used per scene and why).
+Then call `task_complete` (summary: the path (a/b/c) used per scene and why; keep replies short, see "Short visible replies" in `workflow-calling-conventions`).
