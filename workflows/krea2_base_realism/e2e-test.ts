@@ -451,6 +451,7 @@ try {
     undefined,
     undefined,
     undefined,
+    undefined, // notifyJson
   );
   console.log(`  renderId=${renderIdNoLora}`);
   check(
@@ -499,6 +500,7 @@ try {
         },
       ],
     }),
+    undefined, // notifyJson
   );
   console.log(`  renderId=${renderIdWithLora}`);
   check(
