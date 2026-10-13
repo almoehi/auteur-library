@@ -101,7 +101,7 @@ references the earlier result, so never put several in one round: a `create_scen
 calls write NO text: no announcements, no "let me verify", no progress notes. A text-only reply
 ENDS your turn and the rest of the chain is never created. Do not re-read or re-verify stored
 prompts; trust each `create_task` result. Only after the 4th result (or after a stop on failure,
-below) may you write your single final report (Step 5).
+below) may you write your single final report (Step 5), short per "Short visible replies" in `workflow-calling-conventions`.
 
 **Use returned identifiers, never assumed ones.** `requires_tasks` / `requires_artifacts` accept
 keys (or runtime ids). After every `create_task`, read the task id and artifact key FROM THE

@@ -101,4 +101,4 @@ Measure the new clip with `get_video_info` and check:
 - [ ] no other file was written; the prior clip and its artifact are untouched
 
 Then call `task_complete(summary=...)`: the workflow used, the measured prior duration, the start
-offset, the references used, and the prompt. Call it again after the self-review.
+offset, the references used, and the prompt. Call it again after the self-review. Keep replies short: see "Short visible replies" in `workflow-calling-conventions`.

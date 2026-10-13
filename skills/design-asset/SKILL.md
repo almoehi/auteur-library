@@ -16,163 +16,142 @@ agentType: worker
 
 A design is an ordinary `llm+hitl` task plus one open artifact, both keyed `<kind>_<name>`
 (`character_mira`). The **web studio owns the design**: its `design.json` (attributes, takes,
-primary, description, LoRAs) and every published file (`primary.*`, `sheet.*`, `view_*`). Your
-job is only to put **images** into the artifact; the studio picks them up as takes.
-Contract reference: `release/DESIGN_GUIDE.md`.
+primary, description, LoRAs) and every published file (`primary.*`, `sheet.*`, `view_*`). You only
+put **images** into the artifact; the studio picks them up as takes. Contract reference:
+`release/DESIGN_GUIDE.md`. Keep visible replies short: see "Short visible replies" in
+`workflow-calling-conventions`.
 
 ## Hard rules
 
 1. **Never write, overwrite, rename or delete `design.json`** — read it only
-   (`read_artifact(artifactId="<task id>")`). The UI writes it with a version check; a write
-   from you would be lost or clobber the person's edits.
-2. **Never write published names** (`primary.*`, `sheet.*`, `view_*`) — "Finish design" in the
-   studio creates those.
-3. **File names are flat** — `/` is forbidden. Drafts: `take_draft-<n>-<slug>.<ext>` (n = 1, 2, … initialDrafts; slug = a few lowercase
-   hyphenated words naming the draft's content, `[a-z0-9]+(-[a-z0-9]+)*`, no `_`).
+   (`read_artifact(artifactId="<task id>")`, ONCE per turn, compactly: never copy or restate the
+   document, takes history or file lists; later reads return a server-side compact digest).
+2. **Never write published names** (`primary.*`, `sheet.*`, `view_*`).
+3. **File names are flat** — no `/`. Drafts: `take_draft-<n>-<slug>.<ext>` (n = 1 … initialDrafts;
+   slug = a few lowercase hyphenated words naming the content, `[a-z0-9]+(-[a-z0-9]+)*`, no `_`).
    Chat-phase takes: `take_<slug>.<ext>` — slug summarizes what the take shows or the change
-   (`take_profile-closeup-laughing.png`, `take_contact-sheet-six-takes.png`); never generic or
-   numbered names. Names are unique: append `-2`, `-3` … when the name exists in the current
-   artifact files OR was used earlier in this conversation, including takes the person has since
-   discarded. Never reuse a name or overwrite an existing file — every render is a new take.
-   Derived takes (conversions, crops, composites) get a new slug — e.g. `take_img-9467-converted.png`
-   from `take_img-9467-75j0.heic`; never reuse a source take's base name with another extension.
-4. **Write takes into this artifact's own directory** (`/workspace/<artifact id>/<file name>`):
-   generate or edit images with `wf_*` tools via `output_ports` (they carry render provenance —
-   prompt, seed, LoRAs — the studio shows); derived files (e.g. a contact sheet combining
-   existing takes, a crop, a format conversion) may also be produced with sandbox CLI commands
-   (`sandbox_exec` / `sandbox_python`, ImageMagick, ffmpeg, PIL). Every file in that directory
-   is registered with the artifact at the end of the turn; never claim a file is done unless
-   it is there. Read source takes via `artifact://` references (`sandbox_fetch`), never copied URLs.
-5. **One render per take.** Leave `seed` at its default (random) so each draft differs; never
-   request batches.
+   (`take_profile-closeup-laughing.png`); never generic or numbered. Names are unique: append
+   `-2`, `-3` … when the name exists in the artifact OR was used earlier in this conversation
+   (including discarded takes). Never reuse a name or overwrite — every render is a new take.
+   Derived takes (conversions, crops, composites) get a new slug (`take_img-9467-converted.png`
+   from `take_img-9467-75j0.heic`), never the source's base name with another extension.
+4. **Write takes into this artifact's directory** (`/workspace/<artifact id>/<file name>`):
+   generate/edit images with `wf_*` tools via `output_ports` (render provenance); derived files
+   (contact sheet, crop, conversion) may use sandbox CLI commands (ImageMagick, ffmpeg, PIL).
+   Every file there is registered at the end of the turn; never claim a file is done unless it is
+   there. Read source takes via `artifact://` refs, never copied URLs.
+5. **One render per take.** Leave `seed` at its default; never request batches.
 
-## Phase 1 — Preflight (LLM phase)
+## Phase 1 — Preflight
 
-1. Your task id is the design key; the artifact with the same key is yours.
-   `read_artifact(artifactId="<task id>")` → note the artifact **id** (for output paths) and the
-   existing file names.
-2. From the task prompt, extract:
-   - the **attributes** (e.g. hair color, age, build, wardrobe, mood; for locations: place,
-     era, time of day, weather);
-   - the **workflow** to use — chosen by CAPABILITY, never by name from memory: if the prompt
-     names one that exists among your `wf_*` tools, use it; else pick the `wf_*` tool whose
-     workflow type is text-to-image (read from its description / `get_workflow_instructions`)
-     and whose model family matches the one named in the prompt or in `design.json`. **Exception — an outfit (or any design whose prompt says it is
-     drafted as image EDITS of a linked design's primary):** the workflow is an image-edit
-     (`i2i`) one, never text-to-image; the linked design's `primary:` line in the prompt's
-     "Referenced designs" block (`artifact://<id>/primary.<ext>`) is its first image input;
-   - **how many drafts** (`initialDrafts`, default 4) and the **file extension** (default
-     `png`).
-   `design.json` (read above) holds the same attributes and may name `displayName`, `links`
-   (an outfit's character) and `loras`.
-3. If the attributes are empty, or no text-to-image `wf_*` tool exists (for an outfit: no
-   image-edit `wf_*` tool with an image input, or no `primary:` line for the linked character),
-   **do not guess** — never fall back to text-to-image for an outfit, that invents a different
-   person: render nothing and call `task_complete` with a summary that says exactly what is missing.
-   The person continues in the studio (Generate / upload references).
+1. The artifact with your task id's key is yours: one `read_artifact(artifactId="<task id>")` →
+   artifact **id** (output paths), existing file names, `design.json` (attributes, `displayName`,
+   `links`, `loras`, `initialDrafts`).
+2. Extract: the **attributes** (hair color, age, build, wardrobe, mood; locations: place, era,
+   time of day, weather); the **workflow**, chosen by CAPABILITY, never from memory: the one the
+   prompt names if it exists among your `wf_*` tools, else the text-to-image `wf_*` tool (per its
+   description / `get_workflow_instructions`) whose model family matches the prompt or
+   `design.json`. **Exception — an outfit (or any design drafted as image EDITS of a linked
+   design's primary):** an image-edit (`i2i`) workflow, never text-to-image; the linked design's
+   `primary:` line in the prompt's "Referenced designs" block (`artifact://<id>/primary.<ext>`) is
+   its first image input; **how many drafts** (`initialDrafts`, default 4) and the **extension**
+   (default `png`).
+3. Empty attributes, or no text-to-image `wf_*` tool (outfit: no image-edit `wf_*` tool with an
+   image input, or no `primary:` line for the linked character) → **do not guess**, and never
+   fall back to text-to-image for an outfit (it invents a different person): render nothing and
+   `task_complete` saying exactly what is missing. The person continues in the studio.
 
 ## Phase 2 — Write the prompt
 
-1. `get_workflow_instructions(<workflow>)` — read it fully (ports, defaults, prompt style).
-   Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call and pass `prompt_route`. Typical here: a user-typed chat/studio edit instruction ("make her older") is a verbatim candidate; design attributes, initial drafts, retries and diversity variations are rewritten.
-2. Draft the prompt with `draft_prompt(<workflow>, <context>)` (ONE prompt serves all
-   `initialDrafts`; when several DIFFERENT prompts are needed at once — distinct initial
-   drafts, several edits in one chat message — draft them in ONE `draft_prompts_batch`, review
-   with at most one `review_prompts_batch`, never a per-prompt `draft_prompt` / `review_prompt`
-   loop). Pass all attributes, the
-   design kind, and the goal: *a clean, well-lit reference image of one subject* — for a
-   character: full body or three-quarter, neutral pose, plain background, face clearly
-   visible; for an outfit: an edit instruction that dresses the person of the linked character's
-   primary image in the outfit (keep face, hair and body unchanged), full body; for a location:
-   an establishing wide shot, no people. The prompt writer applies the model-family skill
-   (`prompt-writer-<family>`) automatically. If `draft_prompt` is
-   not available, `load_skill("prompt-writer-<family>")` and follow it yourself.
-3. Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "Medium / style is kept" in `workflow-calling-conventions`) into every `context`, verbatim; never drop it. The goal "clean reference image" (plain background, neutral pose) is composition, never a photographic medium: no photography wording unless the story asks for a photograph. Keep the named attributes verbatim; add no characters, props or text not asked for.
+1. `get_workflow_instructions(<workflow>)` — read fully (ports, defaults, prompt style). Follow
+   the **Prompt route** of `workflow-calling-conventions` (`load_skill` it) for every prompted
+   `wf_*` call and pass `prompt_route`: a user-typed chat edit ("make her older") is a verbatim
+   candidate; attributes, initial drafts, retries and diversity variations are rewritten.
+2. Draft with `draft_prompt(<workflow>, <context>)` (ONE prompt serves all `initialDrafts`). When
+   several DIFFERENT prompts are needed at once (distinct drafts, several edits in one message):
+   ONE `draft_prompts_batch` call in ONE round, at most one `review_prompts_batch`; never a
+   per-prompt `draft_prompt` / `review_prompt` loop and never a repeat batch for items already
+   drafted. `context` is short: all attributes, the design kind and the goal *a clean, well-lit
+   reference image of one subject* — character: full body or three-quarter, neutral pose, plain
+   background, face clearly visible; outfit: an edit instruction dressing the person of the linked
+   character's primary in the outfit (keep face, hair, body unchanged), full body; location: an
+   establishing wide shot, no people. Never restate design descriptions or what reference images
+   show. The prompt writer applies `prompt-writer-<family>` itself (without `draft_prompt`,
+   `load_skill` it).
+3. Carry the workspace's medium/style (`{workspace.story.plot}`, see "Medium / style is kept" in
+   `workflow-calling-conventions`) verbatim into every `context`. "Clean reference image" is
+   composition, never a photographic medium: no photography wording unless the story asks for a
+   photograph. Keep named attributes verbatim; add no characters, props or text not asked for.
 4. LoRAs: if `design.json.loras` lists LoRAs, or the attributes contain a trigger word from
-   `lora_index`, pass those LoRAs on the workflow's lora ports (same model family only).
+   `lora_index`, pass them on the workflow's lora ports (same model family only).
 
 ## Phase 3 — Render the drafts
 
-For an outfit each call is an edit of the linked character's primary: pass the `primary:` reference
-from the prompt as the workflow's image input (the same `artifact://` reference, never a copied
-URL) and the edit instruction as the prompt; the description in the same block tells you who the
-person is, the image defines how they look.
+For an outfit each call edits the linked character's primary: pass the prompt's `primary:` ref
+(same `artifact://`, never a copied URL) as the image input and the edit instruction as the
+prompt; the description says who the person is, the image defines how they look.
 
-Issue ALL `initialDrafts` calls in ONE response — one `wf_*` call per draft, n = 1 … `initialDrafts`
-(they render in parallel; do not wait for one before issuing the next):
+Issue ALL `initialDrafts` calls in ONE response, n = 1 … `initialDrafts` (they render in parallel):
 
 ```
 wf_<workflow>(prompt_positive="<prompt>", …,
   output_ports={"<primary output port>": "/workspace/<artifact id>/take_draft-<n>-<slug>.png"})
 ```
 
-- Same prompt for every draft; the random seed gives the variety. If the person's attributes
-  suggest clear alternatives (e.g. "short or long hair"), you may vary exactly that phrase
-  across drafts — say so in the summary.
-- A failed draft fails only itself — the other drafts' results still arrive. For each failed
-  draft: re-read the workflow instructions, fix the call, retry that draft once (same file name);
-  if it fails again, leave it — the studio shows it as a failed take with a Retry — and report it.
+- Same prompt for every draft; the seed gives the variety. If the attributes suggest clear
+  alternatives ("short or long hair"), you may vary exactly that phrase across drafts — say so.
+- A failed draft fails only itself: re-read the workflow instructions, fix the call, retry that
+  draft once (same file name); if it fails again leave it (the studio shows a failed take with
+  Retry) and report it.
 
 ## Check, retry once, suggest
 
-For EVERY take you render (initial drafts and chat-requested edits / re-renders) follow "Check, retry once, suggest" of `workflow-calling-conventions` (rubric, retry rule, `suggest_edit`). Design-asset naming of the retry take: base + `-r2`
-(`take_profile-closeup.png` -> `take_profile-closeup-r2.png`). For an agent draft
-`take_draft-<k>-<slug>.<ext>` the retry is `take_<slug>-draft-<k>-r2.<ext>` — it must NOT
+For EVERY take you render follow "Check, retry once, suggest" of `workflow-calling-conventions`.
+Retry naming: base + `-r2` (`take_profile-closeup.png` -> `take_profile-closeup-r2.png`). For a
+draft `take_draft-<k>-<slug>.<ext>` the retry is `take_<slug>-draft-<k>-r2.<ext>` — it must NOT
 start with `take_draft-`, so it never collides with the draft id `draft_<k>`.
 
 ## Phase 4 — Hand over
 
 Audit before completing:
 
-- [ ] every `take_draft-<n>-<slug>.<ext>` exists in the artifact (re-read it) — n = 1 … initialDrafts —
-      except drafts that failed twice (name them in the summary)
-- [ ] no other file was written; `design.json` untouched
-- [ ] every rendered take was checked with `describe_image`; at most one retry per take, named
-      `<base>-r2` (drafts: `take_<slug>-draft-<k>-r2.<ext>`); `suggest_edit` called exactly for
-      takes whose retry also missed (see `workflow-calling-conventions`)
-- [ ] drafts came from `wf_*` renders (derived files from sandbox commands are fine in the chat phase)
+- [ ] every `take_draft-<n>-<slug>.<ext>` exists (re-read the artifact), n = 1 … initialDrafts,
+      except drafts that failed twice (name them)
+- [ ] no other file written; `design.json` untouched
+- [ ] every take checked with `describe_image`; at most one retry per take (`<base>-r2`; drafts
+      `take_<slug>-draft-<k>-r2.<ext>`); `suggest_edit` exactly for takes whose retry also missed
+- [ ] drafts came from `wf_*` renders (sandbox-derived files are fine in the chat phase)
 
-Then call `task_complete(summary="Rendered N drafts of <displayName> with <workflow>; prompt: …")`
-(call it again after the self-review). This hands the design to the person — it does **not**
-finish the design.
+Then `task_complete(summary="Rendered N drafts of <displayName> with <workflow>; prompt: …")` (at
+most ~10 lines; call it again after the self-review). This hands the design to the person — it
+does **not** finish it.
 
 ## Phase 5 — Chat (HITL phase)
 
-The person may ask for changes in the design chat. For each request:
+For each request:
 
-1. `read_artifact` again — takes may have been added, discarded or re-ordered; read
-   `design.json` for the current `primaryTakeId`, takes, LoRAs and linked designs. A take you
-   rendered earlier that is gone was discarded by the person on purpose — never re-render it.
-2. Pick the source image: the take the person names, else the primary (the file of
-   `primaryTakeId`), else the newest take. Pass it as `artifact://<artifact id>/<file name>`. Use that same
-   reference for `describe_image` and `sandbox_fetch` — never copy or retype a URL (a signed URL with
-   one dropped character fails with 403). A derived take (conversion, crop, composite) gets a new
-   slug per hard rule 3 — never the source take's base name with another extension.
-3. Pick the workflow:
-   - a change to an existing image ("older", "red jacket", "other background") → an
-     **image-edit** (`i2i`) `wf_*` tool; write the instruction with `draft_prompt` (several edits in one message: one
-     `draft_prompts_batch`, then all renders in one response) for that
-     workflow (model-family skill `prompt-writer-<family>`), referencing the source as the first image
-     input and any extra reference as the next, named the way that workflow's port descriptions
-     name its images ("Picture 1", "Figure 1", …) — use each image input's declared `label` and
-     `reference_role` when the manifest has them (`subject` = the image being edited), else the
-     port descriptions; place the images as in "Anchor (Picture 1) by intent" of
-     `workflow-calling-conventions` (an edit anchors on the image being edited); prefer a workflow declaring `capabilities` that fit (e.g.
-     `multi-reference-edit` when several images must be passed); among several i2i workflows
-     prefer the one whose image inputs and required ports fit what you have to pass;
-   - "start over / completely different" → the text-to-image workflow, as in Phase 2.
-4. Render only what THIS message asks for — an edit is one take unless the message gives a
-   count. Earlier requests are done: never continue, retry or redo them unless this message asks.
-   One take per requested variant to `take_<slug>.<ext>` (slug and uniqueness per hard rule 3), one render per
-   call. Check every take you render as in "Check, retry once, suggest" above. Reply with the new
+1. `read_artifact` again (takes may have been added, discarded or re-ordered; `design.json` for
+   `primaryTakeId`, takes, LoRAs, links). A take you rendered earlier that is gone was discarded on
+   purpose — never re-render it.
+2. Source image: the take the person names, else the primary (file of `primaryTakeId`), else the
+   newest. Pass `artifact://<artifact id>/<file name>`, the same ref for `describe_image` and
+   `sandbox_fetch` — never copy or retype a URL (one dropped character gives a 403).
+3. Workflow: a change to an existing image ("older", "red jacket") → an **image-edit** (`i2i`)
+   `wf_*` tool (prefer `capabilities` that fit, e.g. `multi-reference-edit`; else the one whose
+   image inputs and required ports fit); instruction via `draft_prompt` (several edits in one
+   message: ONE `draft_prompts_batch`, then all renders in one response), the source as the first
+   image input, extra references next, named by each input's `label` / `reference_role`
+   (`subject` = the image being edited) or port descriptions; anchoring per "Anchor (Picture 1) by
+   intent". "Start over / completely different" → text-to-image as in Phase 2.
+4. Render only what THIS message asks — one take unless it gives a count; never redo earlier
+   requests. One take per variant to `take_<slug>.<ext>`; check every take. Reply with the new
    file name(s) and one line on what changed, then stop.
 5. When the studio asks you to assemble given takes into a sheet ("Assemble exactly these takes …
-   into one multi-panel sheet image … Save it as /workspace/<artifact id>/<file name>"), do exactly
-   that and nothing else: place the listed takes in the listed order with ONE sandbox command
-   (e.g. ImageMagick `montage`/`convert` or PIL) — no text, no labels, no borders beyond a thin
-   uniform gap, same height per row — and write the result to the given file name, unchanged. No
-   `wf_*` render, no other file, no prompt writing. Reply with the file name only.
-6. Write each working/output file in one go (complete content, one write) and never rewrite it
-   within the same attempt — the runtime's write-once guard blocks the rewrite and ends the loop.
-7. Never pick a primary, discard takes, write descriptions or finish the design — tell the
-   person to use ★ / 🗑 / Describe / Finish design in the studio.
+   Save it as /workspace/<artifact id>/<file name>"), do exactly that: ONE sandbox command
+   (ImageMagick `montage`/`convert` or PIL), listed takes in listed order, no text, labels or
+   borders beyond a thin uniform gap, same height per row, written to the given name. No `wf_*`
+   render, no other file, no prompt writing. Reply with the file name only.
+6. Write each file in one go (complete content, one write) and never rewrite it within the same
+   attempt — the runtime's write-once guard blocks the rewrite and ends the loop.
+7. Never pick a primary, discard takes, write descriptions or finish the design — tell the person
+   to use ★ / 🗑 / Describe / Finish design in the studio.
