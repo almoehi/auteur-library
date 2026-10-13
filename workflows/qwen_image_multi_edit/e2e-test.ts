@@ -289,6 +289,7 @@ try {
     undefined,  // promiseId
     undefined,  // promiseTimeoutMs
     undefined,  // loraJson
+    undefined, // notifyJson
   );
   console.log(`  renderId=${renderId}`);
   check('renderId non-empty', renderId.length > 0, renderId);
@@ -374,6 +375,7 @@ try {
     undefined,  // promiseId
     undefined,  // promiseTimeoutMs
     undefined,  // loraJson
+    undefined, // notifyJson
   );
   check('single-image renderId non-empty', singleRenderId.length > 0, singleRenderId);
   const singleResult = await pollUntilDone(agent, singleRenderId);

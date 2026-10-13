@@ -240,6 +240,11 @@
         "lora": "krea2filterbypass.safetensors",
         "strength": 1
       },
+      "lora_realism": {
+        "on": true,
+        "lora": "Krea2-realism-V1.safetensors",
+        "strength": 1.0
+      },
       "➕ Add Lora": ""
     },
     "class_type": "Power Lora Loader (rgthree)",
