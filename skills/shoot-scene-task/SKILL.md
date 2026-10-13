@@ -80,7 +80,9 @@ location design and of the outfit designs used in the scene. Take the scene's ro
 `scene_list` artifact (`location_slug`, `Outfits` as `<character>:<look>`) and look the keys up in
 `artifact_index` (`location_<slug>`, `outfit_<character>_<look>`; tolerate a suffix). The
 reference is `artifact://<artifact id>/primary.<ext>` (read the artifact to get the file name).
-Missing sheets are not fatal: note them and continue without that reference.
+Missing sheets are not fatal: note them and continue without that reference. List them in the
+task's `references:` line location first, then outfits in order of presence ("Anchor (Picture 1)
+by intent" of `workflow-calling-conventions`, compose intent).
 
 ### 1c. Idempotency check
 

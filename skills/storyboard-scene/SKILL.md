@@ -81,12 +81,18 @@ per shot. The finished storyboard (`shotlist.md` + `frame_1…N` in shot order) 
 # Scene <n> shot list
 
 ## s3-01 — Short title
-Action: what happens, who does what, where, in one or two sentences
+Action: what is VISIBLE in the frame, in one or two sentences
 Camera: shot size, angle, lens feel, movement (e.g. "wide, eye level, slow push-in")
 Characters: mira, jonas        (character slugs, comma-separated, or "none")
 Outfits: mira:raincoat; jonas:work_suit      (<character>:<look> pairs, "; "-separated, or "none")
 Duration: 5
 ```
+
+   **`Action` = what is visible in the frame** — subjects, their positions, pose, expression and
+   objects. No plot, no reasons or motives, no dialogue, no camera motion (motion belongs to
+   shooting, not to a still keyframe; the `Camera` line gives the framing).
+   Good: `Action: Mira stands at the harbor rail, hood up, looking out to sea; Jonas sits on a crate behind her, a thermos in his hand.`
+   Bad: `Action: Mira, who just learned the ship is late, slowly walks to the rail and says "He lied to us" as the camera pushes in.`
 
    4–10 shots are typical; cover the WHOLE action of the scene in order, one clear beat per
    shot, an establishing shot first when the location is not yet known. `Duration` = whole
@@ -123,28 +129,29 @@ the shot count:
 Read each candidate `wf_*` tool's description and `get_workflow_instructions(<tool>)`. **Prefer
 what the manifest declares**: `capabilities` (`multi-reference-edit` marks a multi-image edit)
 and, per image input, `reference_role` (`subject` / `garment` / `background` / `reference`:
-put the main character's outfit primary in `subject`, the location in `background`, further
-characters/outfits in `garment` / `reference`) and `label` (the exact name the prompt must use
+for a keyframe the location (`background`) is the anchor and goes first, then the main
+character's outfit, further characters/outfits in `garment` / `reference`) and `label` (the exact name the prompt must use
 for that image, e.g. "Picture 2"). When they are absent, infer from the descriptions and slot
 order as follows: the workflow type (t2i, i2i, …), the number, kind and ORDER of image inputs, which ports are
 required, the port descriptions (they say how the prompt must refer to each image:
 "Picture 1", "Figure 1", "image 2" …), declared capabilities if present. Never pick by a
 tool's name or family.
 
-Keyframe references in **priority order**:
-1. the outfit primary of the shot's main character (`outfit_…/primary.<ext>`; the character's
+Keyframe references in **priority order** (a storyboard keyframe is COMPOSE intent — see
+"Anchor (Picture 1) by intent" of `workflow-calling-conventions`: the location is the anchor,
+Picture 1):
+1. the location primary,
+2. the outfit primary of the shot's main character (`outfit_…/primary.<ext>`; the character's
    own primary when the character has no outfit design),
-2. the location primary,
-3. the outfit primary of the second character,
-4. further characters' outfit primaries.
+3. further outfits / characters, in order of presence in the shot.
 
 Choose:
 - **Multi-image i2i** — among the i2i workflows whose required ports you can fill, the one
   with the MOST image slots able to hold references (image inputs, not masks/depth/control).
   Fewer slots than references → drop from the end of the priority list. Fill the slots in the
-  order the port descriptions imply (the main-subject slot first).
-- **Single-image i2i only** → edit the main character's outfit primary into the scene (the
-  location and others live in the prompt text only).
+  order the port descriptions imply, the location first (the anchor).
+- **Single-image i2i only** → edit the location primary into the scene (the anchor; the
+  characters live in the prompt text only).
 - **No i2i workflow** (or its required ports cannot be filled) → a t2i workflow, with the
   characters, outfits and location described fully in the prompt.
 A workflow with a required input you cannot supply (a mask, a pose, a prior clip) is
@@ -180,27 +187,10 @@ name); if it fails again, leave it (the studio shows a failed take with Retry) a
 
 ## Check, retry once, suggest
 
-For EVERY take you render (initial drafts and chat takes): verify it against the request with
-`describe_image` on its `artifact://<artifact id>/<file>` ref (batch the checks of one round in
-one response). A take that passes needs no tool call. If it misses:
-
-1. Retry ONCE, automatically: revise the prompt to fix exactly what is off and render again from
-   the SAME source (not from the missed take) as a NEW take named the original's base + `-r2`
-   (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-r2.png`; `take_s3-01-draft-1.png` ->
-   `take_s3-01-draft-1-r2.png`). Keep the missed take (never delete or overwrite it). Batch the
-   retries of several takes into ONE `draft_prompts_batch` and ONE render response; file names
-   stay write-once.
-   The automatic retry takes the REWRITE route (`prompt_route: "rewritten"`, Prompt route rule of
-   `workflow-calling-conventions`): pass the person's original instruction, if any, as `instruction` so it stays LOCKED.
-2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better of the
-   two takes: `file` = its file name (`take_s3-02-wide-rain-r2.png`), `instruction` = one
-   concrete corrective edit instruction (what to change and what to keep, max ~1000 chars),
-   `reason` = one line on what is off (max ~300 chars). Report both takes in chat and stop. The
-   tool is fire-and-forget: its result is a short confirmation, wait for nothing.
-   A suggested fix the person sends from the Edit box is a person's explicit instruction: pass it through
-   (`prompt_route: "verbatim"`) when it meets the Prompt route conditions.
-3. Never retry more than once: a `-r2` take is never retried; its own miss goes straight to
-   `suggest_edit`.
+For EVERY take you render (initial drafts and chat takes) follow "Check, retry once, suggest" of
+`workflow-calling-conventions` (rubric, retry rule, `suggest_edit`). Storyboard naming of the
+retry take: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-r2.png`;
+`take_s3-01-draft-1.png` -> `take_s3-01-draft-1-r2.png`).
 
 ## Phase 3 — Hand over
 
@@ -215,6 +205,7 @@ Audit before completing:
 - [ ] no other file written; `design.json` untouched; no published names
 - [ ] every rendered take was checked with `describe_image`; at most one retry per take, named
       `<base>-r2`; `suggest_edit` called exactly for takes whose retry also missed
+      (see `workflow-calling-conventions`)
 - [ ] drafts came from `wf_*` renders
 - [ ] batch pattern used: prompts came from `draft_prompts_batch` (one item per shot, one call
       per workflow group), at most one `review_prompts_batch` and one `enhance_prompts_batch`,
@@ -248,7 +239,7 @@ For each message:
    SEVERAL shots ("redo shots 2 and 5") is ONE batch (one item per take) and ONE response of
    renders; a single `draft_prompt` only when it touches exactly one shot.
 4. Render only what THIS message asks — one take unless it names a count. Check every take you
-   render (drafts and chat takes) as in "Check, retry once, suggest" below. Reply with the new
+   render (drafts and chat takes) as in "Check, retry once, suggest" above. Reply with the new
    file name(s) and one line on what changed, then stop.
 5. Never pick a primary / frame, discard takes, write descriptions, or finish the design —
    point the person to the studio controls (★ / 🗑 / Finish design).

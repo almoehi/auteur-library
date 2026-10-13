@@ -226,8 +226,10 @@ ENHANCED PROMPT:
 [Complete enhanced prompt — plain text, natural language prose, ready to paste]
 
 NEGATIVE PROMPT:
-blurry, distorted, text, watermark, logo, extra fingers, deformed hands, oversaturated, noise, JPEG artifacts, cropped head
+[quality defects, e.g. blurry, distorted, text, watermark, logo, extra fingers, deformed hands, noise, JPEG artifacts, cropped head — plus the brief's explicit exclusions]
 [append per use case as needed: face asymmetry, crossed eyes — portraits / dust, scratches — product / tilted horizon — architecture]
+
+**Negative prompt rule:** Negative prompt = quality defects (blur, artifacts, deformed anatomy, text/watermark) plus what the brief explicitly excludes. NEVER negate the medium or style the brief asks for (an illustrated, comic, anime, painted or stylised brief must not get CGI/anime/cartoon/illustration/digital-art negatives). If the brief states no exclusions, keep it to the quality defects. Skip the negative entirely for models that take none.
 
 CHANGES SUMMARY:
 • [What was added or restructured — 3–5 concise bullets]

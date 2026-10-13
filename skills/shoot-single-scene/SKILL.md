@@ -80,7 +80,9 @@ serialized by the runtime, the `*_prompts_batch` tools run their items in parall
    camera, characters, outfits, location, mood, duration) and the path used. For path (a)
    describe only the motion from the start frame; for path (b) name the references the way the
    port descriptions do ("Figure 1", "Picture 1" …). The prompt text per clip goes to its
-   declared prompt file(s).
+   declared prompt file(s). Order the reference images by "Anchor (Picture 1) by intent" of
+   `workflow-calling-conventions` (shooting from references is COMPOSE intent: location first,
+   then the shot's characters / outfits).
 3. Optionally audit with at most ONE `review_prompts_batch` over all prompts; if it flags gaps,
    at most ONE `enhance_prompts_batch` for the flagged items only. No per-shot loops.
 
@@ -102,6 +104,9 @@ After each render, write all prompt outputs to their declared paths.
 - Every declared clip was rendered by the video workflow (not a text-to-image tool)
 - Every render returned a success response with the correct output path
 - Every declared prompt file has been written
+- Every still frame you generated yourself (fallback source, text-to-image) was checked and
+  retried at most once as in "Check, retry once, suggest" of `workflow-calling-conventions`;
+  the storyboard's own frames and the video clips are not re-checked here
 - **Path audit**: each `.mp4` path returned by the wf_* tool must match exactly the canonical
   filename declared in your task description. If it saved elsewhere, the artifact build will
   fail — do not call `task_complete` until every path matches. Call the wf_* tool again
