@@ -1,0 +1,202 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Original workflow by author on CivitAI:
+# https://civitai.com/models/2749367/krea-2-simple-gen-workflow-for-high-quality-realism-lots-of-info-and-tips
+#
+# ─── Custom Nodes ────────────────────────────────────────────────────────────
+# ClownsharKSampler_Beta                        https://github.com/ClownsharkBatwing/RES4LYF @ 215f61fe8c0c3f4473744e0956367519eb9f12a5
+# Seed (rgthree)                                https://github.com/rgthree/rgthree-comfy @ 6b76ee6f2c5a007710b5a16f97c94330d6ecc871
+# Power Lora Loader (rgthree)                   https://github.com/rgthree/rgthree-comfy @ 6b76ee6f2c5a007710b5a16f97c94330d6ecc871
+#
+# ─── Append to serverless-comfy/nodes.lock ────────────────────────────────────
+# https://github.com/ClownsharkBatwing/RES4LYF.git 215f61fe8c0c3f4473744e0956367519eb9f12a5
+# https://github.com/rgthree/rgthree-comfy.git 6b76ee6f2c5a007710b5a16f97c94330d6ecc871
+#
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: krea2_base_realism_nsfw
+description: Simple workflow to create images from a prompt using the krea2 model. This got updated. NSFW variant, the KNPV4.1_pre NSFW LoRA (0.9) is baked in.
+url: workflow.json
+model_family: krea2
+workflow_type: t2i
+gpu_types: [rtx4090, l40s]
+ports:
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "Text prompt describing the subject, scene, camera angle, lighting, and mood. Qwen 3 VL handles long, conversational English descriptions well — be specific about facial expressions, shot framing, and visual atmosphere."
+      binding: value@48
+      required: true
+      default: "A middle-aged man sitting in a cafe. He has short, greying brown hair and a stubbly beard. He's laughing.\n\nThe shot is a close up, framing his head and chest."
+    - name: prompt_negative
+      kind: string
+      description: "Text describing what to exclude from the image. Only effective when cfg is set to ~2.0; has no effect at the default cfg=1.0."
+      binding: value@271
+      required: false
+      default: ""
+    - name: width
+      kind: int
+      description: "Output image width in pixels. Must be divisible by 16. Recommended portrait presets: 1440 (default), 896, 1088. Recommended landscape: 1920, 1536."
+      binding: width@232
+      constraints: { min: 16 }
+      required: true
+      default: 1440
+    - name: height
+      kind: int
+      description: "Output image height in pixels. Must be divisible by 16. Recommended portrait presets: 1920 (default), 1152, 1920. Recommended landscape: 1088, 864."
+      binding: height@232
+      constraints: { min: 16 }
+      required: true
+      default: 1920
+    - name: steps
+      kind: int
+      description: "Number of denoising iterations. Total effective sampling is steps + 2 (a fixed 2-step refinement pass is always appended). 4–6 is typical; higher values add detail at proportional render cost."
+      binding: steps@265
+      constraints: { min: 1, max: 20 }
+      required: true
+      default: 6
+    - name: cfg
+      kind: float
+      description: "CFG scale. Default 1.0 is distilled/turbo mode — negative prompts have no effect at this value. Raise to ~2.0 to activate CFG-guided generation and enable negative prompt influence; this roughly doubles render time."
+      binding: value@282
+      constraints: { min: 0.0 }
+      required: false
+      default: 1.0
+    - name: seed
+      kind: int
+      description: "Random seed for reproducibility. Use -1 for a random seed each run."
+      binding: seed@276
+      seed: true
+      required: false
+      default: -1
+  # Node 315 (Power Lora Loader (rgthree)) carries the lora slots. bindWorkflow()
+  # (video-harness/src/render/manifest.ts) KEEPS the workflow.json-authored slots verbatim —
+  # the always-on turbo (slot lora_turbolora, 0.6) and filter-bypass (slot lora_filterbypass,
+  # 1.0) LoRAs hardcoded in workflow.json need no port declaration and can never be wiped or
+  # overwritten by these ports. Each port below that resolves to a lora (caller selection,
+  # validated against the workspace lora catalog by WorkerAgent's dispatch-time resolution /
+  # lora_index tool) is APPENDED after the authored slots at the next free numeric slot key,
+  # in declaration order.
+  #
+  # Port names are selection keys, NOT physical slot keys (named authored keys don't join the
+  # numeric allocation, so appends happen to start at physical lora_1 here — incidental, don't
+  # rely on it). `default` is deliberately left UNSET on all five: a YAML default would
+  # auto-append that lora on every render even when the caller never mentions the port —
+  # surprising behavior for opt-in style/character slots. An unresolved port appends nothing.
+  loras:
+    - name: lora_1
+      kind: lora
+      description: "Optional dynamic LoRA slot 1 (style or character). Appended after the always-on turbo and filter-bypass LoRAs baked into the workflow. Inactive unless a caller supplies a lora selection for this port. A real example compatible with this workflow's krea2 base model: 'Photographic Realism' (civitai.com/models/2777831, base model: Krea 2, file BetterRealism_krea2_c1-st6000.safetensors, sha256 e445fe5efd52003b9ae211edf72aa7847ec744ee917f01d67a49c91eb20d24ce) — trigger word 'b3tt3rr34l1sm', pushes output toward DSLR-photo realism."
+      binding: "315"
+      strength: 0.8
+      required: false
+    - name: lora_2
+      kind: lora
+      description: "Optional dynamic LoRA slot 2 (style or character). Stacks on top of the baked-in LoRAs and lora_1. Inactive unless a caller supplies a lora selection for this port."
+      binding: "315"
+      strength: 0.8
+      required: false
+    - name: lora_3
+      kind: lora
+      description: "Optional dynamic LoRA slot 3 (style or character). Stacks on top of the baked-in LoRAs and lora_1–lora_2. Inactive unless a caller supplies a lora selection for this port."
+      binding: "315"
+      strength: 0.8
+      required: false
+    - name: lora_4
+      kind: lora
+      description: "Optional dynamic LoRA slot 4 (style or character). Stacks on top of the baked-in LoRAs and lora_1–lora_3. Inactive unless a caller supplies a lora selection for this port."
+      binding: "315"
+      strength: 0.8
+      required: false
+  outputs:
+    - name: output_image
+      kind: image
+      description: "Final photorealistic image decoded from the dual-stage sampler latent via Wan 2.1 FP32 VAE."
+      node_id: "213"
+      role: primary
+context: >
+  GPU: minimum 24 GB VRAM (RTX 3090 / L40S recommended). Krea 2 BF16 is a large diffusion model;
+  FP8 variant can fit in ~16 GB but is not used by this workflow.
+
+  Model download: ~25 GB total on first run (Krea 2 RAW BF16 ~14 GB, Qwen 3 VL 4B text encoder
+  ~8 GB, Wan VAE ~600 MB, turbo LoRA ~800 MB, filter bypass LoRA ~150 MB).
+
+  Render time: ~20–40 s per image at 1440×1920 on L40S (6 first-stage steps + 2 refinement steps).
+
+  Resolution: all values must be divisible by 16. Common presets —
+    Portrait: 1440×1920 (default), 896×1152, 1088×1920
+    Landscape: 1920×1088, 1536×864
+    Square: 1536×1536
+
+  Steps: the first-stage sampler uses 'steps' (default 6) as the step count. The second-stage
+  refinement sampler is fixed at 2 steps. Total effective sampling = steps + 2.
+
+  Prompt style: write in natural English. Describe subject appearance, action, shot type,
+  lighting, and mood. The Qwen 3 VL encoder handles long, conversational descriptions better
+  than keyword-based prompting typical of SDXL workflows.
+
+  Negative prompts: only effective when cfg ≥ 2.0. Setting cfg=2.0 activates CFG-guided
+  generation but roughly doubles render time. Leave cfg=1.0 (default) when negatives are not needed.
+
+  LoRA configuration:
+  - Turbo LoRA (0.6), filter bypass LoRA (1.0) and the NSFW LoRA KNPV4.1_pre (0.9, slot lora_knpv4 of
+    node 315) are always active and required; do not disable any. The filter bypass is essential for correct prompt adherence even on SFW content.
+  - Additional style or NSFW LoRAs can be stacked via the four dynamic LoRA ports (lora_1–lora_4). NSFW LoRAs also
+    improve SFW prompt adherence and are useful even for non-explicit tasks.
+  - Keep the filter bypass at 1.0 when stacking other LoRAs — going above 1.0 degrades image quality.
+
+  Known failure modes and fixes:
+  - Model refuses the prompt or ignores key elements (even for SFW content): strong facial
+    expressions and emotionally intense descriptions are the most common triggers — rephrase or
+    soften the wording first. The filter bypass strength is fixed at 1.0 inside the workflow
+    (its slot is baked into workflow.json and is NOT tunable per render via the lora ports).
+    Do NOT select krea2filterbypass.safetensors on a dynamic lora port to boost it — that stacks
+    a SECOND copy on top of the always-on slot and degrades quality unpredictably. A persistent
+    bypass boost (the upstream author suggests 2–6 temporarily) requires editing the slot
+    strength in the workflow bundle's workflow.json, not a render parameter.
+  - Blurry or low-frequency output: confirm the VAE is Wan 2.1 FP32 (not the Qwen image VAE,
+    which is blurrier by design). The Wan FP32 VAE is the recommended choice for sharpness.
+  - Doubled resolution artifacts (noise, ringing): do not use the optional Wan Upscale2x VAE
+    with this workflow — it doubles output resolution and requires a separate downscale step not
+    included in this workflow.
+models:
+  - name: krea2_raw_bf16
+    type: diffusion_models
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_raw_bf16.safetensors
+        filename: krea2_raw_bf16.safetensors
+        sha256: f99bb0ff8e362b77342bc4994e0c50906fe7ef7074864b181b7d48d2fa6d03d7
+
+  - name: qwen3vl_4b_bf16
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors
+        filename: qwen3vl_4b_bf16.safetensors
+        sha256: 36f3ff447ef59201722e8f9ce6020c9819fdcfba6aa2608c4e09b1c0ce114e34
+
+  - name: wan21_vae_fp32
+    type: vae
+    files:
+      - url: https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1_VAE_fp32.safetensors
+        filename: wan21_vae_fp32.safetensors
+        sha256: fd1531e31cdd20af005a9fb66e69afe4ea481a6db9b07cd889ece2e1ca2e67b9
+
+  - name: krea2_turbo_lora_rank_64_bf16
+    type: lora
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_turbo_lora_rank_64_bf16.safetensors
+        filename: krea2_turbo_lora_rank_64_bf16.safetensors
+        sha256: db8c5bae0a415d448da9d842111d6e51f7d32e47143a3118eb267e5c4773de87
+
+  - name: krea2filterbypass
+    type: lora
+    files:
+      - url: https://huggingface.co/Kutches/Kr3a/resolve/81c3668cfc957cae2970e2779da9ac70e5824ff1/krea2filterbypass.safetensors
+        filename: krea2filterbypass.safetensors
+        sha256: ac6114d7112ae2397eb26b9e6e9623aad059d346fc285ea050ffb042c7c6748e
+
+  - name: KNPV4.1_pre
+    type: lora
+    files:
+      - url: https://huggingface.co/diobrando0/krea2_loras_public/resolve/main/KNPV4.1_pre.safetensors
+        filename: KNPV4.1_pre.safetensors
+        sha256: c4adb98f6d014ee2b15f79661b3ae0ffd08bae1fe6d0e02865fcde040157772e
