@@ -284,7 +284,7 @@
   },
   "146": {
     "inputs": {
-      "value": 60
+      "value": 48
     },
     "class_type": "PrimitiveFloat",
     "_meta": {

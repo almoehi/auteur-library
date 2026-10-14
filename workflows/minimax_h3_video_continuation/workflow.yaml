@@ -108,18 +108,20 @@ ports:
       default: 20
     - name: fps
       kind: int
-      description: "Output video frame rate in FPS. Default 24 matches the model's native rate. No RIFE interpolation — output is exactly this FPS."
+      description: "Output (playback) video frame rate in FPS. Default 24 matches the model's native generation rate and must stay equal to it for the clip to last duration_seconds: frames are generated at 24 fps and encoded as-is (no RIFE interpolation), so playback duration = frames / fps. A render profile's fps never overrides it."
       binding: fps@150
       constraints: { min: 1, max: 120 }
       required: true
       default: 24
+      role: output-fps
     - name: duration_seconds
       kind: float
-      description: "Target clip duration in seconds. Converted to the nearest valid frame count for MiniMax H3 (must be a multiple of 17 frames at 24 FPS; minimum 5 frames). Default 10 seconds produces a ~10-second continuation."
+      description: "Target clip PLAYBACK duration in seconds. Converted to the nearest valid frame count at the model's native 24 fps (padded to 17k+5 frames; minimum 5 frames), so the clip lasts this long at the default fps 24. Default 10 seconds produces a ~10-second continuation."
       binding: value@158
       constraints: { min: 1.0 }
       required: false
       default: 10.0
+      role: duration
     - name: prior_clip_start_time
       kind: float
       description: "Seconds offset into the prior clip from which to begin reading frames. Default 0 reads from the start of the clip. Set to <clip_length - read_window> to capture only the final motion of a longer rendered clip (e.g. set to 9.2 for a 10-second clip to read only the last ~0.8s)."
