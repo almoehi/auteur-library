@@ -9,6 +9,10 @@
  * outputs returned and PNG, character_sheet is 3872x2176, view_1 is 768x1920, portrait is 1216x1024. The sheets are saved next
  * to this script as out_female_grey.png / out_male_white.png for visual review.
  *
+ * The pose templates are bundle assets resolved against BUNDLE_JSON_URL: push the bundle first and set
+ * E2E_BUNDLE_REF=<branch or commit> to test an unmerged change (default main). Needs a harness build with
+ * WorkflowAgent.loadFromContentAt (workflow.yaml assets support).
+ *
  * Cost: REAL GPU + S3 (fixtures are staged in S3). Teardown runs in `finally`; still verify no orphaned
  * provider resources afterwards (root CLAUDE.md "cloud resources"). Needs S3_BUCKET / AWS_ACCESS_KEY /
  * AWS_SECRET_KEY (+ AWS_REGION); COMPUTE_BACKEND defaults to modal.
@@ -60,6 +64,10 @@ const _nodeFs = require('node:fs')     as typeof import('node:fs');
 const WORK_DIR          = process.env.WORK_DIR ?? '/work';
 const FIXTURE_DIR       = _path.join(WORK_DIR, 'workflows', WF_NAME);
 const S3_FIXTURE_PREFIX = `e2e-fixtures/${WF_NAME}`;
+// The pose templates are bundle assets: they resolve against the bundle's workflow.json in a PUSHED ref of the
+// library repo (public raw URLs), exactly as in production. E2E_BUNDLE_REF picks the branch / commit (default main).
+const BUNDLE_REF        = process.env.E2E_BUNDLE_REF ?? 'main';
+const BUNDLE_JSON_URL   = `https://raw.githubusercontent.com/almoehi/auteur-library/${BUNDLE_REF}/workflows/${WF_NAME}/workflow.json`;
 
 const SHEET_WIDTH   = 3872;
 const SHEET_HEIGHT  = 2176;
@@ -254,7 +262,7 @@ try {
   console.log('── 1. Load workflow from bundle ─────────────────────────────');
   const workflowJson = _nodeFs.readFileSync(_path.join(FIXTURE_DIR, 'workflow.json'), 'utf8') as string;
   const workflowYaml = _nodeFs.readFileSync(_path.join(FIXTURE_DIR, 'workflow.yaml'), 'utf8') as string;
-  const manifest = JSON.parse(await agent.loadFromContent(WF_NAME, workflowJson, workflowYaml));
+  const manifest = JSON.parse(await agent.loadFromContentAt(WF_NAME, workflowJson, workflowYaml, BUNDLE_JSON_URL));
   if (manifest.error) throw new Error(`loadFromContent failed: ${manifest.error}`);
   check('manifest id matches', manifest.id === WF_NAME, manifest.id ?? '(null)');
   check('workflow_type is i2i', manifest.workflowType === 'i2i' || manifest.workflow_type === 'i2i',

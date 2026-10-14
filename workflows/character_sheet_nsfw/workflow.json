@@ -182,7 +182,7 @@
   "1002": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/fullbody_front_00813e8c134aaf39.png",
+      "image_path": "assets/male/fullbody_front_00813e8c134aaf39.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -190,7 +190,7 @@
   "1001": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/fullbody_front_ac41cb77d6e6cf32.png",
+      "image_path": "assets/female/fullbody_front_ac41cb77d6e6cf32.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -393,7 +393,7 @@
   "1102": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/fullbody_side_229d0e3d0dc926a8.png",
+      "image_path": "assets/male/fullbody_side_229d0e3d0dc926a8.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -401,7 +401,7 @@
   "1101": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/fullbody_side_3f74e67643e97c78.png",
+      "image_path": "assets/female/fullbody_side_3f74e67643e97c78.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -604,7 +604,7 @@
   "1202": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/fullbody_back_075b48994b4b4f86.png",
+      "image_path": "assets/male/fullbody_back_075b48994b4b4f86.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -612,7 +612,7 @@
   "1201": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/fullbody_back_9783994803493656.png",
+      "image_path": "assets/female/fullbody_back_9783994803493656.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -815,7 +815,7 @@
   "1302": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/kneel_side_6f44bd51a4be3fb8.png",
+      "image_path": "assets/male/kneel_side_6f44bd51a4be3fb8.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -823,7 +823,7 @@
   "1301": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/crawl_side_5137c9005dd2252e.png",
+      "image_path": "assets/female/crawl_side_5137c9005dd2252e.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1026,7 +1026,7 @@
   "1402": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/kneel_back_8342545406b9dea1.png",
+      "image_path": "assets/male/kneel_back_8342545406b9dea1.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1034,7 +1034,7 @@
   "1401": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/crawl_back_97c9294b06d9982e.png",
+      "image_path": "assets/female/crawl_back_97c9294b06d9982e.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1301,7 +1301,7 @@
   "1502": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/sit_pose_5c542118d3ed06f7.png",
+      "image_path": "assets/male/sit_pose_5c542118d3ed06f7.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1309,7 +1309,7 @@
   "1501": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/sit_open_767d1b8d79d0076c.png",
+      "image_path": "assets/female/sit_open_767d1b8d79d0076c.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1512,7 +1512,7 @@
   "1602": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/plank_17d91074d0d7f433.png",
+      "image_path": "assets/male/plank_17d91074d0d7f433.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1520,7 +1520,7 @@
   "1601": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/cowgirl_9aed5690782da688.png",
+      "image_path": "assets/female/cowgirl_9aed5690782da688.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1723,7 +1723,7 @@
   "1702": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/pose_hands_on_hips_2028c2e7e4b898e6.png",
+      "image_path": "assets/male/pose_hands_on_hips_2028c2e7e4b898e6.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1731,7 +1731,7 @@
   "1701": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/pose_hand_on_hip_031c6c98957235c6.png",
+      "image_path": "assets/female/pose_hand_on_hip_031c6c98957235c6.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1934,7 +1934,7 @@
   "1802": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/portrait_front_wide_b8400867740338b9.png",
+      "image_path": "assets/male/portrait_front_wide_b8400867740338b9.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -1942,7 +1942,7 @@
   "1801": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/portrait_front_wide_a17bc7e722a889f9.png",
+      "image_path": "assets/female/portrait_front_wide_a17bc7e722a889f9.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -2145,7 +2145,7 @@
   "1902": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/expr_smile_2c7996a390c8555b.png",
+      "image_path": "assets/male/expr_smile_2c7996a390c8555b.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -2153,7 +2153,7 @@
   "1901": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/portrait_up_side_97aaa848bdbb4a54.png",
+      "image_path": "assets/female/portrait_up_side_97aaa848bdbb4a54.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -2420,7 +2420,7 @@
   "2002": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/expr_frightened_306badc917df2af2.png",
+      "image_path": "assets/male/expr_frightened_306badc917df2af2.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -2428,7 +2428,7 @@
   "2001": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/portrait_up_front_c9d80973f7a9ec39.png",
+      "image_path": "assets/female/portrait_up_front_c9d80973f7a9ec39.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -2695,7 +2695,7 @@
   "2102": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/expr_strained_63de9fd3916b8f34.png",
+      "image_path": "assets/male/expr_strained_63de9fd3916b8f34.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -2703,7 +2703,7 @@
   "2101": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/expr_smile_d23cd0a94a697f74.png",
+      "image_path": "assets/female/expr_smile_d23cd0a94a697f74.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -2906,7 +2906,7 @@
   "2202": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/expr_pleasure_26c4577b02f9e206.png",
+      "image_path": "assets/male/expr_pleasure_26c4577b02f9e206.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -2914,7 +2914,7 @@
   "2201": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/expr_frightened_faeb9d0a69c42979.png",
+      "image_path": "assets/female/expr_frightened_faeb9d0a69c42979.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -3117,7 +3117,7 @@
   "2302": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/lying_side_ec7dfd20c3057002.png",
+      "image_path": "assets/male/lying_side_ec7dfd20c3057002.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -3125,7 +3125,7 @@
   "2301": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/expr_mouth_open_c3939bdbdcfd6369.png",
+      "image_path": "assets/female/expr_mouth_open_c3939bdbdcfd6369.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -3392,7 +3392,7 @@
   "2402": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/male/lying_top_2c8314fc3fc07ae2.png",
+      "image_path": "assets/male/lying_top_2c8314fc3fc07ae2.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
@@ -3400,7 +3400,7 @@
   "2401": {
     "class_type": "Image Load",
     "inputs": {
-      "image_path": "https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/charsheet-templates/female/expr_pleasure_3b9a31c606e38cc2.png",
+      "image_path": "assets/female/expr_pleasure_3b9a31c606e38cc2.png",
       "RGBA": "false",
       "filename_text_extension": "true"
     }
