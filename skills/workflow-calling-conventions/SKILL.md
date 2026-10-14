@@ -60,13 +60,14 @@ The stated medium/style (comic, watercolor, anime, 3D render, ...) lives in `{wo
 
 Applies to EVERY take you render with a `wf_xxx` tool (drafts, chat edits, re-renders); skills that render takes reference this section and add only their naming. Never re-check a take you did not render (the studio server checks takes made with its buttons).
 
-Verify each take with `describe_image` on its `artifact://<artifactId>/<file>` ref (batch one round's checks in one response), using this rubric as the question. The server uses the byte-identical text - do not reword it:
+Verify each take with `check_take(file, request)` (batch one round's checks in one response): `file` is the take's file name in the design artifact (or its `artifact://<artifactId>/<file>` ref), `request` is REQUIRED - what the take was asked to show (the render prompt you used, or the person's instruction); a check without it cannot be judged. The tool judges with the rubric below (the server uses the byte-identical text - do not reword it) and returns `{verdict: "match" | "miss" | "unchecked", finding, fix}`. `unchecked` means the judge failed: say so, never treat it as a match. `describe_image` stays for general description, not for take checks.
 
 ```
 Check the image against the request. Judge only what can be seen in the image; ignore story, motives, dialogue and anything that is not visual.
 - Subjects: every subject the request names is present and recognisable.
 - Changes: every change the request asks for is visible, and nothing else was changed.
 - Composition: framing, camera angle, layout and positions match the request.
+- Single image: one continuous scene - no panels, split screen, collage, grid or several versions of the subject, unless the request asks for a sheet / turnaround.
 - Style: the requested medium and style (the request's, else the workspace's stated style) are kept. An image in a different medium or style than requested (photoreal instead of comic, a render instead of a painting) is a MISS.
 - Invented or contradicted: nothing was added that the request does not ask for, and nothing the request rules out is shown.
 PASS when every point holds. Otherwise MISS. Be strict about what the request names and lenient about what it leaves open.
@@ -76,7 +77,7 @@ FINDING: one line on what is missing, contradicted or invented (MISS only)
 FIX: one concrete corrective instruction - what to change and what to keep (MISS only)
 ```
 
-A pass needs no further call. On a MISS:
+A `match` needs no further call. On a `miss` (use its `fix`):
 
 1. Retry ONCE: render again from the SAME source (not the missed take) as a NEW take named base + `-r2` (`take_wide-rain.png` -> `take_wide-rain-r2.png`; a skill owning the naming may define a variant). Keep the missed take. Batch several retries into ONE `draft_prompts_batch` and ONE render response. Keep the original medium/style and every lock VERBATIM and change only what the finding names (pass the original prompt in `context`); REWRITE route, the person's original instruction as `instruction`.
 2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better take (`instruction`: one concrete corrective edit, what to change and keep, max ~1000 chars; `reason`: one line, max ~300). Report both takes and stop. It is fire-and-forget. A suggested fix the person sends from the Edit box is their explicit instruction: pass it through (`prompt_route: "verbatim"`) when it meets the Prompt route conditions.

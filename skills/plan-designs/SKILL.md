@@ -66,6 +66,11 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
    the policy - depict people fully clothed (use the wardrobe attribute, else simple everyday
    clothing) and put 'nudity, nude, naked' in the negative prompt; when it is `allowed`, follow
    the brief (do not add clothing or a nudity negative on your own).
+   **One moment per design picture**: a design (a location above all) gets ONE base `time_of_day`,
+   `lighting`, `weather` and season - the one its first scene uses (else the most common one). Never
+   list several together in one attribute ("night, also sun-flooded morning" renders as a
+   two-panel image); other moments of the same place are later edits or variations of the finished
+   design, not extra attribute text.
    Put only what the sources state; omit unknown keys (except the base `wardrobe`). `character_type` is passed as its own
    argument, not inside `attributes`.
 5. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
