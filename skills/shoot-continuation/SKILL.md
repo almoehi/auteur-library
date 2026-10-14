@@ -66,7 +66,7 @@ what is missing.
    duration / frame constraints, how the start offset and the reference video are passed.
 3. Gather every **reference image** the workflow's ports require or allow: character sheets and
    environment / location plates of finished designs (`artifact_index`: artifacts keyed
-   `character_*`, `location_*`, `outfit_*`), else approved artifacts that show the subject. Pass
+   `character_*`, `location_*`, `outfit_*`), else approved artifacts that show the subject. A character without an `outfit_*` design wears its base look: the `character_*` sheet is its reference. Pass
    them as `artifact://<artifactId>/<file>` (never paste URLs), placed per "Anchor (Picture 1)
    by intent" of `workflow-calling-conventions` (continuation is COMPOSE intent: the place
    first, then the characters). If a required reference
