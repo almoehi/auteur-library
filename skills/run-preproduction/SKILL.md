@@ -53,7 +53,7 @@ intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 | `screenplay-quality` | `{input}` holds `screenplay.md`: the screenplay faithfully adapts the plot with proper format (INT./EXT. headings, action, dialogue) |
 | `cast-quality` | `{input}` holds the `character_<slug>.md` files: every cast role of the story has a dedicated, complete profile. Animals and other non-human creatures with a story role (named, acting or plot-driving, in the title or premise, recurring) ARE cast roles and must be included; only pure background, props or set dressing (unnamed, no action, no plot function) are not. NEVER reject because a cast member is an animal; reject only if a required role is missing or a pure background element / prop was listed as cast |
 | `scenes-quality` | `{input}` holds `scene_list.md`: the scene list covers all narrative beats with numbered scenes, INT/EXT, location, one-line action |
-| `scenes-complete` | `{input}` holds `scene_list.md`: every scene row has a location slug and, for every character present, an outfit/look slug; every scene also has beats (the `Beats` section below the table) and EVERY beat names a camera move |
+| `scenes-complete` | `{input}` holds `scene_list.md`: every scene row has a location slug and, for every character present, an outfit/look slug; every scene also has beats (the `Beats` section below the table) and EVERY beat names a camera move and a continuity (`continuous` | `new moment`) |
 | `design-plan-covers-scenes` | `{input}` holds ALL output files of the task: `design_plan.json` and `scene_list.md` (verbatim copy of the scene list, the ground truth). YES only if every character and location (by `location_slug`) occurring in the scene list has an entry in the plan, every (character, look) pair of the scene list is either that character's `base_look` (covered by the character entry, no outfit entry needed) or has an outfit entry, and no outfit's character is missing from the plan; otherwise NO naming the missing entries |
 | `designs-cover-plan` | `{input}` holds the plan (`design_plan.json`); `{toolCalls}` the task's tool calls (the worker's calls). Count the successful `create_design` calls (result "Design created: ..."), identified by `kind` + `display_name`, and compare with the plan entries; a design that already existed and is documented as skipped counts as covered. Tool-call args may be truncated at about 200 characters, so match on `kind` and `display_name` only. Base looks have no outfit entry and need no outfit design (the character design covers them). YES only if every plan entry is covered |
 | `storyboards-cover-scenes` | `{input}` holds ALL output files of the task: `scene_list.md` (verbatim copy of the scene list, the ground truth) and `design_plan.json`; `{toolCalls}` the task's tool calls. Count the successful `create_design` calls with `kind` `storyboard` (result "Design created: ..."); a storyboard that already existed (`storyboard_scene_<n>`) and is documented as skipped counts as covered. Tool-call args may be truncated at about 200 characters, so match on `kind` and `display_name` ("Scene <n>"). YES only if every scene number of the scene list has a storyboard; otherwise NO naming the scenes without one |
@@ -150,10 +150,15 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
   markdown table with one row per beat: `Beat #` | `Action` (what visibly happens) | `Framing`
   (shot size and angle of the beat) | `Camera move` (how the camera moves during the beat of the
   video clip: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift,
-  orbit, or `hold` ONLY when the beat asks for stillness). Every scene has at least one beat
+  orbit, or `hold` ONLY when the beat asks for stillness) | `Continuity` (how the beat relates to
+  the PREVIOUS beat: `continuous` = the action carries straight on - same place, same moment,
+  same people, even when the framing changes; `new moment` = a jump in time, place or subject, or an
+  insert; the first beat of a scene is `new moment`). Every scene has at least one beat
   (typically 2-6, one per distinct action or change of framing) and EVERY beat names a camera
-  move. Downstream, the storyboard's `Movement:` line and the shoot skills' video prompts are
-  taken from these beats; a scene list without them yields clips that barely move.
+  move and a continuity. Downstream, the storyboard's `Movement:` and `Transition:` lines and the
+  shoot skills' video prompts are taken from these beats (`continuous` becomes a `continue`
+  transition: the clip carries on from the previous one); a scene list without them yields clips
+  that barely move and cut where they should flow.
 
 ### 4d. plan_designs (the orchestrator)
 - agent: `design_planner`; `difficulty: "hard"`
@@ -171,9 +176,11 @@ Output artifact `design_plan`; output files (canonical names, write exactly thes
 
 ## Step 5 — Verify and confirm
 
-Call `task_index` once: all four tasks present with the expected `requires`. Report only tasks
-confirmed by `create_task` results and this index; if any step failed or is missing, say so
-precisely and do not use the success message below. Then tell the user, in at most 3 short lines
+Reconcile before replying: call `task_index` once. All four tasks of the Step 3 plan must be
+present with the expected `requires`; create any planned task that is missing (Step 4 rules, one
+per round) and call `task_index` again. Report only tasks confirmed by `create_task` results and
+this index; list only what still failed, precisely, and do not use the success message below for
+a chain that is incomplete. Then tell the user, in at most 3 short lines
 (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`; no policy lists):
 
 > "Scheduled pre-production: task://<screenplay> -> task://<cast> -> task://<scene_list> -> task://<plan_designs>.

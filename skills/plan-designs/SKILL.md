@@ -27,7 +27,7 @@ You run on the `design_planner` agent. Tools: `artifact_index`, `task_index`, `r
 2. `read_artifact(artifactId="scene_list")`: must contain a table with columns
    `Scene #`, `INT/EXT`, `Location`, `location_slug`, `Time of day`, `Summary`,
    `Characters present`, `Outfits` (`<character_slug>:<look_slug>` pairs separated by `; `).
-   Below the scene table a `Beats` section (per scene: beat, action, framing, camera move) may
+   Below the scene table a `Beats` section (per scene: beat, action, framing, camera move, continuity) may
    follow: it is not part of the scene table and does not change the plan, but your `scene_list.md`
    copy stays verbatim, Beats included.
 3. Read the character table files (pass `artifact_file`): `character_<slug>.md`, each with

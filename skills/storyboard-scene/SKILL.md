@@ -52,7 +52,7 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   `characters`, `outfits`).
 - Read `scene_list` (the scene's row: location, time of day, summary, characters, outfits as
   `<character_slug>:<look_slug>`; below the table the scene's **Beats**: per beat the action,
-  framing and camera move) and the `screenplay` (if it exists; use the scene's slice for
+  framing, camera move and continuity) and the `screenplay` (if it exists; use the scene's slice for
   action and mood) exactly ONCE each. Never re-read them later.
 - Read each linked design ONCE, compactly: `read_artifact` of a design returns a server-side
   compact digest in later turns; use only `artifact_index` / the published description. Never
@@ -80,6 +80,7 @@ Movement: the camera move of the VIDEO clip of this shot (e.g. "slow push-in", "
 Characters: mira, jonas        (character slugs, comma-separated, or "none")
 Outfits: mira:raincoat; jonas:work_suit      (<character>:<look> pairs, "; "-separated, or "none")
 Duration: 5
+Transition: cut — new moment, first shot of the scene
 ```
 
 **`Movement`** = the camera move of the video clip shot from this frame, taken from the shot's
@@ -89,6 +90,15 @@ stillness. When the scene list has no Beats (an older list), derive a fitting mo
 action and mood; never default to `static`/`hold`. `Camera` stays the framing of the keyframe
 IMAGE (a still has no movement): do not put a move into `Camera`, and keyframe prompts use
 `Camera`, never `Movement`.
+
+**`Transition`** = how this shot relates to the PREVIOUS shot, taken from the shot's beat
+`Continuity` in the scene list: `Transition: continue — <short reason>` when the beat is
+`continuous` (the action carries straight on in the same setup: same place, same moment, same
+people) **even when the framing changes** (wide -> close-up of the same moment); `Transition:
+cut — <short reason>` when the beat is a `new moment` (new moment, place or subject, or an
+insert). The first shot is always `cut`. A scene list without `Continuity` (older list): decide
+with the same rule from the actions and say so in the reason. The shoot skills take this line as
+given, so it is decided here once.
 
 **`Action` = what is visible** — subjects, positions, pose, expression, objects. No plot, motives,
 dialogue or camera motion.
@@ -177,8 +187,9 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 Audit before completing:
 
 - [ ] `shotlist.md` written exactly once; every shot has `## <shotId> — <title>` plus `Action`,
-      `Camera`, `Movement`, `Characters`, `Outfits`, `Duration`; ids consecutive `s<scene>-01…`;
-      every `Movement` comes from its beat (`hold` only when the beat asks for stillness)
+      `Camera`, `Movement`, `Characters`, `Outfits`, `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
+      every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
+      every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`
 - [ ] every shot has `take_<shotId>-draft-<n>.<ext>` for n = 1 … drafts per shot (re-read the
       artifact), except drafts that failed twice (name them); all from `wf_*` renders
 - [ ] no other file written; `design.json` untouched; no published names
@@ -197,8 +208,8 @@ For each message:
 
 1. `read_artifact` again; read `design.json` for takes, primary/selection and discarded takes. A
    take you rendered earlier that is gone was discarded on purpose — never re-render it or its name.
-2. **Shot list changes** (add / remove / reorder / retitle / change action, camera or movement): rewrite
-   `shotlist.md` as a whole file (the one allowed overwrite), ids renumbered consecutively.
+2. **Shot list changes** (add / remove / reorder / retitle / change action, camera, movement or transition): rewrite
+   `shotlist.md` as a whole file (the one allowed overwrite), ids renumbered consecutively; re-derive `Transition` of every shot whose predecessor changed (the first stays `cut`).
    Existing takes keep their file names — say takes of a renumbered shot stay under their old id;
    render nothing unless asked or the shot is new (new shots get drafts as in Phase 2, one batch).
 3. **Re-render a shot** ("another angle for shot 4"): one new take `take_<shotId>-<slug>.<ext>`

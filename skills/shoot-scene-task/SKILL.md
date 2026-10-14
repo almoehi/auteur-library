@@ -61,7 +61,13 @@ Before reading any artifact, resolve two things from the user's message:
 If the scene is ambiguous, ask before proceeding:
 > "Which scene should I shoot? Available scenes: [read scene_list artifact and list them]"
 
-If no video workflow is named and more than one is available, ask which to use. If none exists, tell the user and stop. Note two preferences, both taken from the `wf_` tool list: the workflow for fresh starts (`cut` clips: i2v / flf2v, else t2v) and, when one exists, the video-continuation workflow (a workflow with a video input for the prior clip) for `continue` clips. Without a continuation workflow every boundary is a `cut`.
+Note two preferences, both taken from the `wf_` tool list (type + capability read from each tool description and `get_workflow_instructions`, never from memory or the name):
+
+- **Fresh-start workflow (REQUIRED)** for `cut` clips and the first clip: an **image-to-video** workflow, type `i2v` or `i2va` (a first-frame anchor; flf2v is fine only when its last frame is optional). The shot's storyboard frame is always its first frame. A text-to-video workflow is NOT a substitute: it cannot take the frame, so the clip would not look like the storyboard or the cast. **No i2v / i2va workflow in the workspace -> tell the user and stop, creating nothing:**
+  > "Cannot shoot <scene>: this workspace has no image-to-video workflow. Add one (Workflows page) and ask me again."
+- **Video-continuation workflow** (optional): a workflow with a video input for the prior clip, for `continue` clips. Without one every boundary is a `cut`.
+
+If the user named a workflow, it must qualify for these roles, else say why and stop. If several i2v / i2va workflows qualify and none is named, prefer the one that also takes reference images (a reference-role image input); ask only when they differ in a way the user must choose.
 
 Do not read any artifact or create any task until both are resolved.
 
@@ -91,16 +97,20 @@ If it exists but is not approved:
 
 ### 1b. Design sheets (references)
 
-Find the scene's design sheets: the published primaries of the location design and of the outfit
-designs used in the scene. Take the scene's row from the `scene_list` artifact (`location_slug`,
-`Outfits` as `<character>:<look>`) and look the keys up in `artifact_index` (`location_<slug>`,
-`outfit_<character>_<look>`; tolerate a suffix). A pair with no outfit design is the character's
-base look (`base_look` in `design_plan.json`, when available): the character design's primary
-(`character_<character>`) is its reference, and that is not a missing sheet. The reference is
-`artifact://<artifact id>/primary.<ext>` (read the artifact to get the file name). Missing sheets
-are not fatal: note them and continue without that reference. List them per clip, location first,
-then that shot's outfits ("Anchor (Picture 1) by intent" of `workflow-calling-conventions`,
-compose intent).
+Find the scene's reference images: for the location design, the outfit designs and the character
+designs used in the scene, the published **sheet** (`sheet.<ext>`: the model sheet / turnaround
+that shows the subject from several sides) - **sheets first**; a design that has no sheet (read
+its artifact's files) contributes its `primary.<ext>` instead. Take the scene's row from the
+`scene_list` artifact (`location_slug`, `Outfits` as `<character>:<look>`) and look the keys up in
+`artifact_index` (`location_<slug>`, `outfit_<character>_<look>`, `character_<character>`;
+tolerate a suffix). A pair with no outfit design is the character's base look (`base_look` in
+`design_plan.json`, when available): the character design's sheet (else primary) is its
+reference, and that is not a missing sheet. A reference is `artifact://<artifact id>/<file>`
+(read the artifact to get the real file name). Missing designs are not fatal: note them and
+continue without that reference. List them per clip: location first, then that shot's outfits
+(the character design for a base look), then any further character sheets ("Anchor (Picture 1)
+by intent" of `workflow-calling-conventions`, compose intent). The clip's own first frame is NOT
+a reference: it is the `start_frame`.
 
 ### 1c. Idempotency check
 
@@ -122,10 +132,12 @@ Process one artifact at a time.
 
 `read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")` — pass the key
 directly, not the UUID. Sections are `## <shotId> — <title>` with lines `Action:`, `Camera:`,
-`Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds).
+`Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds), `Transition:` (`continue — <reason>`
+or `cut — <reason>`, absent in older storyboards).
 
 Extract for every shot: shot ID and title, `Action`, `Camera` (keyframe framing), `Movement` (the
-camera move of the VIDEO; absent in older storyboards), `Duration`, characters and outfits. When a
+camera move of the VIDEO; absent in older storyboards), `Duration`, `Transition` (absent in older
+storyboards), characters and outfits. When a
 shot has no `Movement:`, take it from the matching beat in the `Beats` section of the
 `scene_list` artifact (read it once; the scene's `### Scene <n>` table: beat, action, framing,
 camera move); no beat either: derive it from the action and say so. Never turn a missing
@@ -152,20 +164,29 @@ in every clip task; leave the line out when the workflow has no negative prompt 
 Clip M = shot M, start frame = `frame_M`; the shot's `Duration` is the clip's planned duration in
 seconds (the authoritative `duration_seconds`; round to whole seconds, at least 1).
 
-**Decide every boundary: CONTINUE or CUT.** For each pair of neighbouring clips (shot M-1 -> M)
-decide from the shotlist and decide ONCE, here:
+**Every boundary is CONTINUE or CUT.** For each pair of neighbouring clips (shot M-1 -> M):
 
-- **CONTINUE** - same setup (same location, subjects and framing), the action carries on, the
-  camera move continues or holds. Example: same framing, Brianna wakes -> Brianna sits up.
-  Clip M is rendered with the video-continuation workflow from clip M-1's real file; its prompt
-  contains NO cut. It cannot start before clip M-1 is approved.
-- **CUT** - new framing, new subject or an insert. Example: princess -> pudding insert ->
-  Brianna's grin. Clip M starts fresh with the image-to-video (or text-to-video) workflow from its
-  storyboard frame. A cut is never faked through the continuation workflow. A cut clip has no
-  clip dependency and renders in parallel with the others.
+1. **Take the shot's `Transition:` as given** (the storyboard decided it from the scene list's
+   beat continuity); reuse its reason. Do not second-guess it.
+2. **Only when the shot has no `Transition:`** (an older storyboard), decide ONCE, here, with the
+   same rule and note it as "decided here": CONTINUE when the action carries straight on in the
+   same setup (same place, same moment, same people) - **even when the framing changes**
+   (wide -> close-up of the same moment); CUT for a new moment, place or subject, or an insert.
+3. Without a video-continuation workflow every boundary is a CUT (Step 0).
+
+- **CONTINUE** - clip M is rendered with the video-continuation workflow from clip M-1's real file;
+  its prompt contains NO hard cut. When the shot's framing differs from the previous shot's, the
+  worker adds the shot's storyboard frame as an extra reference image and writes the new framing as
+  a camera move / reframe within the same continuous shot (`shoot-clip`). It cannot start before
+  clip M-1 is approved, so it keeps `requires_artifacts` on the predecessor clip's artifact.
+- **CUT** - clip M starts fresh with the **image-to-video (i2v / i2va)** workflow from its storyboard
+  frame `frame_M` as the first frame, plus the Step 1b references in the workflow's reference
+  image ports. A cut is never faked through the continuation workflow and never falls back to
+  text-to-video. A cut clip has no clip dependency and renders in parallel with the others.
 
 The first clip is always a fresh start (`start`, treated as a cut). Record per boundary
-`continue`/`cut` and a one-line reason in the plan.
+`continue`/`cut`, whether it came from the storyboard or was decided here, and a one-line reason
+in the plan.
 
 ### 3b. Canonical names (decided once, never renamed)
 
@@ -181,7 +202,8 @@ Per clip M of scene N (slug = 2–3 word kebab-case label from the shot, e.g. `l
 Assembly: task id `assemble_scene<N>`, artifact key `scene<N>_assembly`, file
 `scene<N>_assembled.mp4`.
 
-**Write out the full plan before creating anything:**
+**Write out the full plan before creating anything** - ALL clip task keys AND `assemble_scene<N>`
+(Step 4c reconciles against exactly this list):
 
 | Clip | Shot | Boundary | Reason | Duration | Movement | Task / artifact | Video file |
 |---|---|---|---|---|---|---|---|
@@ -218,17 +240,19 @@ prompt:
   scene: "<Scene Name>"  (scene <N>)
   clip: <M> of <total>  — shot <shotId> "<title>"
   mode: continue | cut   (<one-line reason>)
+  framing_change: yes | no   (continue only; yes when this shot's Camera differs from the previous shot's: "previous: <its Camera>")
   action: <the shot's Action>
   camera: <the shot's Camera - keyframe framing>
   movement: <the shot's Movement VERBATIM>
   duration_seconds: <planned duration>
   start_frame: artifact://<storyboard id>/frame_<M>.<ext>
   prior_clip: artifact://<scene<N>_clip<M-1> id>/<its video file>     (continue only)
-  references: artifact://<location id>/primary.<ext>, artifact://<outfit id>/primary.<ext>, …
-              (omit the line when none were found)
+  references: artifact://<location id>/sheet.<ext>, artifact://<outfit id>/sheet.<ext>,
+              artifact://<character id>/sheet.<ext>, …   (sheet first; `primary.<ext>` for a design
+              without a sheet; omit the line when none were found)
   style: <the workspace medium/style line, verbatim>
   negative_prompt: <text>
-  preferred_workflow: "<wf_ tool name for this mode>"   (a preference; the worker may pick another by capability)
+  preferred_workflow: "<wf_ tool name for this mode>"   (a preference; the worker may pick another i2v / i2va by capability, never a text-to-video one)
 
   Output files (canonical — do not rename):
     scene<N>_clip<M>_<slug>.mp4
@@ -238,7 +262,7 @@ prompt:
 The task `prompt` MUST open with the exact line `Load and use skill: shoot-clip` — the worker
 relies on it to `load_skill()` before doing anything else. Name the preferred workflow from the
 workspace's `wf_` tool list for the clip's mode (never from memory): the continuation workflow
-for `continue`, the i2v / flf2v (else t2v) one for `cut` / start.
+for `continue`, the i2v / i2va one (Step 0) for `cut` / start.
 
 ### 4b. Assembly task (`assemble-scene`)
 
@@ -266,14 +290,23 @@ prompt:
 Use the task/artifact identifiers each earlier `create_task` result reported. If some clip tasks
 already existed (idempotency), their artifacts are listed the same way.
 
+### 4c. Reconcile before replying
+
+Creating many tasks in one turn can end early (a timed-out or cut-off turn leaves the tail
+uncreated). After the last `create_task` call `task_index` and compare it with the Step 3b plan:
+every planned clip task key and `assemble_scene<N>` must exist. Create each planned task that is
+missing (4a / 4b rules, one per round), then `task_index` again. Only what still failed after
+that goes into the reply, with the error text.
+
 ---
 
 ## Step 5 — Confirm to user
 
-After the last `create_task` succeeds, reply in 1-3 short lines (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`): no file names, durations, workflow or skill names, slot counts or sources. Refer to the tasks by `task://<runtime id>` as the `create_task` results reported them.
+After the Step 4c reconciliation is clean, reply in 1-3 short lines (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`): no file names, durations, workflow or skill names, slot counts or sources. Refer to the tasks by `task://<runtime id>` as the `create_task` results reported them.
 
 > "Scheduled Scene <N>: <total> clips (task://<clip1>, task://<clip2>, ...) + assembly task://<assemble>. Cut clips render in parallel; continuations follow their predecessor."
 > "Already scheduled (skipped): task://<id>, ..." - only if any.
+> "Not created: <clip/assembly>: <error>" - only if any still failed after Step 4c; never claim a task that neither `create_task` nor `task_index` confirmed.
 
 ---
 
@@ -286,3 +319,6 @@ After the last `create_task` succeeds, reply in 1-3 short lines (see "Concise re
 5. **Idempotency** — skip every clip / assembly task whose key already exists and is live; never duplicate.
 6. **Canonical names are set in Step 3b** — derive them once, embed them in each task prompt and `output_files`; filenames in the prompt's "Output files" list must match `output_files` exactly (a mismatch makes the task build reject).
 7. **Each `create_task` carries its output artifact inline**, issued one per round using the identifiers the previous result reported.
+8. **Image-to-video only for fresh starts** - the storyboard frame is the first frame; no i2v / i2va workflow in the workspace -> stop with a clear message, never text-to-video.
+9. **Transitions are decided upstream** - take the shot's `Transition:`; decide yourself only when it is absent.
+10. **Reconcile** - `task_index` against the written plan before replying; create what is missing.
