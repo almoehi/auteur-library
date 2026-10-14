@@ -20,7 +20,7 @@ A storyboard is a design (an `llm+hitl` task plus one open artifact, both keyed
 and every published file (`primary.*`, `sheet.*`, `view_*`, `frame_*`, the published copy of
 `shotlist.md`). You write `shotlist.md`, then put keyframe **images** into the artifact; the
 studio shows each `take_<shotId>-…` file as a take of that shot and the person picks one per
-shot. Keep visible replies short: see "Short visible replies" in `workflow-calling-conventions`.
+shot. Keep visible replies concise: see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
 
 ## Hard rules
 
@@ -185,8 +185,8 @@ Audit before completing:
 - [ ] one `draft_prompts_batch` per workflow, at most one review and one enhance batch, all
       renders in one response
 
-Then `task_complete(summary="Storyboard scene <n>: <N> shots, <drafts> draft(s) each with
-<workflow type, slot count and why>; failed: …")`. This hands the design to the person; it does
+Then `task_complete(summary="Storyboard scene <n>: <N> shots drafted; failed: …")` (1-3 lines; no
+workflow types or slot counts). This hands the design to the person; it does
 **not** finish it.
 
 ## Phase 4 — Chat (HITL phase)
@@ -205,6 +205,6 @@ For each message:
    over" re-renders from the references as in Phase 2. SEVERAL shots in one message = ONE
    `draft_prompts_batch` and ONE response of renders; a single `draft_prompt` only for one shot.
 4. Render only what THIS message asks (one take unless it names a count); check every take. Reply
-   with the new file name(s) and one line on what changed, then stop.
+   with one short line (new take name(s), what changed), then stop.
 5. Never pick a primary / frame, discard takes, write descriptions, or finish the design — point
    the person to the studio controls (★ / 🗑 / Finish design).

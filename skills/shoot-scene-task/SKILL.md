@@ -45,7 +45,7 @@ task `assemble_scene<N>` created here. Handle them as follows:
   full shoot (Steps 1-5) instead; never assemble a subset.
 - `assemble_scene<N>` exists and is live -> tell the user, create nothing. Failed or cancelled ->
   create it again (Step 4b only), listing every clip's artifact as in 4b.
-- Otherwise create just the Step 4b task and confirm with the one assembly line of Step 5.
+- Otherwise create just the Step 4b task and confirm with a one-line Step 5 reply.
 
 ---
 
@@ -268,15 +268,10 @@ already existed (idempotency), their artifacts are listed the same way.
 
 ## Step 5 — Confirm to user
 
-After the last `create_task` succeeds (keep it short, see "Short visible replies" in `workflow-calling-conventions`):
+After the last `create_task` succeeds, reply in 1-3 short lines (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`): no file names, durations, workflow or skill names, slot counts or sources. Refer to the tasks by `task://<runtime id>` as the `create_task` results reported them.
 
-> "Scheduled scene <N>: <total> clip tasks + assembly
-> — clip 1 `scene<N>_clip1_<slug>.mp4` (<d>s) · start
-> — clip 2 … · continue (after clip 1) | cut (parallel)
-> — …
-> — `assemble_scene<N>` -> `scene<N>_assembled.mp4` (after all clips)
-> — Worker skills: `shoot-clip`, `assemble-scene` · preferred workflows: `<start wf>` / `<continuation wf>`
-> — Skipped (already scheduled): <keys, if any>"
+> "Scheduled Scene <N>: <total> clips (task://<clip1>, task://<clip2>, ...) + assembly task://<assemble>. Cut clips render in parallel; continuations follow their predecessor."
+> "Already scheduled (skipped): task://<id>, ..." - only if any.
 
 ---
 

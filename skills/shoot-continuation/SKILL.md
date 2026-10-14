@@ -110,5 +110,6 @@ Measure the new clip with `get_video_info` and check:
       keep the first clip — see "Check, retry once, suggest" of `workflow-calling-conventions`)
 - [ ] no other file was written; the prior clip and its artifact are untouched
 
-Then call `task_complete(summary=...)`: the workflow used, the measured prior duration, the start
-offset, the references used, and the prompt. Call it again after the self-review. Keep replies short: see "Short visible replies" in `workflow-calling-conventions`.
+Then call `task_complete(summary=...)`: 1-3 lines - the clip file made and anything the next step must
+know (e.g. measured duration, start offset); the prompt and references are in the render record.
+Call it again after the self-review. Keep replies concise: see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.

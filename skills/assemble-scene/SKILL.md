@@ -62,5 +62,5 @@ exactly this canonical name).
 
 ## 5. Complete
 
-`task_complete` with a short summary (at most ~10 lines): the clips in order with their measured
-durations, the total duration, the route (copy / re-encode), the output file name.
+`task_complete` with a short summary (1-3 lines, see "Concise replies and task/artifact URIs" in
+`workflow-calling-conventions`): the total duration and the route (copy / re-encode); not the per-clip list.

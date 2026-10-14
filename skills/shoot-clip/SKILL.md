@@ -97,6 +97,6 @@ reconstructed version.
   `workflow-calling-conventions`)
 - the prompt file is written and holds the rendered prompt; no other file was written
 
-Then `task_complete` (summary: mode, workflow, duration planned vs measured, for continue the
-measured predecessor duration and offset; at most ~10 lines, see "Short visible replies" in
+Then `task_complete` (summary: 1-3 lines - mode, the measured duration, and for continue the start
+offset; no prompt or workflow restated; see "Concise replies and task/artifact URIs" in
 `workflow-calling-conventions`).

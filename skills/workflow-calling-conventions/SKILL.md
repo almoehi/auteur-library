@@ -14,9 +14,11 @@ Worked examples (only if a call shape is unclear): load_skill workflow-calling-e
 
 When planning work as tasks, prefer ONE task per independently renderable output (clip, shot, design, sheet). Chain tasks with `requires_artifacts` when one needs another's output. Use a single task for several outputs only when they cannot be separated. Per-output tasks render in parallel, can be retried, reviewed and checked individually, and keep each worker's context small.
 
-## Short visible replies
+## Concise replies and task/artifact URIs
 
-Keep every visible reply short: what you do next and why, in at most a few lines. Never restate plans you already made, skill or workflow text, design descriptions, the shotlist, or tool results — they are already in the conversation. Think silently; write only decisions. Final summaries: at most ~10 lines.
+Keep every visible reply concise: a short summary of what was done and what happens next or what you need from the person - typically 1-4 short lines. Never restate plans, file lists, durations, workflow or skill names, slot counts, design descriptions, the shotlist or tool results unless asked - the details live in the task or artifact. Think silently; write only decisions. This covers chat replies and `task_complete` summaries (worker task descriptions stay as detailed as needed).
+
+Mention every task or artifact as `task://<id>` / `artifact://<id>` (`artifact://<id>/<file>` for one file) with the runtime id from `create_task` / `create_artifact` / `artifact_index` / `task_index` (a key resolves too; the runtime id is preferred). The chat renders these as clickable chips; never use a bare key or file name instead.
 
 ## Reusing earlier values
 

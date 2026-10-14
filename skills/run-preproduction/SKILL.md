@@ -101,7 +101,7 @@ references the earlier result, so never put several in one round: a `create_scen
 calls write NO text: no announcements, no "let me verify", no progress notes. A text-only reply
 ENDS your turn and the rest of the chain is never created. Do not re-read or re-verify stored
 prompts; trust each `create_task` result. Only after the 4th result (or after a stop on failure,
-below) may you write your single final report (Step 5), short per "Short visible replies" in `workflow-calling-conventions`.
+below) may you write your single final report (Step 5), short per "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
 
 **Use returned identifiers, never assumed ones.** `requires_tasks` / `requires_artifacts` accept
 keys (or runtime ids). After every `create_task`, read the task id and artifact key FROM THE
@@ -173,12 +173,12 @@ Output artifact `design_plan`; output files (canonical names, write exactly thes
 
 Call `task_index` once: all four tasks present with the expected `requires`. Report only tasks
 confirmed by `create_task` results and this index; if any step failed or is missing, say so
-precisely and do not use the success message below. Then tell the user:
+precisely and do not use the success message below. Then tell the user, in at most 3 short lines
+(see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`; no policy lists):
 
-> "Scheduled pre-production: **Write Screenplay** -> **Create Cast List** -> **Create Scene List**
-> -> **Plan Designs**. Skipped (already existed): <list or none>. Policies created: <list or none>.
-> Characters, outfits, locations and one storyboard per scene appear in the Pre-production tab
-> once `plan_designs` finishes; each storyboard starts after its linked designs are finished."
+> "Scheduled pre-production: task://<screenplay> -> task://<cast> -> task://<scene_list> -> task://<plan_designs>.
+> Skipped (already existed): task://<id>, ... (only if any).
+> Designs and storyboards appear in the Pre-production tab once plan-designs finishes."
 
 ## Key rules
 
