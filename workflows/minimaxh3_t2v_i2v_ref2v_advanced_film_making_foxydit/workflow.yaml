@@ -87,11 +87,12 @@ ports:
       required: true
     - name: video_length
       kind: float
-      description: "Target video duration in seconds. Frame count is derived from this value multiplied by the output frame rate."
+      description: "Target video PLAYBACK duration in seconds. The frame count is derived from this value at the model's native 24 fps (padded to 17k+5 frames), then RIFE-doubled; at the default fps 48 the clip lasts this long."
       binding: value@132
       constraints: { min: 1.0, max: 30.0 }
       required: false
       default: 5.0
+      role: duration
     - name: width
       kind: int
       description: "Output video width in pixels. Must be divisible by 32. Paired with height to set the full resolution."
@@ -108,11 +109,12 @@ ports:
       default: 864
     - name: fps
       kind: int
-      description: "Output video frame rate in FPS. Controls the VHS container frame rate; default 48 = model native 24fps × RIFE 2× interpolation, preserving clip duration. Raise to 60 for high-framerate output or lower to 24 for standard cinema rate."
+      description: "Output (playback) frame rate in FPS. Controls the VHS container frame rate; default 48 = model native 24fps × RIFE 2× interpolation, preserving clip duration. Any other value changes the playback duration (60 plays the clip 20% shorter, 24 twice as long). A render profile's fps never overrides it."
       binding: value@146
       constraints: { min: 1, max: 120 }
       required: false
       default: 48
+      role: output-fps
     - name: sage_attention
       kind: enum
       description: "PathchSageAttentionKJ attention-kernel mode. Leave at 'auto' — the render platform force-overrides this to 'disabled' when dispatching to a GPU where the runtime image's SageAttention build lacks working kernels (see SAGE_BLACKLIST_GPU_TYPES / video-harness#107), regardless of the value set here."

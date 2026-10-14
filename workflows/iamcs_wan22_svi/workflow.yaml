@@ -125,6 +125,7 @@ ports:
       constraints: { min: 8, max: 60 }
       required: false
       default: 16
+      role: output-fps
   outputs:
     - name: output_video
       kind: video
