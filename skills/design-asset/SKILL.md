@@ -18,7 +18,7 @@ A design is an ordinary `llm+hitl` task plus one open artifact, both keyed `<kin
 (`character_mira`). The **web studio owns the design**: its `design.json` (attributes, takes,
 primary, description, LoRAs) and every published file (`primary.*`, `sheet.*`, `view_*`). You only
 put **images** into the artifact; the studio picks them up as takes. Contract reference:
-`release/DESIGN_GUIDE.md`. Keep visible replies short: see "Short visible replies" in
+`release/DESIGN_GUIDE.md`. Keep visible replies concise: see "Concise replies and task/artifact URIs" in
 `workflow-calling-conventions`.
 
 ## Hard rules
@@ -129,8 +129,8 @@ Audit before completing:
       `take_<slug>-draft-<k>-r2.<ext>`); `suggest_edit` exactly for takes whose retry also missed
 - [ ] drafts came from `wf_*` renders (sandbox-derived files are fine in the chat phase)
 
-Then `task_complete(summary="Rendered N drafts of <displayName> with <workflow>; prompt: …")` (at
-most ~10 lines; call it again after the self-review). This hands the design to the person — it
+Then `task_complete(summary="Rendered N drafts of <displayName>.")` (1-3 lines, no prompt or workflow
+restated - they are in the takes' render records; call it again after the self-review). This hands the design to the person — it
 does **not** finish it.
 
 ## Phase 5 — Chat (HITL phase)
@@ -151,8 +151,8 @@ For each request:
    (`subject` = the image being edited) or port descriptions; anchoring per "Anchor (Picture 1) by
    intent". "Start over / completely different" → text-to-image as in Phase 2.
 4. Render only what THIS message asks — one take unless it gives a count; never redo earlier
-   requests. One take per variant to `take_<slug>.<ext>`; check every take. Reply with the new
-   file name(s) and one line on what changed, then stop.
+   requests. One take per variant to `take_<slug>.<ext>`; check every take. Reply with one short line
+   (new take name(s), what changed), then stop.
 5. When the studio asks you to assemble given takes into a sheet ("Assemble exactly these takes …
    Save it as /workspace/<artifact id>/<file name>"), do exactly that: ONE sandbox command
    (ImageMagick `montage`/`convert` or PIL), listed takes in listed order, no text, labels or

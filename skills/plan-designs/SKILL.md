@@ -164,16 +164,14 @@ needs the `scene_list` artifact (it is approved). The storyboard's duplicate-nam
 3. If any entity failed: `task_complete` is still correct only if all others are done and the
    summary lists the failures; if the design plan could not be covered at all, call `task_failed`.
 
-Keep replies short (see "Short visible replies" in `workflow-calling-conventions`). `task_complete` summary format:
+Keep replies concise (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`). `task_complete` summary format (omit lines that are empty/none except `failed`; name designs by their task URI `task://<id>` where known, never list every key when all went well):
 
 ```
-design plan: <n> characters, <n> locations, <n> outfits, <n> storyboards
-created: <keys>
-skipped (existing): <keys>
-renamed: <old -> new, reason>
+design plan: <n> characters, <n> locations, <n> outfits, <n> storyboards - all created
+skipped (existing): <count, or keys only if few>
 failed: <key: error> or none
-file mismatch: <declared files> or none
 ```
+Add `renamed:` / `file mismatch:` lines only when they occurred.
 
 ## Key rules
 
