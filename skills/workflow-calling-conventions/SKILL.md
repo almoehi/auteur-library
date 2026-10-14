@@ -16,7 +16,7 @@ Keep every visible reply short: what you do next and why, in at most a few lines
 
 ## Reusing earlier values
 
-A ⟦ref:…⟧ in your earlier tool calls stands for a value you sent; to reuse it exactly pass the ⟦ref:…⟧ token (alone or inside a longer text) — never retype or copy a shortened value.
+A ⟦ref:r12.key⟧ in your earlier tool calls stands for a value you sent (call r12, argument key); to reuse it exactly pass the ⟦ref:…⟧ token (alone or inside a longer text) — never retype or copy a shortened value. Refs stay valid for the whole conversation; if one is refused, the error lists the refs that exist.
 
 ## Correct sequence
 
