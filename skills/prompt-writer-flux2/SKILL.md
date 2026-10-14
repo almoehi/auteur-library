@@ -125,6 +125,7 @@ precedence over any formatting here). Alternative takes of the same edit come fr
 ## Short prompts per workflow kind
 
 - **EDIT workflows** (i2i): the change first, at most 2 short keep locks, no restated character or location descriptions (the reference images carry them), and one image-naming sentence ("Picture 1 is ...").
+- **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 - **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
 
 ## Fidelity

@@ -99,7 +99,7 @@ tools run in parallel.
 1. **Bind references for every shot** silently: choose the workflow, the reference list in
    priority order and the slot map.
 2. **EXACTLY ONE `draft_prompts_batch` call per workflow, in ONE round** (one item per shot;
-   normally all shots share one workflow, so one call). Never repeat it per shot subset or retry
+   one call per workflow; shots may use different workflows, see "Choosing the workflow"). Never repeat it per shot subset or retry
    round for shots already drafted. If refused for size, split into the fewest batches, all in
    the same response.
 3. **Review at most once**: ONE `review_prompts_batch` over all prompts, then only for flagged
@@ -128,10 +128,19 @@ References in priority order (keyframe = COMPOSE intent, location is the anchor,
 "Anchor (Picture 1) by intent"): 1. location primary; 2. outfit primary of the shot's main
 character (its own primary if no outfit design); 3. further outfits / characters by presence.
 
-- **Multi-image i2i**: the fillable i2i workflow with the MOST image slots able to hold
-  references (not masks/depth/control); fewer slots → drop from the end of the list.
+- **Reference-to-image (ref2i)**: preferred - composes a NEW frame from the references (location =
+  Picture 1), any camera.
+- **Multi-image i2i edit**: for shots matching the location plate's framing; the fillable i2i
+  workflow with the MOST image slots able to hold references (not masks/depth/control); fewer
+  slots → drop from the end of the list.
 - **Single-image i2i only** → edit the location primary into the scene (characters in the prompt).
 - **No usable i2i** → t2i with characters, outfits and location described in the prompt.
+- **INTERIM**: when no ref2i workflow exists and the shot's Camera differs from the plate's
+  framing, use the text-to-image workflow with a rich description of place, characters and
+  outfits instead of an edit.
+
+Several workflows may be used within one scene (chosen per shot). The workflow type is read from
+the `wf_*` tool description, which ends with the type display name (e.g. "(reference-to-image)").
 
 A workflow with a required input you cannot supply (mask, pose, prior clip) is disqualified. Say
 the choice and reason in the summary.
