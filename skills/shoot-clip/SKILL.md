@@ -103,10 +103,10 @@ reconstructed version.
 
 ## 6. Pre-completion audit
 
-- **render inputs**: the render really received what the task asked for. Read your own output
-  artifact (`read_artifact`; the file record carries the render provenance - workflow, prompt and
-  media inputs - when recorded; the coordinator's `render_info` tool is not available to workers)
-  and check against your `wf_*` call: for `cut`, the `start_frame` is in the media inputs on the
+- **render inputs**: the render really received what the task asked for. Call
+  `render_info({ render_id })` with the `renderId` your `wf_*` call returned (it reports the
+  workflow, params, prompt route and the media inputs that reached the render) and check it
+  against your `wf_*` call: for `cut`, the `start_frame` is in the media inputs on the
   start-image port and each intended reference you passed is listed; for `continue`, the prior clip
   (and, on a framing change, the frame). Empty media inputs, or the start frame missing, means the
   render failed: re-render ONCE with the corrected call; still wrong -> `BLOCKED:` naming it
