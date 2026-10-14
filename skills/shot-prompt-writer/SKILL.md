@@ -93,6 +93,7 @@ Rules:
 Use the `prompt-writer-wan22` skill guidance:
 - Describe ONLY what moves between start and end frame
 - Active camera verbs: "holds steady", "slowly pushes in", "tilts down"
+- Use the shot's `Movement:` (shotlist, else the scene list's Beats) verbatim as the camera instruction; "holds steady" / static locks only when it says `hold`
 - Subject action as progression: "descends the remaining steps", "turns from the window"
 - Include scene dynamics: "rain falls steadily", "grey light holds flat"
 - For directional exits/entrances: add forward-time anchor — "time flows forward", "subject moves continuously toward the door"

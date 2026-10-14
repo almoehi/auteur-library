@@ -127,6 +127,8 @@ Shot sizes: `extreme close-up` | `close-up` | `medium close-up` | `medium shot` 
 
 Lens: `medium focal length` (default) | `telephoto` | `shallow depth of field` | `anamorphic bokeh`
 
+A `Movement:` from the brief (shotlist / beat) IS the camera instruction: use that move, not a different one. `static shot` / `locked-off frame` and "no zoom / no push" locks only when the movement says `hold`; a missing movement is not a hold.
+
 Contradictions to avoid: `drone shot` + `extreme close-up` / `static shot` + `slow pan` / `dolly in` + `pull back`
 
 **Layer 4 — Scene / Lighting**

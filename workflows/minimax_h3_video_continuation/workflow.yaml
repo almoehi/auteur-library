@@ -165,6 +165,14 @@ context: |
   5. overall_soundscape: floor and fabric materials from the reference images; dialogue cues.
   6. non_diegetic_music: music cue or "N/A".
 
+  Continue, do not cut: use this workflow for a boundary that CONTINUES the prior clip (same
+  setup, the action carries on, the camera move continues or holds). The prompt continues
+  <Video 1> in the same shot and contains no cut ("the target video cuts to ..." makes a new
+  shot that only borrows light and mood). A new framing, subject or insert is a CUT: start it
+  fresh with an image-to-video / text-to-video workflow from its start frame instead. Set
+  prior_clip_start_time from the prior clip's REAL duration (get_video_info) minus 1-2 s, never
+  from a planned length. Each output is only the new segment: keep it as its own clip file.
+
   Chaining: feed the last output as prior_clip for the next generation. Re-run the prompt
   system each time to restate the identity block — this is what prevents subject drift across
   a long chain. One shot per generation; continuation is continuous by design.

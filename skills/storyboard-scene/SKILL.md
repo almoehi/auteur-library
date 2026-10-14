@@ -51,7 +51,8 @@ shot. Keep visible replies short: see "Short visible replies" in `workflow-calli
   (`scene`, optional `notes`, drafts per shot = `initialDrafts` (default 1), `links`: `location`,
   `characters`, `outfits`).
 - Read `scene_list` (the scene's row: location, time of day, summary, characters, outfits as
-  `<character_slug>:<look_slug>`) and the `screenplay` (if it exists; use the scene's slice for
+  `<character_slug>:<look_slug>`; below the table the scene's **Beats**: per beat the action,
+  framing and camera move) and the `screenplay` (if it exists; use the scene's slice for
   action and mood) exactly ONCE each. Never re-read them later.
 - Read each linked design ONCE, compactly: `read_artifact` of a design returns a server-side
   compact digest in later turns; use only `artifact_index` / the published description. Never
@@ -72,11 +73,20 @@ ONE write of `/workspace/<artifact id>/shotlist.md`, one section per shot, exact
 
 ## s3-01 — Short title
 Action: what is VISIBLE in the frame, in one or two sentences
-Camera: shot size, angle, lens feel, movement (e.g. "wide, eye level, slow push-in")
+Camera: KEYFRAME framing - shot size, angle, lens feel of the still image (e.g. "wide, eye level")
+Movement: the camera move of the VIDEO clip of this shot (e.g. "slow push-in", "pan left", "hold")
 Characters: mira, jonas        (character slugs, comma-separated, or "none")
 Outfits: mira:raincoat; jonas:work_suit      (<character>:<look> pairs, "; "-separated, or "none")
 Duration: 5
 ```
+
+**`Movement`** = the camera move of the video clip shot from this frame, taken from the shot's
+beat in the scene list's **Beats** (one shot per beat, in order; the beat's `Camera move` verbatim,
+e.g. `slow push-in`, `pan left`, `handheld drift`). Write `hold` ONLY when the beat asks for
+stillness. When the scene list has no Beats (an older list), derive a fitting move from the
+action and mood; never default to `static`/`hold`. `Camera` stays the framing of the keyframe
+IMAGE (a still has no movement): do not put a move into `Camera`, and keyframe prompts use
+`Camera`, never `Movement`.
 
 **`Action` = what is visible** — subjects, positions, pose, expression, objects. No plot, motives,
 dialogue or camera motion.
@@ -147,7 +157,7 @@ the choice and reason in the summary.
 
 ### Prompt `context` (per shot, SHORT)
 
-Shot text (Action + Camera), image labels (slot map by port label: "Picture 1 is the harbor,
+Shot text (Action + Camera - never Movement: a keyframe is a still), image labels (slot map by port label: "Picture 1 is the harbor,
 Picture 2 is Mira"), one style line (`{workspace.story.plot}` medium/style verbatim, see "Medium /
 style is kept"), and the goal: *one cinematic keyframe of this shot, consistent with the
 reference images; compose as the camera line says; no text, captions or panels*. Never restate
@@ -165,7 +175,8 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 Audit before completing:
 
 - [ ] `shotlist.md` written exactly once; every shot has `## <shotId> — <title>` plus `Action`,
-      `Camera`, `Characters`, `Outfits`, `Duration`; ids consecutive `s<scene>-01…`
+      `Camera`, `Movement`, `Characters`, `Outfits`, `Duration`; ids consecutive `s<scene>-01…`;
+      every `Movement` comes from its beat (`hold` only when the beat asks for stillness)
 - [ ] every shot has `take_<shotId>-draft-<n>.<ext>` for n = 1 … drafts per shot (re-read the
       artifact), except drafts that failed twice (name them); all from `wf_*` renders
 - [ ] no other file written; `design.json` untouched; no published names
@@ -184,7 +195,7 @@ For each message:
 
 1. `read_artifact` again; read `design.json` for takes, primary/selection and discarded takes. A
    take you rendered earlier that is gone was discarded on purpose — never re-render it or its name.
-2. **Shot list changes** (add / remove / reorder / retitle / change action or camera): rewrite
+2. **Shot list changes** (add / remove / reorder / retitle / change action, camera or movement): rewrite
    `shotlist.md` as a whole file (the one allowed overwrite), ids renumbered consecutively.
    Existing takes keep their file names — say takes of a renumbered shot stay under their old id;
    render nothing unless asked or the shot is new (new shots get drafts as in Phase 2, one batch).

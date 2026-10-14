@@ -218,6 +218,13 @@ Roll Clockwise / Roll Counterclockwise
 
 Rules: ONE camera move per shot. If static: state "frame never moves" AND list what should not happen.
 
+**A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
+write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
+camera pushes in slowly ..."). Add the static lock above (and the "no zoom / no push / no pan"
+refusals) ONLY when the movement says `hold`. A missing movement is not a hold: pick a move that
+fits the beat. In a video continuation the prompt continues `<Video 1>` without a cut; the move
+continues or holds that of the prior clip.
+
 ---
 
 ## Step 5 — Translate Emotions to Observable Behavior
