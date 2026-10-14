@@ -100,10 +100,14 @@ Process one artifact at a time.
 
 ### 2a. Read the shotlist
 
-Storyboard path: `read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")`; fallback path: `read_artifact(artifactId="<shotlist key>")`. Pass the key directly, not the UUID. Storyboard shot lists are sections `## <shotId> — <title>` with lines `Action:`, `Camera:`, `Characters:`, `Outfits:`, `Duration:` (seconds).
+Storyboard path: `read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")`; fallback path: `read_artifact(artifactId="<shotlist key>")`. Pass the key directly, not the UUID. Storyboard shot lists are sections `## <shotId> — <title>` with lines `Action:`, `Camera:`, `Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds).
 
-Extract for every shot: shot ID, description (action, location, mood), camera notes
-(angle, lens, movement), characters present.
+Extract for every shot: shot ID, description (action, location, mood), `Camera:` (keyframe
+framing), `Movement:` (the camera move of the VIDEO; absent in older storyboards), `Duration:`,
+characters present. When a shot has no `Movement:`, take it from the matching beat in the
+`Beats` section of the `scene_list` artifact (read it once; the scene's `### Scene <n>` table:
+beat, action, framing, camera move); no beat either: derive it from the action and say so. Never
+turn a missing movement into "static".
 
 ### 2b. Read the visual shots
 
@@ -137,6 +141,21 @@ Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "M
 
 Count total clips. This is how many `.mp4` slots you must declare in the artifact.
 
+**Decide every boundary: CONTINUE or CUT.** For each pair of neighbouring clips (shot i -> i+1)
+decide from the shotlist and decide ONCE, here:
+
+- **CONTINUE** - same setup (same location, subjects and framing), the action carries on, the
+  camera move continues or holds. Example: same framing, Brianna wakes -> Brianna sits up.
+  The next clip is rendered with the video-continuation workflow from the previous clip; its
+  prompt contains NO cut.
+- **CUT** - new framing, new subject or an insert. Example: princess -> pudding insert ->
+  Brianna's grin. The next clip starts fresh with the image-to-video (or text-to-video) workflow
+  from that shot's storyboard frame. A cut is never faked through the continuation workflow.
+
+The first clip of a scene is always a fresh start. Each clip, continued or not, stays its own
+`.mp4` file (the scene edit plays them back to back). Record per boundary `continue`/`cut` and a
+one-line reason in the file plan.
+
 ### 3b. Assign canonical filenames
 
 One canonical `.mp4` per clip:
@@ -155,10 +174,10 @@ Derive prompt file names from the clip stem:
 
 **Write out the full file plan before proceeding:**
 
-| Clip | Shot(s) | Type | Canonical filename |
-|---|---|---|---|
-| 1 | s2-01 | Single cut | `scene2_clip1_lobby-entrance.mp4` |
-| 2 | s2-02, s2-03, s2-04 | Action breakdown | `scene2_clip2_staircase-descent.mp4` |
+| Clip | Shot(s) | Type | Boundary to previous | Movement | Canonical filename |
+|---|---|---|---|---|---|
+| 1 | s2-01 | Single cut | start | slow push-in | `scene2_clip1_lobby-entrance.mp4` |
+| 2 | s2-02, s2-03, s2-04 | Action breakdown | continue (same framing, action carries on) | hold | `scene2_clip2_staircase-descent.mp4` |
 | … | | | |
 
 ---
@@ -187,9 +206,14 @@ description:
               (the scene's design sheets; omit the line when none were found)
 
   Clips to render — canonical filenames (worker must use these exactly):
-    scene<N>_clip1_<slug>.mp4    — <shot IDs, clip type: action breakdown / single cut>
-    scene<N>_clip2_<slug>.mp4    — <shot IDs, clip type>
+    scene<N>_clip1_<slug>.mp4    — <shot IDs, clip type>; start; Movement: <move verbatim>
+    scene<N>_clip2_<slug>.mp4    — <shot IDs, clip type>; continue|cut (<reason>); Movement: <move verbatim>
     …
+
+  Movement is the camera move of the video clip, passed verbatim into its prompt ("hold" =
+  locked-off). Boundaries: `continue` = render with the video-continuation workflow from the
+  previous clip (no cut in the prompt); `cut` = fresh image-to-video / text-to-video from the
+  shot's frame.
 
   Prompt files:
     scene<N>_clip1_<slug>_prompt.txt            (storyboard path)
@@ -221,6 +245,7 @@ After `create_artifact` succeeds (keep it short, see "Short visible replies" in 
 
 > "Scheduled: **Shoot <Scene Name>**
 > — <N> clips: <list canonical .mp4 filenames>
+> — Boundaries: <clip i -> i+1: continue|cut, reason; ...>
 > — Source: <storyboard `<key>` (frame i = start frame of shot i) | shotlist + visual shots (fallback)>
 > — Worker skill: `shoot-single-scene` · preferred workflow: `<workflow name>`
 > — <fallback path only: M single-cut clip(s) will need T2I keyframe generation before rendering>

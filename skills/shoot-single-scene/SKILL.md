@@ -18,13 +18,19 @@ or a shotlist + visual-shots pair as fallback), the design-sheet `references:`, 
 canonical clip and prompt file names. Read:
 
 - **Storyboard source:** `shotlist.md` (sections `## <shotId> — <title>` with `Action`,
-  `Camera`, `Characters`, `Outfits`, `Duration`) and the frames `frame_1.<ext>` … `frame_N.<ext>`
+  `Camera` (keyframe framing), `Movement` (the video's camera move), `Characters`, `Outfits`,
+  `Duration`) and the frames `frame_1.<ext>` … `frame_N.<ext>`
   of the storyboard artifact; frame i is the start frame of shot i. Reference every frame as
   `artifact://<artifact id>/<file>` (never a copied URL). Look at a frame with `describe_image`
   when you need to know what it shows.
 - **Fallback source:** the shotlist and the visual storyboard artifacts; the visual bible and
   cast descriptions only if they exist (they are optional).
 - The `references:` design sheets (location / outfit primaries) as `artifact://` references.
+
+- **Movement per shot:** the shot's `Movement:` line. A shot without one (older storyboard):
+  read the scene's **Beats** in the `scene_list` artifact (beat, action, framing, camera move)
+  and use the matching beat's camera move. Neither exists: derive a move from the action; never
+  default to static.
 
 Read the screenplay only if the shotlist is ambiguous. Extract only what is relevant for your
 scene.
@@ -49,6 +55,28 @@ Pick, in this order:
 Fallback source without a storyboard frame for a shot: i2v/flf2v still apply to its available
 images; missing frames are generated with a text-to-image `wf_*` tool (choose by capability the
 same way; generated frames must stay visually consistent with the start frame).
+
+### Continue or cut (per boundary between neighbouring clips)
+
+Your task description lists, per clip, whether its boundary to the previous clip is `continue`
+or `cut` (decided by `shoot-scene-task` from the shotlist). Re-check against the shotlist; if
+you decide differently, say so in the summary.
+
+- **CONTINUE** (same setup, the action carries on, the camera move continues or holds): render
+  with the video-continuation workflow (a workflow with a video input for the prior clip). Set
+  its `prior_clip_start_time` to the previous clip's REAL duration minus 1-2 s: measure the
+  rendered previous file with `get_video_info` (`path_or_url="artifact://<id>/<file>"`), never
+  use the planned/requested length (a clip shorter than the offset is barely read). The prompt
+  continues `<Video 1>` in the same shot: describe the continuing action and the shot's
+  `Movement`, and write NO cut ("the target video cuts to ...") and no new composition. The
+  output is its own clip file (only the new segment); do not merge.
+- **CUT** (new framing, new subject, an insert): start fresh with the image-to-video (or
+  text-to-video) workflow of the table above, the shot's storyboard frame as the start image.
+  Never fake a cut through the continuation workflow.
+
+Because a continued clip needs the REAL previous file, render clips in order; a `continue` clip
+waits for its predecessor. Record every boundary as `continue`/`cut` with the reason in your
+`task_complete` summary.
 
 State the path used for the scene — and why a better path was not available — in your
 `task_complete` summary, so the person knows (e.g. "path (b): no i2v workflow accepted a start
@@ -77,7 +105,9 @@ serialized by the runtime, the `*_prompts_batch` tools run their items in parall
 2. ONE `draft_prompts_batch(workflow_name, items=[{context}, …])`, one item per shot (and per
    prompt parameter the workflow expects). `workflow_name` is per call: one batch per distinct
    workflow, issued in the same response. Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "Medium / style is kept" in `workflow-calling-conventions`) into every `context`, verbatim; never drop it. Each `context`: the full shot context (action,
-   camera, characters, outfits, location, mood, duration) and the path used. For path (a)
+   camera, characters, outfits, location, mood, duration), the path used and the shot's
+   `Movement:` VERBATIM ("hold" = a locked-off frame; any other move is written as that move,
+   never replaced by static/no-zoom locks). For path (a)
    describe only the motion from the start frame; for path (b) name the references the way the
    port descriptions do ("Figure 1", "Picture 1" …). The prompt text per clip goes to its
    declared prompt file(s). Order the reference images by "Anchor (Picture 1) by intent" of
@@ -103,6 +133,8 @@ After each render, write all prompt outputs to their declared paths.
 
 - Every declared clip was rendered by the video workflow (not a text-to-image tool)
 - Every render returned a success response with the correct output path
+- Every clip prompt carries its shot's `Movement` verbatim; a continuation prompt contains no cut;
+  every `prior_clip_start_time` = measured previous duration minus 1-2 s
 - Every declared prompt file has been written
 - Every still frame you generated yourself (fallback source, text-to-image) was checked and
   retried at most once as in "Check, retry once, suggest" of `workflow-calling-conventions`;

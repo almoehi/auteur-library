@@ -39,7 +39,8 @@ what is missing.
 2. Measure the REAL clip with `get_video_info` (duration, fps, frame count, resolution, audio) on
    the artifact reference (`path_or_url="artifact://<artifactId>/<fileKey>"`; never a copied URL). Never assume the duration the clip was requested with —
    generated clips routinely differ from their target.
-3. Choose the **start offset**: the point inside the **last 1–2 seconds** of the measured clip
+3. Choose the **start offset** (`prior_clip_start_time`) = the MEASURED duration minus 1-2 s,
+   never a planned length: the point inside the **last 1–2 seconds** of the measured clip
    where the continuation should resume. Read the chosen workflow's instructions (Phase 4) for its
    constraints and make sure enough reference frames remain after the offset (e.g. a minimum of a
    few frames); move the offset earlier until they do. Note the offset in the summary.
@@ -72,6 +73,13 @@ what is missing.
    `task_complete` with a `BLOCKED:` summary naming the missing references.
 
 ## Phase 5 — Write the prompt
+
+**A continuation does not cut.** The prompt continues `<Video 1>` in the same shot: same
+framing, subject and setup, the action carrying on, the camera move continuing or holding (take
+the move from the shot's `Movement:` / beat when the task names one). Never write "the target
+video cuts to ..." or a new composition; if the brief asks for a new framing, subject or insert,
+that is a CUT: it does not belong in this workflow (render it fresh from a storyboard frame with
+an image-to-video workflow, see `shoot-single-scene`) - say so in the summary instead.
 
 Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call and pass `prompt_route`. Typical here: the brief is agent-derived and rewritten; the person's optional instructions are passed in `instruction`, or verbatim only when short, explicit and concrete.
 
