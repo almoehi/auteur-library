@@ -87,6 +87,8 @@ A `match` needs no further call. On a `miss` (use its `fix`):
 
 In multi-reference image workflows Picture 1 is the anchor (keeps framing and look best). **EDIT**: the image being edited is Picture 1, other references follow, named by the workflow's port labels. **COMPOSE** (new scene): the ENVIRONMENT image is Picture 1, then people/objects by priority. Never anchor a composed scene on an outfit or character image.
 
+A ref2i (reference-to-image) prompt is a scene description naming the pictures by label, not an edit instruction.
+
 ## Key rules
 
 Call `wf_xxx` for every shot or batch your task defines, `task_complete` only afterwards (never after just reading the artifact); read artifacts with `read_artifact`; set `prompt_route` on every prompted call; check every take, retry at most once.

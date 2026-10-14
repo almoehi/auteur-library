@@ -232,6 +232,7 @@ CHANGES SUMMARY:
 
 - **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
 - **EDIT workflows** (if one uses this family): the change first, at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
+- **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 
 ## Fidelity
 

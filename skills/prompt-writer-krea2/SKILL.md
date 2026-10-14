@@ -256,6 +256,7 @@ CHANGES SUMMARY:
 ## Short prompts per workflow kind
 
 - This family has text-to-image workflows only: keep the prompt as short as the element stack allows. If it is used for an edit, put the change first with at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
+- **REFERENCE-TO-IMAGE workflows** (ref2i, if one uses this family): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 
 ## Fidelity
 

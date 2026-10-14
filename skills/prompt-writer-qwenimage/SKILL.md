@@ -128,6 +128,7 @@ alternative takes of the same edit, re-render with a different `seed`, not a rew
 ## Short prompts per workflow kind
 
 - **EDIT workflows** (i2i): the change first, at most 2 short keep locks, no restated character or location descriptions (the reference images carry them), and one image-naming sentence ("Picture 1 is ...").
+- **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 - This family has no video workflow; for text-to-image keep the prompt as short as the six-element stack allows.
 
 ## Fidelity
