@@ -58,7 +58,9 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   compact digest in later turns; use only `artifact_index` / the published description. Never
   copy or restate design documents, takes history or file lists.
 - Map `<character_slug>:<look_slug>` to the linked keys `character_<slug>` / `outfit_<slug>_<look>`
-  (keys in `design.json.links` are the truth).
+  (keys in `design.json.links` are the truth). A pair with no linked outfit design is a character's
+  BASE LOOK (read `base_look` from `design_plan.json` when available): the linked character design
+  covers it - use the character's primary for it and do not report it as missing.
 - **Preflight** — if any fails do not guess: render nothing, `task_complete` saying exactly what
   is missing: the scene number (`scene` attribute or task id); a readable `scene_list` with a row
   for it; each linked design readable with a published `primary.<ext>`
@@ -136,7 +138,7 @@ image inputs, required ports and port descriptions. Never pick by a tool's name 
 
 References in priority order (keyframe = COMPOSE intent, location is the anchor, Picture 1; see
 "Anchor (Picture 1) by intent"): 1. location primary; 2. outfit primary of the shot's main
-character (its own primary if no outfit design); 3. further outfits / characters by presence.
+character (its own primary if no outfit design: the character design shows the base look); 3. further outfits / characters by presence.
 
 - **Reference-to-image (ref2i)**: preferred - composes a NEW frame from the references (location =
   Picture 1), any camera.

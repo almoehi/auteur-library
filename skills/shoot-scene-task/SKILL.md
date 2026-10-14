@@ -94,7 +94,9 @@ If it exists but is not approved:
 Find the scene's design sheets: the published primaries of the location design and of the outfit
 designs used in the scene. Take the scene's row from the `scene_list` artifact (`location_slug`,
 `Outfits` as `<character>:<look>`) and look the keys up in `artifact_index` (`location_<slug>`,
-`outfit_<character>_<look>`; tolerate a suffix). The reference is
+`outfit_<character>_<look>`; tolerate a suffix). A pair with no outfit design is the character's
+base look (`base_look` in `design_plan.json`, when available): the character design's primary
+(`character_<character>`) is its reference, and that is not a missing sheet. The reference is
 `artifact://<artifact id>/primary.<ext>` (read the artifact to get the file name). Missing sheets
 are not fatal: note them and continue without that reference. List them per clip, location first,
 then that shot's outfits ("Anchor (Picture 1) by intent" of `workflow-calling-conventions`,

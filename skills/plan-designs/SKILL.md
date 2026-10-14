@@ -4,7 +4,7 @@ description: >
   Use when your task prompt says "Load and use skill: plan-designs" — turn the character
   table and the scene list into a design plan and create one studio design (character,
   outfit, location) for every entry with create_design, then one storyboard design per scene.
-  Produces design_plan.json and the scheduled design tasks. Do NOT invoke for drafting or
+  Produces design_plan.json and the scheduled design tasks. Outfit designs are created only for looks differing visibly from a character's base look. Do NOT invoke for drafting or
   rendering design images (design-asset) or storyboard keyframes (storyboard-scene), writing
   screenplays or scene lists, or creating a single design on request.
 agentType: worker
@@ -43,17 +43,30 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
      list but without a file (flag in the summary; create it from the scene context only).
    - **locations**: distinct `location_slug` values of the scene list; display name from the
      `Location` column.
-   - **outfits**: distinct (character_slug, look_slug) pairs from the `Outfits` column, plus
-     looks in WARDROBE TRACKERs that are used in a scene.
-2. **Normalize slugs** (single rule, apply everywhere): lowercase, ASCII, non-alphanumerics to
+   - **looks**: distinct (character_slug, look_slug) pairs from the `Outfits` column, plus
+     looks in WARDROBE TRACKERs that are used in a scene. Looks are candidates only; see
+     "Base look and outfits" below for which become outfit designs.
+2. **Base look and outfits** (per character, decide before writing anything):
+   - Choose ONE **base look**: the look the character wears in the most scenes (tie: the look of
+     their first appearance). The character design wears it: it becomes the character's base
+     `wardrobe` attribute, and its slug is recorded as `base_look` on the character entry of
+     `design_plan.json`. The character design COVERS the base look: no outfit design for it.
+   - Create an **outfit design only for a look that differs visibly from the base look**: other
+     garments or a clear costume change (e.g. a raincoat over pyjamas).
+   - These are NOT outfits: the base look itself; the same garment in another state ("messy
+     pyjamas", "wet coat", "torn shirt"); accessory-only changes (hat, glasses, bag); "natural
+     fur", "no clothes" or any look that is just the character's own body; a character's only look.
+   - Result: `outfits` lists only non-base, visibly different looks. A scene-list pair
+     `<character>:<base_look>` is covered by the character design.
+3. **Normalize slugs** (single rule, apply everywhere): lowercase, ASCII, non-alphanumerics to
    `_`, collapse repeats, trim `_`. Result must match `[a-z0-9]+(_[a-z0-9]+)*`.
    Key = `<kind>_<name>`, at most 64 characters (for outfits the name is `<character>_<look>`);
    shorten the look slug if needed. Design names are unique across ALL kinds, so a location
    slug must not equal a character slug (suffix `_place` to the location if it does).
-3. **Merge duplicates and variants** ("Mira", "MIRA", "young Mira" = same slug `mira`; a
+4. **Merge duplicates and variants** ("Mira", "MIRA", "young Mira" = same slug `mira`; a
    different age or costume is an outfit/look, not a new character).
    Style is not an attribute: never add the story's medium/style as a design attribute; `design-asset` carries it from `{workspace.story.plot}` into every prompt.
-4. **Map attributes** to registry keys (values are short comma-joined descriptors, never sentences):
+5. **Map attributes** to registry keys (values are short comma-joined descriptors, never sentences):
 
 | kind | `character_type` (create_design field) / attribute keys |
 |---|---|
@@ -61,9 +74,9 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 | outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` |
 | location | `place`, `era`, `time_of_day`, `weather`, `lighting`, `mood` |
 
-   Every character gets a base `wardrobe` (their default look, e.g. "school uniform", "worn
-   leather jacket, jeans") even when their looks are separate outfit designs; when the sources
-   state none, give a plain everyday one ("simple, plain everyday clothing"). Follow the
+   Every character gets a base `wardrobe` = their base look (see "Base look and outfits"; e.g.
+   "school uniform", "worn leather jacket, jeans"), described from the WARDROBE TRACKER, even
+   when other looks are separate outfit designs; when the sources state none, give a plain everyday one ("simple, plain everyday clothing"). Follow the
    workspace content policy (`{workspace.contentPolicy.nudity}`; absent or empty = forbidden):
    when it is `forbidden` - or ALWAYS for a minor (a child, teen or anyone under 18) whatever
    the policy - depict people fully clothed (use the wardrobe attribute, else simple everyday
@@ -76,14 +89,15 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
    design, not extra attribute text.
    Put only what the sources state; omit unknown keys (except the base `wardrobe`). `character_type` is passed as its own
    argument, not inside `attributes`.
-5. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
+6. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
    `scene_list.md` first (an exact, character-for-character copy of the `scene_list` artifact's text as you read it; no edits, no summary) because the `design-plan-covers-scenes` task check judges the contents of all your output files, then `design_plan.json`:
 
 ```json
 {
   "characters": [
-    { "name": "Mira", "slug": "mira", "character_type": "woman",
-      "attributes": [ { "key": "age", "value": "late 20s" }, { "key": "hair", "value": "auburn, shoulder length" } ],
+    { "name": "Mira", "slug": "mira", "character_type": "woman", "base_look": "work_suit",
+      "attributes": [ { "key": "age", "value": "late 20s" }, { "key": "hair", "value": "auburn, shoulder length" },
+                      { "key": "wardrobe", "value": "grey work suit" } ],
       "scenes": [1, 2, 4] }
   ],
   "locations": [
@@ -99,7 +113,7 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 }
 ```
 
-Both file names are canonical: write exactly `scene_list.md` and `design_plan.json` into the `design_plan` artifact. If the files declared on the artifact differ, still write these two names and report the mismatch in the `task_complete` summary (line `file mismatch: <declared> vs scene_list.md, design_plan.json`). Every outfit's `character_slug` must exist in `characters`.
+Both file names are canonical: write exactly `scene_list.md` and `design_plan.json` into the `design_plan` artifact. If the files declared on the artifact differ, still write these two names and report the mismatch in the `task_complete` summary (line `file mismatch: <declared> vs scene_list.md, design_plan.json`). Every outfit's `character_slug` must exist in `characters`, every character has a `base_look` (the look slug it wears; omit only when the sources name no look at all), and no outfit's `look_slug` equals its character's `base_look`.
 
 ## Phase 2 — Create the designs
 
@@ -129,7 +143,9 @@ registry, mapped from the scene's row:
 - `location`: the key of the scene's `location_slug` design (exactly one);
 - `characters`: the keys of every slug in `Characters present` (one link each);
 - `outfits`: the keys of every `<character_slug>:<look_slug>` pair of the `Outfits` column
-  (one link each; a pair whose outfit design failed or does not exist is dropped and noted).
+  (one link each). A pair whose look is the character's `base_look` has no outfit design: the
+  character link covers it (no outfit link, not reported as missing). Any other pair whose outfit
+  design failed or does not exist is dropped and noted.
 
 ```
 create_design({ kind: "storyboard", display_name: "Scene <n>", start: "attributes",
@@ -167,7 +183,7 @@ needs the `scene_list` artifact (it is approved). The storyboard's duplicate-nam
 Keep replies concise (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`). `task_complete` summary format (omit lines that are empty/none except `failed`; name designs by their task URI `task://<id>` where known, never list every key when all went well):
 
 ```
-design plan: <n> characters, <n> locations, <n> outfits, <n> storyboards - all created
+design plan: <n> characters, <n> locations, <n> outfits (non-base looks only), <n> storyboards - all created
 skipped (existing): <count, or keys only if few>
 failed: <key: error> or none
 ```
@@ -180,6 +196,7 @@ Add `renamed:` / `file mismatch:` lines only when they occurred.
 3. `start` is always `"attributes"`, `initial_drafts` 1.
 4. Idempotent: never recreate an existing design.
 5. Never write `design.json` or any design file; only `design_plan.json` and `scene_list.md`.
-6. One storyboard per scene (`storyboard_scene_<n>`), created last, linked by the ACTUAL
+6. Outfits only for looks that differ visibly from the character's base look (the character design covers the base look).
+7. One storyboard per scene (`storyboard_scene_<n>`), created last, linked by the ACTUAL
    design keys from the create results; existing storyboards are skipped. Storyboards are not
    part of `design_plan.json`.
