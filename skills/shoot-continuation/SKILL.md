@@ -15,7 +15,9 @@ agentType: worker
 The new clip starts from the END of an existing clip: the render workflow receives the prior
 clip as a video input (plus reference images that keep characters and places consistent) and
 generates what happens next. Work with whichever workflow the workspace offers — never assume
-a specific one.
+a specific one. The continuation mechanics (real predecessor duration, start offset = real
+duration minus 1-2 s, no cut in the prompt) are the `continue` mode of `shoot-clip`; follow the
+same rules here — this skill only adds the person-driven brief and the continuity check.
 
 ## Phase 1 — Preflight
 
@@ -79,7 +81,7 @@ framing, subject and setup, the action carrying on, the camera move continuing o
 the move from the shot's `Movement:` / beat when the task names one). Never write "the target
 video cuts to ..." or a new composition; if the brief asks for a new framing, subject or insert,
 that is a CUT: it does not belong in this workflow (render it fresh from a storyboard frame with
-an image-to-video workflow, see `shoot-single-scene`) - say so in the summary instead.
+an image-to-video workflow, see `shoot-clip`) - say so in the summary instead.
 
 Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call and pass `prompt_route`. Typical here: the brief is agent-derived and rewritten; the person's optional instructions are passed in `instruction`, or verbatim only when short, explicit and concrete.
 
