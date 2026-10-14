@@ -125,7 +125,7 @@ Audit before completing:
 - [ ] every `take_draft-<n>-<slug>.<ext>` exists (re-read the artifact), n = 1 … initialDrafts,
       except drafts that failed twice (name them)
 - [ ] no other file written; `design.json` untouched
-- [ ] every take checked with `describe_image`; at most one retry per take (`<base>-r2`; drafts
+- [ ] every take checked with `check_take` (file + the request it was rendered from); at most one retry per take (`<base>-r2`; drafts
       `take_<slug>-draft-<k>-r2.<ext>`); `suggest_edit` exactly for takes whose retry also missed
 - [ ] drafts came from `wf_*` renders (sandbox-derived files are fine in the chat phase)
 
@@ -141,8 +141,8 @@ For each request:
    `primaryTakeId`, takes, LoRAs, links). A take you rendered earlier that is gone was discarded on
    purpose — never re-render it.
 2. Source image: the take the person names, else the primary (file of `primaryTakeId`), else the
-   newest. Pass `artifact://<artifact id>/<file name>`, the same ref for `describe_image` and
-   `sandbox_fetch` — never copy or retype a URL (one dropped character gives a 403).
+   newest. Pass `artifact://<artifact id>/<file name>`, the same ref for `describe_image`,
+   `check_take` and `sandbox_fetch` — never copy or retype a URL (one dropped character gives a 403).
 3. Workflow: a change to an existing image ("older", "red jacket") → an **image-edit** (`i2i`)
    `wf_*` tool (prefer `capabilities` that fit, e.g. `multi-reference-edit`; else the one whose
    image inputs and required ports fit); instruction via `draft_prompt` (several edits in one
