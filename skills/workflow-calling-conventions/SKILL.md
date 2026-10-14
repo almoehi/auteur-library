@@ -10,6 +10,10 @@ Use this whenever your task asks you to render, shoot or produce media (images, 
 
 Worked examples (only if a call shape is unclear): load_skill workflow-calling-examples.
 
+## Task granularity (coordinator)
+
+When planning work as tasks, prefer ONE task per independently renderable output (clip, shot, design, sheet). Chain tasks with `requires_artifacts` when one needs another's output. Use a single task for several outputs only when they cannot be separated. Per-output tasks render in parallel, can be retried, reviewed and checked individually, and keep each worker's context small.
+
 ## Short visible replies
 
 Keep every visible reply short: what you do next and why, in at most a few lines. Never restate plans you already made, skill or workflow text, design descriptions, the shotlist, or tool results — they are already in the conversation. Think silently; write only decisions. Final summaries: at most ~10 lines.

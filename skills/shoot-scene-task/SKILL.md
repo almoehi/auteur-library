@@ -3,11 +3,12 @@ name: shoot-scene-task
 description: >
   Trigger when the user wants to shoot, film, or render a named scene into video clips —
   e.g. "shoot scene 2", "let's film scene 1", "create a task to shoot the hotel lobby scene".
-  This skill validates prerequisites, determines the clip structure from the scene's finished
-  storyboard design (shot list + keyframes; older shotlist + storyboard artifacts as fallback),
-  and schedules the worker task that renders the video clips.
+  Validates prerequisites, reads the scene's finished storyboard design (shot list + keyframes),
+  and schedules ONE task per clip (one clip per shot) plus one assembly task that joins the
+  clips into the scene video.
   Do NOT invoke for storyboard design or keyframe rendering (storyboard-scene), prompt writing,
-  or any task that does not result in producing final video clips for a named scene.
+  rendering a single clip yourself (worker skill shoot-clip), or any task that does not result
+  in producing final video clips for a named scene.
 agentType: workspace
 ---
 
@@ -23,9 +24,11 @@ Use this skill when the user expresses intent to film or shoot a named scene:
 > "start filming the hotel lobby scene"
 > "schedule scene 3 for shooting"
 
-This skill runs in the workspace coordinator. It validates prerequisites, reads the scene
-artifacts, groups shots into clips, assigns canonical filenames, and schedules the worker
-task that executes the actual rendering. The worker uses the `shoot-single-scene` skill.
+This skill runs in the workspace coordinator. It validates prerequisites, reads the scene's
+storyboard design, plans one clip per shot, and schedules **one task per clip** (worker skill
+`shoot-clip`) plus **one assembly task** (worker skill `assemble-scene`). Per-clip tasks render
+in parallel where the story allows, can be retried, reviewed and checked individually, and keep
+every worker's context small.
 
 ---
 
@@ -36,12 +39,12 @@ Before reading any artifact, resolve two things from the user's message:
 | Required | How to resolve |
 |---|---|
 | Scene identifier | Explicitly stated ("Scene 2", "s2", "the rain scene") |
-| Video workflow | Named in the message, OR inferred from the available `wf_` tools by capability: workflow type i2v / flf2v / ref2v / t2v read from the tool description (never by name from memory) |
+| Video workflow | Named in the message, OR inferred from the available `wf_` tools by capability: workflow type i2v / flf2v / ref2v / t2v / video-continuation read from the tool description (never by name from memory) |
 
 If the scene is ambiguous, ask before proceeding:
 > "Which scene should I shoot? Available scenes: [read scene_list artifact and list them]"
 
-If no video workflow is named and more than one is available, ask which to use. If none exists, tell the user and stop.
+If no video workflow is named and more than one is available, ask which to use. If none exists, tell the user and stop. Note two preferences, both taken from the `wf_` tool list: the workflow for fresh starts (`cut` clips: i2v / flf2v, else t2v) and, when one exists, the video-continuation workflow (a workflow with a video input for the prior clip) for `continue` clips. Without a continuation workflow every boundary is a `cut`.
 
 Do not read any artifact or create any task until both are resolved.
 
@@ -49,48 +52,46 @@ Do not read any artifact or create any task until both are resolved.
 
 ## Step 1 — Preflight
 
-### 1a. Look for the scene's storyboard design FIRST
+### 1a. The storyboard design
 
-Call `artifact_index`. The preferred source is the finished storyboard design of the scene:
+Call `artifact_index`. The source is the finished storyboard design of the scene:
 
 | Artifact | Requirement |
 |---|---|
 | `storyboard_scene_<n>` (the key may carry a suffix; match the scene number) | approved; files `shotlist.md` and `frame_1.<ext>` … `frame_N.<ext>` |
 
-If it exists and is approved with a `shotlist.md` and at least one `frame_*` file: use the
-**storyboard path** (frame i = start frame of shot i; N frames must equal the shot count of
-the shotlist — if not, tell the user and stop). If the storyboard design exists but is not
-approved (not finished), tell the user and stop:
+Frame i is the start frame of shot i; N frames must equal the shot count of the shotlist — if not,
+tell the user and stop. There is no fallback source (without storyboard keyframes there is no
+per-clip start frame to plan from). If no storyboard design exists for the scene:
+
+> "Cannot shoot <scene>: it has no storyboard design yet. Create and finish it in the design
+> studio (Pre-production -> Storyboards) and ask me again."
+
+If it exists but is not approved:
 
 > "Cannot shoot <scene>: the storyboard design `<key>` is not finished yet. Finish it in the
 > design studio (Pre-production -> Storyboards) and ask me again."
 
-**Fallback path** — only when NO storyboard design exists for the scene: you need two approved
-artifacts: the textual shot list (key contains `shotlist` and the scene identifier) and the
-rendered visual shots (key contains `visual_shots`, `rendered_shots` or `storyboard` and the
-scene identifier). If either is missing or not approved, tell the user and stop:
-
-> "Cannot shoot <scene>: **<artifact type>** is not yet approved.
-> Once `<key>` is approved, ask me to shoot <scene> again."
-
 ### 1b. Design sheets (references)
 
-For the storyboard path also find the scene's design sheets: the published primaries of the
-location design and of the outfit designs used in the scene. Take the scene's row from the
-`scene_list` artifact (`location_slug`, `Outfits` as `<character>:<look>`) and look the keys up in
-`artifact_index` (`location_<slug>`, `outfit_<character>_<look>`; tolerate a suffix). The
-reference is `artifact://<artifact id>/primary.<ext>` (read the artifact to get the file name).
-Missing sheets are not fatal: note them and continue without that reference. List them in the
-task's `references:` line location first, then outfits in order of presence ("Anchor (Picture 1)
-by intent" of `workflow-calling-conventions`, compose intent).
+Find the scene's design sheets: the published primaries of the location design and of the outfit
+designs used in the scene. Take the scene's row from the `scene_list` artifact (`location_slug`,
+`Outfits` as `<character>:<look>`) and look the keys up in `artifact_index` (`location_<slug>`,
+`outfit_<character>_<look>`; tolerate a suffix). The reference is
+`artifact://<artifact id>/primary.<ext>` (read the artifact to get the file name). Missing sheets
+are not fatal: note them and continue without that reference. List them per clip, location first,
+then that shot's outfits ("Anchor (Picture 1) by intent" of `workflow-calling-conventions`,
+compose intent).
 
 ### 1c. Idempotency check
 
-Call `task_index`. If a task titled "Shoot <scene name>" already exists and is not in a
-failed or cancelled state, inform the user and stop:
+Call `task_index`. The keys that matter are `shoot_scene<N>_clip<M>` (per clip) and
+`assemble_scene<N>`. A clip or assembly task that already exists and is not failed or cancelled is
+SKIPPED (never duplicate it, never change it). Plan and create only the missing ones; if every
+key exists and is live, tell the user and stop:
 
-> "A shoot task for <scene> already exists (status: <status>). No new task created.
-> If you want to re-shoot, cancel the existing task first."
+> "Scene <N> is already scheduled (clips <list> + assembly). No new tasks created.
+> To re-shoot a clip, cancel its task first."
 
 ---
 
@@ -100,165 +101,174 @@ Process one artifact at a time.
 
 ### 2a. Read the shotlist
 
-Storyboard path: `read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")`; fallback path: `read_artifact(artifactId="<shotlist key>")`. Pass the key directly, not the UUID. Storyboard shot lists are sections `## <shotId> — <title>` with lines `Action:`, `Camera:`, `Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds).
+`read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")` — pass the key
+directly, not the UUID. Sections are `## <shotId> — <title>` with lines `Action:`, `Camera:`,
+`Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds).
 
-Extract for every shot: shot ID, description (action, location, mood), `Camera:` (keyframe
-framing), `Movement:` (the camera move of the VIDEO; absent in older storyboards), `Duration:`,
-characters present. When a shot has no `Movement:`, take it from the matching beat in the
-`Beats` section of the `scene_list` artifact (read it once; the scene's `### Scene <n>` table:
-beat, action, framing, camera move); no beat either: derive it from the action and say so. Never
-turn a missing movement into "static".
+Extract for every shot: shot ID and title, `Action`, `Camera` (keyframe framing), `Movement` (the
+camera move of the VIDEO; absent in older storyboards), `Duration`, characters and outfits. When a
+shot has no `Movement:`, take it from the matching beat in the `Beats` section of the
+`scene_list` artifact (read it once; the scene's `### Scene <n>` table: beat, action, framing,
+camera move); no beat either: derive it from the action and say so. Never turn a missing
+movement into "static".
 
-### 2b. Read the visual shots
+### 2b. Character context (optional)
 
-Storyboard path: `frame_<i>.<ext>` is the start frame of shot i (shotlist order); nothing else
-to read. Fallback path: `read_artifact(artifactId="<visual-shots key>")` and note how many
-storyboard images each shot has.
-
-### 2c. Character context (optional)
-
-If a `character_table` artifact exists and is approved, read the `character_<slug>.md` files
-of the characters present; they improve motion prompt quality. Do not require any other
+If a `character_table` artifact exists and is approved, read the `character_<slug>.md` files of
+the characters present; they improve motion prompt quality. Do not require any other
 pre-production artifact.
 
-Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "Medium / style is kept" in `workflow-calling-conventions`) into every `context`, verbatim; never drop it. Put it into the task description of every clip so the worker carries it into each prompt.
+Carry the workspace's stated medium/style (from `{workspace.story.plot}`, see "Medium / style is
+kept" in `workflow-calling-conventions`) verbatim into every clip task as a `style:` line. Take
+the negative prompt text from the scene's art direction / the workflow's recommended negative
+(via `get_workflow_instructions` of the preferred workflow) and embed it as `negative_prompt:`
+in every clip task; leave the line out when the workflow has no negative prompt port.
 
 ---
 
 ## Step 3 — Planning
 
-### 3a. Group shots into clips
+### 3a. One clip per shot
 
-**Storyboard path:** one clip per shot (clip i = shot i, start frame = `frame_i`; the shot's
-`Duration` guides the clip length). Skip the table below.
+Clip M = shot M, start frame = `frame_M`; the shot's `Duration` is the clip's planned duration in
+seconds (the authoritative `duration_seconds`; round to whole seconds, at least 1).
 
-**Fallback path:** classify each shot by storyboard image count:
-
-| Image count | Clip type | Frame strategy for worker |
-|---|---|---|
-| 3+ images | Action breakdown | First / middle / last storyboard image → start / mid / end frame (no T2I needed) |
-| 1–2 images | Single cut | Available image → start frame; worker generates mid + end frame via T2I |
-
-Count total clips. This is how many `.mp4` slots you must declare in the artifact.
-
-**Decide every boundary: CONTINUE or CUT.** For each pair of neighbouring clips (shot i -> i+1)
+**Decide every boundary: CONTINUE or CUT.** For each pair of neighbouring clips (shot M-1 -> M)
 decide from the shotlist and decide ONCE, here:
 
 - **CONTINUE** - same setup (same location, subjects and framing), the action carries on, the
   camera move continues or holds. Example: same framing, Brianna wakes -> Brianna sits up.
-  The next clip is rendered with the video-continuation workflow from the previous clip; its
-  prompt contains NO cut.
+  Clip M is rendered with the video-continuation workflow from clip M-1's real file; its prompt
+  contains NO cut. It cannot start before clip M-1 is approved.
 - **CUT** - new framing, new subject or an insert. Example: princess -> pudding insert ->
-  Brianna's grin. The next clip starts fresh with the image-to-video (or text-to-video) workflow
-  from that shot's storyboard frame. A cut is never faked through the continuation workflow.
+  Brianna's grin. Clip M starts fresh with the image-to-video (or text-to-video) workflow from its
+  storyboard frame. A cut is never faked through the continuation workflow. A cut clip has no
+  clip dependency and renders in parallel with the others.
 
-The first clip of a scene is always a fresh start. Each clip, continued or not, stays its own
-`.mp4` file (the scene edit plays them back to back). Record per boundary `continue`/`cut` and a
-one-line reason in the file plan.
+The first clip is always a fresh start (`start`, treated as a cut). Record per boundary
+`continue`/`cut` and a one-line reason in the plan.
 
-### 3b. Assign canonical filenames
+### 3b. Canonical names (decided once, never renamed)
 
-One canonical `.mp4` per clip:
-```
-scene<N>_clip<M>_<short-slug>.mp4
-```
-- `N` = scene number
-- `M` = sequential clip index starting at 1
-- `slug` = 2–3 word kebab-case label from the shot description
-  (e.g. `lobby-entrance`, `staircase-descent`, `departure-aftermath`)
+Per clip M of scene N (slug = 2–3 word kebab-case label from the shot, e.g. `lobby-entrance`):
 
-Derive prompt file names from the clip stem:
-- storyboard path: `<clip-stem>_prompt.txt` — the video prompt of the clip
-- fallback path: `<clip-stem>_prompt_seg1.txt` (start → mid) and `<clip-stem>_prompt_seg2.txt` (mid → end)
-- `prompt_neg.txt` — one shared negative prompt for the whole scene (not per clip)
+| What | Name |
+|---|---|
+| task id | `shoot_scene<N>_clip<M>` |
+| output artifact key | `scene<N>_clip<M>` |
+| video file | `scene<N>_clip<M>_<slug>.mp4` |
+| prompt file | `scene<N>_clip<M>_<slug>_prompt.txt` |
 
-**Write out the full file plan before proceeding:**
+Assembly: task id `assemble_scene<N>`, artifact key `scene<N>_assembly`, file
+`scene<N>_assembled.mp4`.
 
-| Clip | Shot(s) | Type | Boundary to previous | Movement | Canonical filename |
-|---|---|---|---|---|---|
-| 1 | s2-01 | Single cut | start | slow push-in | `scene2_clip1_lobby-entrance.mp4` |
-| 2 | s2-02, s2-03, s2-04 | Action breakdown | continue (same framing, action carries on) | hold | `scene2_clip2_staircase-descent.mp4` |
-| … | | | |
+**Write out the full plan before creating anything:**
+
+| Clip | Shot | Boundary | Reason | Duration | Movement | Task / artifact | Video file |
+|---|---|---|---|---|---|---|---|
+| 1 | s2-01 | start | – | 5 | slow push-in | `shoot_scene2_clip1` / `scene2_clip1` | `scene2_clip1_lobby-entrance.mp4` |
+| 2 | s2-02 | continue | same framing, action carries on | 5 | hold | `shoot_scene2_clip2` / `scene2_clip2` | `scene2_clip2_staircase-descent.mp4` |
+| … | | | | | | | |
 
 ---
 
-## Step 4 — Create task and artifact
+## Step 4 — Create the tasks
 
-### 4a. create_task
+One `create_task` call per task, **sequentially, one per round** (a later task's `requires_*` names
+an earlier task's artifact; use the key/id the result reports, never an assumed one). Order: clips
+1..N, then the assembly. Skip those the idempotency check found live. Each call creates the task
+AND its output artifact inline (`output_artifact_name` + `output_files`); never create the artifact
+separately.
 
-The task description MUST open with the exact line `Load and use skill: shoot-single-scene`
-followed by the scene context block. Do not paraphrase or omit this line — the worker
-relies on it to trigger a `load_skill()` call before doing any other work.
+### 4a. Clip task (`shoot-clip`)
 
 ```
-title:       "Shoot <Scene Name>"
-agent:       <an agent from available_agents that has the wf_* workflow tools and the
-              sandbox — in the default workspace `generic`; never an agent that is not listed>
-description:
+id:                   shoot_scene<N>_clip<M>
+title:                "Shoot <Scene Name> – clip <M> (<shot title>)"
+description:          one line: what the clip shows
+agent:                <an agent from available_agents that has the wf_* workflow tools and the
+                       sandbox — in the default workspace `generic`; never one that is not listed>
+requires_artifacts:   ["scene<N>_clip<M-1>"]   — ONLY for a `continue` clip; omit for start / cut
+output_artifact_name: scene<N>_clip<M>
+output_artifact_description: "<Scene Name> clip <M>"
+output_files:         ["scene<N>_clip<M>_<slug>.mp4", "scene<N>_clip<M>_<slug>_prompt.txt"]
+prompt:
 
-  Load and use skill: shoot-single-scene
+  Load and use skill: shoot-clip
 
-  scene_name: "<Scene Name>"
-  workflow: "<video wf_ tool name>"   (a preference; the worker may pick another by capability)
-  source: storyboard `storyboard_scene_<n>` (shotlist.md; frame_i = start frame of shot i)
-          — or, fallback path: shotlist artifact `<key>` + visual shots artifact `<key>`
+  scene: "<Scene Name>"  (scene <N>)
+  clip: <M> of <total>  — shot <shotId> "<title>"
+  mode: continue | cut   (<one-line reason>)
+  action: <the shot's Action>
+  camera: <the shot's Camera - keyframe framing>
+  movement: <the shot's Movement VERBATIM>
+  duration_seconds: <planned duration>
+  start_frame: artifact://<storyboard id>/frame_<M>.<ext>
+  prior_clip: artifact://<scene<N>_clip<M-1> id>/<its video file>     (continue only)
   references: artifact://<location id>/primary.<ext>, artifact://<outfit id>/primary.<ext>, …
-              (the scene's design sheets; omit the line when none were found)
+              (omit the line when none were found)
+  style: <the workspace medium/style line, verbatim>
+  negative_prompt: <text>
+  preferred_workflow: "<wf_ tool name for this mode>"   (a preference; the worker may pick another by capability)
 
-  Clips to render — canonical filenames (worker must use these exactly):
-    scene<N>_clip1_<slug>.mp4    — <shot IDs, clip type>; start; Movement: <move verbatim>
-    scene<N>_clip2_<slug>.mp4    — <shot IDs, clip type>; continue|cut (<reason>); Movement: <move verbatim>
-    …
-
-  Movement is the camera move of the video clip, passed verbatim into its prompt ("hold" =
-  locked-off). Boundaries: `continue` = render with the video-continuation workflow from the
-  previous clip (no cut in the prompt); `cut` = fresh image-to-video / text-to-video from the
-  shot's frame.
-
-  Prompt files:
-    scene<N>_clip1_<slug>_prompt.txt            (storyboard path)
-    scene<N>_clip1_<slug>_prompt_seg1.txt / _seg2.txt   (fallback path; one pair per clip)
-    …
-    prompt_neg.txt  (shared negative prompt — one for the whole scene)
-
-  These filenames are canonical. Do not rename clips at any point during execution.
+  Output files (canonical — do not rename):
+    scene<N>_clip<M>_<slug>.mp4
+    scene<N>_clip<M>_<slug>_prompt.txt
 ```
 
-Include enough context for the worker to connect each filename to the right shots
-(shot IDs and clip type). The worker reads the shot list and the frames / visual-shots artifact
-directly; you do not need to re-embed the full shot descriptions.
+The task `prompt` MUST open with the exact line `Load and use skill: shoot-clip` — the worker
+relies on it to `load_skill()` before doing anything else. Name the preferred workflow from the
+workspace's `wf_` tool list for the clip's mode (never from memory): the continuation workflow
+for `continue`, the i2v / flf2v (else t2v) one for `cut` / start.
 
-### 4b. create_artifact (immediately after create_task returns)
+### 4b. Assembly task (`assemble-scene`)
 
 ```
-task_id: <id from 4a>
-id:      scene<N>_shooting
-name:    "<Scene Name> Shooting"
-files:   [every .mp4 and every .txt from Step 3b — list individually, no omissions]
+id:                   assemble_scene<N>
+title:                "Assemble <Scene Name>"
+description:          one line
+agent:                same agent as the clips (needs the sandbox)
+requires_tasks:       ["shoot_scene<N>_clip1", …, "shoot_scene<N>_clip<last>"]
+requires_artifacts:   ["scene<N>_clip1", …, "scene<N>_clip<last>"]
+output_artifact_name: scene<N>_assembly
+output_artifact_description: "<Scene Name> assembled"
+output_files:         ["scene<N>_assembled.mp4"]
+prompt:
+
+  Load and use skill: assemble-scene
+
+  scene: "<Scene Name>"  (scene <N>)
+  clips (in order, concatenate back to back):
+    1. artifact://<id of scene<N>_clip1>/scene<N>_clip1_<slug>.mp4   — <duration>s
+    2. …
+  Output file (canonical — do not rename): scene<N>_assembled.mp4
 ```
+
+Use the task/artifact identifiers each earlier `create_task` result reported. If some clip tasks
+already existed (idempotency), their artifacts are listed the same way.
 
 ---
 
 ## Step 5 — Confirm to user
 
-After `create_artifact` succeeds (keep it short, see "Short visible replies" in `workflow-calling-conventions`):
+After the last `create_task` succeeds (keep it short, see "Short visible replies" in `workflow-calling-conventions`):
 
-> "Scheduled: **Shoot <Scene Name>**
-> — <N> clips: <list canonical .mp4 filenames>
-> — Boundaries: <clip i -> i+1: continue|cut, reason; ...>
-> — Source: <storyboard `<key>` (frame i = start frame of shot i) | shotlist + visual shots (fallback)>
-> — Worker skill: `shoot-single-scene` · preferred workflow: `<workflow name>`
-> — <fallback path only: M single-cut clip(s) will need T2I keyframe generation before rendering>
-> — Output artifact: `scene<N>_shooting` (<total file count> declared slots)"
+> "Scheduled scene <N>: <total> clip tasks + assembly
+> — clip 1 `scene<N>_clip1_<slug>.mp4` (<d>s) · start
+> — clip 2 … · continue (after clip 1) | cut (parallel)
+> — …
+> — `assemble_scene<N>` -> `scene<N>_assembled.mp4` (after all clips)
+> — Worker skills: `shoot-clip`, `assemble-scene` · preferred workflows: `<start wf>` / `<continuation wf>`
+> — Skipped (already scheduled): <keys, if any>"
 
 ---
 
 ## Key rules
 
 1. **Resolve intent before reading artifacts** — never start a discovery pass until scene and workflow are unambiguous.
-2. **Storyboard design first** — use the finished `storyboard_scene_<n>` when it exists; fall back to the shotlist + visual-shots pair only when no storyboard design exists. Bail on missing or unapproved prerequisites; do not create a partial task. No other pre-production artifact (cast, visual bible, art direction) is required.
-3. **Idempotency** — if a Shoot task for this scene already exists and is live, do not create another.
-4. **Canonical filenames are set in Step 3** — derive them once, embed them in the task description and artifact files list. The worker locks onto these; renaming causes slot mismatch and completion rejection.
-5. **Filenames must match exactly** — Before calling `create_task`, confirm that every filename in the task description's "Clips to render" list appears verbatim in the `files` list passed to `create_artifact`, and vice versa. Any mismatch causes `buildArtifacts` to reject the task — fix it before creating the task, not after.
-6. **create_artifact immediately follows create_task** — do not read the next scene or do anything else between the two calls.
-7. **Fallback single-cut clips need T2I** — declare their `.mp4` slot normally; the `shoot-single-scene` worker skill handles keyframe generation automatically.
+2. **Storyboard design only** — the finished `storyboard_scene_<n>` is the source; bail on a missing or unapproved one. No partial scheduling. No other pre-production artifact (cast, visual bible, art direction) is required.
+3. **One task per clip, one assembly task** — never one task for several clips.
+4. **Dependencies** — `continue` clip: `requires_artifacts: [scene<N>_clip<M-1>]` (starts once the predecessor is approved and reads its real file); `cut` clip: no clip dependency; assembly: all clip tasks and artifacts.
+5. **Idempotency** — skip every clip / assembly task whose key already exists and is live; never duplicate.
+6. **Canonical names are set in Step 3b** — derive them once, embed them in each task prompt and `output_files`; filenames in the prompt's "Output files" list must match `output_files` exactly (a mismatch makes the task build reject).
+7. **Each `create_task` carries its output artifact inline**, issued one per round using the identifiers the previous result reported.
