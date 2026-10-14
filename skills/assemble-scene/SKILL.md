@@ -2,7 +2,9 @@
 name: assemble-scene
 description: >
   Use when the task prompt says "Load and use skill: assemble-scene", or tasks you with joining
-  the rendered clips of one scene into a single scene video — e.g. "assemble scene 2". Produces
+  the rendered clips of one scene into a single scene video — e.g. "assemble scene 2", "stitch the
+  clips of scene 3", "render the final cut of scene 1" (a direct user request is turned into the
+  `assemble_scene<N>` task by the coordinator skill shoot-scene-task). Produces
   one mp4 with all clips back to back in clip order (ffmpeg in the sandbox, no transitions).
   Do NOT invoke for rendering or shooting clips (shoot-clip), planning a scene
   (shoot-scene-task), quality checks, or full-film assembly.

@@ -5,7 +5,9 @@ description: >
   e.g. "shoot scene 2", "let's film scene 1", "create a task to shoot the hotel lobby scene".
   Validates prerequisites, reads the scene's finished storyboard design (shot list + keyframes),
   and schedules ONE task per clip (one clip per shot) plus one assembly task that joins the
-  clips into the scene video.
+  clips into the scene video. Also handles direct assembly requests — "assemble scene 3",
+  "stitch the clips of scene 2", "render the final cut of scene 1" — by (re)creating only the
+  missing `assemble_scene<N>` task (see "Assembly-only requests").
   Do NOT invoke for storyboard design or keyframe rendering (storyboard-scene), prompt writing,
   rendering a single clip yourself (worker skill shoot-clip), or any task that does not result
   in producing final video clips for a named scene.
@@ -29,6 +31,21 @@ storyboard design, plans one clip per shot, and schedules **one task per clip** 
 `shoot-clip`) plus **one assembly task** (worker skill `assemble-scene`). Per-clip tasks render
 in parallel where the story allows, can be retried, reviewed and checked individually, and keep
 every worker's context small.
+
+---
+
+## Assembly-only requests
+
+"Assemble scene N", "stitch the clips of scene N", "render the final cut of scene N" (the former
+`scene-assembler` intents) are this skill too: the worker skill `assemble-scene` runs only as the
+task `assemble_scene<N>` created here. Handle them as follows:
+
+- Resolve the scene (Step 0; no video workflow is needed). Run Step 1c's `task_index` check.
+- Clip tasks `shoot_scene<N>_clip<M>` missing -> the scene was never shot: say so and offer the
+  full shoot (Steps 1-5) instead; never assemble a subset.
+- `assemble_scene<N>` exists and is live -> tell the user, create nothing. Failed or cancelled ->
+  create it again (Step 4b only), listing every clip's artifact as in 4b.
+- Otherwise create just the Step 4b task and confirm with the one assembly line of Step 5.
 
 ---
 
