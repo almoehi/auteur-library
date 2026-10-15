@@ -4,7 +4,7 @@ description: >
   Use when your task prompt says "Load and use skill: plan-designs" — turn the character
   table and the scene list into a design plan and create one studio design (character,
   outfit, location) for every entry with create_design, then one storyboard design per scene.
-  Produces design_plan.json and the scheduled design tasks. Outfit designs are created only for looks differing visibly from a character's base look. Do NOT invoke for drafting or
+  Produces design_plan.json and the scheduled design tasks. Outfit designs are created only for looks differing visibly from a character's base look (nudity-allowed workspace: adult characters are designed nude and every clothed look is an outfit; explicit scenes get catalog NSFW LoRAs attached). Do NOT invoke for drafting or
   rendering design images (design-asset) or storyboard keyframes (storyboard-scene), writing
   screenplays or scene lists, or creating a single design on request.
 agentType: worker
@@ -17,8 +17,13 @@ Your output files are plain text only: `scene_list.md` (Markdown) and `design_pl
 You never render images. Each `create_design` creates a design task that a design worker
 (skill `design-asset`, for storyboards `storyboard-scene`) and the person in the design studio continue.
 
-You run on the `design_planner` agent. Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file`, `create_design`,
+You run on the `design_planner` agent. Tools: `artifact_index`, `task_index`, `read_artifact`, `lora_index`, `sandbox_write_file`, `create_design`,
 `task_complete`, `task_failed`.
+
+**Content policy** (`{workspace.contentPolicy.nudity}`; absent or empty = `forbidden`) decides two
+things below: the base look of a character ("Base look and outfits") and the NSFW LoRA plan
+(Phase 1 step 6). A minor (a child, teen or anyone under 18) is ALWAYS planned as under
+`forbidden`, whatever the policy.
 
 ## Phase 0 — Preflight
 
@@ -46,7 +51,16 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
    - **looks**: distinct (character_slug, look_slug) pairs from the `Outfits` column, plus
      looks in WARDROBE TRACKERs that are used in a scene. Looks are candidates only; see
      "Base look and outfits" below for which become outfit designs.
-2. **Base look and outfits** (per character, decide before writing anything):
+2. **Base look and outfits** (per character, decide before writing anything). Two regimes:
+   - **Nudity `allowed`, adult character - nude base**: the character design is the character's
+     NUDE body (identity reference for every shot; dressing an image is reliable, undressing is
+     not). Its base `wardrobe` attribute is `nude` and `base_look` is `nude`. EVERY clothed look a
+     scene uses - the most-worn one and a character's only look included - becomes an outfit design
+     (drafted as an edit dressing the nude primary). A scene-list pair whose look is no clothes /
+     nude / naked (whatever its slug) is covered by the character design: no outfit, no link. The
+     "These are NOT outfits" rules below still apply to everything else (garment states,
+     accessory-only changes).
+   - **Otherwise (nudity `forbidden`, or a minor) - clothed base**, as follows.
    - Choose ONE **base look**: the look the character wears in the most scenes (tie: the look of
      their first appearance). The character design wears it: it becomes the character's base
      `wardrobe` attribute, and its slug is recorded as `base_look` on the character entry of
@@ -76,12 +90,11 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 
    Every character gets a base `wardrobe` = their base look (see "Base look and outfits"; e.g.
    "school uniform", "worn leather jacket, jeans"), described from the WARDROBE TRACKER, even
-   when other looks are separate outfit designs; when the sources state none, give a plain everyday one ("simple, plain everyday clothing"). Follow the
-   workspace content policy (`{workspace.contentPolicy.nudity}`; absent or empty = forbidden):
-   when it is `forbidden` - or ALWAYS for a minor (a child, teen or anyone under 18) whatever
-   the policy - depict people fully clothed (use the wardrobe attribute, else simple everyday
-   clothing) and put 'nudity, nude, naked' in the negative prompt; when it is `allowed`, follow
-   the brief (do not add clothing or a nudity negative on your own).
+   when other looks are separate outfit designs; when the sources state none, give a plain everyday one ("simple, plain everyday clothing").
+   Nude base (nudity `allowed`, adult): `wardrobe` = `nude` - never a garment, the clothed looks
+   are outfits. Under `forbidden` - or ALWAYS for a minor whatever the policy - people are fully
+   clothed (use the wardrobe attribute, else simple everyday clothing) and 'nudity, nude, naked'
+   goes in the negative prompt.
    **One moment per design picture**: a design (a location above all) gets ONE base `time_of_day`,
    `lighting`, `weather` and season - the one its first scene uses (else the most common one). Never
    list several together in one attribute ("night, also sun-flooded morning" renders as a
@@ -89,7 +102,31 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
    design, not extra attribute text.
    Put only what the sources state; omit unknown keys (except the base `wardrobe`). `character_type` is passed as its own
    argument, not inside `attributes`.
-6. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
+6. **NSFW LoRA plan** (only when nudity is `allowed`; skip entirely otherwise, and never for a
+   scene with a minor in it). The base model renders explicit content only with the right LoRAs,
+   so plan them per design now - the design workers load what you attach:
+   1. From each scene's row and Beats, list the explicit **content** it shows, as short tags in
+      three groups: **acts** (the sex act / position: e.g. blowjob, missionary, cowgirl,
+      doggystyle, masturbation, kissing nude), **anatomy / detail** (nude bodies: breasts,
+      nipples, genitals (female / male), pubic hair, erection, ...), **poses** (body pose or
+      framing an act needs: kneeling, spread legs, lying on back, POV, ...). A scene without
+      nudity or sex has none.
+   2. Call `lora_index()` ONCE. For every tag pick the catalog LoRA whose **trigger words or
+      description** match it (several tags may share one LoRA). Never invent a name; never pick a
+      LoRA that matches no tag ("never load a LoRA just because the catalog has one"). Note each
+      LoRA's `modelFamily`.
+   3. **Attach** (the `loras` argument of `create_design`, names exactly as `lora_index` lists
+      them, strength omitted = the catalog default):
+      - **storyboard** of the scene: its act, anatomy and pose LoRAs (the storyboard worker picks
+        per shot which apply);
+      - **character** (nude base): the anatomy / detail LoRAs of its sex (general nude-body ones,
+        never act LoRAs) - so the nude reference is anatomically right;
+      - outfits and locations: none.
+      At most 4 LoRAs per design, most important first: act > anatomy > pose.
+   4. Tags without a catalog LoRA are **missing**: list them (per scene) in `design_plan.json`
+      `nsfw_loras.missing` and in the summary, so the person can import one (Civitai import in the
+      studio / API) - never block on them.
+7. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
    `scene_list.md` first (an exact, character-for-character copy of the `scene_list` artifact's text as you read it; no edits, no summary) because the `design-plan-covers-scenes` task check judges the contents of all your output files, then `design_plan.json`:
 
 ```json
@@ -113,6 +150,21 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 }
 ```
 
+Nudity `allowed` adds the LoRA plan (and an adult character's `base_look` is `"nude"` with
+`wardrobe` `"nude"`). `characters` / `storyboards` map a design to its attached LoRA names:
+
+```json
+"nsfw_loras": {
+  "scenes": [
+    { "scene": 3, "acts": ["blowjob"], "anatomy": ["breasts", "penis"], "poses": ["kneeling", "pov"],
+      "loras": ["<catalog name>", "<catalog name>"] }
+  ],
+  "characters": { "sister": ["<catalog name>"] },
+  "storyboards": { "3": ["<catalog name>", "<catalog name>"] },
+  "missing": [ { "scene": 3, "tags": ["deepthroat"] } ]
+}
+```
+
 Both file names are canonical: write exactly `scene_list.md` and `design_plan.json` into the `design_plan` artifact. If the files declared on the artifact differ, still write these two names and report the mismatch in the `task_complete` summary (line `file mismatch: <declared> vs scene_list.md, design_plan.json`). Every outfit's `character_slug` must exist in `characters`, every character has a `base_look` (the look slug it wears; omit only when the sources name no look at all), and no outfit's `look_slug` equals its character's `base_look`.
 
 ## Phase 2 — Create the designs
@@ -120,7 +172,7 @@ Both file names are canonical: write exactly `scene_list.md` and `design_plan.js
 Order: all characters first, then locations, then outfits (an outfit links to its character), then the storyboards (they link to the designs created before).
 Skip any entity whose key is in `existing` (record as skipped). One call per entity:
 
-- character: `create_design({ kind: "character", display_name: "<name>", start: "attributes", character_type, attributes, initial_drafts: 1 })`
+- character: `create_design({ kind: "character", display_name: "<name>", start: "attributes", character_type, attributes, initial_drafts: 1 })` (+ `loras: [{ "name": "<catalog name>" }, …]` from the NSFW LoRA plan, when it has any)
 - location: `create_design({ kind: "location", display_name: "<name>", start: "attributes", attributes, initial_drafts: 1 })`
 - outfit: `create_design({ kind: "outfit", display_name: "<display_name>", start: "attributes", attributes, initial_drafts: 1, links: [{ "role": "character", "key": "character_<character_slug>" }] })`
 
@@ -144,13 +196,15 @@ registry, mapped from the scene's row:
 - `characters`: the keys of every slug in `Characters present` (one link each);
 - `outfits`: the keys of every `<character_slug>:<look_slug>` pair of the `Outfits` column
   (one link each). A pair whose look is the character's `base_look` has no outfit design: the
-  character link covers it (no outfit link, not reported as missing). Any other pair whose outfit
+  character link covers it (no outfit link, not reported as missing). With a nude base that is
+  exactly the nude / no-clothes pairs; every clothed pair links its outfit. Any other pair whose outfit
   design failed or does not exist is dropped and noted.
 
 ```
 create_design({ kind: "storyboard", display_name: "Scene <n>", start: "attributes",
   attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<Summary of the scene, optional>" } ],
   initial_drafts: 1,
+  loras: [ { name: "<catalog name>" }, … ],   // NSFW LoRA plan of the scene; omit when none
   links: [ { role: "location", key: "<location key>" },
            { role: "character", key: "<character key>" }, …one per character…
            { role: "outfit", key: "<outfit key>" }, …one per outfit… ] })
@@ -169,6 +223,8 @@ needs the `scene_list` artifact (it is approved). The storyboard's duplicate-nam
   noted); different kind -> retry once with a suffixed display name (`<name> (place)` / slug
   suffix) and record the rename.
 - Outfit refused for a missing character: create the character first, then retry.
+- A `loras` name refused as unknown: re-check `lora_index`, retry once with the exact names (or
+  without the unknown one); never drop the design over a LoRA - note it under `missing`.
 - Any other error: retry once; if it fails again record it as failed and continue.
 
 ## Phase 3 — Pre-completion audit
@@ -186,7 +242,9 @@ Keep replies concise (see "Concise replies and task/artifact URIs" in `workflow-
 design plan: <n> characters, <n> locations, <n> outfits (non-base looks only), <n> storyboards - all created
 skipped (existing): <count, or keys only if few>
 failed: <key: error> or none
+nsfw loras: <n> attached to <n> designs; missing: <scene: tags> or none
 ```
+(the `nsfw loras` line only when nudity is `allowed`.)
 Add `renamed:` / `file mismatch:` lines only when they occurred.
 
 ## Key rules
@@ -196,7 +254,8 @@ Add `renamed:` / `file mismatch:` lines only when they occurred.
 3. `start` is always `"attributes"`, `initial_drafts` 1.
 4. Idempotent: never recreate an existing design.
 5. Never write `design.json` or any design file; only `design_plan.json` and `scene_list.md`.
-6. Outfits only for looks that differ visibly from the character's base look (the character design covers the base look).
+6. Outfits only for looks that differ visibly from the character's base look (the character design covers the base look). Nudity `allowed`: adult characters are designed nude and every clothed look is an outfit.
+8. Nudity `allowed`: explicit scenes get catalog LoRAs (acts, anatomy, poses) attached via `create_design` `loras` - only matching ones, max 4 per design, missing ones reported, never invented.
 7. One storyboard per scene (`storyboard_scene_<n>`), created last, linked by the ACTUAL
    design keys from the create results; existing storyboards are skipped. Storyboards are not
    part of `design_plan.json`.
