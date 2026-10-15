@@ -17,6 +17,7 @@ name: krea2_base_realism_nsfw
 description: Simple workflow to create images from a prompt using the krea2 model. This got updated. NSFW variant, the KNPV4.1_pre NSFW LoRA (0.9) is baked in. The Krea2-realism-V1 realism LoRA (1.0) is baked in too.
 url: workflow.json
 model_family: krea2
+content: nsfw
 workflow_type: t2i
 gpu_types: [rtx4090, l40s]
 ports:

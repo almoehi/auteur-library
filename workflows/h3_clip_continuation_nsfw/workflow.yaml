@@ -30,6 +30,7 @@ description: >
 url: workflow.json
 workflow_type: ref2va
 model_family: minimaxh3
+content: nsfw
 gpu_types: [a100, h100, b200]
 # sage_attention ships "disabled" (node our_sage_kj). The upstream graph's SageAttention patch failed on
 # l40s (sm_89) and h100 (sm_90) with "CUDA error: no kernel image is available" because the

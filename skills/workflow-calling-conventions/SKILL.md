@@ -96,6 +96,14 @@ In multi-reference image workflows Picture 1 is the anchor (keeps framing and lo
 
 A ref2i (reference-to-image) prompt is a scene description naming the pictures by label, not an edit instruction.
 
+## NSFW-marked workflows (content policy)
+
+A workflow whose description starts with **[nsfw]** renders nudity and sex. Choose by the workspace content policy (`{workspace.contentPolicy.nudity}`; absent = forbidden), never by name:
+- `forbidden`, or any shot / design depicting a minor (whatever the policy): never use an [nsfw] workflow (a forbidden workspace refuses them anyway).
+- `allowed`, and the frame shows nudity or sex between adults: among workflows of the SAME capability prefer the [nsfw] one; capability still comes first (an [nsfw] edit never replaces a needed reference-to-image).
+- **Explicit sex acts** cannot be composed from references or edited into a frame (the people keep their reference poses). Two steps: (1) render the act with the [nsfw] text-to-image workflow plus the act LoRA from the catalog (`lora_index`: missionary, blowjob, deepthroat, ...), describing the room of the location design; (2) put each character in with the [nsfw] multi-reference edit, ONE person per call (Picture 1 = the act frame, then the previous output; Picture 2 = that character's primary): "Replace the woman in image 1 with the adult woman from image 2 ... Leave the man unchanged. Keep the exact poses, camera angle, framing and room of image 1." Never pass two people as one picture for a swap. Frame people large: small figures in a wide shot barely take the identity.
+- Call every depicted person an adult in the prompt.
+
 ## Key rules
 
 Call `wf_xxx` for every shot or batch your task defines, `task_complete` only afterwards (never after just reading the artifact); read artifacts with `read_artifact`; set `prompt_route` on every prompted call; check every take, retry at most once.

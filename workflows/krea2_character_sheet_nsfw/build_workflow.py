@@ -411,6 +411,7 @@ SFW_HEADER = """# GENERATED from krea2_character_sheet_nsfw by its build_workflo
 # Patterns are regexes (re.S); the replacement is literal text.
 SFW_YAML_EDITS = [
     (r"name: krea2_character_sheet_nsfw\n", "name: krea2_character_sheet\n"),
+    (r"content: nsfw\n", ""),
     (r"description: >\n.*?\nurl:", """description: >
   Turns ONE image of a character into a 13-panel clothed character reference sheet with fixed poses:
   full body front, side and back; front, back and profile portraits; four facial expressions; and
