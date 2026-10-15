@@ -227,6 +227,11 @@ try {
   check('has primary output', manifest.outputs?.some((o: any) => o.role === 'primary'), JSON.stringify(manifest.outputs));
   const seedParam = manifest.params?.find((p: any) => p.name === 'seed');
   check('has numeric seed param (seed: true, bound to RandomNoise.noise_seed)', seedParam?.seed === true && seedParam?.kind === 'int', JSON.stringify(seedParam));
+  // LoRA ports: tolerate whichever manifest section carries them (loras / inputs / params).
+  const portNames = new Set<string>(
+    [...(manifest.loras ?? []), ...(manifest.loraPorts ?? []), ...(manifest.lora_ports ?? []), ...(manifest.inputs ?? []), ...(manifest.params ?? [])]
+      .map((p: any) => p.name));
+  for (const n of ['lora_1', 'lora_2', 'lora_3', 'lora_4']) check(`lora port ${n} declared`, portNames.has(n), [...portNames].join(','));
 
   // 1b. Pre-flight: verify model URLs from YAML before spending GPU budget ────
   // Parses YAML directly — authoritative source of URLs, same data loadFromContent used.
