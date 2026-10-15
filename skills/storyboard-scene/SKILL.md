@@ -48,15 +48,22 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
 ## Reading inputs (compact, once)
 
 - `read_artifact(artifactId="<task id>")` ONCE → artifact **id**, existing files, `design.json`
-  (`scene`, optional `notes`, drafts per shot = `initialDrafts` (default 1), `links`: `location`,
-  `characters`, `outfits`).
+  (`scene`, optional `notes`, drafts per shot = `initialDrafts` (default 1), `links`: `location`
+  - ONE OR SEVERAL location links, the first is the scene's default place -, `characters`,
+  `outfits`). Every location a shot uses must be one of the linked locations: a shot's
+  `Location:` is the key of a linked location design (see "One shot = one place").
 - Read `scene_list` (the scene's row: location, time of day, summary, characters, outfits as
   `<character_slug>:<look_slug>`; below the table the scene's **Beats**: per beat the action,
-  framing, camera move and continuity) and the `screenplay` (if it exists; use the scene's slice for
+  framing, camera move and continuity - `continuous`, `parallel` (happens at the same time somewhere
+  ELSE, names its place) or `new moment`) and the `screenplay` (if it exists; use the scene's slice for
   action and mood) exactly ONCE each. Never re-read them later.
 - Read each linked design ONCE, compactly: `read_artifact` of a design returns a server-side
   compact digest in later turns; use only `artifact_index` / the published description. Never
   copy or restate design documents, takes history or file lists.
+- Map each place name (the scene row's location slug and the place named by every `parallel` beat)
+  to the linked key `location_<slug>` (keys in `design.json.links` are the truth). A place with no
+  linked location design cannot be a shot's `Location:`: use the nearest linked location and name
+  the gap in the summary.
 - Map `<character_slug>:<look_slug>` to the linked keys `character_<slug>` / `outfit_<slug>_<look>`
   (keys in `design.json.links` are the truth). A pair with no linked outfit design is a character's
   BASE LOOK (read `base_look` from `design_plan.json` when available): the linked character design
@@ -71,7 +78,7 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   in the summary - never let a clothed shot come out nude.
 - **Preflight** — if any fails do not guess: render nothing, `task_complete` saying exactly what
   is missing: the scene number (`scene` attribute or task id); a readable `scene_list` with a row
-  for it; each linked design readable with a published `primary.<ext>`
+  for it; at least one linked location; each linked design readable with a published `primary.<ext>`
   (`artifact://<id>/primary.<ext>`); at least one image-rendering `wf_*` tool.
 
 ## Phase 1 — Shot list
@@ -83,13 +90,61 @@ ONE write of `/workspace/<artifact id>/shotlist.md`, one section per shot, exact
 
 ## s3-01 — Short title
 Action: what is VISIBLE in the frame, in one or two sentences
-Camera: KEYFRAME framing - shot size, angle, lens feel of the still image (e.g. "wide, eye level")
-Movement: the camera move of the VIDEO clip of this shot (e.g. "slow push-in", "pan left", "hold")
+Location: location_harbor        (key of the ONE linked location design this shot takes place in)
+Camera: KEYFRAME framing - the OPENING frame of the shot (= the keyframe): shot size, angle, lens feel (e.g. "wide, eye level")
+Movement: the camera move of the VIDEO clip of this shot, within the same place (e.g. "slow push-in", "pan left", "hold")
 Characters: mira, jonas        (character slugs, comma-separated, or "none")
 Outfits: mira:raincoat; jonas:work_suit      (<character>:<look> pairs, "; "-separated, or "none")
 Duration: 5
 Transition: cut — new moment, first shot of the scene
 ```
+
+### One shot = one place + one opening framing
+
+A keyframe is ONE image: the shot's opening frame. So a shot holds exactly ONE place
+(`Location:`) and ONE opening framing (`Camera:`). `Camera` is that opening frame - exactly what
+the keyframe shows; `Movement` only moves within the SAME place (a push-in, a pan across the same
+room). Never pack two places or two framings into one shot ("POV tight on the sister, then sudden
+wide to the driveway" gives a keyframe with neither).
+
+Action happening ELSEWHERE at the same time ("meanwhile", a car arriving outside, someone at the
+door, a phone ringing in another room) is its OWN **cutaway shot**: its own `Location:` (a linked
+location design), its own `Camera`, `Transition: cut — cutaway (parallel action)`. If the main
+action continues afterwards, it resumes in a FOLLOWING shot (back in the first place,
+`Transition: cut — back to <the main action>`). A scene-list beat with Continuity `parallel` is
+exactly such a cutaway shot, at the place the beat names.
+
+Worked example (beats: "sister freezes at the wall" - continuous; "car pulls up at the driveway" -
+parallel, driveway; "sister reacts" - continuous):
+
+```
+## s3-02 — Sister freezes
+Action: The sister stands pressed against the hallway wall, eyes wide, hand flat on the plaster.
+Location: location_hallway
+Camera: tight close-up on the sister, eye level
+Movement: slow push-in
+Transition: continue — same moment, framing changes
+
+## s3-03 — Car arrives
+Action: A dark car pulls up at the end of the driveway, headlights on the gravel.
+Location: location_driveway
+Camera: wide, low angle across the driveway
+Movement: hold
+Transition: cut — cutaway (parallel action)
+
+## s3-04 — Her reaction
+Action: The sister stays against the wall, breath held, glancing toward the window.
+Location: location_hallway
+Camera: medium close-up, eye level
+Movement: slow pan toward the window
+Transition: cut — back to the sister's reaction
+```
+
+(each shot also carries `Characters`, `Outfits` and `Duration`; omitted here for brevity.)
+
+**`Location`** (ALWAYS written) = the key of the linked location design this shot takes place in
+(`location_driveway`), never a free name. A shot at the scene's default place uses the first
+linked location.
 
 **`Movement`** = the camera move of the video clip shot from this frame, taken from the shot's
 beat in the scene list's **Beats** (one shot per beat, in order; the beat's `Camera move` verbatim,
@@ -103,8 +158,9 @@ IMAGE (a still has no movement): do not put a move into `Camera`, and keyframe p
 `Continuity` in the scene list: `Transition: continue — <short reason>` when the beat is
 `continuous` (the action carries straight on in the same setup: same place, same moment, same
 people) **even when the framing changes** (wide -> close-up of the same moment); `Transition:
-cut — <short reason>` when the beat is a `new moment` (new moment, place or subject, or an
-insert). The first shot is always `cut`. A scene list without `Continuity` (older list): decide
+cut — cutaway (parallel action)` when the beat is `parallel` (it happens at the same time
+somewhere else: a shot of its own at the place the beat names); `Transition: cut — <short
+reason>` when the beat is a `new moment` (new moment, place or subject, or an insert). The first shot is always `cut`. A scene list without `Continuity` (older list): decide
 with the same rule from the actions and say so in the reason. The shoot skills take this line as
 given, so it is decided here once.
 
@@ -113,10 +169,11 @@ dialogue or camera motion.
 Good: `Action: Mira stands at the harbor rail, hood up, looking out to sea; Jonas sits on a crate behind her.`
 Bad: `Action: Mira, who just learned the ship is late, walks to the rail and says "He lied to us" as the camera pushes in.`
 
-4–10 shots, covering the WHOLE action in order, one beat per shot, an establishing shot first when
-the location is not yet known. `Duration` = whole seconds (3–10). Ids consecutive from 01, never
+4–10 shots, covering the WHOLE action in order, one beat per shot (a beat that packs two places or
+two framings is split into several shots), an establishing shot first when the location is not
+yet known. `Duration` = whole seconds (3–10). Ids consecutive from 01, never
 renumbered except by a rewrite the person asked for. `Characters` / `Outfits` name only linked
-designs (others: in `Action` only).
+designs (others: in `Action` only); `Location` names only a linked location design.
 
 ## Phase 2 — Render the initial drafts (all shots, batched)
 
@@ -154,8 +211,9 @@ Read each candidate's description and `get_workflow_instructions(<tool>)`. Prefe
 name the prompt must use, e.g. "Picture 2"); else infer from workflow type, number/kind/ORDER of
 image inputs, required ports and port descriptions. Never pick by a tool's name or family.
 
-References in priority order (keyframe = COMPOSE intent, location is the anchor, Picture 1; see
-"Anchor (Picture 1) by intent"): 1. location primary; 2. outfit primary of the shot's main
+References in priority order (keyframe = COMPOSE intent, the SHOT's location - its `Location:`
+line, not necessarily the scene's first - is the anchor, Picture 1; see
+"Anchor (Picture 1) by intent"): 1. primary of the shot's `Location:` design; 2. outfit primary of the shot's main
 character (its own primary if no outfit design: the character design shows the base look; with
 a nude base: the outfit primary when clothed in this shot, the character primary when nude, see
 "Nude base"); 3. further outfits / characters by presence.
@@ -211,9 +269,10 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 Audit before completing:
 
 - [ ] `shotlist.md` written exactly once; every shot has `## <shotId> — <title>` plus `Action`,
-      `Camera`, `Movement`, `Characters`, `Outfits`, `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
+      `Location` (a linked location key), `Camera`, `Movement`, `Characters`, `Outfits`, `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
       every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
-      every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`
+      every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
+      a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings
 - [ ] every shot has `take_<shotId>-draft-<n>.<ext>` for n = 1 … drafts per shot (re-read the
       artifact), except drafts that failed twice (name them); all from `wf_*` renders
 - [ ] no other file written; `design.json` untouched; no published names
@@ -232,7 +291,7 @@ For each message:
 
 1. `read_artifact` again; read `design.json` for takes, primary/selection and discarded takes. A
    take you rendered earlier that is gone was discarded on purpose — never re-render it or its name.
-2. **Shot list changes** (add / remove / reorder / retitle / change action, camera, movement or transition): rewrite
+2. **Shot list changes** (add / remove / reorder / retitle / change action, location, camera, movement or transition): rewrite
    `shotlist.md` as a whole file (the one allowed overwrite), ids renumbered consecutively; re-derive `Transition` of every shot whose predecessor changed (the first stays `cut`).
    Existing takes keep their file names — say takes of a renumbered shot stay under their old id;
    render nothing unless asked or the shot is new (new shots get drafts as in Phase 2, one batch).
