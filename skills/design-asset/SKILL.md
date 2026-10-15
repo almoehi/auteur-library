@@ -89,8 +89,9 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
    workflow's negative-prompt port, keeping its default text before these terms), in every
    render of a person, chat-phase edits and variations included. When it is `allowed`, follow
    the brief (do not add clothing or a nudity negative on your own), and:
-   - **Character with `wardrobe` `nude`** (the nude base of a nudity-allowed plan): render the
-     adult character fully NUDE - full body, neutral standing pose, facing the camera, plain
+   - **Character with `wardrobe` `nude`** (the nude base of a nudity-allowed plan) - only when the
+     attributes show an adult (else follow the `forbidden` rule above): render the
+     character fully NUDE - full body, neutral standing pose, facing the camera, plain
      backdrop, face clearly visible, no garments, no covering hands or props. It is the identity
      reference every outfit dresses and every nude shot binds, so anatomy must be complete and
      natural. Use the [nsfw] text-to-image workflow (see "NSFW-marked workflows" in

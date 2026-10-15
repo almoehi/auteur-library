@@ -61,11 +61,14 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   (keys in `design.json.links` are the truth). A pair with no linked outfit design is a character's
   BASE LOOK (read `base_look` from `design_plan.json` when available): the linked character design
   covers it - use the character's primary for it and do not report it as missing.
-- **Nude base** (nudity-allowed workspace: the character's `base_look` / `wardrobe` is `nude`): the
-  character primary is the NUDE body. Bind it ONLY for a shot where that character is nude; a shot
-  where they wear clothes binds the shot's outfit primary for them. A clothed pair with no linked
-  outfit design (an older plan) → bind the character primary, describe the garments in the prompt
-  and name the gap in the summary - never let a clothed shot come out nude.
+- **Nude base** (THE binding rule for nude vs clothed; nudity-allowed workspace): a character
+  whose design has `wardrobe` `nude` (its `design.json` attributes; `base_look` `nude` in
+  `design_plan.json`) has a NUDE primary. Each shot's `Outfits:` line names that character's look
+  IN THIS SHOT: `<character>:nude` when nude there, else the clothed look's pair. Bind the
+  character primary ONLY for `:nude`; every clothed pair binds its linked outfit primary (a
+  garment-state or accessory variant: the outfit of the look it varies). A clothed pair with no
+  outfit link → bind the character primary, describe the garments in the prompt and name the gap
+  in the summary - never let a clothed shot come out nude.
 - **Preflight** — if any fails do not guess: render nothing, `task_complete` saying exactly what
   is missing: the scene number (`scene` attribute or task id); a readable `scene_list` with a row
   for it; each linked design readable with a published `primary.<ext>`
