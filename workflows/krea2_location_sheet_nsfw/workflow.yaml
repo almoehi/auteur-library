@@ -158,7 +158,7 @@ context: |
   Best for location and environment reference sheets when you have a descriptive text prompt
   and need multiple consistent viewpoints of the same space assembled into a compact grid.
 
-  Two modes (same for krea2_character_sheet): with `reference_image` the supplied image is the
+  Two modes: with `reference_image` the supplied image is the
   anchor — the reference wins over the KREA-2 stage (still evaluated, result discarded) and prompt / anchor_width / anchor_height /
   steps / cfg / seed are not used to generate it; without it the anchor is generated from
   `prompt_location`. The reference is center-cropped to 16:9 (1216×672) before the orbit starts.
