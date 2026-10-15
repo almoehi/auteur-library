@@ -18,6 +18,26 @@
       "title": "Load Diffusion Model"
     }
   },
+  "150": {
+    "inputs": {
+      "model": [
+        "126",
+        0
+      ],
+      "clip": [
+        "133",
+        0
+      ],
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "➕ Add Lora": ""
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "Power Lora Loader (rgthree)"
+    }
+  },
   "133": {
     "inputs": {
       "clip_name": "qwen_3_8b_fp8mixed.safetensors",
@@ -75,7 +95,7 @@
   "139": {
     "inputs": {
       "model": [
-        "126",
+        "150",
         0
       ]
     },
