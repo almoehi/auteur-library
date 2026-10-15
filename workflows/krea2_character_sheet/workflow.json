@@ -1459,13 +1459,13 @@
   "1605": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They smile warmly with their mouth open and the upper teeth visible, looking into the camera. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Close-up head-and-shoulders portrait facing the camera, the face filling the frame. They smile warmly with their mouth open and the upper teeth visible, looking into the camera. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "1604": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She smiles warmly with her mouth open and the upper teeth visible, looking into the camera. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Close-up head-and-shoulders portrait facing the camera, the face filling the frame. She smiles warmly with her mouth open and the upper teeth visible, looking into the camera. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "1606": {
@@ -1552,8 +1552,8 @@
         "23",
         0
       ],
-      "ref_boost": 4.0,
-      "ref_boost_a": 2.5
+      "ref_boost": 3.0,
+      "ref_boost_a": 4.0
     }
   },
   "1623": {
@@ -1670,13 +1670,13 @@
   "1705": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Their expression is frightened: eyes wide open, eyebrows raised and drawn together, mouth slightly open. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Close-up head-and-shoulders portrait facing the camera, the face filling the frame. Their expression is frightened: eyes wide open, eyebrows raised and drawn together, mouth slightly open. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "1704": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Her expression is frightened: eyes wide open, eyebrows raised and drawn together, mouth slightly open. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Close-up head-and-shoulders portrait facing the camera, the face filling the frame. Her expression is frightened: eyes wide open, eyebrows raised and drawn together, mouth slightly open. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "1706": {
@@ -1763,8 +1763,8 @@
         "23",
         0
       ],
-      "ref_boost": 4.0,
-      "ref_boost_a": 2.5
+      "ref_boost": 3.0,
+      "ref_boost_a": 4.0
     }
   },
   "1723": {
@@ -1881,13 +1881,13 @@
   "1805": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They look physically exhausted and strained, not angry: eyebrows raised and pulled together, eyes half closed, mouth hanging open as they gasp for breath, head tipped slightly back. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Close-up head-and-shoulders portrait facing the camera, the face filling the frame. They look physically exhausted and strained, not angry: eyebrows raised and pulled together, eyes half closed, mouth hanging open as they gasp for breath, head tipped slightly back. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "1804": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She holds her mouth wide open, jaw dropped, teeth and tongue visible, eyes looking into the camera. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Close-up head-and-shoulders portrait facing the camera, the face filling the frame. She holds her mouth wide open, jaw dropped, teeth and tongue visible, eyes looking into the camera. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "1806": {
@@ -1974,8 +1974,8 @@
         "23",
         0
       ],
-      "ref_boost": 4.0,
-      "ref_boost_a": 2.5
+      "ref_boost": 3.0,
+      "ref_boost_a": 4.0
     }
   },
   "1823": {
@@ -2092,13 +2092,13 @@
   "1905": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Their expression is blissful delight: head tilted slightly back, eyes looking upward, a warm open-mouthed smile. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Close-up head-and-shoulders portrait facing the camera, the face filling the frame. Their expression is blissful delight: head tilted slightly back, eyes looking upward, a warm open-mouthed smile. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "1904": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Her expression is blissful delight: head tilted slightly back, eyes looking upward, a warm open-mouthed smile. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Close-up head-and-shoulders portrait facing the camera, the face filling the frame. Her expression is blissful delight: head tilted slightly back, eyes looking upward, a warm open-mouthed smile. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "1906": {
@@ -2185,8 +2185,8 @@
         "23",
         0
       ],
-      "ref_boost": 4.0,
-      "ref_boost_a": 2.5
+      "ref_boost": 3.0,
+      "ref_boost_a": 4.0
     }
   },
   "1923": {

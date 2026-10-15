@@ -105,6 +105,7 @@ PANELS = {
     "lying_top": (STRIP, "Seen from directly overhead, {he} lie{s} flat on {his} back on the floor, body stretched out in one straight horizontal line, arms along {his} sides, face looking straight up into the camera, the whole body from head to feet in frame. " + NO_MANNEQUIN),
 }
 
+SFW_CLOSE_UP = "Close-up head-and-shoulders portrait facing the camera, the face filling the frame. "
 # SFW: panels new to it, and the NSFW wording replaced (the mannequins there wear a t-shirt and shorts).
 SFW_PANELS = {
     "portrait_side_wide": (WIDE, "Head-and-shoulders portrait in exact left profile, neutral relaxed expression, lips closed. " + PROFILE_HEAD),
@@ -151,6 +152,9 @@ SLOTS = NSFW_SLOTS if VARIANT == "nsfw" else SFW_SLOTS
 PORTRAIT_SLOT = 8 if VARIANT == "nsfw" else 3  # the slot of the front portrait (output `portrait`)
 if VARIANT == "sfw":
     PANELS.update(SFW_PANELS)
+    # Without a framing sentence the edit follows the character's full-body pose instead of the close-up template.
+    for _panel in ("expr_smile", "expr_frightened", "expr_mouth_open", "expr_strained", "expr_pleasure"):
+        PANELS[_panel] = (WIDE, SFW_CLOSE_UP + PANELS[_panel][1])
 # Krea2EditModelPatch pull of the person (ref_boost) and of the template (ref_boost_a); `identity` = whether the
 # identity_prompt sentence is appended.
 TUNED = {"ref_boost": 4.0, "ref_boost_a": 2.5, "identity": True}
@@ -160,7 +164,9 @@ NSFW_PANEL_TUNE = {
     # Sat back on the heels instead of kneeling upright as the template does.
     "kneel_back": {"ref_boost": 2.0, "ref_boost_a": 5.0},
 }
+_EXPRESSION_TUNE = {"ref_boost": 3.0, "ref_boost_a": 4.0}  # the template pulls harder so the close-up framing holds
 SFW_PANEL_TUNE: dict[str, dict] = {
+    **{n: _EXPRESSION_TUNE for n in ("expr_smile", "expr_frightened", "expr_mouth_open", "expr_strained", "expr_pleasure")},
     # Same rear-view problem as the NSFW one.
     "fullbody_back": {"ref_boost": 2.0, "ref_boost_a": 5.0, "identity": False},
 }
