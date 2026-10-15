@@ -2,9 +2,13 @@
 # Original workflow: image_flux2_klein_9b_kv_image_edit
 # https://comfy.org/workflows/image_flux2_klein_9b_kv_image_edit-546732126bf6/
 #
+# Catalog LoRAs: a Power Lora Loader (node 150) between the UNet and the KV cache takes the four
+# LoRA ports. flux2_image_edit_nsfw is GENERATED from this bundle by derive_nsfw.py - re-run it
+# after every change here.
+#
 # ─── Custom Nodes ─────────────────────────────────────────────────────────────
-# (none — every node class in this workflow is a built-in ComfyUI core node;
-#  see report.md "Custom Nodes" section)
+# Power Lora Loader (rgthree) is in nodes.lock; every other node is a built-in ComfyUI core node
+# (see report.md "Custom Nodes" section)
 # ──────────────────────────────────────────────────────────────────────────────
 
 name: flux2_image_edit
@@ -60,6 +64,31 @@ ports:
       seed: true
       required: false
       default: -1
+  loras:
+    - name: lora_1
+      kind: lora
+      description: "Optional LoRA slot 1 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_2
+      kind: lora
+      description: "Optional LoRA slot 2 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_3
+      kind: lora
+      description: "Optional LoRA slot 3 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_4
+      kind: lora
+      description: "Optional LoRA slot 4 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
   outputs:
     - name: edited_image
       kind: image
@@ -109,6 +138,9 @@ context: >
     change is being ignored or under-applied.
   - seed: vary it to get alternative takes of the same edit (e.g. fold or fit of a garment);
     keep it fixed while refining the instruction so only the wording changes the result.
+
+  LoRAs: up to four flux2 catalog LoRAs on lora_1..lora_4 (Klein 9B distilled ones work best;
+  0.5-1.0 strength).
 
   Known issues:
   - Edit not applied strongly enough: increase cfg slightly, or state the instruction more
