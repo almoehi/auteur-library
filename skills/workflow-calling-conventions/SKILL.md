@@ -36,6 +36,7 @@ Only when the `wf_xxx` tool exposes LoRA slot parameters (`lora_1`, `style_lora`
 2. Pick a candidate when its trigger word appears (or belongs) in the prompt or its description fits what the prompt asks for. **Its `modelFamily` must match the workflow's model family** (in the `wf_xxx` tool description; infer from name/description if absent) - a mismatched LoRA produces garbage and is rejected at call time, so leave it out.
 3. Pass the **exact catalog name** as the slot parameter; never invent a name. **Put the trigger word in the prompt.** Omit the strength unless the task or catalog says otherwise.
 4. An unset slot is always safe (built-in LoRAs still run). Never load a LoRA just because the catalog has one.
+5. **Obey each LoRA's description** - it carries usage rules: "already baked into <workflow>: never select it there", a phrase the prompt must START with, a trigger that renders as a watermark (leave it out unless the effect is missing), a lower strength when stacked, "edits well" / "text-to-image only".
 
 ### Prompt route — pass the person's instruction through, or rewrite it
 
@@ -102,7 +103,7 @@ A workflow whose description starts with **[nsfw]** renders nudity and sex. Choo
 - `forbidden`, or any shot / design depicting a minor (whatever the policy): never use an [nsfw] workflow (a forbidden workspace refuses them anyway).
 - `allowed`, and the frame shows nudity or sex between adults: among workflows of the SAME capability prefer the [nsfw] one; capability still comes first (an [nsfw] edit never replaces a needed reference-to-image).
 - **Explicit sex acts**: prefer an [nsfw] **reference-to-image** workflow - it composes the act directly from the place (Picture 1) and the characters (Pictures 2, 3), with a general NSFW LoRA (an act LoRA is optional). An [nsfw] multi-reference EDIT cannot produce an act (the people keep their reference poses); without a reference-to-image one use two steps: (1) render the act with the [nsfw] text-to-image workflow plus the act LoRA from the catalog (`lora_index`: missionary, blowjob, deepthroat, ...), describing the room of the location design; (2) put each character in with the [nsfw] multi-reference edit, ONE person per call (Picture 1 = the act frame, then the previous output; Picture 2 = that character's primary): "Replace the woman in image 1 with the adult woman from image 2 ... Leave the man unchanged. Keep the exact poses, camera angle, framing and room of image 1." Never pass two people as one picture for a swap. Frame people large: small figures in a wide shot barely take the identity.
-- **NSFW LoRAs**: `design.json.loras` (planned by `plan-designs`) first, `lora_index` only for content they do not cover. The "general NSFW LoRA" above is the planned one, else one from `lora_index`.
+- **NSFW LoRAs**: `design.json.loras` (planned by `plan-designs`) first, `lora_index` only for content they do not cover. A nudity EDIT (undressing, a swap step that must show a nude body) uses the catalog's image-edit nudity LoRA of the edit workflow's family (solo nudity only, never for an act). The "general NSFW LoRA" above is the planned one, else one from `lora_index`.
 - Call every depicted person an adult in the prompt.
 
 ## Key rules

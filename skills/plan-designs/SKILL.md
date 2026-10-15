@@ -120,25 +120,35 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
       doggystyle, masturbation, kissing nude), **anatomy / detail** (nude bodies: breasts,
       nipples, genitals (female / male), pubic hair, erection, ...), **poses** (body pose or
       framing an act needs: kneeling, spread legs, lying on back, POV, ...). A scene without
-      nudity or sex has none.
-   Every nude-base character also has fixed tags: the nude anatomy of its sex (breasts, nipples,
-      vulva / penis, pubic hair) - whether or not a scene shows it explicitly.
-   2. Call `lora_index()` ONCE. For every tag pick the catalog LoRA whose **trigger words or
-      description** match it (several tags may share one LoRA); also note one **general NSFW**
-      LoRA (nudity / sex in general) if the catalog has one. Never invent a name; never pick a
-      LoRA that matches no tag ("never load a LoRA just because the catalog has one"). Note each
-      LoRA's `modelFamily`.
+      nudity or sex has none. Every nude-base character has the fixed tag `nude body` (realistic nude anatomy of its sex).
+   2. Call `lora_index()` ONCE. For every tag pick the catalog LoRAs whose **trigger words or
+      description** match it (several tags may share one LoRA) - in EVERY image model family the
+      catalog has (e.g. krea2 and flux2 both): the design worker renders with one workflow and
+      keeps only the LoRAs of its family. Skip video LoRAs (description says video / motion /
+      clip, or a video model family such as minimaxh3) - designs are still images.
+      - **General**: a general NSFW / anatomy / realism LoRA ("general-purpose", "base NSFW
+        LoRA", "realistic bodies") goes with every explicit tag.
+      - **Acts**: the act's own LoRA; an act without one falls back to an all-in-one sex LoRA
+        ("sex in general, positions no act LoRA covers") - only without that is it missing.
+      - **Anatomy / detail**: a detail LoRA whose description says "when X is the subject of the
+        frame" only for a scene where X is the focus (close-up, the act centres on it).
+      - Not here: image-EDIT LoRAs ("edit LoRA", "undress … in an edit") - the workers take
+        those from `lora_index` for nudity edits themselves.
+      Never invent a name; never pick a LoRA that matches no tag ("never load a LoRA just
+      because the catalog has one").
    3. **Attach** (the `loras` argument of `create_design`, names exactly as `lora_index` lists
       them, strength omitted = the catalog default):
-      - **storyboard** of a scene with tags: the general NSFW LoRA, then its act, anatomy and pose
-        LoRAs (the storyboard worker picks per shot which apply);
-      - **nude-base character**: the anatomy LoRAs of its sex (never act LoRAs) - so the nude
-        reference is anatomically right;
+      - **storyboard** of a scene with tags: per image family the general LoRA, then the act,
+        anatomy and pose LoRAs (the storyboard worker picks per shot which apply);
+      - **nude-base character**: per image family the general anatomy / realism LoRAs only (no
+        act LoRAs, no frame-subject detail LoRAs);
       - outfits and locations: none.
-      At most 4 LoRAs per design, most important first: general > act > anatomy > pose.
-   4. Tags without a catalog LoRA are **missing**: list them in `design_plan.json`
-      `nsfw_loras.missing` (per scene or per character) and in the summary, so the person can
-      import one (Civitai import in the studio / API) - never block on them.
+      At most 4 LoRAs PER MODEL FAMILY per design, most important first: general > act >
+      anatomy > pose.
+   4. Tags without a catalog LoRA in some image family are **missing**: list them in
+      `design_plan.json` `nsfw_loras.missing` (per scene or per character, with the family) and
+      in the summary, so the person can import one (Civitai import in the studio / API) - never
+      block on them.
 7. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
    `scene_list.md` first (an exact, character-for-character copy of the `scene_list` artifact's text as you read it; no edits, no summary) because the `design-plan-covers-scenes` task check judges the contents of all your output files, then `design_plan.json`:
 
@@ -173,8 +183,8 @@ and the plan adds the top-level key `nsfw_loras` (tags and the LoRA names attach
     { "scene": 3, "acts": ["blowjob"], "anatomy": ["breasts", "penis"], "poses": ["kneeling", "pov"],
       "storyboard_loras": ["<catalog name>", "<catalog name>"] }
   ],
-  "characters": [ { "slug": "lena", "tags": ["breasts", "vulva"], "loras": ["<catalog name>"] } ],
-  "missing": [ { "scene": 3, "tags": ["deepthroat"] }, { "character": "lena", "tags": ["pubic hair"] } ]
+  "characters": [ { "slug": "lena", "tags": ["nude body"], "loras": ["<catalog name>"] } ],
+  "missing": [ { "scene": 3, "family": "krea2", "tags": ["cowgirl"] } ]
 }
 ```
 
