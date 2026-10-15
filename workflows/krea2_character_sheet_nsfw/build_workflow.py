@@ -448,7 +448,14 @@ def derive_sfw_yaml(nsfw_head: str) -> str:
 yaml_head = (NSFW_DIR / "workflow.yaml").read_text().split(ASSETS_MARKER)[0].rstrip("\n")
 if VARIANT == "sfw":
     yaml_head = derive_sfw_yaml(yaml_head).rstrip("\n")
-asset_names = sorted(n for panels in TEMPLATES.values() for n in panels.values())
+# Referenced = every Image Load path in the graph; it must match the asset files one to one.
+asset_names = sorted({v["inputs"]["image_path"] for v in graph.values() if v["class_type"] == "Image Load"})
+on_disk = sorted(n for panels in TEMPLATES.values() for n in panels.values())
+if asset_names != on_disk:
+    raise SystemExit(
+        f"assets out of sync - unreferenced files: {sorted(set(on_disk) - set(asset_names))}, "
+        f"referenced without a file: {sorted(set(asset_names) - set(on_disk))}"
+    )
 (HERE / "workflow.yaml").write_text(
     f"{yaml_head}\n\n{ASSETS_MARKER}{'─' * 40}\nassets:\n" + "".join(f"  - {n}\n" for n in asset_names)
 )
