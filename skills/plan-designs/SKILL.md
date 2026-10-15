@@ -113,7 +113,7 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
    design, not extra attribute text.
    Put only what the sources state; omit unknown keys (except the base `wardrobe`). `character_type` is passed as its own
    argument, not inside `attributes`.
-6. **NSFW LoRA plan** (mandatory whenever nudity is `allowed`: you MUST call `lora_index`, never skip or guess it; only when nudity is `allowed`; skip entirely otherwise, and never for a
+6. **NSFW LoRA plan** (mandatory whenever nudity is `allowed`: you MUST call `lora_index`, never skip or guess it; skip entirely otherwise, and never for a
    scene with a minor in it). The base model renders explicit content only with the right LoRAs,
    so plan them per design now - the design workers load what you attach:
    1. From each scene's row and Beats, list the explicit **content** it shows, as short tags in
