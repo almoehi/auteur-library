@@ -1,746 +1,3488 @@
 {
-  "10": {
-    "inputs": {
-      "value": ""
-    },
-    "class_type": "PrimitiveStringMultiline",
-    "_meta": {
-      "title": "Text String (User Prompt)"
-    }
-  },
-  "20": {
-    "inputs": {
-      "unet_name": "Krea2/Krea2_Turbo_convrot_int8mixed.safetensors",
-      "weight_dtype": "default"
-    },
+  "1": {
     "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Krea2 model"
+    "inputs": {
+      "unet_name": "krea2_raw_bf16.safetensors",
+      "weight_dtype": "default"
     }
   },
-  "111": {
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_4b_bf16.safetensors",
+      "type": "krea2",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "wan21_vae_fp32.safetensors"
+    }
+  },
+  "10": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "lora_name": "krea2_turbo_lora_rank_64_bf16.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "1",
+        0
+      ]
+    }
+  },
+  "12": {
+    "class_type": "LoraLoaderModelOnly",
     "inputs": {
       "lora_name": "Krea2-realism-V1.safetensors",
       "strength_model": 1.0,
       "model": [
-        "20",
+        "10",
         0
       ]
-    },
+    }
+  },
+  "14": {
     "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "Krea2 realism LoRA (Krea2-realism-V1)"
+    "inputs": {
+      "lora_name": "krea2_identity_edit_v1_2.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "12",
+        0
+      ]
     }
   },
   "21": {
+    "class_type": "LoadImage",
     "inputs": {
-      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
-      "type": "krea2",
-      "device": "default"
-    },
-    "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "Krea2 CLIP"
+      "image": "character_image.png"
     }
   },
-  "22": {
+  "23": {
+    "class_type": "VAEEncode",
     "inputs": {
-      "vae_name": "qwen_image_vae.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Krea2 VAE"
-    }
-  },
-  "27": {
-    "inputs": {
-      "width": 1920,
-      "height": 1080,
-      "batch_size": 1
-    },
-    "class_type": "EmptyLatentImage",
-    "_meta": {
-      "title": "Krea2 latent"
-    }
-  },
-  "40": {
-    "inputs": {
-      "unet_name": "MinimaxH3/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "H3 fl2va model"
-    }
-  },
-  "41": {
-    "inputs": {
-      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
-      "type": "minimax",
-      "device": "default"
-    },
-    "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "H3 CLIP"
-    }
-  },
-  "42": {
-    "inputs": {
-      "vae_name": "h3/minimax_h3_video_vae_fp16.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "H3 video VAE"
-    }
-  },
-  "45": {
-    "inputs": {
-      "noise_seed": 0
-    },
-    "class_type": "RandomNoise",
-    "_meta": {
-      "title": "Move noise"
-    }
-  },
-  "46": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "51": {
-    "inputs": {
-      "vae_name": "h3/minimax_h3_audio_vae_fp32.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "H3 audio VAE"
-    }
-  },
-  "30": {
-    "inputs": {
-      "character_description": [
-        "10",
-        0
-      ],
-      "visual_style": "",
-      "backdrop": "plain seamless neutral grey studio backdrop",
-      "framing": "full body, generous margin",
-      "spoken_line": "Hello. My name is written in the story we are about to tell, and this is how my voice sounds when I speak plainly.",
-      "voice_description": "",
-      "language": "English",
-      "silent_during_closeup": true,
-      "shot_seconds": 0.75,
-      "scared_shot": true,
-      "ambient_sound": ""
-    },
-    "class_type": "OrbitSheetsCharacterPrompt",
-    "_meta": {
-      "title": "Turnaround prompt (H3 spec)"
-    }
-  },
-  "39": {
-    "inputs": {
-      "lora_name": "minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
-      "strength_model": 1.0,
-      "model": [
-        "40",
-        0
-      ]
-    },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "H3 turbo LoRA (4-step)"
-    }
-  },
-  "73": {
-    "inputs": {
-      "lora_name": "minimax_h3_ref_lora_rank_256_bf16.safetensors",
-      "strength_model": 1.0,
-      "model": [
-        "39",
-        0
-      ]
-    },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "H3 reference LoRA"
-    }
-  },
-  "25": {
-    "inputs": {
-      "text": [
-        "80",
-        0
-      ],
-      "clip": [
+      "pixels": [
         "21",
         0
+      ],
+      "vae": [
+        "3",
+        0
       ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "Krea2 positive"
     }
   },
-  "74": {
+  "60": {
+    "class_type": "PrimitiveString",
     "inputs": {
-      "model": [
-        "73",
+      "value": "female"
+    }
+  },
+  "61": {
+    "class_type": "StringCompare",
+    "inputs": {
+      "string_a": [
+        "60",
         0
       ],
-      "attention": "comfy kitchen (int8)"
-    },
-    "class_type": "OrbitSheetsAttentionBackend",
-    "_meta": {
-      "title": "Attention backend"
+      "string_b": "female",
+      "mode": "Equal",
+      "case_sensitive": false
     }
   },
-  "26": {
+  "62": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": false
+    }
+  },
+  "63": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Preserve the exact facial identity, hairstyle, hair colour, eye colour, skin tone and body build of the person in image 2."
+    }
+  },
+  "64": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Keep the plain grey studio background of image 1."
+    }
+  },
+  "65": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey studio background of image 1 with a pure white seamless studio background: plain white (#FFFFFF) everywhere behind the figure, no grey, no gradient, no vignette, only a faint soft contact shadow."
+    }
+  },
+  "66": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "62",
+        0
+      ],
+      "on_false": [
+        "64",
+        0
+      ],
+      "on_true": [
+        "65",
+        0
+      ]
+    }
+  },
+  "67": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "63",
+        0
+      ],
+      "string_b": [
+        "66",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "68": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 0
+    }
+  },
+  "69": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 10
+    }
+  },
+  "1002": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/fullbody_front_d679044a80a229b1.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1001": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/fullbody_front_7e36d334578987db.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1003": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1002",
+        0
+      ],
+      "on_true": [
+        "1001",
+        0
+      ]
+    }
+  },
+  "1005": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They stand upright facing the camera, arms hanging at their sides, neutral expression, the whole body from head to toes in frame. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1004": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She stands upright facing the camera, arms hanging at her sides, neutral expression, the whole body from head to toes in frame. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1006": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1005",
+        0
+      ],
+      "on_true": [
+        "1004",
+        0
+      ]
+    }
+  },
+  "1007": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "1006",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "1021": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 768,
+      "height": 1920,
+      "batch_size": 1
+    }
+  },
+  "1020": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1003",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1022": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1021",
+        0
+      ],
+      "source_image": [
+        "1003",
+        0
+      ],
+      "source_latent": [
+        "1020",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "1023": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1007",
+        0
+      ],
+      "image": [
+        "1003",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1024": {
+    "class_type": "ConditioningZeroOut",
     "inputs": {
       "conditioning": [
-        "25",
+        "1023",
         0
       ]
-    },
-    "class_type": "ConditioningZeroOut",
-    "_meta": {
-      "title": "Krea2 negative"
     }
   },
-  "43": {
+  "1025": {
+    "class_type": "KSampler",
     "inputs": {
-      "shift_video": 12.0,
-      "shift_audio": 3.0,
-      "model": [
-        "74",
+      "seed": [
+        "68",
         0
-      ]
-    },
-    "class_type": "MiniMaxH3SigmaShift",
-    "_meta": {
-      "title": "H3 sigma shift"
-    }
-  },
-  "28": {
-    "inputs": {
-      "seed": 0,
-      "steps": 8,
+      ],
+      "steps": [
+        "69",
+        0
+      ],
       "cfg": 1.0,
       "sampler_name": "euler",
       "scheduler": "simple",
       "denoise": 1.0,
       "model": [
-        "111",
+        "1022",
         0
       ],
       "positive": [
-        "25",
+        "1023",
         0
       ],
       "negative": [
-        "26",
+        "1024",
         0
       ],
       "latent_image": [
-        "27",
+        "1021",
         0
       ]
-    },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "Krea2 sampler"
     }
   },
-  "47": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 8,
-      "denoise": 1.0,
-      "model": [
-        "43",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
-  "29": {
-    "inputs": {
-      "samples": [
-        "28",
-        0
-      ],
-      "vae": [
-        "22",
-        0
-      ]
-    },
+  "1026": {
     "class_type": "VAEDecode",
-    "_meta": {
-      "title": "Krea2 anchor frame"
-    }
-  },
-  "44": {
     "inputs": {
-      "width": 1216,
-      "height": 672,
-      "length": 124,
-      "clip": [
-        "41",
+      "samples": [
+        "1025",
         0
       ],
       "vae": [
-        "42",
-        0
-      ],
-      "prompt": [
-        "30",
-        0
-      ],
-      "first_frame": [
-        "102",
+        "3",
         0
       ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "H3 I2VA move"
     }
   },
-  "48": {
+  "1102": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/fullbody_side_41222537c824301b.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1101": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/fullbody_side_181f300eeff6ddc5.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1103": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1102",
+        0
+      ],
+      "on_true": [
+        "1101",
+        0
+      ]
+    }
+  },
+  "1105": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They stand upright in exact left profile, the whole body from head to toes in frame. Their head and face are also in exact profile, turned the same way as their body: they look straight ahead, not at the camera; only one eye and the side of their face are visible. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1104": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She stands upright in exact left profile, the whole body from head to toes in frame. Her head and face are also in exact profile, turned the same way as her body: she looks straight ahead, not at the camera; only one eye and the side of her face are visible. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1106": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1105",
+        0
+      ],
+      "on_true": [
+        "1104",
+        0
+      ]
+    }
+  },
+  "1107": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "1106",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "1121": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 768,
+      "height": 1920,
+      "batch_size": 1
+    }
+  },
+  "1120": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1103",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1122": {
+    "class_type": "Krea2EditModelPatch",
     "inputs": {
       "model": [
-        "43",
-        0
-      ],
-      "conditioning": [
-        "44",
-        0
-      ]
-    },
-    "class_type": "BasicGuider",
-    "_meta": {
-      "title": "Basic Guider"
-    }
-  },
-  "49": {
-    "inputs": {
-      "noise": [
-        "45",
-        0
-      ],
-      "guider": [
-        "48",
-        0
-      ],
-      "sampler": [
-        "46",
-        0
-      ],
-      "sigmas": [
-        "47",
-        0
-      ],
-      "latent_image": [
-        "44",
-        1
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "H3 sampler"
-    }
-  },
-  "50": {
-    "inputs": {
-      "samples": [
-        "49",
+        "14",
         0
       ],
       "vae": [
-        "42",
-        0
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "Frames"
-    }
-  },
-  "52": {
-    "inputs": {
-      "samples": [
-        "49",
+        "3",
         0
       ],
-      "vae": [
-        "51",
-        0
-      ]
-    },
-    "class_type": "VAEDecodeAudio",
-    "_meta": {
-      "title": "Voice track"
-    }
-  },
-  "60": {
-    "inputs": {
-      "images": [
-        "50",
+      "fit_mode": "fit",
+      "target_latent": [
+        "1121",
         0
       ],
-      "subject_hint": [
-        "10",
+      "source_image": [
+        "1103",
         0
       ],
-      "clip": [
+      "source_latent": [
+        "1120",
+        0
+      ],
+      "source_image_b": [
         "21",
         0
       ],
-      "count": 6,
-      "mode": "vision_llm",
-      "candidates": 32,
-      "keep_first_frame": false,
-      "selection_brief": "Only used if count is raised above the shot count. Pick additional sharp, well-formed frames that add a genuinely different angle; the six main views (full-body front, face close-up, left profile, right profile, rear, frightened face) are already selected, one per shot.\n\nPrefer: sharp frames; anatomically correct figures with clear, natural eyes and well-formed features.\n\nReject: near-duplicates of a view already selected; motion-blurred frames; frames with bad, distorted, or asymmetrical eyes; frames with broken anatomy, warping, or bad hands/limbs; frames caught mid-cut between two shots; any frame where the mouth is caught open mid-speech.",
-      "sharpness_weight": 0.35,
-      "free_vram_first": true,
-      "llm_url": "",
-      "timeout_seconds": 300,
-      "sharpness_gate": true,
-      "max_length": 400,
-      "temperature": 0.2,
-      "shots": 6,
-      "boards": 1,
-      "shot_split": "views (by content)"
-    },
-    "class_type": "OrbitSheetsFrameSelect",
-    "_meta": {
-      "title": "Select frames"
-    }
-  },
-  "72": {
-    "inputs": {
-      "filename_prefix": "ControlCenter/voice",
-      "quality": "V0",
-      "audio": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "SaveAudioMP3",
-    "_meta": {
-      "title": "SaveAudioMP3"
-    }
-  },
-  "61": {
-    "inputs": {
-      "images": [
-        "60",
+      "source_latent_b": [
+        "23",
         0
       ],
-      "columns": 2,
-      "cell_width": 512,
-      "padding": 8,
-      "label_frames": false,
-      "label_prefix": ""
-    },
-    "class_type": "OrbitSheetsContactSheet",
-    "_meta": {
-      "title": "Sheet"
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
     }
   },
-  "71": {
+  "1123": {
+    "class_type": "Krea2EditGroundedEncode",
     "inputs": {
-      "source": [
-        "60",
-        1
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1107",
+        0
+      ],
+      "image": [
+        "1103",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1124": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "1123",
+        0
       ]
-    },
-    "class_type": "PreviewAny",
-    "_meta": {
-      "title": "Selection report"
     }
   },
-  "70": {
+  "1125": {
+    "class_type": "KSampler",
     "inputs": {
-      "filename_prefix": "ComfyUI",
-      "images": [
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1122",
+        0
+      ],
+      "positive": [
+        "1123",
+        0
+      ],
+      "negative": [
+        "1124",
+        0
+      ],
+      "latent_image": [
+        "1121",
+        0
+      ]
+    }
+  },
+  "1126": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "1125",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1202": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/fullbody_back_f6ec09a30cb9229b.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1201": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/fullbody_back_821b92a334bc7197.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1203": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
         "61",
         0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "SaveImage"
-    }
-  },
-  "75": {
-    "inputs": {
-      "filename_prefix": "anchor_image",
-      "images": [
-        "101",
-        0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "Anchor preview"
-    }
-  },
-  "78": {
-    "inputs": {
-      "fps": 24,
-      "bit_depth": 8,
-      "images": [
-        "50",
+      ],
+      "on_false": [
+        "1202",
         0
       ],
-      "audio": [
-        "52",
+      "on_true": [
+        "1201",
         0
       ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create video"
     }
   },
-  "79": {
+  "1205": {
+    "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "filename_prefix": "video/OrbitSheets",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "78",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Save video"
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They stand upright with their back to the camera, the whole body from head to heels in frame. Their head faces straight away from the camera like the rest of their body, not turned over their shoulder: only the back of their head and their hair are visible, their face cannot be seen at all. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
-  "80": {
+  "1204": {
+    "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "string_b": "plain seamless neutral grey studio backdrop, even soft lighting, no props, no text, no watermark",
-      "delimiter": ", ",
-      "string_a": [
-        "10",
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She stands upright with her back to the camera, the whole body from head to heels in frame. Her head faces straight away from the camera like the rest of her body, not turned over her shoulder: only the back of her head and her hair are visible, her face cannot be seen at all. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1206": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1205",
+        0
+      ],
+      "on_true": [
+        "1204",
         0
       ]
-    },
+    }
+  },
+  "1207": {
     "class_type": "StringConcatenate",
-    "_meta": {
-      "title": "Krea2 backdrop"
+    "inputs": {
+      "string_a": [
+        "1206",
+        0
+      ],
+      "string_b": [
+        "66",
+        0
+      ],
+      "delimiter": " "
     }
   },
-  "81": {
-    "class_type": "ImageFromBatch",
-    "_meta": {
-      "title": "Split: pose_front"
-    },
+  "1221": {
+    "class_type": "EmptySD3LatentImage",
     "inputs": {
+      "width": 768,
+      "height": 1920,
+      "batch_size": 1
+    }
+  },
+  "1220": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1203",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1222": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1221",
+        0
+      ],
+      "source_image": [
+        "1203",
+        0
+      ],
+      "source_latent": [
+        "1220",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 2.0,
+      "ref_boost_a": 5.0
+    }
+  },
+  "1223": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1207",
+        0
+      ],
       "image": [
-        "60",
+        "1203",
         0
       ],
-      "batch_index": 0,
-      "length": 1
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
     }
   },
-  "82": {
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "SaveImage (pose_front)"
-    },
+  "1224": {
+    "class_type": "ConditioningZeroOut",
     "inputs": {
-      "filename_prefix": "pose_front",
-      "images": [
-        "81",
+      "conditioning": [
+        "1223",
         0
       ]
     }
   },
-  "83": {
-    "class_type": "ImageFromBatch",
-    "_meta": {
-      "title": "Split: pose_face_closeup"
-    },
+  "1225": {
+    "class_type": "KSampler",
     "inputs": {
-      "image": [
-        "60",
+      "seed": [
+        "68",
         0
       ],
-      "batch_index": 1,
-      "length": 1
-    }
-  },
-  "84": {
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "SaveImage (pose_face_closeup)"
-    },
-    "inputs": {
-      "filename_prefix": "pose_face_closeup",
-      "images": [
-        "83",
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1222",
+        0
+      ],
+      "positive": [
+        "1223",
+        0
+      ],
+      "negative": [
+        "1224",
+        0
+      ],
+      "latent_image": [
+        "1221",
         0
       ]
     }
   },
-  "85": {
-    "class_type": "ImageFromBatch",
-    "_meta": {
-      "title": "Split: pose_left_profile"
-    },
+  "1226": {
+    "class_type": "VAEDecode",
     "inputs": {
-      "image": [
-        "60",
+      "samples": [
+        "1225",
         0
       ],
-      "batch_index": 2,
-      "length": 1
-    }
-  },
-  "86": {
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "SaveImage (pose_left_profile)"
-    },
-    "inputs": {
-      "filename_prefix": "pose_left_profile",
-      "images": [
-        "85",
+      "vae": [
+        "3",
         0
       ]
     }
   },
-  "87": {
-    "class_type": "ImageFromBatch",
-    "_meta": {
-      "title": "Split: pose_right_profile"
-    },
+  "1302": {
+    "class_type": "Image Load",
     "inputs": {
-      "image": [
-        "60",
-        0
-      ],
-      "batch_index": 3,
-      "length": 1
+      "image_path": "assets/male/portrait_front_wide_39edf4956800054b.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
     }
   },
-  "88": {
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "SaveImage (pose_right_profile)"
-    },
+  "1301": {
+    "class_type": "Image Load",
     "inputs": {
-      "filename_prefix": "pose_right_profile",
-      "images": [
-        "87",
+      "image_path": "assets/female/portrait_front_wide_02e5f27b175b983a.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1303": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1302",
+        0
+      ],
+      "on_true": [
+        "1301",
         0
       ]
     }
   },
-  "89": {
-    "class_type": "ImageFromBatch",
-    "_meta": {
-      "title": "Split: pose_rear"
-    },
+  "1305": {
+    "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "image": [
-        "60",
-        0
-      ],
-      "batch_index": 4,
-      "length": 1
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Head-and-shoulders portrait facing the camera squarely, neutral relaxed expression, lips closed, eyes looking into the camera. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
-  "90": {
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "SaveImage (pose_rear)"
-    },
+  "1304": {
+    "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "filename_prefix": "pose_rear",
-      "images": [
-        "89",
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Head-and-shoulders portrait facing the camera squarely, neutral relaxed expression, lips closed, eyes looking into the camera. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1306": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1305",
+        0
+      ],
+      "on_true": [
+        "1304",
         0
       ]
     }
   },
-  "91": {
-    "class_type": "ImageFromBatch",
-    "_meta": {
-      "title": "Split: pose_frightened"
-    },
+  "1307": {
+    "class_type": "StringConcatenate",
     "inputs": {
-      "image": [
-        "60",
+      "string_a": [
+        "1306",
         0
       ],
-      "batch_index": 5,
-      "length": 1
-    }
-  },
-  "92": {
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "SaveImage (pose_frightened)"
-    },
-    "inputs": {
-      "filename_prefix": "pose_frightened",
-      "images": [
-        "91",
-        0
-      ]
-    }
-  },
-  "100": {
-    "inputs": {
-      "image": "reference_image.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Load Image (optional reference)"
-    }
-  },
-  "101": {
-    "inputs": {
-      "any_01": [
-        "100",
+      "string_b": [
+        "67",
         0
       ],
-      "any_02": [
-        "29",
-        0
-      ]
-    },
-    "class_type": "Any Switch (rgthree)",
-    "_meta": {
-      "title": "Anchor: reference image, else KREA-2"
+      "delimiter": " "
     }
   },
-  "102": {
+  "1321": {
+    "class_type": "EmptySD3LatentImage",
     "inputs": {
-      "upscale_method": "lanczos",
       "width": 1216,
-      "height": 672,
-      "crop": "center",
-      "image": [
-        "101",
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "1320": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1303",
+        0
+      ],
+      "vae": [
+        "3",
         0
       ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Fit anchor to orbit canvas"
+    }
+  },
+  "1322": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1321",
+        0
+      ],
+      "source_image": [
+        "1303",
+        0
+      ],
+      "source_latent": [
+        "1320",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "1323": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1307",
+        0
+      ],
+      "image": [
+        "1303",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1324": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "1323",
+        0
+      ]
+    }
+  },
+  "1325": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1322",
+        0
+      ],
+      "positive": [
+        "1323",
+        0
+      ],
+      "negative": [
+        "1324",
+        0
+      ],
+      "latent_image": [
+        "1321",
+        0
+      ]
+    }
+  },
+  "1326": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "1325",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1402": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/portrait_back_wide_d1f213853cabf49b.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1401": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/portrait_back_wide_651b027b16d29127.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1403": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1402",
+        0
+      ],
+      "on_true": [
+        "1401",
+        0
+      ]
+    }
+  },
+  "1405": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Head-and-shoulders portrait seen from directly behind, their back to the camera. Their head faces straight away from the camera like the rest of their body, not turned over their shoulder: only the back of their head and their hair are visible, their face cannot be seen at all. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1404": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Head-and-shoulders portrait seen from directly behind, her back to the camera. Her head faces straight away from the camera like the rest of her body, not turned over her shoulder: only the back of her head and her hair are visible, her face cannot be seen at all. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1406": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1405",
+        0
+      ],
+      "on_true": [
+        "1404",
+        0
+      ]
+    }
+  },
+  "1407": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "1406",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "1421": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "1420": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1403",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1422": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1421",
+        0
+      ],
+      "source_image": [
+        "1403",
+        0
+      ],
+      "source_latent": [
+        "1420",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "1423": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1407",
+        0
+      ],
+      "image": [
+        "1403",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1424": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "1423",
+        0
+      ]
+    }
+  },
+  "1425": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1422",
+        0
+      ],
+      "positive": [
+        "1423",
+        0
+      ],
+      "negative": [
+        "1424",
+        0
+      ],
+      "latent_image": [
+        "1421",
+        0
+      ]
+    }
+  },
+  "1426": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "1425",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1502": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/portrait_side_wide_fd5d41f55958776c.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1501": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/portrait_side_wide_0d1c15433882074e.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1503": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1502",
+        0
+      ],
+      "on_true": [
+        "1501",
+        0
+      ]
+    }
+  },
+  "1505": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Head-and-shoulders portrait in exact left profile, neutral relaxed expression, lips closed. Their head and face are also in exact profile, turned the same way as their body: they look straight ahead, not at the camera; only one eye and the side of their face are visible. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1504": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Head-and-shoulders portrait in exact left profile, neutral relaxed expression, lips closed. Her head and face are also in exact profile, turned the same way as her body: she looks straight ahead, not at the camera; only one eye and the side of her face are visible. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1506": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1505",
+        0
+      ],
+      "on_true": [
+        "1504",
+        0
+      ]
+    }
+  },
+  "1507": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "1506",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "1521": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "1520": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1503",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1522": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1521",
+        0
+      ],
+      "source_image": [
+        "1503",
+        0
+      ],
+      "source_latent": [
+        "1520",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "1523": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1507",
+        0
+      ],
+      "image": [
+        "1503",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1524": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "1523",
+        0
+      ]
+    }
+  },
+  "1525": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1522",
+        0
+      ],
+      "positive": [
+        "1523",
+        0
+      ],
+      "negative": [
+        "1524",
+        0
+      ],
+      "latent_image": [
+        "1521",
+        0
+      ]
+    }
+  },
+  "1526": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "1525",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1602": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/expr_smile_e288b685cffd9af1.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1601": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/expr_smile_9a24a900189298de.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1603": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1602",
+        0
+      ],
+      "on_true": [
+        "1601",
+        0
+      ]
+    }
+  },
+  "1605": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They smile warmly with their mouth open and the upper teeth visible, looking into the camera. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1604": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She smiles warmly with her mouth open and the upper teeth visible, looking into the camera. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1606": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1605",
+        0
+      ],
+      "on_true": [
+        "1604",
+        0
+      ]
+    }
+  },
+  "1607": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "1606",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "1621": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "1620": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1603",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1622": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1621",
+        0
+      ],
+      "source_image": [
+        "1603",
+        0
+      ],
+      "source_latent": [
+        "1620",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "1623": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1607",
+        0
+      ],
+      "image": [
+        "1603",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1624": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "1623",
+        0
+      ]
+    }
+  },
+  "1625": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1622",
+        0
+      ],
+      "positive": [
+        "1623",
+        0
+      ],
+      "negative": [
+        "1624",
+        0
+      ],
+      "latent_image": [
+        "1621",
+        0
+      ]
+    }
+  },
+  "1626": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "1625",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1702": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/expr_frightened_40ff0a85219fcbc5.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1701": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/expr_frightened_e14023bd55d361e7.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1703": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1702",
+        0
+      ],
+      "on_true": [
+        "1701",
+        0
+      ]
+    }
+  },
+  "1705": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Their expression is frightened: eyes wide open, eyebrows raised and drawn together, mouth slightly open. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1704": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Her expression is frightened: eyes wide open, eyebrows raised and drawn together, mouth slightly open. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1706": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1705",
+        0
+      ],
+      "on_true": [
+        "1704",
+        0
+      ]
+    }
+  },
+  "1707": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "1706",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "1721": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "1720": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1703",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1722": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1721",
+        0
+      ],
+      "source_image": [
+        "1703",
+        0
+      ],
+      "source_latent": [
+        "1720",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "1723": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1707",
+        0
+      ],
+      "image": [
+        "1703",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1724": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "1723",
+        0
+      ]
+    }
+  },
+  "1725": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1722",
+        0
+      ],
+      "positive": [
+        "1723",
+        0
+      ],
+      "negative": [
+        "1724",
+        0
+      ],
+      "latent_image": [
+        "1721",
+        0
+      ]
+    }
+  },
+  "1726": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "1725",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1802": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/expr_strained_725afb48ff0d2a53.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1801": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/expr_mouth_open_0ca2b790bb4d1e44.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1803": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1802",
+        0
+      ],
+      "on_true": [
+        "1801",
+        0
+      ]
+    }
+  },
+  "1805": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They look physically exhausted and strained, not angry: eyebrows raised and pulled together, eyes half closed, mouth hanging open as they gasp for breath, head tipped slightly back. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1804": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She holds her mouth wide open, jaw dropped, teeth and tongue visible, eyes looking into the camera. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1806": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1805",
+        0
+      ],
+      "on_true": [
+        "1804",
+        0
+      ]
+    }
+  },
+  "1807": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "1806",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "1821": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "1820": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1803",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1822": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1821",
+        0
+      ],
+      "source_image": [
+        "1803",
+        0
+      ],
+      "source_latent": [
+        "1820",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "1823": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1807",
+        0
+      ],
+      "image": [
+        "1803",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1824": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "1823",
+        0
+      ]
+    }
+  },
+  "1825": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1822",
+        0
+      ],
+      "positive": [
+        "1823",
+        0
+      ],
+      "negative": [
+        "1824",
+        0
+      ],
+      "latent_image": [
+        "1821",
+        0
+      ]
+    }
+  },
+  "1826": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "1825",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1902": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/expr_pleasure_e90e404a9d844811.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1901": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/expr_pleasure_3996d1aa85901004.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "1903": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1902",
+        0
+      ],
+      "on_true": [
+        "1901",
+        0
+      ]
+    }
+  },
+  "1905": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Their expression is blissful delight: head tilted slightly back, eyes looking upward, a warm open-mouthed smile. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1904": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. Her expression is blissful delight: head tilted slightly back, eyes looking upward, a warm open-mouthed smile. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "1906": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "1905",
+        0
+      ],
+      "on_true": [
+        "1904",
+        0
+      ]
+    }
+  },
+  "1907": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "1906",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "1921": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "1920": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "1903",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "1922": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "1921",
+        0
+      ],
+      "source_image": [
+        "1903",
+        0
+      ],
+      "source_latent": [
+        "1920",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "1923": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "1907",
+        0
+      ],
+      "image": [
+        "1903",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "1924": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "1923",
+        0
+      ]
+    }
+  },
+  "1925": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "1922",
+        0
+      ],
+      "positive": [
+        "1923",
+        0
+      ],
+      "negative": [
+        "1924",
+        0
+      ],
+      "latent_image": [
+        "1921",
+        0
+      ]
+    }
+  },
+  "1926": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "1925",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "2002": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/kneel_side_638a4ea736ef9ad1.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "2001": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/kneel_side_ae367988d2c3d934.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "2003": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "2002",
+        0
+      ],
+      "on_true": [
+        "2001",
+        0
+      ]
+    }
+  },
+  "2005": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They kneel upright on both knees in exact side profile, arms hanging at their sides, the whole body from head to knees and feet in frame. Their head and face are also in exact profile, turned the same way as their body: they look straight ahead, not at the camera; only one eye and the side of their face are visible. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "2004": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She kneels upright on both knees in exact side profile, arms hanging at her sides, the whole body from head to knees and feet in frame. Her head and face are also in exact profile, turned the same way as her body: she looks straight ahead, not at the camera; only one eye and the side of her face are visible. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "2006": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "2005",
+        0
+      ],
+      "on_true": [
+        "2004",
+        0
+      ]
+    }
+  },
+  "2007": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "2006",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "2021": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "2020": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "2003",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "2022": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "2021",
+        0
+      ],
+      "source_image": [
+        "2003",
+        0
+      ],
+      "source_latent": [
+        "2020",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "2023": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "2007",
+        0
+      ],
+      "image": [
+        "2003",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "2024": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "2023",
+        0
+      ]
+    }
+  },
+  "2025": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "2022",
+        0
+      ],
+      "positive": [
+        "2023",
+        0
+      ],
+      "negative": [
+        "2024",
+        0
+      ],
+      "latent_image": [
+        "2021",
+        0
+      ]
+    }
+  },
+  "2026": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "2025",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "2102": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/squat_front_2847aa3c64043c0a.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "2101": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/squat_front_3176f22fe2c273a4.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "2103": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "2102",
+        0
+      ],
+      "on_true": [
+        "2101",
+        0
+      ]
+    }
+  },
+  "2105": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They squat facing the camera, feet flat on the floor, knees apart, hands resting on their knees, the whole body from head to feet in frame. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "2104": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She squats facing the camera, feet flat on the floor, knees apart, hands resting on her knees, the whole body from head to feet in frame. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "2106": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "2105",
+        0
+      ],
+      "on_true": [
+        "2104",
+        0
+      ]
+    }
+  },
+  "2107": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "2106",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "2121": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "2120": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "2103",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "2122": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "2121",
+        0
+      ],
+      "source_image": [
+        "2103",
+        0
+      ],
+      "source_latent": [
+        "2120",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "2123": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "2107",
+        0
+      ],
+      "image": [
+        "2103",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "2124": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "2123",
+        0
+      ]
+    }
+  },
+  "2125": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "2122",
+        0
+      ],
+      "positive": [
+        "2123",
+        0
+      ],
+      "negative": [
+        "2124",
+        0
+      ],
+      "latent_image": [
+        "2121",
+        0
+      ]
+    }
+  },
+  "2126": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "2125",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "2202": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/male/sit_pose_45ca49b633ce3b5a.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "2201": {
+    "class_type": "Image Load",
+    "inputs": {
+      "image_path": "assets/female/sit_pose_e0a55bd5043058f8.png",
+      "RGBA": "false",
+      "filename_text_extension": "true"
+    }
+  },
+  "2203": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "2202",
+        0
+      ],
+      "on_true": [
+        "2201",
+        0
+      ]
+    }
+  },
+  "2205": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. They are seated upright at chair height in empty space at a three-quarter angle, thighs level, knees bent at a right angle, hands on their thighs, face turned toward the camera; there is no chair, stool or furniture anywhere, only the plain studio floor. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "2204": {
+    "class_type": "PrimitiveStringMultiline",
+    "inputs": {
+      "value": "Replace the grey mannequin in image 1 with the woman from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. She is seated upright at chair height in empty space at a three-quarter angle, thighs level, knees bent at a right angle, hands on her thighs, face turned toward the camera; there is no chair, stool or furniture anywhere, only the plain studio floor. She wears exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+    }
+  },
+  "2206": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "61",
+        0
+      ],
+      "on_false": [
+        "2205",
+        0
+      ],
+      "on_true": [
+        "2204",
+        0
+      ]
+    }
+  },
+  "2207": {
+    "class_type": "StringConcatenate",
+    "inputs": {
+      "string_a": [
+        "2206",
+        0
+      ],
+      "string_b": [
+        "67",
+        0
+      ],
+      "delimiter": " "
+    }
+  },
+  "2221": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1216,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "2220": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "2203",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "2222": {
+    "class_type": "Krea2EditModelPatch",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "fit_mode": "fit",
+      "target_latent": [
+        "2221",
+        0
+      ],
+      "source_image": [
+        "2203",
+        0
+      ],
+      "source_latent": [
+        "2220",
+        0
+      ],
+      "source_image_b": [
+        "21",
+        0
+      ],
+      "source_latent_b": [
+        "23",
+        0
+      ],
+      "ref_boost": 4.0,
+      "ref_boost_a": 2.5
+    }
+  },
+  "2223": {
+    "class_type": "Krea2EditGroundedEncode",
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "prompt": [
+        "2207",
+        0
+      ],
+      "image": [
+        "2203",
+        0
+      ],
+      "image_b": [
+        "21",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": ""
+    }
+  },
+  "2224": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "2223",
+        0
+      ]
+    }
+  },
+  "2225": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": [
+        "68",
+        0
+      ],
+      "steps": [
+        "69",
+        0
+      ],
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "2222",
+        0
+      ],
+      "positive": [
+        "2223",
+        0
+      ],
+      "negative": [
+        "2224",
+        0
+      ],
+      "latent_image": [
+        "2221",
+        0
+      ]
+    }
+  },
+  "2226": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "2225",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "3001": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1026",
+        0
+      ],
+      "width": 426,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3002": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1126",
+        0
+      ],
+      "width": 426,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3003": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3001",
+        0
+      ],
+      "image2": [
+        "3002",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 0,
+      "spacing_color": "white"
+    }
+  },
+  "3004": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1226",
+        0
+      ],
+      "width": 428,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3005": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3003",
+        0
+      ],
+      "image2": [
+        "3004",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 0,
+      "spacing_color": "white"
+    }
+  },
+  "3006": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1626",
+        0
+      ],
+      "width": 640,
+      "height": 540,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3007": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1726",
+        0
+      ],
+      "width": 640,
+      "height": 540,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3008": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3006",
+        0
+      ],
+      "image2": [
+        "3007",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 0,
+      "spacing_color": "white"
+    }
+  },
+  "3009": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1826",
+        0
+      ],
+      "width": 640,
+      "height": 540,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3010": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1926",
+        0
+      ],
+      "width": 640,
+      "height": 540,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3011": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3009",
+        0
+      ],
+      "image2": [
+        "3010",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 0,
+      "spacing_color": "white"
+    }
+  },
+  "3012": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3008",
+        0
+      ],
+      "image2": [
+        "3011",
+        0
+      ],
+      "direction": "down",
+      "match_image_size": false,
+      "spacing_width": 0,
+      "spacing_color": "white"
+    }
+  },
+  "3013": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1326",
+        0
+      ],
+      "width": 1280,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3014": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1426",
+        0
+      ],
+      "width": 1280,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3015": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "1526",
+        0
+      ],
+      "width": 1280,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3016": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "2026",
+        0
+      ],
+      "width": 1280,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3017": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "2126",
+        0
+      ],
+      "width": 1280,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3018": {
+    "class_type": "ImageResize+",
+    "inputs": {
+      "image": [
+        "2226",
+        0
+      ],
+      "width": 1280,
+      "height": 1080,
+      "interpolation": "lanczos",
+      "method": "fill / crop",
+      "condition": "always",
+      "multiple_of": 0
+    }
+  },
+  "3020": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3005",
+        0
+      ],
+      "image2": [
+        "3013",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "white"
+    }
+  },
+  "3021": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3020",
+        0
+      ],
+      "image2": [
+        "3014",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "white"
+    }
+  },
+  "3022": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3021",
+        0
+      ],
+      "image2": [
+        "3015",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "white"
+    }
+  },
+  "3023": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3012",
+        0
+      ],
+      "image2": [
+        "3016",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "white"
+    }
+  },
+  "3024": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3023",
+        0
+      ],
+      "image2": [
+        "3017",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "white"
+    }
+  },
+  "3025": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3024",
+        0
+      ],
+      "image2": [
+        "3018",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "white"
+    }
+  },
+  "3026": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3022",
+        0
+      ],
+      "image2": [
+        "3025",
+        0
+      ],
+      "direction": "down",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "white"
+    }
+  },
+  "3027": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3005",
+        0
+      ],
+      "image2": [
+        "3013",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "black"
+    }
+  },
+  "3028": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3027",
+        0
+      ],
+      "image2": [
+        "3014",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "black"
+    }
+  },
+  "3029": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3028",
+        0
+      ],
+      "image2": [
+        "3015",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "black"
+    }
+  },
+  "3030": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3012",
+        0
+      ],
+      "image2": [
+        "3016",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "black"
+    }
+  },
+  "3031": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3030",
+        0
+      ],
+      "image2": [
+        "3017",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "black"
+    }
+  },
+  "3032": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3031",
+        0
+      ],
+      "image2": [
+        "3018",
+        0
+      ],
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "black"
+    }
+  },
+  "3033": {
+    "class_type": "ImageStitch",
+    "inputs": {
+      "image1": [
+        "3029",
+        0
+      ],
+      "image2": [
+        "3032",
+        0
+      ],
+      "direction": "down",
+      "match_image_size": false,
+      "spacing_width": 16,
+      "spacing_color": "black"
+    }
+  },
+  "3019": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "62",
+        0
+      ],
+      "on_false": [
+        "3026",
+        0
+      ],
+      "on_true": [
+        "3033",
+        0
+      ]
+    }
+  },
+  "9000": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "charsheet",
+      "images": [
+        "3019",
+        0
+      ]
+    }
+  },
+  "9001": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "charsheet_front",
+      "images": [
+        "1026",
+        0
+      ]
+    }
+  },
+  "9002": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "charsheet_side",
+      "images": [
+        "1126",
+        0
+      ]
+    }
+  },
+  "9003": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "charsheet_back",
+      "images": [
+        "1226",
+        0
+      ]
+    }
+  },
+  "9004": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "charsheet_portrait",
+      "images": [
+        "1326",
+        0
+      ]
     }
   }
 }
