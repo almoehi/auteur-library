@@ -32,9 +32,11 @@ things below: the base look of a character ("Base look and outfits") and the NSF
 2. `read_artifact(artifactId="scene_list")`: must contain a table with columns
    `Scene #`, `INT/EXT`, `Location`, `location_slug`, `Time of day`, `Summary`,
    `Characters present`, `Outfits` (`<character_slug>:<look_slug>` pairs separated by `; `).
-   Below the scene table a `Beats` section (per scene: beat, action, framing, camera move, continuity) may
-   follow: it is not part of the scene table and does not change the plan, but your `scene_list.md`
-   copy stays verbatim, Beats included.
+   Below the scene table a `Beats` section (per scene: beat, action, framing, camera move,
+   continuity: `continuous` | `parallel` | `new moment`) may follow. Your `scene_list.md` copy stays
+   verbatim, Beats included. A `parallel` beat happens at the same time somewhere ELSE and names
+   its place: that place is an extra location of the scene (see "locations" below and the storyboard
+   `location` links).
 3. Read the character table files (pass `artifact_file`): `character_<slug>.md`, each with
    `VISUAL PROFILE` and `WARDROBE TRACKER`.
 4. Existing designs (idempotency, mandatory: always run it, never assume nothing exists): `artifact_index` keys starting `character_`, `outfit_`,
@@ -46,9 +48,15 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 1. Build the entity lists:
    - **characters**: every `character_<slug>.md` file; plus any character named in the scene
      list but without a file (flag in the summary; create it from the scene context only).
-   - **locations**: EVERY distinct `location_slug` value of the scene list (no scene may reference a
-     location without a design: re-scan all scene rows, including ones whose slug appears once);
-     display name from the `Location` column.
+   - **locations**: EVERY distinct `location_slug` value of the scene list PLUS every place named
+     by a `parallel` beat in the Beats section (no scene may reference a location without a
+     design: re-scan all scene rows AND all beats, including places that appear once). A parallel
+     beat's place is matched to a table slug/name when it is the same place, else it is a new
+     location entry (slug = the place's lowercase slug, display name from the beat). Record per
+     scene the ordered list of places it uses: the row's `location_slug` first, then the
+     parallel-beat places in beat order, without duplicates (`scene_locations`, used for the
+     storyboard links). A location's `scenes` in `design_plan.json` includes every scene
+     whose parallel beats use it.
    - **looks**: distinct (character_slug, look_slug) pairs from the `Outfits` column, plus
      looks in WARDROBE TRACKERs that are used in a scene. Looks are candidates only; see
      "Base look and outfits" below for which become outfit designs.
@@ -218,7 +226,12 @@ One storyboard per scene of the scene list (`Scene #` = `<n>`), skipping scenes 
 slug, so the key becomes `storyboard_scene_<n>`; check the result's key). Links come from the
 registry, mapped from the scene's row:
 
-- `location`: the key of the scene's `location_slug` design (exactly one);
+- `location`: ONE link per place the scene uses, the scene row's `location_slug` design FIRST
+  (it is the scene's default place), then the design of every place named by one of the scene's
+  `parallel` beats (the scene's `scene_locations`), without duplicates. Links can ONLY be given
+  here, when the storyboard is created - there is no way to add one later, and
+  `storyboard-scene` can only place a shot at a linked location - so a missing link means the
+  parallel beat cannot get its own cutaway shot;
 - `characters`: the keys of every slug in `Characters present` (one link each);
 - `outfits`: the keys of every `<character_slug>:<look_slug>` pair of the `Outfits` column
   (one link each). A pair whose look is the character's `base_look` has no outfit design: the
@@ -231,12 +244,13 @@ create_design({ kind: "storyboard", display_name: "Scene <n>", start: "attribute
   attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<Summary of the scene, optional>" } ],
   initial_drafts: 1,
   loras: [ { name: "<catalog name>" }, … ],   // NSFW LoRA plan of the scene; omit when none
-  links: [ { role: "location", key: "<location key>" },
+  links: [ { role: "location", key: "<scene location key>" },
+           { role: "location", key: "<parallel-beat location key>" }, …one per further place…
            { role: "character", key: "<character key>" }, …one per character…
            { role: "outfit", key: "<outfit key>" }, …one per outfit… ] })
 ```
 
-(`initial_drafts` = drafts PER SHOT, default 1. A role is repeated once per linked design; if the
+(`initial_drafts` = drafts PER SHOT, default 1. A role is repeated once per linked design (several `location` links); if the
 tool refuses a role name, use the role names its error or description lists.) Every given link is required: the storyboard
 task waits until those designs are finished, so never link a design you did not create or
 find; if a link key is refused as unknown, re-check the registry and the `artifact_index`
