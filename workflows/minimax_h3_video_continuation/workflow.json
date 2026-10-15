@@ -148,17 +148,6 @@
       "title": "RandomNoise"
     }
   },
-  "157": {
-    "inputs": {
-      "aspect_ratio": "16:9 (Widescreen)",
-      "megapixels": 0.4,
-      "multiple": 32
-    },
-    "class_type": "ResolutionSelector",
-    "_meta": {
-      "title": "Resolution Selector (Size)"
-    }
-  },
   "156": {
     "inputs": {
       "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
@@ -218,11 +207,11 @@
         0
       ],
       "width": [
-        "157",
-        0
+        "clip_w",
+        1
       ],
       "height": [
-        "157",
+        "clip_h",
         1
       ],
       "length": [
@@ -353,6 +342,35 @@
     "class_type": "PrimitiveFloat",
     "_meta": {
       "title": "Float (prior clip start time)"
+    }
+  },
+  "clip_info": {
+    "class_type": "VHS_VideoInfoLoaded",
+    "inputs": {
+      "video_info": [
+        "177",
+        3
+      ]
+    }
+  },
+  "clip_w": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "max(256, round(a / 32) * 32)",
+      "values.a": [
+        "clip_info",
+        3
+      ]
+    }
+  },
+  "clip_h": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "max(256, round(a / 32) * 32)",
+      "values.a": [
+        "clip_info",
+        4
+      ]
     }
   }
 }

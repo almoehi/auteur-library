@@ -1,0 +1,270 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# NSFW variant of h3_single_cut_clip: the same graph and ports with a skin-realism and an anatomy
+# LoRA baked into the Power Lora Loader next to the LightX2V turbo LoRA. Generated from the SFW
+# bundle by h3_single_cut_clip/derive_nsfw.py - change h3_single_cut_clip and re-run it, never edit
+# this bundle by hand. Sources and node notes: see h3_single_cut_clip.
+#
+# ─── Custom Nodes (all already in serverless-comfy/nodes.lock) ────────────────
+# MiniMaxH3ReferenceToVideo, MiniMaxH3SigmaShift, VAEDecodeAudio  built-in ComfyUI
+# H3KeyframeInject                https://github.com/jlucasmcrell/ComfyUI-H3-Multishot
+#   (registered by the pack's h3_avbank_probe.py; it also patches the model's extra_conds so
+#   reference rows and the start keyframe can be combined)
+# ImageResize+                    https://github.com/cubiq/ComfyUI_essentials
+# SolAttnPatch                    https://github.com/kijai/ComfyUI-SolAttn_triton
+# PathchSageAttentionKJ           https://github.com/kijai/ComfyUI-KJNodes
+# VHS_VideoCombine                https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+# Power Lora Loader (rgthree)     https://github.com/rgthree/rgthree-comfy
+# ComfyMathExpression             https://github.com/evanspearman/ComfyMath
+# RIFE VFI                        https://github.com/Fannovel16/ComfyUI-Frame-Interpolation
+# easy cleanGpuUsed / easy seed   https://github.com/yolain/ComfyUI-Easy-Use
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: h3_single_cut_clip_nsfw
+description: >
+  Generates a new clip - video with synchronized audio - that starts exactly on a given start
+  frame (ref0, e.g. the shot's storyboard keyframe) and keeps characters, outfits, props and the
+  set consistent through up to five optional reference images (character and outfit sheets,
+  location plate, props, poses), driven by a structured MiniMax H3 prompt. Best for the first
+  clip of a scene or the first clip after a cut; continue the result without a cut with
+  h3_clip_continuation_nsfw. Not for continuing an existing clip, not for text-only generation.
+  NSFW variant: a skin-realism (0.5) and an anatomy (0.6) LoRA are baked in next to the turbo
+  LoRA; the four LoRA ports take act / detail adapters from the workspace catalog.
+url: workflow.json
+workflow_type: i2va
+model_family: minimaxh3
+gpu_types: [a100, h100, b200]
+# sage_attention ships "disabled" (node 157): the SageAttention wheel in the compute image carries
+# sm_80 kernels only (l40s / h100 failed with "no kernel image is available"); the harness also
+# forces it off on h100. a100 is the e2e card; h100 is declared but UNVERIFIED for this bundle.
+
+ports:
+  inputs:
+    - name: ref0
+      kind: image
+      description: "Start frame of the clip, addressed as <Picture 1>: it is pinned as frame 0, so the clip opens exactly on it (usually the shot's storyboard keyframe). Center-cropped to width x height - give it the clip's aspect ratio. Also a reference: everything visible in it keeps its look."
+      binding: image@ref_image_1
+      reference_role: subject
+      label: "Picture 1"
+      required: true
+    - name: ref1
+      kind: image
+      description: "Optional reference 1, addressed as <Picture 2>. Recommended: the identity / design sheet of the main character in this clip. Supply the optional references in order without gaps: fill ref1 before ref2."
+      binding: image@ref_image_2
+      reference_role: reference
+      label: "Picture 2"
+      required: false
+    - name: ref2
+      kind: image
+      description: "Optional reference 2, addressed as <Picture 3>: a second character, an outfit, the location plate (empty set), a prop or a pose. Give it a one-line role in subject_definitions. Supply only when ref1 is supplied."
+      binding: image@ref_image_3
+      reference_role: reference
+      label: "Picture 3"
+      required: false
+    - name: ref3
+      kind: image
+      description: "Optional reference 3, addressed as <Picture 4>; same uses as ref2. Supply only when ref2 is supplied."
+      binding: image@ref_image_4
+      reference_role: reference
+      label: "Picture 4"
+      required: false
+    - name: ref4
+      kind: image
+      description: "Optional reference 4, addressed as <Picture 5>; same uses as ref2. Supply only when ref3 is supplied."
+      binding: image@ref_image_5
+      reference_role: reference
+      label: "Picture 5"
+      required: false
+    - name: ref5
+      kind: image
+      description: "Optional reference 5, addressed as <Picture 6>; same uses as ref2. Supply only when ref4 is supplied."
+      binding: image@ref_image_6
+      reference_role: reference
+      label: "Picture 6"
+      required: false
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "MiniMax H3 keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief). Sections in order: subject_definitions (<Picture 1> = the start frame, then one line per supplied reference, <Subject N> for characters), summary starting with [keyframe completion], retention_analysis, detailed_description (style first, then [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', later shots timestamped, dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. Only cite <Picture N> for references that were supplied."
+      binding: value@138
+      required: true
+    - name: duration_seconds
+      kind: float
+      description: "Target clip playback duration in seconds. Converted to the nearest valid MiniMax H3 frame count at the native 24 fps."
+      binding: value@132
+      constraints: { min: 1.0, max: 30.0 }
+      required: false
+      default: 5.0
+      role: duration
+    - name: steps
+      kind: int
+      description: "Denoising steps. The baked-in turbo LoRA (0.7) is tuned for 6-8 steps; 4 is the fastest usable draft."
+      binding: steps@124
+      constraints: { min: 1, max: 50 }
+      required: false
+      default: 8
+    - name: seed
+      kind: int
+      description: "Random seed for reproducibility. -1 draws a new one, so a second take differs from the first."
+      binding: seed@142
+      seed: true
+      required: false
+      default: -1
+    - name: width
+      kind: int
+      description: "Output width in pixels. Snapped to the nearest multiple of 32 in the graph (the model needs it), so any value works; the render profile's size applies here and every continuation inherits it from the clip."
+      binding: value@wh_width
+      constraints: { min: 256, max: 1920 }
+      required: false
+      default: 480
+    - name: height
+      kind: int
+      description: "Output height in pixels. Snapped to the nearest multiple of 32 in the graph (the model needs it), so any value works; the render profile's size applies here and every continuation inherits it from the clip."
+      binding: value@wh_height
+      constraints: { min: 256, max: 1920 }
+      required: false
+      default: 864
+    - name: fps
+      kind: int
+      description: "Output (playback) frame rate. 48 is the model's native 24 fps through RIFE 2x and keeps the clip duration; a continuation must use the same value."
+      binding: value@146
+      constraints: { min: 1, max: 120 }
+      required: false
+      default: 48
+      role: output-fps
+    - name: sage_attention
+      kind: string
+      description: "SageAttention mode of the KJNodes patch. Leave at 'disabled' unless the compute image is known to carry SageAttention kernels for the card."
+      binding: sage_attention@157
+      required: false
+      default: disabled
+  # Node 674 (Power Lora Loader (rgthree)) carries the lora slots. bindWorkflow()
+  # (video-harness/src/render/manifest.ts) KEEPS the workflow.json-authored slot verbatim: the
+  # always-on LightX2V turbo distillation (lora_1, 0.7), skin-realism slider (lora_2, 0.5) and anatomy
+  # LoRA (lora_3, MysticXXX 0.6) need no port and can never be wiped or
+  # overwritten by a port. Each port below that resolves to a lora (a workspace lora-catalog name)
+  # is APPENDED after it, in declaration order. `default` is left UNSET on all four: a default would
+  # append that lora on every render. `strength` is only the fallback for a catalog entry that
+  # declares none - strength resolves call-time lora_<port>_strength -> catalog default -> this value.
+  loras:
+    - name: lora_1
+      kind: lora
+      description: "Optional LoRA slot 1 (act or detail adapter trained for MiniMax H3). Appended after the three always-on LoRAs baked into the workflow (turbo, realism slider, anatomy). Inactive unless a catalog lora name is passed. Pick from lora_index (modelFamily minimaxh3); add the lora's trigger word to the prompt when it has one. Never select the three baked-in LoRAs here - that loads a second copy."
+      binding: "674"
+      strength: 0.8
+      required: false
+    - name: lora_2
+      kind: lora
+      description: "Optional LoRA slot 2. Stacks on top of the baked-in LoRAs and lora_1. Inactive unless a catalog lora name is passed."
+      binding: "674"
+      strength: 0.8
+      required: false
+    - name: lora_3
+      kind: lora
+      description: "Optional LoRA slot 3. Stacks on top of the baked-in LoRAs and lora_1-lora_2. Inactive unless a catalog lora name is passed."
+      binding: "674"
+      strength: 0.8
+      required: false
+    - name: lora_4
+      kind: lora
+      description: "Optional LoRA slot 4. Stacks on top of the baked-in LoRAs and lora_1-lora_3. Inactive unless a catalog lora name is passed."
+      binding: "674"
+      strength: 0.8
+      required: false
+  outputs:
+    - name: output_video
+      kind: video
+      description: "Final video with audio, RIFE 2x interpolated, encoded at the fps param rate (default 48)."
+      node_id: "145"
+      role: primary
+context: |
+  Use for the first clip of a scene and for every new shot after a cut (new framing, subject or
+  insert). A boundary that continues this clip without a cut goes to h3_clip_continuation_nsfw with
+  this clip as prior_clip (it inherits the width, height and look from the clip). Both workflows
+  number pictures the same way: <Picture 1> is the clip's start frame (here ref0, there the prior
+  clip's last frame) and ref<n> is <Picture n+1>, so subject_definitions carry over unchanged.
+
+  Start frame: ref0 is required. It is pinned as frame 0 (the clip opens exactly on it) and is
+  also <Picture 1>. It is center-cropped to width x height, so pass a frame with the clip's aspect
+  ratio - normally the shot's storyboard keyframe - and set width / height to that aspect.
+
+  References: ref1-ref5 are optional and are <Picture 2>-<Picture 6> in attachment order. Pass
+  every character, outfit, location and prop of the shot you have a design for - the model only
+  keeps a look it is shown (a description in the prompt alone drifts between clips). Recommended
+  order: the main character's sheet, further characters / outfits, the location plate, props.
+  Supply them without gaps (never ref3 without ref2), cite a picture only when it was supplied,
+  and give every cited picture a line in subject_definitions.
+
+  Prompt format - full-reference brief (prompt-writer-minimaxh3 Template B), English:
+  subject_definitions -> summary ([keyframe completion] ...) -> retention_analysis ->
+  detailed_description -> overall_soundscape -> non_diegetic_music. In subject_definitions
+  <Picture 1> is the start frame; the first shot begins "For the target video, at 0.00 seconds,
+  <Picture 1> is fully referenced." and describes the motion away from it, not its content.
+
+  LoRAs: three are always on and baked into the graph - the LightX2V turbo distillation (0.7),
+  a skin-realism slider (0.5) and an anatomy LoRA (0.6). Do not select them on a port. lora_1-lora_4
+  take act / detail adapters from the workspace lora catalog (modelFamily minimaxh3).
+
+  Resolution and chaining: width, height and fps are inherited by every continuation of this
+  clip - pick them once. Width and height are snapped to the nearest multiple of 32 in the graph
+  (size_w / size_h; e.g. 720 -> 704). Portrait 480x864 default, 864x480 landscape, 864x1536 for
+  final quality.
+
+  GPU / VRAM: 40 GB minimum (Qwen3VL 32B text encoder ~16 GB, REF2VA int8 model ~21 GB).
+  First run downloads ~43 GB of models (shared with h3_clip_continuation_nsfw). A 5-second clip at
+  8 steps takes a few minutes on a100.
+models:
+  # MiniMax H3 reference-to-video weights (an A/B against the fl2va weights of the predecessor
+  # bundles kept the characters closer to their reference images at the same speed).
+  - name: minimax_h3_ref2va_pruned_int8_convrot
+    type: unet
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors
+        sha256: 9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779
+
+  - name: qwen3vl_32b_minimax_h3_nvfp4_awq
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+        sha256: 35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6
+
+  - name: minimax_h3_audio_vae_fp32
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+        sha256: 8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48
+
+  - name: minimax_h3_video_vae_fp16
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+        sha256: 7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522
+
+  # The always-on turbo LoRA baked into the Power Lora Loader node (see ports.loras).
+  - name: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy
+    type: lora
+    files:
+      - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        filename: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        sha256: fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1
+
+  # CivitAI blocks datacenter IPs, so the two CivitAI-sourced NSFW LoRAs come from the model-cache mirror.
+  - name: PlagueKind-tiddies-realismslider
+    type: lora
+    files:
+      - url: https://s3.us-east-1.amazonaws.com/auteur-model-cache-20260905193718168400000001/public/lora/PlagueKind-tiddies-realismslider.safetensors
+        filename: PlagueKind-tiddies-realismslider.safetensors
+        sha256: e5c8c275af58663a664ad2922cc10a248bff70b941043375d2c82d9cc55b7030
+
+  - name: MysticXXX_MMH3-V3
+    type: lora
+    files:
+      - url: https://s3.us-east-1.amazonaws.com/auteur-model-cache-20260905193718168400000001/public/lora/MysticXXX_MMH3-V3.safetensors
+        filename: MysticXXX_MMH3-V3.safetensors
+        sha256: 99307e313784cbea7d9ee2a56ecb8794272f1024737985b824eca8c5c619a0b6
+
+  - name: rife49
+    type: rife
+    files:
+      - url: https://huggingface.co/marduk191/rife/resolve/main/rife49.pth
+        filename: rife49.pth
+        sha256: e55fd00f3cc184e3c65961f4bb827a9da022e78eed36b055242c0ac30000d533

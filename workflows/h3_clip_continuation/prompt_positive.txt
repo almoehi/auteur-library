@@ -1,0 +1,17 @@
+How the reference video and pictures align with the target video - <Video 1> supplies the frames immediately preceding the target video; the target video resumes from its final frame at the 0.00-second mark with no cut. Target duration 10.00 seconds.
+
+summary:
+[video continuation] The target video continues <Video 1> without interruption.
+
+subject_definitions:
+<Video 1> establishes the inherited motion, camera position, framing and light at the seam.
+<Picture 1> is the last frame of <Video 1>, where the target video starts.
+
+integrated_multimodal_description:
+[Shot 1] The shot resumes from the final frame of <Video 1> with no cut.
+
+overall_soundscape:
+Room tone continuing from <Video 1>.
+
+non_diegetic_music:
+N/A
