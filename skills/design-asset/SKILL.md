@@ -88,9 +88,23 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
    else simple everyday clothing) and put `nudity, nude, naked` in the negative prompt (the
    workflow's negative-prompt port, keeping its default text before these terms), in every
    render of a person, chat-phase edits and variations included. When it is `allowed`, follow
-   the brief (do not add clothing or a nudity negative on your own).
-5. LoRAs: if `design.json.loras` lists LoRAs, or the attributes contain a trigger word from
-   `lora_index`, pass them on the workflow's lora ports (same model family only).
+   the brief (do not add clothing or a nudity negative on your own), and:
+   - **Character with `wardrobe` `nude`** (the nude base of a nudity-allowed plan) - only when the
+     attributes show an adult (else follow the `forbidden` rule above): render the
+     character fully NUDE - full body, neutral standing pose, facing the camera, plain
+     backdrop, face clearly visible, no garments, no covering hands or props. It is the identity
+     reference every outfit dresses and every nude shot binds, so anatomy must be complete and
+     natural. Use the [nsfw] text-to-image workflow (see "NSFW-marked workflows" in
+     `workflow-calling-conventions`).
+   - **Outfit of a nude-base character**: the linked primary is nude; the edit DRESSES the person
+     in exactly the outfit's garments (keep face, hair, body, skin unchanged). The result shows
+     what the garments cover covered; prefer the [nsfw] image-edit workflow only when the outfit
+     itself leaves nudity visible (lingerie, open robe).
+5. LoRAs: `design.json.loras` were attached by the planner for this design (e.g. NSFW anatomy
+   LoRAs of a nude base): pass EVERY one whose `modelFamily` matches the workflow on its lora
+   ports, with its `strength`, and put its trigger words in the prompt (`context`); a LoRA of
+   another family is skipped (say so in the summary). Also pass a `lora_index` LoRA whose trigger
+   word the attributes contain (same model family only).
 
 ## Phase 3 — Render the drafts
 

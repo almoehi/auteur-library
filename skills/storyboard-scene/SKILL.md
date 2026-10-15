@@ -61,6 +61,14 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   (keys in `design.json.links` are the truth). A pair with no linked outfit design is a character's
   BASE LOOK (read `base_look` from `design_plan.json` when available): the linked character design
   covers it - use the character's primary for it and do not report it as missing.
+- **Nude base** (THE binding rule for nude vs clothed; nudity-allowed workspace): a character
+  whose design has `wardrobe` `nude` (its `design.json` attributes; `base_look` `nude` in
+  `design_plan.json`) has a NUDE primary. Each shot's `Outfits:` line names that character's look
+  IN THIS SHOT: `<character>:nude` when nude there, else the clothed look's pair. Bind the
+  character primary ONLY for `:nude`; every clothed pair binds its linked outfit primary (a
+  garment-state or accessory variant: the outfit of the look it varies). A clothed pair with no
+  outfit link → bind the character primary, describe the garments in the prompt and name the gap
+  in the summary - never let a clothed shot come out nude.
 - **Preflight** — if any fails do not guess: render nothing, `task_complete` saying exactly what
   is missing: the scene number (`scene` attribute or task id); a readable `scene_list` with a row
   for it; each linked design readable with a published `primary.<ext>`
@@ -148,7 +156,9 @@ image inputs, required ports and port descriptions. Never pick by a tool's name 
 
 References in priority order (keyframe = COMPOSE intent, location is the anchor, Picture 1; see
 "Anchor (Picture 1) by intent"): 1. location primary; 2. outfit primary of the shot's main
-character (its own primary if no outfit design: the character design shows the base look); 3. further outfits / characters by presence.
+character (its own primary if no outfit design: the character design shows the base look; with
+a nude base: the outfit primary when clothed in this shot, the character primary when nude, see
+"Nude base"); 3. further outfits / characters by presence.
 
 - **Reference-to-image (ref2i)**: preferred - composes a NEW frame from the references (location =
   Picture 1), any camera.
@@ -176,7 +186,19 @@ Picture 2 is Mira"), one style line (`{workspace.story.plot}` medium/style verba
 style is kept"), and the goal: *one cinematic keyframe of this shot, consistent with the
 reference images; compose as the camera line says; no text, captions or panels*. Never restate
 what the reference images show or the design descriptions. The prompt writer applies
-`prompt-writer-<family>` itself. Pass same-family `design.json.loras` on the lora ports.
+`prompt-writer-<family>` itself.
+
+### LoRAs per shot
+
+`design.json.loras` holds the scene's planned LoRAs (in a nudity-allowed workspace: the NSFW
+acts / anatomy / poses LoRAs of `plan-designs`). Per shot pass only those that FIT that shot -
+an act LoRA only on shots showing that act, anatomy LoRAs only where those body parts are
+visible, a pose LoRA only for that pose - with their `strength`, same `modelFamily` as the shot's
+workflow only, and put their trigger words in the shot's `context`. A clothed or non-sexual shot
+gets none of them. An explicit shot whose content has no planned LoRA: check `lora_index` (once
+per turn) for a matching one before rendering without; name content left without a LoRA in the
+summary. Two-step explicit acts ("NSFW-marked workflows" in `workflow-calling-conventions`): the
+act LoRA goes on step 1 (the act frame), anatomy LoRAs on both steps.
 
 ### Check, retry once, suggest
 
