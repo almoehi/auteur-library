@@ -161,6 +161,8 @@ character (its own primary if no outfit design: the character design shows the b
   framing, use the text-to-image workflow with a rich description of place, characters and
   outfits instead of an edit.
 
+Nudity or sex in a shot: follow "NSFW-marked workflows" in `workflow-calling-conventions` ([nsfw] workflows, explicit acts in two steps).
+
 Several workflows may be used within one scene (chosen per shot). The workflow type is read from
 the `wf_*` tool description, which ends with the type display name (e.g. "(reference-to-image)").
 

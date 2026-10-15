@@ -1,0 +1,232 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Krea 2 Identity Edit by conradlocke / lbouaraba on the Krea 2 realism NSFW stack:
+#   https://github.com/lbouaraba/comfyui-krea2edit (nodes, Apache-2.0)
+#   https://huggingface.co/conradlocke/krea2-identity-edit (LoRA v1.2, Krea 2 Community License)
+# Base stack = krea2_base_realism_nsfw (krea2_raw_bf16 + turbo / filter-bypass / realism / KNPV LoRAs,
+# Wan 2.1 FP32 VAE), sampled with a core KSampler (euler/simple) so the edit node's model patch is the
+# only forward patch. Dynamic catalog LoRAs go into the Power Lora Loader (node 15) after the baked ones.
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# comfyui-krea2edit (Krea2EditModelPatch, Krea2EditGroundedEncode) via the customNodes stanza;
+# Power Lora Loader (rgthree) is in nodes.lock; the rest is ComfyUI core.
+#
+# ─── Findings (spikes 2026-10-15) ─────────────────────────────────────────────
+# - Place + person (Picture 1 = location plate, Picture 2 = a character): room, camera and identity
+#   are kept; nudity renders. Two people as ONE side-by-side Picture 2 work for non-explicit scenes.
+# - Explicit acts do NOT come out of an edit: act LoRAs barely move poses (the people keep the poses
+#   of Picture 2), Raw/cfg 3 breaks anatomy. Render the act with krea2_base_realism_nsfw + an act LoRA,
+#   then swap identities in here ONE PERSON PER CALL (a two-person Picture 2 swaps the wrong person or
+#   changes the act about half the time). Small figures in a wide shot barely take the swap.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: krea2_image_edit_nsfw
+description: >
+  Edits an image by a plain-English instruction with Krea 2 Identity Edit on the Krea 2 NSFW realism
+  stack, optionally bringing in a person from a second image: put a character into a location plate,
+  swap one person of a frame for a character (identity from Picture 2, pose and framing from
+  Picture 1), restage, recolour, undress. Nudity allowed. Keeps the camera of Picture 1. Not for
+  generating a sex act from scratch (render it text-to-image first, then swap the people in one per
+  call), not text-to-image, not video.
+url: workflow.json
+workflow_type: i2i
+model_family: krea2
+content: nsfw
+capabilities: [multi-reference-edit]
+gpu_types: [l40s, a100, h100]
+ports:
+  inputs:
+    - name: image_1
+      kind: image
+      description: "Picture 1, the image to edit: its camera angle, framing and background are kept (a location plate, a storyboard frame, an act frame whose people get swapped). Around 1 MP works best."
+      binding: image@20
+      reference_role: subject
+      label: "Picture 1"
+      required: true
+    - name: image_2
+      kind: image
+      description: "Optional Picture 2, the identity reference: ONE person (character design) whose face, hair, skin and build go into Picture 1. Leave it out for a plain instruction edit of Picture 1."
+      binding: image@21
+      reference_role: reference
+      label: "Picture 2"
+      required: false
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "Plain-English edit instruction naming the images, e.g. \"Replace the woman in image 1 with the adult woman from image 2: her exact face, red hair, skin and build. Leave the man unchanged. Keep the exact poses, camera angle, framing and room of image 1.\" Say what to keep from each image."
+      binding: prompt@40
+      required: true
+      default: "Place the adult person from image 2 into image 1. Keep the room, the lighting and the camera angle of image 1 and the exact face, hair and body of image 2."
+    - name: width
+      kind: int
+      description: "Output width in pixels, multiple of 16. Keep width x height at or below ~2 MP (above it, source content bleeds and subjects duplicate). Match Picture 1's aspect ratio."
+      binding: width@30
+      constraints: { min: 256, max: 2048 }
+      required: true
+      default: 1344
+    - name: height
+      kind: int
+      description: "Output height in pixels, multiple of 16. See width."
+      binding: height@30
+      constraints: { min: 256, max: 2048 }
+      required: true
+      default: 768
+    - name: steps
+      kind: int
+      description: "Sampling steps. 8 favors instruction adherence, 12 face detail; 10 is balanced."
+      binding: steps@50
+      constraints: { min: 1, max: 50 }
+      required: false
+      default: 10
+    - name: cfg
+      kind: float
+      description: "Guidance. 1.0 with the turbo LoRA at full strength; the negative branch only matters above 1."
+      binding: cfg@50
+      required: false
+      default: 1.0
+    - name: seed
+      kind: int
+      description: "Random seed. -1 or omit for a random seed."
+      binding: seed@50
+      seed: true
+      required: false
+      default: -1
+    - name: ref_boost
+      kind: float
+      description: "Identity fidelity dial for Picture 2 (multiplies attention to it). 1 = off, 4 = strong likeness (recommended), >10 = over-copying."
+      binding: ref_boost@31
+      constraints: { min: 0, max: 20 }
+      required: false
+      default: 4.0
+    - name: ref_boost_a
+      kind: float
+      description: "Same dial for Picture 1. 1 = off; raise it if the pose or room drifts."
+      binding: ref_boost_a@31
+      constraints: { min: 0, max: 20 }
+      required: false
+      default: 1.0
+    - name: grounding_px
+      kind: int
+      description: "Longest side of the images the text encoder sees while reading the instruction. Trained range 384-768; lower favors edit adherence, higher likeness."
+      binding: grounding_px@40
+      constraints: { min: 0, max: 4096 }
+      required: false
+      default: 768
+    - name: nsfw_strength
+      kind: float
+      description: "KNPV NSFW LoRA strength; 0 disables it."
+      binding: strength_model@13
+      constraints: { min: 0, max: 2 }
+      required: false
+      default: 0.9
+    - name: identity_strength
+      kind: float
+      description: "Krea 2 Identity Edit LoRA strength."
+      binding: strength_model@14
+      constraints: { min: 0, max: 2 }
+      required: false
+      default: 1.0
+  loras:
+    - name: lora_1
+      kind: lora
+      description: "Optional krea2 catalog LoRA slot 1 (e.g. an anatomy or detail LoRA). Stacks after the baked-in LoRAs. Act LoRAs barely change poses in an edit - use them with krea2_base_realism_nsfw."
+      binding: "15"
+      strength: 0.8
+      required: false
+    - name: lora_2
+      kind: lora
+      description: "Optional krea2 catalog LoRA slot 2 (e.g. an anatomy or detail LoRA). Stacks after the baked-in LoRAs. Act LoRAs barely change poses in an edit - use them with krea2_base_realism_nsfw."
+      binding: "15"
+      strength: 0.8
+      required: false
+    - name: lora_3
+      kind: lora
+      description: "Optional krea2 catalog LoRA slot 3 (e.g. an anatomy or detail LoRA). Stacks after the baked-in LoRAs. Act LoRAs barely change poses in an edit - use them with krea2_base_realism_nsfw."
+      binding: "15"
+      strength: 0.8
+      required: false
+    - name: lora_4
+      kind: lora
+      description: "Optional krea2 catalog LoRA slot 4 (e.g. an anatomy or detail LoRA). Stacks after the baked-in LoRAs. Act LoRAs barely change poses in an edit - use them with krea2_base_realism_nsfw."
+      binding: "15"
+      strength: 0.8
+      required: false
+  outputs:
+    - name: edited_image
+      kind: image
+      description: "The edited Picture 1."
+      node_id: "52"
+      role: primary
+customNodes:
+  - name: comfyui-krea2edit
+    repository: https://github.com/lbouaraba/comfyui-krea2edit.git
+    commitHash: 86f886dac23013d88996e3a2e99093ba44d322fb
+
+context: >
+  Krea 2 Identity Edit, nudity allowed. Word the instruction with "image 1" / "image 2" and say what
+  to keep from each; call every person an adult. Recipes: (1) character into a place: Picture 1 =
+  location plate, Picture 2 = the character design. (2) Explicit act with known characters: render
+  the act with krea2_base_realism_nsfw + the act LoRA, then call this workflow once per person:
+  Picture 1 = the act frame (then the previous call's output), Picture 2 = ONE character,
+  "Replace the woman in image 1 with the adult woman from image 2 ... Leave the man unchanged. Keep
+  the exact poses, camera angle, framing and room of image 1." Never pass two people as Picture 2 for
+  a swap. Without Picture 2 it edits people and objects; global changes (time of day,
+  lighting, camera) barely apply. Frame people large: a wide shot with small figures barely takes the identity. The Identity
+  Edit LoRA is trained on SFW data; nudity comes from the KNPV + filter-bypass LoRAs. ~2 min per image
+  on l40s.
+
+models:
+  - name: krea2_raw_bf16
+    type: diffusion_models
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_raw_bf16.safetensors
+        filename: krea2_raw_bf16.safetensors
+        sha256: f99bb0ff8e362b77342bc4994e0c50906fe7ef7074864b181b7d48d2fa6d03d7
+
+  - name: qwen3vl_4b_bf16
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors
+        filename: qwen3vl_4b_bf16.safetensors
+        sha256: 36f3ff447ef59201722e8f9ce6020c9819fdcfba6aa2608c4e09b1c0ce114e34
+
+  - name: wan21_vae_fp32
+    type: vae
+    files:
+      - url: https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1_VAE_fp32.safetensors
+        filename: wan21_vae_fp32.safetensors
+        sha256: fd1531e31cdd20af005a9fb66e69afe4ea481a6db9b07cd889ece2e1ca2e67b9
+
+  - name: krea2_turbo_lora_rank_64_bf16
+    type: lora
+    files:
+      - url: https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_turbo_lora_rank_64_bf16.safetensors
+        filename: krea2_turbo_lora_rank_64_bf16.safetensors
+        sha256: db8c5bae0a415d448da9d842111d6e51f7d32e47143a3118eb267e5c4773de87
+
+  - name: krea2filterbypass
+    type: lora
+    files:
+      - url: https://huggingface.co/Kutches/Kr3a/resolve/81c3668cfc957cae2970e2779da9ac70e5824ff1/krea2filterbypass.safetensors
+        filename: krea2filterbypass.safetensors
+        sha256: ac6114d7112ae2397eb26b9e6e9623aad059d346fc285ea050ffb042c7c6748e
+
+  - name: KNPV4.1_pre
+    type: lora
+    files:
+      - url: https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/lora/c4adb98f6d014ee2b15f79661b3ae0ffd08bae1fe6d0e02865fcde040157772e/KNPV4.1_pre.safetensors
+        filename: KNPV4.1_pre.safetensors
+        sha256: c4adb98f6d014ee2b15f79661b3ae0ffd08bae1fe6d0e02865fcde040157772e
+
+  - name: Krea2-realism-V1
+    type: lora
+    files:
+      - url: https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/lora/b77b27a4fe5186d518d6cefdb75a4aa79318cb77ad21b81102a156a6d4889744/Krea2-realism-V1.safetensors
+        filename: Krea2-realism-V1.safetensors
+        sha256: b77b27a4fe5186d518d6cefdb75a4aa79318cb77ad21b81102a156a6d4889744
+
+  - name: krea2_identity_edit_v1_2
+    type: lora
+    files:
+      - url: https://huggingface.co/conradlocke/krea2-identity-edit/resolve/main/krea2_identity_edit_v1_2.safetensors
+        filename: krea2_identity_edit_v1_2.safetensors
+        sha256: 6adf9a69cc9502d286db7b69964d37da7e9cfe4b05b4d004bc275f087d3fd3cf

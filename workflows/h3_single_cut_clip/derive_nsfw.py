@@ -75,5 +75,6 @@ for base, node in LORA_NODE.items():
                      "  a skin-realism slider (0.5) and an anatomy LoRA (0.6). Do not select them on a port.")
     y = y.replace("take style / character adapters", "take act / detail adapters")
     y = must_replace(y, "\n  - name: rife49\n", MODELS + "\n  - name: rife49\n")
+    y = must_replace(y, "\nmodel_family: minimaxh3\n", "\nmodel_family: minimaxh3\ncontent: nsfw\n")
     (dst / "workflow.yaml").write_text(y)
     print("wrote", dst)
