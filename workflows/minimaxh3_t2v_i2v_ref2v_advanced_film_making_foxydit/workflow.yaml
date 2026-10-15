@@ -52,12 +52,13 @@
 name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
 version: "1.6"
 description: >
-  Generates video with synchronized audio from a structured text prompt using the MiniMax H3
-  FL2VA model and Qwen3VL 32B text encoder, in T2V mode (no image anchor inputs required).
-  Best for cinematic AI filmmaking structured around MiniMax H3's REF2V prompt format (use prompt-writer-minimaxh3 skill), which
-  organizes subject definitions, shot descriptions, and soundscape into discrete sections for
-  rich narrative control. Not suitable for I2V, first/last-frame anchoring, or external
-  reference image workflows — a separate FL2VA export is needed for those modes.
+  TEXT-TO-VIDEO ONLY - despite "i2v_ref2v" in its name this workflow takes NO image or video
+  inputs: it cannot use a start frame, a storyboard keyframe or character / outfit / location
+  references, so it is never the workflow for a shot that has any of them (use
+  h3_single_cut_clip for a new shot from a start frame, h3_clip_continuation to continue a
+  clip). Generates video with synchronized audio from a structured MiniMax H3 text prompt
+  (prompt-writer-minimaxh3; FL2VA model, Qwen3VL 32B text encoder) - for a shot with no
+  storyboard frame and no designed characters.
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3

@@ -1,0 +1,20 @@
+subject_definitions:
+<Picture 1> is the start frame of the target video: at 0.00 seconds it is fully referenced, so framing, set, light and every visible subject start exactly as shown.
+<Subject 1> is the woman defined by <Picture 2>; her face, hair and clothing follow that picture.
+<Picture 3> is the pose <Subject 1> ends in.
+
+summary:
+[keyframe completion] The target video starts on <Picture 1>: <Subject 1> walks into the empty room, crosses it and settles into the pose from <Picture 3>.
+
+retention_analysis:
+<Picture 1>: fully_preserved at 0.00 seconds. <Picture 2>: fully_preserved (identity, hair, clothing). <Picture 3>: attribute_transfer (body pose only).
+
+detailed_description:
+Live-action, cinematic, soft natural interior light, shallow depth of field.
+[Shot 1] For the target video, at 0.00 seconds, <Picture 1> is fully referenced. Medium-wide shot, camera static. <Subject 1> enters from the right edge of frame and walks across the room toward the camera. At 00:02.500 she slows and turns three-quarters toward the lens. At 00:04 she settles into the pose from <Picture 3> and holds it, eyes on the camera. Hair, clothing and light stay unchanged throughout.
+
+overall_soundscape:
+Soft footsteps on a wooden floor, a light rustle of fabric as she turns, low room tone.
+
+non_diegetic_music:
+N/A

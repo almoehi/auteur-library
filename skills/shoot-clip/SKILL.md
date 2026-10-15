@@ -41,7 +41,10 @@ Reference every image / clip as `artifact://<artifactId>/<file>` (never a copied
 Read the descriptions and `get_workflow_instructions` of your video `wf_*` tools; prefer what the
 manifest declares (`capabilities`, per image input `reference_role` and `label`) and otherwise
 infer from descriptions and port order. A workflow with a required input you cannot supply is
-disqualified. The `preferred_workflow` is used when it qualifies. Then read the chosen
+disqualified. The `preferred_workflow` is only a tie-breaker between workflows that qualify for the
+mode in the table below: for a `cut` it must be image-to-video (type `i2v` / `i2va`) - a
+`preferred_workflow` of another type (e.g. text-to-video `t2v` / `t2va`, whatever its name says)
+is IGNORED, and you take a qualifying image-to-video workflow instead. Then read the chosen
 workflow's instructions fully: prompt syntax, duration parameter, frame constraints.
 
 | Mode | Workflow | Inputs |
@@ -93,7 +96,9 @@ ONE `wf_*` call with the frames / clip / references, the prompt, `prompt_route`,
 duration and (continue) `prior_clip_start_time`. A `cut` call MUST carry the `start_frame` on the
 start-image port; a call without it is wrong - fix it before sending. Route the video to the task's canonical `.mp4`
 (`output_ports` when needed). On an error re-read the workflow instructions, fix the call and
-retry once; if it fails again, `task_complete` with a `BLOCKED:` / failure summary.
+retry once WITH THE SAME WORKFLOW; if it fails again, `task_complete` with a `BLOCKED:` / failure
+summary that quotes the error. A failed render never makes another workflow type acceptable: never
+fall back to a text-to-video workflow for a `cut` because the image-to-video render failed.
 
 ## 5. Write the prompt file
 

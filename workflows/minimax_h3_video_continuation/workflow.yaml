@@ -7,7 +7,8 @@
 # MiniMaxH3ReferenceToVideo, CreateVideo, SaveVideo, VAEDecodeAudio — built-in ComfyUI (comfy_extras)
 # VHS_LoadVideoFFmpeg — ComfyUI-VideoHelperSuite (already in nodes.lock)
 # ComfyMathExpression — ComfyMath (already in nodes.lock)
-# ResolutionSelector   — built-in ComfyUI
+# VHS_VideoInfoLoaded  — ComfyUI-VideoHelperSuite (already in nodes.lock): width / height of
+#   the prior clip (clip_info -> clip_w / clip_h, snapped to a multiple of 32) set the output size
 #
 # ─── Append to nodes.lock ─────────────────────────────────────────────────────
 # (none — all custom nodes already in nodes.lock)
@@ -143,8 +144,9 @@ context: |
   Duration: pass the target clip length in seconds; fractional values are fine (e.g. 6.5).
   Use steps=4–8 for fast drafts and steps=20–30 for final quality.
 
-  Reference images: pass all reference images at the same resolution. The model derives output
-  resolution automatically from them.
+  Resolution: the output has the prior clip's width and height (snapped to a multiple of 32), so
+  the continuation always matches the clip it continues. Pass all reference images at the same
+  resolution.
 
   Prompt format — six REF2V sections (English only, all required):
   1. Context header: one-line description of how video and pictures align to the target, e.g.
