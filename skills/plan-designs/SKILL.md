@@ -37,7 +37,7 @@ things below: the base look of a character ("Base look and outfits") and the NSF
    copy stays verbatim, Beats included.
 3. Read the character table files (pass `artifact_file`): `character_<slug>.md`, each with
    `VISUAL PROFILE` and `WARDROBE TRACKER`.
-4. Existing designs (idempotency): `artifact_index` keys starting `character_`, `outfit_`,
+4. Existing designs (idempotency, mandatory: always run it, never assume nothing exists): `artifact_index` keys starting `character_`, `outfit_`,
    `location_`, `storyboard_`, plus `task_index`. Remember them as `existing`.
 If an input is missing or unparseable: `task_failed` with a clear message naming it. Write nothing.
 
@@ -46,8 +46,9 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 1. Build the entity lists:
    - **characters**: every `character_<slug>.md` file; plus any character named in the scene
      list but without a file (flag in the summary; create it from the scene context only).
-   - **locations**: distinct `location_slug` values of the scene list; display name from the
-     `Location` column.
+   - **locations**: EVERY distinct `location_slug` value of the scene list (no scene may reference a
+     location without a design: re-scan all scene rows, including ones whose slug appears once);
+     display name from the `Location` column.
    - **looks**: distinct (character_slug, look_slug) pairs from the `Outfits` column, plus
      looks in WARDROBE TRACKERs that are used in a scene. Looks are candidates only; see
      "Base look and outfits" below for which become outfit designs.
@@ -112,7 +113,7 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
    design, not extra attribute text.
    Put only what the sources state; omit unknown keys (except the base `wardrobe`). `character_type` is passed as its own
    argument, not inside `attributes`.
-6. **NSFW LoRA plan** (only when nudity is `allowed`; skip entirely otherwise, and never for a
+6. **NSFW LoRA plan** (mandatory whenever nudity is `allowed`: you MUST call `lora_index`, never skip or guess it; only when nudity is `allowed`; skip entirely otherwise, and never for a
    scene with a minor in it). The base model renders explicit content only with the right LoRAs,
    so plan them per design now - the design workers load what you attach:
    1. From each scene's row and Beats, list the explicit **content** it shows, as short tags in
@@ -188,6 +189,8 @@ and the plan adds the top-level key `nsfw_loras` (tags and the LoRA names attach
 }
 ```
 
+**Writing these files is NOT completion.** Phase 2 (a `create_design` call for every plan entry, then one storyboard per scene) must follow. A tool message saying the file was written, or listing `task_complete` as a next action, never ends the task: call `task_complete` only after all create calls and the Phase 3 audit.
+
 Both file names are canonical: write exactly `scene_list.md` and `design_plan.json` into the `design_plan` artifact. If the files declared on the artifact differ, still write these two names and report the mismatch in the `task_complete` summary (line `file mismatch: <declared> vs scene_list.md, design_plan.json`). Every outfit's `character_slug` must exist in `characters`, every character has a `base_look` (the look slug it wears; omit only when the sources name no look at all), and no outfit's `look_slug` equals its character's `base_look`.
 
 ## Phase 2 — Create the designs
@@ -252,11 +255,13 @@ needs the `scene_list` artifact (it is approved). The storyboard's duplicate-nam
 
 ## Phase 3 — Pre-completion audit
 
-1. Re-run `artifact_index`; every design plan entry must have a design key now (created or
-   pre-existing), and every scene must have a `storyboard_scene_<n>`. Re-create anything
-   missing once.
+1. MANDATORY: re-run `artifact_index` (never skip it). It must show one design per plan entry
+   (every character, location and outfit; created or pre-existing) and a `storyboard_scene_<n>`
+   for every scene. Create anything missing, then re-run it. Zero `create_design` calls so far
+   means Phase 2 has not run: do it now, never `task_complete`.
 2. `design_plan.json` and `scene_list.md` both exist in your artifact directory and equals what you used.
-3. If any entity failed: `task_complete` is still correct only if all others are done and the
+3. The `task_complete` summary may only claim what the tool results and the audit show: counts come from the audit's `artifact_index`, never from the plan or from intent.
+4. If any entity failed: `task_complete` is still correct only if all others are done and the
    summary lists the failures; if the design plan could not be covered at all, call `task_failed`.
 
 Keep replies concise (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`). `task_complete` summary format (omit lines that are empty/none except `failed`; name designs by their task URI `task://<id>` where known, never list every key when all went well):

@@ -171,7 +171,8 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Output artifact `design_plan`; output files (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`, then one create_design call per design plan entry, then one storyboard design per scene (`kind: "storyboard"`, see the skill).
+Deliverable: the designs. Create one design per plan entry with `create_design` (characters, locations, outfits), then one storyboard design per scene (`kind: "storyboard"`, see the skill). Writing files is NOT completion: call `task_complete` only after every `create_design` call and the audit, and report only counts the tool results show.
+Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`.
 ```
 
 ## Step 5 — Verify and confirm
