@@ -53,7 +53,7 @@ When the user or task asks to skip drafting/enhancement or use the prompt verbat
 
 ## Output file routing
 
-Each `wf_xxx` output is auto-routed to the declared file slot whose name matches the output port name (`pose_front.png` <- port `pose_front`). If one call yields several outputs of the same kind and the declared names do not map 1:1 to the ports, pass `output_ports={"<port>": "/workspace/<artifact_uuid>/<file>"}` explicitly. One call may produce one or more files; your task description says how many calls are needed.
+Each `wf_xxx` output is auto-routed to the declared file slot whose name matches the output port name (`portrait.png` <- port `portrait`). If one call yields several outputs of the same kind and the declared names do not map 1:1 to the ports, pass `output_ports={"<port>": "/workspace/<artifact_uuid>/<file>"}` explicitly. One call may produce one or more files; your task description says how many calls are needed.
 
 ## Artifact-backed inputs (reference images, source video)
 
