@@ -4,9 +4,13 @@
 # edited photo; up to three optional reference chains feed ReferenceLatent (positive + negative).
 # https://comfy.org/workflows/image_flux2_klein_9b_kv_image_edit-546732126bf6/
 #
+# Catalog LoRAs: a Power Lora Loader (node 150) between the UNet and the KV cache takes the four
+# LoRA ports. flux2_reference_compose_nsfw is GENERATED from this bundle by derive_nsfw.py - re-run
+# it after every change here.
+#
 # ─── Custom Nodes ─────────────────────────────────────────────────────────────
-# (none — every node class in this workflow is a built-in ComfyUI core node;
-#  see ../flux2_image_edit/report.md "Custom Nodes" section)
+# Power Lora Loader (rgthree) is in nodes.lock; every other node is a built-in ComfyUI core node
+# (see ../flux2_image_edit/report.md "Custom Nodes" section).
 # ──────────────────────────────────────────────────────────────────────────────
 
 name: flux2_reference_compose
@@ -83,6 +87,31 @@ ports:
       seed: true
       required: false
       default: -1
+  loras:
+    - name: lora_1
+      kind: lora
+      description: "Optional LoRA slot 1 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_2
+      kind: lora
+      description: "Optional LoRA slot 2 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_3
+      kind: lora
+      description: "Optional LoRA slot 3 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_4
+      kind: lora
+      description: "Optional LoRA slot 4 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
   outputs:
     - name: image
       kind: image
@@ -104,6 +133,8 @@ context: >
   Prompting: say the camera angle and framing explicitly ("low-angle shot from the floor", "overhead
   view"); name each subject with its picture ("Brianna from Picture 2 sits on the bed in the
   bedroom from Picture 1"); restate the art style in the prompt when the pictures are illustrations.
+  LoRAs: up to four flux2 catalog LoRAs on lora_1..lora_4 (Klein 9B distilled ones work best;
+  0.5-1.0 strength).
   Parameters: steps 4 and cfg 1 are tuned for this step-distilled model; vary the seed for
   alternative takes; width / height must be multiples of 16.
 models:
