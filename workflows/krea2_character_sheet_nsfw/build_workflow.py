@@ -105,11 +105,15 @@ PANELS = {
     "lying_top": (STRIP, "Seen from directly overhead, {he} lie{s} flat on {his} back on the floor, body stretched out in one straight horizontal line, arms along {his} sides, face looking straight up into the camera, the whole body from head to feet in frame. " + NO_MANNEQUIN),
 }
 
+# Head-and-shoulders, not waist-up: the male templates' portraits were drawn as medium shots without it.
+SFW_PORTRAIT_FRAMING = "Tight head-and-shoulders portrait, the head filling the upper part of the frame and the image ending at the chest. "
 SFW_CLOSE_UP = "Close-up head-and-shoulders portrait facing the camera, the face filling the frame. "
 # SFW: panels new to it, and the NSFW wording replaced (the mannequins there wear a t-shirt and shorts).
 SFW_PANELS = {
-    "portrait_side_wide": (WIDE, "Head-and-shoulders portrait in exact left profile, neutral relaxed expression, lips closed. " + PROFILE_HEAD),
-    "portrait_back_wide": (WIDE, "Head-and-shoulders portrait seen from directly behind, {his} back to the camera. " + BACK_HEAD),
+    "portrait_front_wide": (WIDE, SFW_PORTRAIT_FRAMING + "Facing the camera squarely, neutral relaxed expression, lips closed, eyes looking into the camera."),
+    "portrait_side_wide": (WIDE, SFW_PORTRAIT_FRAMING + "In exact left profile, neutral relaxed expression, lips closed. " + PROFILE_HEAD),
+    "portrait_back_wide": (WIDE, SFW_PORTRAIT_FRAMING + "Seen from directly behind, {his} back to the camera. " + BACK_HEAD),
+    "expr_strained": (WIDE, "{He} look{s} physically strained and not smiling: teeth gritted and clenched, lips pulled back, brow deeply furrowed, eyes narrowed, the whole face tense, head tipped slightly back."),
     "squat_front": (WIDE, "{He} squat{s} facing the camera, feet flat on the floor, knees apart, hands resting on {his} knees, the whole body from head to feet in frame."),
     "sit_pose": (WIDE, "{He} {is} seated upright at chair height in empty space at a three-quarter angle, thighs level, knees bent at a right angle, hands on {his} thighs, face turned toward the camera; there is no chair, stool or furniture anywhere, only the plain studio floor."),
     "expr_pleasure": (WIDE, "{His} expression is blissful delight: head tilted slightly back, eyes looking upward, a warm open-mouthed smile."),
@@ -166,6 +170,7 @@ NSFW_PANEL_TUNE = {
 }
 _EXPRESSION_TUNE = {"ref_boost": 3.0, "ref_boost_a": 4.0}  # the template pulls harder so the close-up framing holds
 SFW_PANEL_TUNE: dict[str, dict] = {
+    **{n: _EXPRESSION_TUNE for n in ("portrait_front_wide", "portrait_back_wide", "portrait_side_wide")},
     **{n: _EXPRESSION_TUNE for n in ("expr_smile", "expr_frightened", "expr_mouth_open", "expr_strained", "expr_pleasure")},
     # Same rear-view problem as the NSFW one.
     "fullbody_back": {"ref_boost": 2.0, "ref_boost_a": 5.0, "identity": False},
