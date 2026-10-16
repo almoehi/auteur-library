@@ -231,7 +231,9 @@ wf_<tool>(prompt_positive="<prompt>", <image ports with artifact:// refs>, …,
   output_ports={"<primary output port>": "/workspace/<artifact id>/take_s3-01-draft-<n>.png"})
 ```
 
-Same prompt for all drafts of a shot (the random seed varies them). A failed draft fails only
+Same prompt for all drafts of a shot (the random seed varies them). Keyframes match the story's
+intended format: pass `is_portrait` (`true` for a vertical phone clip, `false` for landscape) on every
+keyframe call when the story calls for a specific orientation; omit it otherwise. A failed draft fails only
 its own take: re-read the workflow instructions, fix the call, retry that draft once (same file
 name); if it fails again leave it (the studio shows a failed take with Retry) and report it.
 

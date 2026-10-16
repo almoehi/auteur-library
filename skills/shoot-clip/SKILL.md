@@ -117,7 +117,7 @@ ONE `wf_*` call with the frames / clip / references, the drafted prompt, the pla
 duration and (continue) `prior_clip_start_time`. Keep the `draft` quality unless the task asks
 otherwise. Do NOT pass `width` / `height` by default - the render profile decides the size. Set them
 only when the story or shot calls for a different format (a smartphone clip inside the film, the
-storyboard's aspect ratio) or the task carries them; the values then override the profile. A `cut` call MUST carry the `start_frame` on the
+storyboard's aspect ratio) or the task carries them; the values then override the profile. Set `is_portrait` only when the shot's format differs from the keyframe / story format (e.g. a vertical phone clip from a landscape keyframe); otherwise omit it - the code follows the start frame's orientation. A `cut` call MUST carry the `start_frame` on the
 start-image port; a call without it is wrong - fix it before sending. Route the video to the task's canonical `.mp4`
 (`output_ports` when needed). On an error re-read the workflow instructions, fix the call and
 retry once WITH THE SAME WORKFLOW; if it fails again, `task_complete` with a `BLOCKED:` / failure

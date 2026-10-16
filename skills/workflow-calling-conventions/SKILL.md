@@ -57,6 +57,8 @@ When the user or task asks to skip drafting/enhancement or use the prompt verbat
 
 Do not pass `width` / `height` by default - the render profile (draft / preview / master) decides the size. Set them only when the story or shot needs a different format (e.g. a vertical smartphone clip inside the film, the storyboard's aspect ratio); the values you pass then override the profile's size.
 
+To set only the orientation, pass `is_portrait` (`true` = portrait, `false` = landscape) on a `wf_*` tool that has it: the code turns the final size that way round (swapping `width` / `height`, scaled to fit the workflow's bounds) and tells you in the result when it changed the size. Omit it to keep the size as computed. An image-to-video call without it follows its first-frame image, so a clip never crops or stretches its keyframe.
+
 ## Output file routing
 
 Each `wf_xxx` output is auto-routed to the declared file slot whose name matches the output port name (`portrait.png` <- port `portrait`). If one call yields several outputs of the same kind and the declared names do not map 1:1 to the ports, pass `output_ports={"<port>": "/workspace/<artifact_uuid>/<file>"}` explicitly. One call may produce one or more files; your task description says how many calls are needed.
