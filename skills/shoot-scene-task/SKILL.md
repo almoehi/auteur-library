@@ -2,10 +2,13 @@
 name: shoot-scene-task
 description: >
   Trigger when the user wants to shoot, film, or render a named scene into video clips —
-  e.g. "shoot scene 2", "let's film scene 1", "create a task to shoot the hotel lobby scene".
-  Validates prerequisites, reads the scene's finished storyboard design (shot list + keyframes),
-  and schedules ONE task per clip (one clip per shot) plus one assembly task that joins the
-  clips into the scene video. Also handles direct assembly requests — "assemble scene 3",
+  e.g. "shoot scene 2", "let's film scene 1", "create a task to shoot the hotel lobby scene",
+  "plan and shoot artifact://<storyboard>", "shoot storyboard_scene_3", "shoot @scene_3",
+  "shoot scenes 1 and 4" (several scenes or storyboards in one request).
+  Validates prerequisites, reads each scene's finished storyboard design (shot list + keyframes),
+  and schedules ONE task per clip (one clip per shot) plus one assembly task PER scene that joins
+  the clips into the scene video. Load this skill instead of creating a single worker task that
+  renders the clips itself. Also handles direct assembly requests — "assemble scene 3",
   "stitch the clips of scene 2", "render the final cut of scene 1" — by (re)creating only the
   missing `assemble_scene<N>` task (see "Assembly-only requests").
   Do NOT invoke for storyboard design or keyframe rendering (storyboard-scene), prompt writing,
@@ -25,6 +28,15 @@ Use this skill when the user expresses intent to film or shoot a named scene:
 > "shoot scene X using the I2V workflow"
 > "start filming the hotel lobby scene"
 > "schedule scene 3 for shooting"
+> "plan and shoot artifact://a_abc123 and artifact://a_def456"   (storyboard design artifacts)
+> "shoot storyboard_scene_3" / "shoot @scene_3"
+> "shoot scenes 1 and 4"
+
+A storyboard artifact URI, `storyboard_scene_<n>` or an `@scene_<n>` mention each name a scene
+(resolve the number from the storyboard's key). **Several scenes in one request**: run Steps 0-4
+once per scene, in the order given, producing the full set of per-clip tasks plus one
+`assemble_scene<N>` task for EACH scene; never merge scenes into one task and never let a worker
+render clips itself. Step 5 gives one short reply covering all scenes.
 
 This skill runs in the workspace coordinator. It validates prerequisites, reads the scene's
 storyboard design, plans one clip per shot, and schedules **one task per clip** (worker skill
@@ -135,6 +147,10 @@ directly, not the UUID. Sections are `## <shotId> — <title>` with lines `Actio
 `Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds), `Transition:` (`continue — <reason>`
 or `cut — <reason>`, absent in older storyboards).
 
+Keep each shot's complete block (the `## <shotId> — <title>` heading and every line up to the
+next heading) verbatim: it goes into the clip task unchanged, including `Blocking:`, `Pose:`,
+`Frame:`, `Visible:` and, in a workspace with `contentPolicy.nudity: allowed`, `Act:`.
+
 Extract for every shot: shot ID and title, `Action`, `Camera` (keyframe framing), `Movement` (the
 camera move of the VIDEO; absent in older storyboards), `Duration`, `Transition` (absent in older
 storyboards), characters and outfits. When a
@@ -142,6 +158,13 @@ shot has no `Movement:`, take it from the matching beat in the `Beats` section o
 `scene_list` artifact (read it once; the scene's `### Scene <n>` table: beat, action, framing,
 camera move); no beat either: derive it from the action and say so. Never turn a missing
 movement into "static".
+
+### 2a-2. Frame edits
+
+A published frame may carry `edits`: the edit instructions that were applied to its keyframe in
+the design studio (for example "remove the car"). Read them from the storyboard design's
+`design.json` (the published output of that `frame_<i>`; none recorded = no edits) and pass them
+on, verbatim, per clip (`frame_edits:`). The clip must never bring back what an edit removed.
 
 ### 2b. Character context (optional)
 
@@ -229,7 +252,11 @@ title:                "Shoot <Scene Name> – clip <M> (<shot title>)"
 description:          one line: what the clip shows
 agent:                <an agent from available_agents that has the wf_* workflow tools and the
                        sandbox — in the default workspace `generic`; never one that is not listed>
-requires_artifacts:   ["scene<N>_clip<M-1>"]   — ONLY for a `continue` clip; omit for start / cut
+requires_tasks:       ["shoot_scene<N>_clip<M-1>"]    — ONLY for a `continue` clip; omit for start / cut
+requires_artifacts:   ["scene<N>_clip<M-1>"]          — ONLY for a `continue` clip; omit for start / cut
+                       (a `continue` clip depends on its previous clip so it can continue from that
+                       clip's last frame with the continuation workflow)
+can_create_tasks:     NOT set (a clip task never creates tasks)
 output_artifact_name: scene<N>_clip<M>
 output_artifact_description: "<Scene Name> clip <M>"
 output_files:         ["scene<N>_clip<M>_<slug>.mp4", "scene<N>_clip<M>_<slug>_prompt.txt"]
@@ -241,11 +268,16 @@ prompt:
   clip: <M> of <total>  — shot <shotId> "<title>"
   mode: continue | cut   (<one-line reason>)
   framing_change: yes | no   (continue only; yes when this shot's Camera differs from the previous shot's: "previous: <its Camera>")
+  shot_block: |
+    <the shot's FULL block from shotlist.md, verbatim, every line: Action, Location, Camera,
+     Movement, Transition, Characters, Outfits, Blocking, Pose, Frame, Visible, Duration and the
+     Act: line when present>
+  frame_edits: <the frame's published `edits`, verbatim; "none" when it has none>
   action: <the shot's Action>
   camera: <the shot's Camera - keyframe framing>
   movement: <the shot's Movement VERBATIM>
   duration_seconds: <planned duration>
-  start_frame: artifact://<storyboard id>/frame_<M>.<ext>
+  start_frame: artifact://<storyboard id>/frame_<M>.<ext>   (exactly this storyboard artifact and frame file)
   prior_clip: artifact://<scene<N>_clip<M-1> id>/<its video file>     (continue only)
   references: artifact://<location id>/sheet.<ext>, artifact://<outfit id>/sheet.<ext>,
               artifact://<character id>/sheet.<ext>, …   (sheet first; `primary.<ext>` for a design
@@ -315,10 +347,11 @@ After the Step 4c reconciliation is clean, reply in 1-3 short lines (see "Concis
 1. **Resolve intent before reading artifacts** — never start a discovery pass until scene and workflow are unambiguous.
 2. **Storyboard design only** — the finished `storyboard_scene_<n>` is the source; bail on a missing or unapproved one. No partial scheduling. No other pre-production artifact (cast, visual bible, art direction) is required.
 3. **One task per clip, one assembly task** — never one task for several clips.
-4. **Dependencies** — `continue` clip: `requires_artifacts: [scene<N>_clip<M-1>]` (starts once the predecessor is approved and reads its real file); `cut` clip: no clip dependency; assembly: all clip tasks and artifacts.
+4. **Dependencies** — `continue` clip (`Transition: continue`): `requires_tasks: [shoot_scene<N>_clip<M-1>]` AND `requires_artifacts: [scene<N>_clip<M-1>]` (starts once the predecessor is approved and continues from its real last frame); `cut` clip: no clip dependency; assembly: all clip tasks and artifacts of ITS scene.
 5. **Idempotency** — skip every clip / assembly task whose key already exists and is live; never duplicate.
 6. **Canonical names are set in Step 3b** — derive them once, embed them in each task prompt and `output_files`; filenames in the prompt's "Output files" list must match `output_files` exactly (a mismatch makes the task build reject).
 7. **Each `create_task` carries its output artifact inline**, issued one per round using the identifiers the previous result reported.
 8. **Image-to-video only for fresh starts** - the storyboard frame is the first frame; no i2v / i2va workflow in the workspace -> stop with a clear message, never text-to-video.
 9. **Transitions are decided upstream** - take the shot's `Transition:`; decide yourself only when it is absent.
-10. **Reconcile** - `task_index` against the written plan before replying; create what is missing.
+10. **Clip tasks never get `can_create_tasks`** - only planning tasks do; the clip prompt embeds the canonical output files, the storyboard artifact URI + exact frame file, the full shot block (with any `Act:` line) and the frame's `edits`.
+11. **Reconcile** - `task_index` against the written plan before replying; create what is missing.

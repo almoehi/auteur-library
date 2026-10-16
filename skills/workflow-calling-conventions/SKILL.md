@@ -1,6 +1,6 @@
 ---
 name: workflow-calling-conventions
-description: "Producing output files with wf_xxx workflow tools — correct call sequence, prompt route (pass the person's instruction through or rewrite it), batch handling, and completion contract."
+description: "Producing output files with wf_xxx workflow tools — correct call sequence, prompt writing (pass the person's own words through or draft with the prompt writer), batch handling, and completion contract."
 agentType: all
 ---
 
@@ -9,10 +9,6 @@ agentType: all
 Use this whenever your task asks you to render, shoot or produce media (images, frames, video) by calling `wf_xxx` workflow tools (listed in your tools, prefix `wf_`).
 
 Worked examples (only if a call shape is unclear): load_skill workflow-calling-examples.
-
-## Task granularity (coordinator)
-
-When planning work as tasks, prefer ONE task per independently renderable output (clip, shot, design, sheet). Chain tasks with `requires_artifacts` when one needs another's output. Use a single task for several outputs only when they cannot be separated. Per-output tasks render in parallel, can be retried, reviewed and checked individually, and keep each worker's context small.
 
 ## Concise replies and task/artifact URIs
 
@@ -26,7 +22,7 @@ A ⟦ref:r12.key⟧ in your earlier tool calls stands for a value you sent (call
 
 ## Correct sequence
 
-`read_artifact` the work spec -> (LoRA slots exposed: `lora_index()` once) -> per shot or batch decide the prompt route and call `wf_xxx(prompt=..., prompt_route="verbatim" | "rewritten")` -> `task_complete` only AFTER every required call is done.
+`read_artifact` the work spec -> (LoRA slots exposed: `lora_index()` once) -> per shot or batch write the prompt (see "Prompt writing") and call `wf_xxx(prompt=...)` -> `task_complete` only AFTER every required call is done.
 
 ## LoRA lookup and loading
 
@@ -38,17 +34,19 @@ Only when the `wf_xxx` tool exposes LoRA slot parameters (`lora_1`, `style_lora`
 4. An unset slot is always safe (built-in LoRAs still run). Never load a LoRA just because the catalog has one.
 5. **Obey each LoRA's description** - it carries usage rules: "already baked into <workflow>: never select it there", a phrase the prompt must START with, a trigger that renders as a watermark (leave it out unless the effect is missing), a lower strength when stacked, "edits well" / "text-to-image only".
 
-### Prompt route — pass the person's instruction through, or rewrite it
+### Prompt writing - pass the person's instruction through, or draft it
 
-Decide for EVERY prompted wf_xxx call and state the decision with the `prompt_route` argument (`"verbatim"` or `"rewritten"`).
+The system decides the route from where the prompt text comes from; you do not state it. When a prompt-writer model is configured, a prompted wf_xxx call is accepted only if its prompt is (a) the output of `draft_prompt` / `draft_prompts_batch` / `enhance_prompt` of THIS task, or (b) text that occurs word for word in your task prompt or in a person's chat message. Anything else is refused ("Run draft_prompt (or draft_prompts_batch) for this call, or pass the person's own text verbatim.").
 
-- **PASS THROUGH (`prompt_route: "verbatim"`)** only when ALL of these hold: the text comes from the person (chat or studio); it is an explicit, concrete instruction (an imperative change or motion); it is short (about 300 characters or a few clauses); it states what and where without ambiguity; nothing needs adapting to the workflow beyond naming the supplied images. Then the prompt is the person's text VERBATIM, plus one sentence naming the supplied images by the workflow's port labels (for example "Picture 1 is the frame to edit; Picture 2 is Detective Raccoon (outfit).") and at most ONE short keep clause, only if the person did not say what to keep. Do NOT call draft_prompt, review_prompt or enhance_prompt.
-- **REWRITE with the prompt writer (`prompt_route: "rewritten"`)** for agent-derived briefs (scene lists, shotlists, design attributes, initial drafts), long, unstructured or vague requests, text-to-image and text-to-video generation, diversity variations and automatic retries after a miss. Pass the person's text, if any, in the `instruction` argument of draft_prompt / enhance_prompt / review_prompt (never only inside `context`): the prompt writer keeps it LOCKED.
+- **PASS THROUGH** only when ALL of these hold: the text comes from the person (chat or studio); it is an explicit, concrete instruction (an imperative change or motion); it is short (about 300 characters or a few clauses); it states what and where without ambiguity; nothing needs adapting to the workflow beyond naming the supplied images. Then the prompt is the person's text VERBATIM, plus one sentence naming the supplied images by the workflow's port labels (for example "Picture 1 is the frame to edit; Picture 2 is Detective Raccoon (outfit).") and at most ONE short keep clause, only if the person did not say what to keep. Do NOT call draft_prompt, review_prompt or enhance_prompt. (A task created with `prompt_writer: "skip"` passes its prompt as given.)
+- **DRAFT with the prompt writer** for agent-derived briefs (scene lists, shotlists, design attributes, initial drafts), long, unstructured or vague requests, text-to-image and text-to-video generation, diversity variations and automatic retries after a miss. Pass the person's text, if any, in the `instruction` argument of draft_prompt / enhance_prompt / review_prompt (never only inside `context`): the prompt writer keeps it LOCKED.
+- **`image_inputs`**: whenever the render call passes images, give `draft_prompt` / `draft_prompts_batch` (per item) the same images as `image_inputs`, a list of `{port, ref}` (the workflow's input port name and the `artifact://` ref passed to it). The code writes the "Picture N is <name>" lines from the workflow's port labels and the artifact titles - never type or renumber Picture lines yourself.
+- **`verbatim_phrases`**: a list of phrases that must survive unchanged in the written prompt (a shot's `Act:` text in an NSFW workspace, dialogue to keep). The code appends any phrase the writer dropped.
 - **Explicit overrides**: "use my words exactly" means pass through; "improve the prompt" means rewrite.
 - **Video clip duration**: for a video workflow (one whose duration parameter, e.g. `video_length`, the `wf_xxx` tool description names), pass `duration_seconds` (the clip's planned duration) to `draft_prompt` / `draft_prompts_batch` (per item) / `enhance_prompt` / `review_prompt` - it MUST equal the value you pass as the `wf_xxx` call's duration parameter; the prompt then states exactly that duration.
 - **Batch prompt tools** (`draft_prompts_batch` / `enhance_prompts_batch` / `review_prompts_batch`): `items` is a real JSON array of objects, written out in full. When some items of a batch fail (e.g. a timeout), retry ONLY the failed items - never re-send the whole batch.
 
-## Verbatim prompts - explicit override of the Prompt route
+## Verbatim prompts - explicit override of Prompt writing
 
 When the user or task asks to skip drafting/enhancement or use the prompt verbatim ("use this prompt as-is", "no prompt enhancement"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt`; pass the prompt to `wf_xxx` byte for byte (only addition allowed: a required LoRA trigger word, unless forbidden).
 
@@ -87,8 +85,8 @@ FIX: one concrete corrective instruction - what to change and what to keep (MISS
 
 A `match` needs no further call. On a `miss` (use its `fix`):
 
-1. Retry ONCE: render again from the SAME source (not the missed take) as a NEW take named base + `-r2` (`take_wide-rain.png` -> `take_wide-rain-r2.png`; a skill owning the naming may define a variant). Keep the missed take. Batch several retries into ONE `draft_prompts_batch` and ONE render response. Keep the original medium/style and every lock VERBATIM and change only what the finding names (pass the original prompt in `context`); REWRITE route, the person's original instruction as `instruction`.
-2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better take (`instruction`: one concrete corrective edit, what to change and keep, max ~1000 chars; `reason`: one line, max ~300). Report both takes and stop. It is fire-and-forget. A suggested fix the person sends from the Edit box is their explicit instruction: pass it through (`prompt_route: "verbatim"`) when it meets the Prompt route conditions.
+1. Retry ONCE: render again from the SAME source (not the missed take) as a NEW take named base + `-r2` (`take_wide-rain.png` -> `take_wide-rain-r2.png`; a skill owning the naming may define a variant). Keep the missed take. Batch several retries into ONE `draft_prompts_batch` and ONE render response. Keep the original medium/style and every lock VERBATIM and change only what the finding names (pass the original prompt in `context`); draft with the prompt writer, the person's original instruction as `instruction`.
+2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better take (`instruction`: one concrete corrective edit, what to change and keep, max ~1000 chars; `reason`: one line, max ~300). Report both takes and stop. It is fire-and-forget. A suggested fix the person sends from the Edit box is their explicit instruction: pass it through when it meets the pass-through conditions of "Prompt writing".
 3. Never retry a `-r2` take (its miss goes straight to `suggest_edit`); sandbox-derived files (crop, conversion, sheet) are not checked.
 
 ## Anchor (Picture 1) by intent
@@ -108,4 +106,4 @@ A workflow whose description starts with **[nsfw]** renders nudity and sex. Choo
 
 ## Key rules
 
-Call `wf_xxx` for every shot or batch your task defines, `task_complete` only afterwards (never after just reading the artifact); read artifacts with `read_artifact`; set `prompt_route` on every prompted call; check every take, retry at most once.
+Call `wf_xxx` for every shot or batch your task defines, `task_complete` only afterwards (never after just reading the artifact); read artifacts with `read_artifact`; check every take, retry at most once.

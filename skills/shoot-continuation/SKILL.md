@@ -85,7 +85,7 @@ video cuts to ..." or a new composition; if the brief asks for a new framing, su
 that is a CUT: it does not belong in this workflow (render it fresh from a storyboard frame with
 an image-to-video workflow, see `shoot-clip`) - say so in the summary instead.
 
-Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call and pass `prompt_route`. Typical here: the brief is agent-derived and rewritten; the person's optional instructions are passed in `instruction`, or verbatim only when short, explicit and concrete.
+Follow "Prompt writing" of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call. Typical here: the brief is agent-derived and drafted with the prompt writer; the person's optional instructions are passed in `instruction`, or verbatim only when short, explicit and concrete. Pass `image_inputs` (every image the call passes) and `verbatim_phrases` (a shot's `Act:` text, dialogue to keep) to `draft_prompt`.
 
 Load the prompt-writer skill of the chosen workflow's **model family** (`prompt-writer-<family>`
 — the one matching the workflow's base model; `draft_prompt` applies it automatically when

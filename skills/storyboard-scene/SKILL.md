@@ -93,11 +93,40 @@ Action: what is VISIBLE in the frame, in one or two sentences
 Location: location_harbor        (key of the ONE linked location design this shot takes place in)
 Camera: KEYFRAME framing - the OPENING frame of the shot (= the keyframe): shot size, angle, lens feel (e.g. "wide, eye level")
 Movement: the camera move of the VIDEO clip of this shot, within the same place (e.g. "slow push-in", "pan left", "hold")
+Blocking: who is where, facing which way, who touches whom or what (e.g. "Mira at the rail, back to camera, facing the sea; Jonas on the crate 2 m behind her, facing her back; no contact")
+Pose: body orientation, hands and head per person (e.g. "Mira: torso square to the rail, both hands on it, head turned left; Jonas: seated, elbows on knees, head down")
+Frame: where each person sits in the frame, left / centre / right, foreground / background (e.g. "Mira right foreground, Jonas left background")
+Visible: who must be visible and who must NOT be (e.g. "Mira and Jonas full length; nobody else")
+Act: plain words for who does what to whom (ONLY when contentPolicy.nudity is allowed; see below)
 Characters: mira, jonas        (character slugs, comma-separated, or "none")
 Outfits: mira:raincoat; jonas:work_suit      (<character>:<look> pairs, "; "-separated, or "none")
 Duration: 5
 Transition: cut — new moment, first shot of the scene
 ```
+
+### Blocking, Pose, Frame, Visible, Act - the instant the keyframe must show
+
+Every shot carries `Blocking:`, `Pose:`, `Frame:` and `Visible:`; they are what keeps a keyframe
+(and the clip rendered from it) from drifting, so write them concretely, from the beat and the
+scene list's Blocking / Contact (and Act) columns:
+
+- **`Blocking:`** who is where, facing which way, and the contact points (who touches whom or
+  what, where). "no contact" when there is none.
+- **`Pose:`** body orientation, hands and head, per person.
+- **`Frame:`** left, centre or right, foreground or background, per person.
+- **`Visible:`** who must be visible and who must NOT be. **POV shots**: the POV character is the
+  camera, so `Visible:` lists their hands or forearms only, never their face or body, and the POV
+  character is NOT a visible subject: do not put them in `Characters:` as a full-body figure and
+  do not bind a full-body reference of them.
+- **`Act:`** written ONLY when the workspace's `contentPolicy.nudity` (`{workspace.contentPolicy.nudity}`)
+  is `allowed`, and only for adults (any depicted minor: never; the line is left out). Plain,
+  explicit words for who does what to whom, the positions and contact points - no euphemisms,
+  no metaphors. Copy the scene list's `Act` column wording where it has one. Under `forbidden`
+  (or absent) leave the line out entirely: it is ignored there.
+
+**A shot asks for ONE instant, never a sequence.** The keyframe is a single moment; "she opens
+the door, steps in and turns" is three shots, not one `Action`/`Blocking`. Describe the state at
+the opening frame, and let `Movement` / the video carry the change.
 
 ### One shot = one place + one opening framing
 
@@ -140,7 +169,7 @@ Movement: slow pan toward the window
 Transition: cut — back to the sister's reaction
 ```
 
-(each shot also carries `Characters`, `Outfits` and `Duration`; omitted here for brevity.)
+(each shot also carries `Blocking`, `Pose`, `Frame`, `Visible`, `Characters`, `Outfits` and `Duration`; omitted here for brevity.)
 
 **`Location`** (ALWAYS written) = the key of the linked location design this shot takes place in
 (`location_driveway`), never a free name. A shot at the scene's default place uses the first
@@ -177,9 +206,11 @@ designs (others: in `Action` only); `Location` names only a linked location desi
 
 ## Phase 2 — Render the initial drafts (all shots, batched)
 
-Follow the **Prompt route** of `workflow-calling-conventions` for every prompted `wf_*` call
-(pass `prompt_route`): initial keyframes from the shot list are `rewritten`; a short user-typed
-chat edit on an edit workflow is a verbatim candidate. Never loop shot by shot; single
+Follow "Prompt writing" of `workflow-calling-conventions` for every prompted `wf_*` call:
+initial keyframes from the shot list are drafted with `draft_prompts_batch` (pass `image_inputs`
+per item - the shot's references - and, in a workspace with `contentPolicy.nudity: allowed`, the
+shot's `Act:` text as `verbatim_phrases`); a short user-typed chat edit on an edit workflow is a
+pass-through candidate. Never loop shot by shot; single
 `draft_prompt` / `review_prompt` / `enhance_prompt` calls are serialized, the `*_prompts_batch`
 tools run in parallel.
 

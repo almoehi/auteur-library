@@ -84,13 +84,18 @@ artifact call:
 
 ```
 create_task({ id, title, description, prompt, agent, requires_tasks, requires_artifacts,
-              output_artifact_name, output_files, output_artifact_description, policies })
+              output_artifact_name, output_files, output_artifact_description, policies,
+              can_create_tasks })
 ```
 
 - `id` = the Step 3 task id; `output_artifact_name` = the Step 3 output artifact KEY (a valid
   free snake_case key); `output_files` = the exact files from the Step 3 table (for the open
   `character_table` artifact use `[]`); `policies` = the checks from the Step 3 table
   (task checks; they judge the task's output files).
+- `can_create_tasks: true` ONLY on `plan_designs` (a planning task: its worker calls
+  `create_design`); the writer tasks (`write_screenplay`, `character_table`, `create_scenes`)
+  leave it unset, so their workers cannot create tasks. Without the flag a worker's `create_design`
+  / `create_task` is refused.
 - Unknown check keys are refused with the list of known keys and nothing is created: fix the
   key from that list (or create the missing policy per Step 2) and call again.
 
@@ -126,8 +131,14 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
   - write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`
     where `<slug>` is the lowercase name, `[a-z0-9]+(_[a-z0-9]+)*`
   - each file has exactly these sections as `##` headings: `NAME`, `ROLE`, `PERSONALITY`,
-    `VISUAL PROFILE` (character type, age, ethnicity, hair, eyes, build, distinguishing
-    features — one `key: value` line each), `WARDROBE TRACKER` (a table: look slug | description |
+    `VISUAL PROFILE` (character type, age, ethnicity, height, hair, eyes, build, build detail,
+    proportions, posture, distinguishing features — one `key: value` line each; NO `[...]`
+    placeholders or blanks: every field gets a concrete value, or the explicit word `n/a` when it
+    does not apply; invent a fitting value the screenplay does not contradict rather than leave a
+    field open; in a workspace with `contentPolicy.nudity: allowed` (`{workspace.contentPolicy.nudity}`)
+    and an adult character, add the anatomical details needed for a consistent depiction as
+    `key: value` lines in the same section, concrete and non-euphemistic; a minor never gets
+    them), `WARDROBE TRACKER` (a table: look slug | description |
     garments, colors, material, fit, accessories | scenes where worn; look slugs are
     lowercase, `[a-z0-9]+(_[a-z0-9]+)*`, e.g. `raincoat`, `evening_dress`)
   - files are registered automatically; then `task_complete`
@@ -142,6 +153,8 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
   the same place has the same slug in every scene) | `Time of day` | `Summary` (one sentence) |
   `Characters present` | then per present character its outfit: `Outfits` as
   `<character_slug>:<look_slug>` pairs separated by `; ` (e.g. `mira:raincoat; jonas:work_suit`).
+  The Summary names every entrance, exit and spoken line that matters to the story, not only the
+  main action.
   Character slugs must equal the `character_<slug>.md` file stems from the character table; look
   slugs must exist in that character's WARDROBE TRACKER (add a new look there only if the
   screenplay demands one, and say so in the summary). Every present character needs a look.
@@ -157,6 +170,15 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
   in the Action as the `location_slug` of a location (reuse a slug of the table or invent a new
   stable one, e.g. `driveway`); `new moment` = a jump in time, place or subject, or an
   insert; the first beat of a scene is `new moment`).
+  Beyond those columns every Beats table also has `Blocking` (who is where, facing which way) and
+  `Contact` (who touches whom or what, where; `none` when nothing does). In a workspace with
+  `contentPolicy.nudity: allowed` it also has an `Act` column: plain, explicit words for who does
+  what to whom, the positions and contact points, no euphemisms (`none` for a beat without an act;
+  never for a depicted minor). **One beat per distinct happening**: each entrance, each exit and
+  each dialogue line that changes the picture is its own beat (a character leaving gets an exit
+  beat, not a clause of the previous one). **POV scenes**: say which character is the POV; that
+  character is the camera - their beats show their hands or forearms only, never a full-body
+  figure, and the character is not listed as visible in `Blocking`.
   One beat = one place and one opening framing: split a beat that packs two places or two framings. Every scene has at least one beat
   (typically 2-6, one per distinct action or change of framing) and EVERY beat names a camera
   move and a continuity. Downstream, the storyboard's `Movement:` and `Transition:` lines and the
@@ -166,7 +188,7 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
   that barely move and cut where they should flow.
 
 ### 4d. plan_designs (the orchestrator)
-- agent: `design_planner`; `difficulty: "hard"`
+- agent: `design_planner`; `difficulty: "hard"`; `can_create_tasks: true` (the only task of the chain that gets it)
 - `requires_tasks: ["create_scenes","character_table"]`,
   `requires_artifacts: ["character_table","scene_list"]`
 - `output_artifact_name: "design_plan"`, `output_artifact_description: "Design Plan"`, `output_files: ["scene_list.md","design_plan.json"]` (BOTH must be declared in this call; `scene_list.md` is a verbatim copy of the scene list, so the task check judge sees both in `{input}`), X
@@ -201,4 +223,4 @@ a chain that is incomplete. Then tell the user, in at most 3 short lines
 4. Canonical ids and filenames from the Step 3 table, identical in every prompt and in every `create_task` call.
 5. Never write check/policy names into a task's prompt or description (a worker would pass them on, e.g. as `create_design` policies); checks are attached only through `create_task.policies`.
 6. Policies exist before the `create_task` that references them (create missing ones with `create_policy` first, Step 2); an unknown check key is refused and nothing is created.
-7. Never claim an unconfirmed task. Do not read artifacts or run `create_design` yourself; the worker does it.
+7. Never claim an unconfirmed task. Do not read artifacts or run `create_design` yourself; the `plan_designs` worker does it (it is the only task created with `can_create_tasks: true`).

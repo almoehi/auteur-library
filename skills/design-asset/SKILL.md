@@ -64,9 +64,10 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
 ## Phase 2 — Write the prompt
 
 1. `get_workflow_instructions(<workflow>)` — read fully (ports, defaults, prompt style). Follow
-   the **Prompt route** of `workflow-calling-conventions` (`load_skill` it) for every prompted
-   `wf_*` call and pass `prompt_route`: a user-typed chat edit ("make her older") is a verbatim
-   candidate; attributes, initial drafts, retries and diversity variations are rewritten.
+   "Prompt writing" of `workflow-calling-conventions` (`load_skill` it) for every prompted
+   `wf_*` call: a user-typed chat edit ("make her older") is a pass-through candidate (the
+   person's words verbatim); attributes, initial drafts, retries and diversity variations are
+   drafted with `draft_prompt` (pass `image_inputs` for the images the call carries).
 2. Draft with `draft_prompt(<workflow>, <context>)` (ONE prompt serves all `initialDrafts`). When
    several DIFFERENT prompts are needed at once (distinct drafts, several edits in one message):
    ONE `draft_prompts_batch` call in ONE round, at most one `review_prompts_batch`; never a

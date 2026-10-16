@@ -16,7 +16,7 @@ agentType: worker
 
 `scene{X}_storyboard_qc.json` — a per-frame quality report with:
 - Pass/fail verdict per check per frame
-- Overall scene verdict: PASS / FAIL_CRITICAL / FAIL_WARNING
+- Overall scene verdict: PASS / FAIL_CRITICAL / FAIL_WARNING / NEEDS_REVIEW
 - Specific failure descriptions and recommended actions
 
 ---
@@ -111,6 +111,33 @@ and perform VLM review. Check:
 > "Shot description: [summary from shot_prompts for this frame].
 > Does this image depict that content? Answer: PASS or FAIL + one-sentence reason."
 
+**F-07 People count:**
+> "The shot lists these characters: [Characters line]. Count the people visible. Does the count
+> match? Exception: in a POV shot the POV character is the camera and appears as hands or
+> forearms only. Answer: PASS or FAIL + one-sentence reason."
+
+**F-08 Location and furniture:**
+> "The shot text names this place and these objects / furniture: [Location + Action/Blocking].
+> Are they present, and is nothing contradicting the text shown (a car that a frame edit
+> removed, a missing bed)? Answer: PASS or FAIL + one-sentence reason."
+
+**F-09 Outfits visible:**
+> "Each visible character should wear the look in the shot's Outfits line: [Outfits]. Is it
+> visible (and nude only where the line says nude)? Answer: PASS or FAIL + one-sentence reason."
+
+**F-10 Single moment:**
+> "Is this ONE continuous instant - no panels, split screen, collage, repeated figures or several
+> stages of an action? Answer: PASS or FAIL + one-sentence reason."
+
+**F-11 Act matches (only when the workspace's `contentPolicy.nudity` is `allowed` and the shot
+has an `Act:` line):**
+> "The shot's act: [Act text]. Does the image show exactly that act - who does what to whom, the
+> positions and contact points? Answer: PASS or FAIL + one-sentence reason."
+
+A check the vision model refuses, answers emptily or with something that is neither PASS nor
+FAIL is **UNCHECKED**, with the reason. UNCHECKED is never a pass: a person must review that
+frame (a take check in the studio may return the same `unchecked` verdict).
+
 For frames that FAILED automated checks: skip VLM review (already critical fail).
 
 ---
@@ -120,7 +147,7 @@ For frames that FAILED automated checks: skip VLM review (already critical fail)
 ```json
 {
   "scene_id": "scene2",
-  "overall_verdict": "PASS | FAIL_CRITICAL | FAIL_WARNING",
+  "overall_verdict": "PASS | FAIL_CRITICAL | FAIL_WARNING | NEEDS_REVIEW",
   "critical_failures": [],
   "warnings": [],
   "frames": {
@@ -130,7 +157,9 @@ For frames that FAILED automated checks: skip VLM review (already critical fail)
       "F02_location": {"passed": true, "severity": "critical", "reason": "Period hotel room visible"},
       "F03_character": {"passed": false, "severity": "critical", "reason": "Character wearing summer dress, not traveling clothes"},
       "F04_costume": {"passed": false, "severity": "high", "reason": "White dress visible, expected dark traveling clothes"},
-      "F06_content": {"passed": true, "severity": "medium", "reason": "Wife at window as described"}
+      "F06_content": {"passed": true, "severity": "medium", "reason": "Wife at window as described"},
+      "F07_people": {"passed": true, "severity": "high", "reason": "2 people, as listed"},
+      "F11_act": {"passed": null, "verdict": "unchecked", "severity": "high", "reason": "vision model refused"}
     }
   },
   "recommended_action": "Re-render frames: s2_01 (F03 costume failure)"
@@ -139,8 +168,9 @@ For frames that FAILED automated checks: skip VLM review (already critical fail)
 
 Overall verdict rules:
 - FAIL_CRITICAL: any frame has F01 or F02 or F03 failure
-- FAIL_WARNING: any frame has F04, F05, or F06 failure but no critical failures
-- PASS: all frames pass all checks
+- FAIL_WARNING: any frame has an F04, F05, F06, F07, F08, F09, F10 or F11 failure but no critical failures
+- NEEDS_REVIEW: no failure, but any check is UNCHECKED (list the frames); a person must review them, never reported as PASS
+- PASS: all frames pass all checks (none unchecked)
 
 Write the report to `scene{X}_storyboard_qc.json` via sandbox.
 

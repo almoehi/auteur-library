@@ -23,16 +23,18 @@ wf_xxx(
 )
 ```
 
-## Prompt route (the person typed "make the raccoon look left" in the studio chat on an edit workflow)
+## Prompt writing (the person typed "make the raccoon look left" in the studio chat on an edit workflow)
 
 ```
-# verbatim: short, explicit, concrete -> the person's text + image naming, no prompt-writer tools
-wf_xxx(prompt="Make the raccoon look left. Picture 1 is the frame to edit.",
-       prompt_route="verbatim", ...)
+# pass through: short, explicit, concrete -> the person's text + image naming, no prompt-writer tools
+wf_xxx(prompt="Make the raccoon look left. Picture 1 is the frame to edit.", ...)
 
-# rewritten: vague or agent-derived -> the person's text goes in `instruction`, the writer keeps it LOCKED
-draft_prompt(workflow_name="<wf>", instruction="make it feel more menacing", context="<scene brief>")
-wf_xxx(prompt="<the drafted prompt>", prompt_route="rewritten", ...)
+# draft: vague or agent-derived -> the person's text goes in `instruction`, the writer keeps it LOCKED;
+# image_inputs lets the code write the "Picture N is ..." lines, verbatim_phrases protects must-keep text
+draft_prompt(workflow_name="<wf>", instruction="make it feel more menacing", context="<scene brief>",
+             image_inputs=[{"port": "ref0", "ref": "artifact://<id>/frame_1.png"}],
+             verbatim_phrases=["<the shot's Act: text>"])
+wf_xxx(prompt="<the drafted prompt>", ...)
 ```
 
 ## Verbatim override

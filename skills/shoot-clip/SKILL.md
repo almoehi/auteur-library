@@ -20,7 +20,9 @@ One task = one clip = one render. Never render a second clip, a second take of t
 Your task prompt must carry: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`), `movement`,
 `duration_seconds`, `start_frame`, `style`, the canonical output files (a `.mp4` and a
 `_prompt.txt`), and for `continue` also `prior_clip`. `action`, `camera`, `references`,
-`framing_change`, `negative_prompt`, `preferred_workflow` are used when present.
+`framing_change`, `negative_prompt`, `preferred_workflow`, `shot_block` (the shot's full block from
+`shotlist.md`: Blocking, Pose, Frame, Visible, Act ...), `frame_edits` and `width` / `height` are used
+when present. You never create tasks (no `create_task`): this task renders ONE clip and nothing else.
 
 - A required field is missing -> render nothing, `task_complete` with a summary starting
   `BLOCKED:` that names it.
@@ -49,13 +51,25 @@ workflow's instructions fully: prompt syntax, duration parameter, frame constrai
 
 | Mode | Workflow | Inputs |
 |---|---|---|
-| `cut` | an **image-to-video** workflow, type `i2v` or `i2va` (flf2v only when its last frame is optional), read from the tool description's type and the manifest `capabilities` | `start_frame` ALWAYS as the first-frame (start image) port; each of the `references` (character / outfit / location sheets) in the workflow's optional reference-image ports, matched by the port's `reference_role` / `label` (else port order and descriptions), in the order "Anchor (Picture 1) by intent" of `workflow-calling-conventions` gives (compose intent: place first, then people); ports with nothing to fill stay OMITTED |
+| `cut` | an **image-to-video** workflow, type `i2v` or `i2va` (flf2v only when its last frame is optional), read from the tool description's type and the manifest `capabilities` | `start_frame` ALWAYS as the first-frame (start image) port; the reference images (see below) in the workflow's optional reference-image ports, matched by the port's `reference_role` / `label` (else port order and descriptions); ports with nothing to fill stay OMITTED |
 | `continue` | the video-continuation workflow (a video input port for the prior clip) | `prior_clip` = the predecessor's clip file; when `framing_change: yes`, also `start_frame` (this shot's storyboard frame) as an additional reference image, if the workflow has a free image port |
 
 A `cut` is never faked through the continuation workflow and never rendered text-to-video (only
 the `start_frame: none` exception of Preflight). A workflow with a required input you cannot
 supply is disqualified. No workflow qualifies for the mode -> `BLOCKED:` naming what is missing.
 State the workflow and path used in your summary.
+
+### Reference images (always passed when the workflow has free image ports)
+
+Pass the shot's references to the video workflow, not just the start frame: the character
+design's primary (or sheet), the outfit design's primary, the location design's primary - the ones
+the shot's `Characters`, `Outfits` and `Location` and its `Visible:` line name (a POV shot's
+`Visible:` shows hands or forearms only: do not pass a full-body reference of the POV character).
+The task's `references` list is the source; when it is thin, look the designs up in `artifact_index`
+(`character_<slug>`, `outfit_<character>_<look>`, `location_<slug>`; `primary.<ext>`, else the
+sheet). Fill the workflow's labelled image ports in port order, location first and then people
+(compose intent, "Anchor (Picture 1) by intent" of `workflow-calling-conventions`). Do NOT type
+"Picture N is ..." lines: pass the same images as `image_inputs` (Step 3) and the code writes them.
 
 ### Continue mode: measure the real predecessor
 
@@ -74,26 +88,35 @@ hard cut, a new scene or a "cuts to". Subjects, place, lighting and wardrobe sta
 
 ## 3. Prepare the prompt
 
-Follow the **Prompt route** rule of `workflow-calling-conventions` (`load_skill` it) and pass
-`prompt_route` on the render call. The shot brief is agent-derived, so: ONE `draft_prompt`
-(`workflow_name`, `context`, `duration_seconds`) for this clip — no per-step loops; at most one
-`review_prompt`, and one `enhance_prompt` only if it flags a gap.
+Follow "Prompt writing" of `workflow-calling-conventions` (`load_skill` it). The shot brief is
+agent-derived, so: ONE `draft_prompt` for this clip - no per-step loops; at most one `review_prompt`,
+and one `enhance_prompt` only if it flags a gap. Always pass:
+
+- `workflow_name`, `context`, `duration_seconds`;
+- `image_inputs`: every image the render call passes, as `{port, ref}` (start frame, references,
+  and for a framing change the target frame) - the code writes the Picture lines;
+- `verbatim_phrases`: the shot's `Act:` text (only when the task's `shot_block` has one; it is
+  read only in a workspace with `contentPolicy.nudity: allowed`) and any dialogue that must be kept.
 
 - `duration_seconds` = the task's planned duration, passed to `draft_prompt` AND as the render
   call's duration parameter (the value the `wf_*` tool description names, e.g. `video_length`) —
   the same number in both.
-- `context`: action, camera, characters / outfits / location from the task, the path used, and
-  the `movement` VERBATIM ("hold" = a locked-off frame; any other move is written as that move,
-  never replaced by static / no-zoom locks). Path `cut` with a start frame: describe only the
-  motion from that frame. References (sheets) are named the way the port descriptions do and
-  only keep the identity of people, outfits and place consistent.
+- `context`: the shot's full `shot_block` VERBATIM (Blocking, Pose, Frame, Visible, Act stay as
+  written - they are how the people are placed and posed), the characters / outfits / location, the
+  path used, and the `movement` VERBATIM ("hold" = a locked-off frame; any other move is written as
+  that move). With no Movement asking for a move, the frame never moves: no push-in, no
+  reframing. Path `cut` with a start frame: describe only the motion from that frame.
+- `frame_edits`: restate what the frame's edits changed as a constraint and NEVER re-add an element
+  an edit removed (an edit "remove the car" means no car in the clip prompt either).
 - Carry the `style` line into the `context` verbatim; a clip in another medium is a miss.
 - Use the `negative_prompt` when the workflow has a negative prompt port.
 
 ## 4. Render
 
-ONE `wf_*` call with the frames / clip / references, the prompt, `prompt_route`, the planned
-duration and (continue) `prior_clip_start_time`. A `cut` call MUST carry the `start_frame` on the
+ONE `wf_*` call with the frames / clip / references, the drafted prompt, the planned
+duration and (continue) `prior_clip_start_time`. Keep the `draft` quality unless the task asks
+otherwise; an explicit `width` / `height` from the task is passed as given (it overrides the
+profile's size). A `cut` call MUST carry the `start_frame` on the
 start-image port; a call without it is wrong - fix it before sending. Route the video to the task's canonical `.mp4`
 (`output_ports` when needed). On an error re-read the workflow instructions, fix the call and
 retry once WITH THE SAME WORKFLOW; if it fails again, `task_complete` with a `BLOCKED:` / failure
@@ -110,9 +133,10 @@ reconstructed version.
 
 - **render inputs**: the render really received what the task asked for. Call
   `render_info({ render_id })` with the `renderId` your `wf_*` call returned (it reports the
-  workflow, params, prompt route and the media inputs that reached the render) and check it
+  workflow, params and the media inputs that reached the render) and check it
   against your `wf_*` call: for `cut`, the `start_frame` is in the media inputs on the
-  start-image port and each intended reference you passed is listed; for `continue`, the prior clip
+  start-image port and each intended reference you passed is listed (a clip with no character /
+  outfit / location reference although the workflow had free ports is wrong: re-render once); for `continue`, the prior clip
   (and, on a framing change, the frame). Empty media inputs, or the start frame missing, means the
   render failed: re-render ONCE with the corrected call; still wrong -> `BLOCKED:` naming it
 - the `.mp4` exists at exactly the canonical path (a returned path elsewhere makes the artifact
