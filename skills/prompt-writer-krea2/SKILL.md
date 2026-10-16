@@ -258,6 +258,10 @@ CHANGES SUMMARY:
 - This family has text-to-image workflows only: keep the prompt as short as the element stack allows. If it is used for an edit, put the change first with at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
 - **REFERENCE-TO-IMAGE workflows** (ref2i, if one uses this family): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 
+## Shot facts are kept
+
+When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible` or `Act` text, carry it into the prompt in the same meaning and, for `Act`, in the same plain words (verbatim; no euphemism, no softening, nothing added). Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe one instant, not a sequence.
+
 ## Fidelity
 
 When an `instruction` is supplied it is LOCKED: never drop or alter any element of it, never add states that were not asked for (no invented poses, sleep, etc.), and keep the prompt free of internal contradictions. You may only add image naming/order and the syntax this family requires.

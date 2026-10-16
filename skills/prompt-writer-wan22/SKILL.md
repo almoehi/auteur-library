@@ -127,7 +127,7 @@ Shot sizes: `extreme close-up` | `close-up` | `medium close-up` | `medium shot` 
 
 Lens: `medium focal length` (default) | `telephoto` | `shallow depth of field` | `anamorphic bokeh`
 
-A `Movement:` from the brief (shotlist / beat) IS the camera instruction: use that move, not a different one. `static shot` / `locked-off frame` and "no zoom / no push" locks only when the movement says `hold`; a missing movement is not a hold.
+A `Movement:` from the brief (shotlist / beat) IS the camera instruction: use that move, not a different one. `static shot` / `locked-off frame` and "no zoom / no push" locks whenever the movement says `hold` or is absent: the frame never moves unless the brief asks for a move.
 
 Contradictions to avoid: `drone shot` + `extreme close-up` / `static shot` + `slow pan` / `dolly in` + `pull back`
 
@@ -286,6 +286,10 @@ Spatial relationships: `standing at distance from camera` / `facing camera at 45
 - **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
 - **EDIT workflows** (if one uses this family): the change first, at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
 - **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
+
+## Shot facts are kept
+
+When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible` or `Act` text, carry it into the prompt in the same meaning and, for `Act`, in the same plain words (verbatim; no euphemism, no softening, nothing added). Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe one instant, not a sequence.
 
 ## Fidelity
 

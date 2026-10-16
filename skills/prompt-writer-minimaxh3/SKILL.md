@@ -220,9 +220,10 @@ Rules: ONE camera move per shot. If static: state "frame never moves" AND list w
 
 **A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
-camera pushes in slowly ..."). Add the static lock above (and the "no zoom / no push / no pan"
-refusals) ONLY when the movement says `hold`. A missing movement is not a hold: pick a move that
-fits the beat. In a video continuation the prompt continues `<Video 1>` without a cut; the move
+camera pushes in slowly ..."). **Default is a locked frame**: when the brief carries no `Movement:` that asks for a move
+(absent, `hold` or `static`), use the static template above - the frame never moves, no push-in,
+no reframing - and add no camera move of your own. Add the "no zoom / no push / no pan"
+refusals whenever the frame is locked. In a video continuation the prompt continues `<Video 1>` without a cut; the move
 continues or holds that of the prior clip.
 
 ---
@@ -394,6 +395,10 @@ Observable positioning: describe physical spatial relationship to environment â€
 - **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
 - **EDIT workflows** (if one uses this family): the change first, at most 2 short keep locks, no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
 - **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
+
+## Shot facts are kept
+
+When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible` or `Act` text, carry it into the prompt in the same meaning and, for `Act`, in the same plain words (verbatim; no euphemism, no softening, nothing added). Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe one instant, not a sequence.
 
 ## Fidelity
 
