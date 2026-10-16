@@ -65,9 +65,10 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   linked location design cannot be a shot's `Location:`: use the nearest linked location and name
   the gap in the summary.
 - Bind each `<character_slug>:<look_slug>` pair (THE binding rule for nude vs clothed; keys in
-  `design.json.links` are the truth): a shot's `Outfits:` pair `<c>:nude` binds the character
-  design primary (`character_<c>`); `<c>:<look>` binds the outfit design primary
-  (`outfit_<c>_<look>`, tolerate a suffix). A missing outfit design -> bind the character primary,
+  `design.json.links` are the truth): a shot's `Outfits:` pair `<c>:nude` or `<c>:none` binds the
+  character design primary (`character_<c>`); `<c>:<look>` binds the outfit design primary: the
+  key from `design_plan.json` `outfits[]` (character_slug + look_slug) when present, else
+  `outfit_<c>_<look>` (suffix tolerated). A missing outfit design -> bind the character primary,
   describe the garments in the prompt and name the gap in the summary - never let a clothed shot
   come out nude.
 - **Preflight** — if any fails do not guess: render nothing, `task_complete` saying exactly what
@@ -241,7 +242,7 @@ image inputs, required ports and port descriptions. Never pick by a tool's name 
 References in priority order (keyframe = COMPOSE intent, the SHOT's location - its `Location:`
 line, not necessarily the scene's first - is the anchor, Picture 1; see
 "Anchor (Picture 1) by intent"): 1. primary of the shot's `Location:` design; 2. outfit primary of the shot's main
-character (the outfit primary for a `<c>:<look>` pair, the character primary for `<c>:nude`
+character (the outfit primary for a `<c>:<look>` pair, the character primary for `<c>:nude`/`<c>:none`
 or a missing outfit design, see the binding rule above); 3. further outfits / characters by presence.
 
 - **Reference-to-image (ref2i)**: preferred - composes a NEW frame from the references (location =

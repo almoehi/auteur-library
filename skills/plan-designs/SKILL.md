@@ -38,11 +38,14 @@ things below: the look of a character design ("Characters and outfits") and the 
 - **The character design's own look** (its `wardrobe` attribute): `nude` when nudity is `allowed`
   AND the character is a human adult (age stated or clearly implied 18+) with no look younger than
   18; otherwise plain neutral clothing (e.g. "plain neutral clothing: simple fitted grey t-shirt
-  and trousers"; a creature or animal that wears nothing: `none`). Minors are always clothed. The
-  character design carries identity; outfits carry everything worn.
-- **Scene-list pairs**: `<character>:<look>` -> that look's outfit design; `<character>:nude` ->
-  the character design only (valid only for such a nude adult). A pair whose look has no tracker
-  row -> an outfit entry built from the scene context, flagged in the summary.
+  and trousers"). A creature or animal that wears nothing has `wardrobe` `none`, NO tracker rows
+  and the scene pair `<c>:none`. Minors are always clothed. The character design carries
+  identity; outfits carry everything worn.
+- **Scene-list pairs**: `<c>:<look>` -> that look's outfit design; `<c>:nude` (valid only for a
+  nude adult as above) and `<c>:none` (a character that wears nothing) -> the character design
+  only, no outfit entry. Any other pair - a look with no tracker row, or an invalid `<c>:nude`
+  (minor, creature, nudity forbidden; a minor is never nude) - -> an outfit entry built from the
+  scene context, flagged in the summary.
 
 ## Phase 0 - Preflight
 
@@ -76,14 +79,17 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
      location (slug = the lowercase slug of the place, display name from the beat). Per scene the
      ordered places: the row's `location_slug` first, then parallel-beat places in beat order, no
      duplicates. A location's `scenes` includes every scene whose parallel beats use it.
-   - **outfits**: one per WARDROBE TRACKER row of each character, plus one per scene-list pair
-     whose look has no tracker row (per "Characters and outfits").
+   - **outfits**: per "Characters and outfits".
    - **storyboards**: one per scene (see step 6).
-2. **Normalize slugs** (single rule, apply everywhere): lowercase, ASCII, non-alphanumerics to
-   `_`, collapse repeats, trim `_`. Result must match `[a-z0-9]+(_[a-z0-9]+)*`.
-   Key = `<kind>_<name>`, at most 64 characters (for outfits the name is `<character>_<look>`);
-   shorten the look slug if needed. Design names are unique across ALL kinds, so a location
-   slug must not equal a character slug (suffix `_place` to the location if it does).
+2. **Slugs and keys** (single rule, apply everywhere): slug = lowercase, ASCII, non-alphanumerics
+   to `_`, collapse repeats, trim `_`; it matches `[a-z0-9]+(_[a-z0-9]+)*`. `create_design`
+   derives the key itself as `<kind>_` + slug of the `display_name` (there is no key argument), so
+   set `display_name` = the slug's words in Title Case: `sister` -> "Sister", `pool_terrace` ->
+   "Pool Terrace", outfit -> "Sister - Bikini Cardigan"; the key is then exactly `<kind>_<slug>` /
+   `outfit_<character_slug>_<look_slug>`. Never use the story's full name as `display_name` (put it
+   in an attribute or notes if useful). Keys are at most 64 characters: shorten the look part
+   and note it in `flagged:`. Design names are unique across ALL kinds, so a location slug must
+   not equal a character slug (suffix `_place` to the location slug, display "Harbor Place").
    Merge duplicates ("Mira", "MIRA", "young Mira" = slug `mira`; another age or costume is a
    tracker row, not a new character). Style is not an attribute: never add the story's
    medium/style as a design attribute; `design-asset` carries it from `{workspace.story.plot}`.
@@ -135,8 +141,8 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
    Summary) and `links` computed from the entries' keys: one `location` link per place the scene
    uses (the row's `location_slug` design FIRST, then parallel-beat places - links can ONLY be
    given at creation, and `storyboard-scene` can only place a shot at a linked location), one
-   `character` link per character in `Characters present`, one `outfit` link per `<c>:<look>` pair
-   of the `Outfits` column except `<c>:nude`.
+   `character` link per character in `Characters present`, one `outfit` link per pair of the
+   `Outfits` column that has an outfit entry ("Characters and outfits").
 7. **`designs`**: THE work list - every key in creation order: characters, locations, outfits,
    storyboards. Keys are fixed here, once.
 8. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
@@ -145,16 +151,16 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
 ```json
 {
   "characters": [
-    { "name": "Mira", "slug": "mira", "key": "character_mira", "character_type": "woman",
+    { "display_name": "Mira", "slug": "mira", "key": "character_mira", "character_type": "woman",
       "attributes": [ { "key": "age", "value": "late 20s" }, { "key": "hair", "value": "auburn, shoulder length" },
                       { "key": "wardrobe", "value": "plain neutral clothing: simple fitted grey t-shirt and trousers" } ],
       "loras": [], "scenes": [1, 2, 4] },
-    { "name": "Lena", "slug": "lena", "key": "character_lena", "character_type": "woman",
+    { "display_name": "Lena", "slug": "lena", "key": "character_lena", "character_type": "woman",
       "attributes": [ { "key": "age", "value": "early 30s" }, { "key": "wardrobe", "value": "nude" } ],
       "loras": [ { "name": "<catalog name>" } ], "scenes": [3] }
   ],
   "locations": [
-    { "name": "Harbor", "slug": "harbor", "key": "location_harbor",
+    { "display_name": "Harbor", "slug": "harbor", "key": "location_harbor",
       "attributes": [ { "key": "place", "value": "foggy fishing harbor" }, { "key": "time_of_day", "value": "dusk" } ],
       "scenes": [1, 3] }
   ],
@@ -197,8 +203,8 @@ Only a key in `existing` is skipped (record it).
 - outfit: `create_design({ kind: "outfit", display_name, start: "attributes", attributes, initial_drafts: 1, links: [{ "role": "character", "key": "character_<character_slug>" }] })`
 - storyboard: `create_design({ kind: "storyboard", display_name: "Scene <n>", start: "attributes", attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<notes>" } ], initial_drafts: 1, links, loras })`
 
-Omit `loras` when the entry has none. `display_name` of a character/location is its `name`; of a
-storyboard `Scene <n>` (the key becomes `storyboard_scene_<n>`; check the result's key).
+Omit `loras` when the entry has none. `display_name` is the entry's (storyboard: `Scene <n>`); check that
+the result's key equals the entry's key.
 `start: "attributes"` needs a non-sheet text-to-image workflow in the workspace (an outfit needs an image-to-image one: it is drafted as edits of its character's primary and only starts once that design is finished - always pass the character link); `character_type` is REQUIRED for characters (custom text allowed, e.g. "ghost"). A refusal result starts with `error:`; a success reads `Design created: key <key>, @<name>, task id <id>, status <status>`. Treat any result not starting with `Design created` as not created.
 
 Never pass `policies` to `create_design` (the tool does not accept it; designs go through human review), even if the task prompt names checks. Call sequentially (one at a time) and keep
@@ -228,16 +234,17 @@ those designs are finished): if a link key is refused as unknown, re-check the r
 2. `design_plan.json` and `scene_list.md` both exist in your artifact directory and equal what you used.
 3. If the design plan could not be covered at all, call `task_failed`.
 
-Keep replies concise (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`). The `task_complete` summary uses exactly this format; counts come from the audit and from your own calls, never from the plan (name designs by task URI `task://<id>` where known; never list every key when all went well):
+Keep replies concise (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`). The `task_complete` summary uses exactly this format; counts come from the audit and from your own calls, never from the plan (the check sees only the first ~200 characters of the call, hence skipped/renamed first, as FULL keys, never counts):
 
 ```
+skipped (existing): <full keys> or none
+renamed: <old key> -> <new key> (only if any)
 designs: <created>/<planned> - characters a/b, locations a/b, outfits a/b, storyboards a/b
-skipped (existing): <count, or keys only if few>
 failed: <key: error> or none
 loras: <n> sent in create_design calls; missing: <scene: tags> or none
 ```
 
-(the `loras` line only when nudity is `allowed`.) Add `renamed:`, `file mismatch:` and `flagged:` lines (characters without a file, scene pairs without a tracker row, entries that looked wrong) only when they occurred.
+(the `loras` line only when nudity is `allowed`.) Add `file mismatch:` and `flagged:` lines (characters without a file, scene pairs without a tracker row, entries that looked wrong) only when they occurred.
 
 ## Key rules
 

@@ -54,8 +54,8 @@ intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 | `cast-quality` | `{input}` holds the `character_<slug>.md` files: every cast role of the story has a dedicated, complete profile. Animals and other non-human creatures with a story role (named, acting or plot-driving, in the title or premise, recurring) ARE cast roles and must be included; only pure background, props or set dressing (unnamed, no action, no plot function) are not. NEVER reject because a cast member is an animal; reject only if a required role is missing or a pure background element / prop was listed as cast |
 | `scenes-quality` | `{input}` holds `scene_list.md`: the scene list covers all narrative beats with numbered scenes, INT/EXT, location, one-line action |
 | `scenes-complete` | `{input}` holds `scene_list.md`: every scene row has a location slug and, for every character present, an outfit/look slug; every scene also has beats (the `Beats` section below the table) and EVERY beat names a camera move and a continuity (`continuous` | `parallel` | `new moment`; a `parallel` beat names its place) |
-| `design-plan-covers-scenes` | `{input}` holds ALL output files of the task: `design_plan.json` and `scene_list.md` (verbatim copy of the scene list, the ground truth). YES only if every character and location (by `location_slug`, including every place named by a `parallel` beat) occurring in the scene list has an entry in the plan, every (character, look) pair of the scene list other than `<character>:nude` has an `outfits` entry with that `character_slug` and `look_slug`, and no outfit's character is missing from the plan; otherwise NO naming the missing entries |
-| `designs-cover-plan` | `{input}` holds the plan (`design_plan.json`); `{toolCalls}` the task's tool calls (the worker's calls). Every key of the plan's `designs` list must be covered by a successful `create_design` call (result "Design created: key <key>"), or be documented in the `task_complete` summary as skipped (already existing) or renamed. YES only if every key is covered; otherwise NO naming the uncovered keys |
+| `design-plan-covers-scenes` | `{input}` holds ALL output files of the task: `design_plan.json` and `scene_list.md` (verbatim copy of the scene list, the ground truth). YES only if every character and location (by `location_slug`, including every place named by a `parallel` beat) occurring in the scene list has an entry in the plan, every (character, look) pair of the scene list other than `<character>:nude` and `<character>:none` (these need no outfit entry) has an `outfits` entry with that `character_slug` and `look_slug`, and no outfit's character is missing from the plan; otherwise NO naming the missing entries |
+| `designs-cover-plan` | `{input}` holds the plan (`design_plan.json`); `{toolCalls}` the task's tool calls (the worker's calls). PLANNED = the character, location and outfit keys of the plan's `designs` list (fallback: the keys of the plan's entries); storyboards belong to `storyboards-cover-scenes`. A key is covered by a `Design created: key <key>` tool result, by appearing in an `artifact_index` result, or by the summary's `skipped (existing)` / `renamed: <old> -> <new>` lines (a renamed new key must appear in a `Design created` result). YES only if every planned key is covered; otherwise NO naming the uncovered keys |
 | `storyboards-cover-scenes` | `{input}` holds ALL output files of the task: `scene_list.md` (verbatim copy of the scene list, the ground truth) and `design_plan.json`; `{toolCalls}` the task's tool calls. A scene is covered by a successful `create_design` result "Design created: key storyboard_scene_<n>" (match by that key), or a documented skip of an existing `storyboard_scene_<n>`. YES only if every scene number of the scene list has a storyboard; otherwise NO naming the scenes without one |
 
 Each check is attached to the task named in the Step 3 table and judges that task's output files.
@@ -140,7 +140,7 @@ create_task({ id: "character_table", title: "Character table", description: "One
     field open; in a workspace with `contentPolicy.nudity: allowed` (`{workspace.contentPolicy.nudity}`)
     and an adult character, add the anatomical details needed for a consistent depiction as
     `key: value` lines in the same section, concrete and non-euphemistic; a minor never gets
-    them), `WARDROBE TRACKER` (a table with ONE row per look the character wears in the story - garment looks only; nudity is not a row, it is the `nude` pair in the scene list: look slug | description |
+    them), `WARDROBE TRACKER` (a table with ONE row per look the character wears in the story - garment looks only; nudity is not a row (it is the `nude` pair in the scene list), and a creature or animal that wears nothing has NO rows (pair `none`): look slug | description |
     garments, colors, material, fit, accessories | scenes where worn; look slugs are
     lowercase, `[a-z0-9]+(_[a-z0-9]+)*`, e.g. `raincoat`, `evening_dress`)
   - files are registered automatically; then `task_complete`
@@ -162,8 +162,8 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   main action.
   Character slugs must equal the `character_<slug>.md` file stems from the character table; the
   `Outfits` column uses ONLY look slugs from that character's WARDROBE TRACKER (copy them exactly; add a
-  new row there only if the screenplay demands one, and say so in the summary), or `nude` (only for an
-  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed). Every present character needs a look.
+  new row there only if the screenplay demands one, and say so in the summary), , `nude` (only for an
+  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed), or `none` (a character that wears nothing, e.g. an animal). Every present character needs a look.
   Short-film default: no more than 4 scenes unless the story requires more.
   **Beats section (below the table, same file).** For EACH scene a `### Scene <n>` heading and a
   markdown table with one row per beat: `Beat #` | `Action` (what visibly happens) | `Framing`

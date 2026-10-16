@@ -95,6 +95,7 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
      camera, plain backdrop, face clearly visible, no garments, no covering hands or props; it is
      the identity reference every shot binds, so anatomy must be complete and natural; use the
      [nsfw] text-to-image workflow (see "NSFW-marked workflows" in `workflow-calling-conventions`).
+     `none` (creature/animal): no garments or accessories, natural appearance - never render the word.
      Anything else: the plain neutral clothing the attribute names.
    - **Outfit**: always dresses the linked character primary (edit): exactly the outfit's garments,
      face, hair, body and skin unchanged. Use the [nsfw] image-edit workflow only when the outfit
