@@ -22,7 +22,7 @@ A ⟦ref:r12.key⟧ in your earlier tool calls stands for a value you sent (call
 
 ## Correct sequence
 
-`read_artifact` the work spec -> (LoRA slots exposed: `lora_index()` once) -> per shot or batch write the prompt (see "Prompt writing") and call `wf_xxx(prompt=...)` -> `task_complete` only AFTER every required call is done.
+`read_artifact` the work spec -> (LoRA slots exposed: `lora_index()` once) -> per shot or batch write the prompt (see "Prompt route") and call `wf_xxx(prompt=...)` -> `task_complete` only AFTER every required call is done.
 
 ## LoRA lookup and loading
 
@@ -34,19 +34,22 @@ Only when the `wf_xxx` tool exposes LoRA slot parameters (`lora_1`, `style_lora`
 4. An unset slot is always safe (built-in LoRAs still run). Never load a LoRA just because the catalog has one.
 5. **Obey each LoRA's description** - it carries usage rules: "already baked into <workflow>: never select it there", a phrase the prompt must START with, a trigger that renders as a watermark (leave it out unless the effect is missing), a lower strength when stacked, "edits well" / "text-to-image only".
 
-### Prompt writing - pass the person's instruction through, or draft it
+### Prompt route — code decides, you do not state it
 
-The system decides the route from where the prompt text comes from; you do not state it. When a prompt-writer model is configured, a prompted wf_xxx call is accepted only if its prompt is (a) the output of `draft_prompt` / `draft_prompts_batch` / `enhance_prompt` of THIS task, or (b) text that occurs word for word in your task prompt or in a person's chat message. Anything else is refused ("Run draft_prompt (or draft_prompts_batch) for this call, or pass the person's own text verbatim.").
+There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its prompt is accepted only when it is (a) the unchanged OUTPUT of a prompt-writer tool of this task for the SAME workflow, or (b) the person's own text word for word (found unchanged in your task prompt or a person's chat message). Anything else — a prompt you typed or edited, or the person's text plus an added sentence — is refused with "Run draft_prompt (or draft_prompts_batch) for this call, or pass the person's own text verbatim."
 
-- **PASS THROUGH** only when ALL of these hold: the text comes from the person (chat or studio); it is an explicit, concrete instruction (an imperative change or motion); it is short (about 300 characters or a few clauses); it states what and where without ambiguity; nothing needs adapting to the workflow beyond naming the supplied images. Then the prompt is the person's text VERBATIM, plus one sentence naming the supplied images by the workflow's port labels (for example "Picture 1 is the frame to edit; Picture 2 is Detective Raccoon (outfit).") and at most ONE short keep clause, only if the person did not say what to keep. Do NOT call draft_prompt, review_prompt or enhance_prompt. (A task created with `prompt_writer: "skip"` passes its prompt as given.)
-- **DRAFT with the prompt writer** for agent-derived briefs (scene lists, shotlists, design attributes, initial drafts), long, unstructured or vague requests, text-to-image and text-to-video generation, diversity variations and automatic retries after a miss. Pass the person's text, if any, in the `instruction` argument of draft_prompt / enhance_prompt / review_prompt (never only inside `context`): the prompt writer keeps it LOCKED.
-- **`image_inputs`**: whenever the render call passes images, give `draft_prompt` / `draft_prompts_batch` (per item) the same images as `image_inputs`, a list of `{port, ref}` (the workflow's input port name and the `artifact://` ref passed to it). The code writes the "Picture N is <name>" lines from the workflow's port labels and the artifact titles - never type or renumber Picture lines yourself.
-- **`verbatim_phrases`**: a list of phrases that must survive unchanged in the written prompt (a shot's `Act:` text in an NSFW workspace, dialogue to keep). The code appends any phrase the writer dropped.
+- **PASS THROUGH** only when ALL hold: it comes from the person (chat or studio); an explicit, concrete, short, unambiguous instruction that needs nothing adapted. Pass it VERBATIM and add nothing, not even a sentence naming the images. Do NOT call draft_prompt, review_prompt or enhance_prompt.
+- **REWRITE with the prompt writer** for everything else (agent-derived briefs, long or vague requests, generation from text or references, any call with images, variations, retries). Pass the person's text in `instruction` (kept LOCKED). Pass the call's images as `image_inputs` (`[{ "port": "<input>", "ref": "artifact://<id>/<file>" }]`): code writes the "Picture N is <name>" lines, never write or number pictures yourself. Pass wording that must survive as `verbatim_phrases`: code appends any the writer drops.
 - **Explicit overrides**: "use my words exactly" means pass through; "improve the prompt" means rewrite.
+
+A task created with `prompt_writer: "skip"` passes its prompt as given (no draft needed). Details for the rewrite route:
+
+- **`image_inputs`** (`draft_prompt` / `draft_prompts_batch`, per item): a list of `{port, ref}` (the workflow's input port name and the `artifact://` ref passed to it). The code writes the "Picture N is <name>" lines from the workflow's port labels and the artifact titles - never type or renumber Picture lines yourself.
+- **`verbatim_phrases`**: phrases that must survive unchanged in the written prompt (a shot's `Act:` text in an NSFW workspace, dialogue to keep). The code appends any phrase the writer dropped.
 - **Video clip duration**: for a video workflow (one whose duration parameter, e.g. `video_length`, the `wf_xxx` tool description names), pass `duration_seconds` (the clip's planned duration) to `draft_prompt` / `draft_prompts_batch` (per item) / `enhance_prompt` / `review_prompt` - it MUST equal the value you pass as the `wf_xxx` call's duration parameter; the prompt then states exactly that duration.
 - **Batch prompt tools** (`draft_prompts_batch` / `enhance_prompts_batch` / `review_prompts_batch`): `items` is a real JSON array of objects, written out in full. When some items of a batch fail (e.g. a timeout), retry ONLY the failed items - never re-send the whole batch.
 
-## Verbatim prompts - explicit override of Prompt writing
+## Verbatim prompts - explicit override of Prompt route
 
 When the user or task asks to skip drafting/enhancement or use the prompt verbatim ("use this prompt as-is", "no prompt enhancement"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt`; pass the prompt to `wf_xxx` byte for byte (only addition allowed: a required LoRA trigger word, unless forbidden).
 
@@ -79,18 +82,24 @@ Check the image against the request. Judge only what can be seen in the image; i
 - Composition: framing, camera angle, layout and positions match the request.
 - Single image: one continuous scene - no panels, split screen, collage, grid or several versions of the subject, unless the request asks for a sheet / turnaround.
 - Style: the requested medium and style (the request's, else the workspace's stated style) are kept. An image in a different medium or style than requested (photoreal instead of comic, a render instead of a painting) is a MISS.
+- People: the number of people visible matches the request's Characters - nobody extra, nobody missing. A point-of-view (POV / first-person) shot shows its viewpoint character at most as hands or forearms, never their face or body.
+- Setting: the furniture, props and location match the request's text (a lounger is not a chair, the named place is not another one).
+- Outfits: every outfit the request lists is visible and as described; no listed garment is missing, no other garment replaces it.
+- Moment: the image shows a single moment of the action, not a sequence.
+- Act: only when the request has an "Act (must show)" line - the participants, their body positions and the contact points match it.
 - Invented or contradicted: nothing was added that the request does not ask for, and nothing the request rules out is shown.
 PASS when every point holds. Otherwise MISS. Be strict about what the request names and lenient about what it leaves open.
+If you cannot judge the image (it is unreadable, or you decline), answer UNCHECKED with the reason - never guess PASS.
 Answer in exactly this form:
-VERDICT: PASS or MISS
-FINDING: one line on what is missing, contradicted or invented (MISS only)
+VERDICT: PASS, MISS or UNCHECKED
+FINDING: one line on what is missing, contradicted or invented (MISS), or why it cannot be judged (UNCHECKED)
 FIX: one concrete corrective instruction - what to change and what to keep (MISS only)
 ```
 
 A `match` needs no further call. On a `miss` (use its `fix`):
 
 1. Retry ONCE: render again from the SAME source (not the missed take) as a NEW take named base + `-r2` (`take_wide-rain.png` -> `take_wide-rain-r2.png`; a skill owning the naming may define a variant). Keep the missed take. Batch several retries into ONE `draft_prompts_batch` and ONE render response. Keep the original medium/style and every lock VERBATIM and change only what the finding names (pass the original prompt in `context`); draft with the prompt writer, the person's original instruction as `instruction`.
-2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better take (`instruction`: one concrete corrective edit, what to change and keep, max ~1000 chars; `reason`: one line, max ~300). Report both takes and stop. It is fire-and-forget. A suggested fix the person sends from the Edit box is their explicit instruction: pass it through when it meets the pass-through conditions of "Prompt writing".
+2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better take (`instruction`: one concrete corrective edit, what to change and keep, max ~1000 chars; `reason`: one line, max ~300). Report both takes and stop. It is fire-and-forget. A suggested fix the person sends from the Edit box is their explicit instruction: pass it through when it meets the pass-through conditions of "Prompt route".
 3. Never retry a `-r2` take (its miss goes straight to `suggest_edit`); sandbox-derived files (crop, conversion, sheet) are not checked.
 
 ## Anchor (Picture 1) by intent

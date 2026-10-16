@@ -163,7 +163,8 @@ movement into "static".
 
 A published frame may carry `edits`: the edit instructions that were applied to its keyframe in
 the design studio (for example "remove the car"). Read them from the storyboard design's
-`design.json` (the published output of that `frame_<i>`; none recorded = no edits) and pass them
+`design.json`: the `published.outputs[]` entry of that `frame_<i>` file has `edits`, a list of
+strings, oldest first (field absent or empty = no edits). Pass them
 on, verbatim, per clip (`frame_edits:`). The clip must never bring back what an edit removed.
 
 ### 2b. Character context (optional)

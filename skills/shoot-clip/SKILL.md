@@ -88,7 +88,7 @@ hard cut, a new scene or a "cuts to". Subjects, place, lighting and wardrobe sta
 
 ## 3. Prepare the prompt
 
-Follow "Prompt writing" of `workflow-calling-conventions` (`load_skill` it). The shot brief is
+Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it). The shot brief is
 agent-derived, so: ONE `draft_prompt` for this clip - no per-step loops; at most one `review_prompt`,
 and one `enhance_prompt` only if it flags a gap. Always pass:
 
@@ -106,7 +106,7 @@ and one `enhance_prompt` only if it flags a gap. Always pass:
   path used, and the `movement` VERBATIM ("hold" = a locked-off frame; any other move is written as
   that move). With no Movement asking for a move, the frame never moves: no push-in, no
   reframing. Path `cut` with a start frame: describe only the motion from that frame.
-- `frame_edits`: restate what the frame's edits changed as a constraint and NEVER re-add an element
+- `frame_edits` (the frame's `published.outputs[].edits` of the storyboard's `design.json`, oldest first): restate what the frame's edits changed as a constraint and NEVER re-add an element
   an edit removed (an edit "remove the car" means no car in the clip prompt either).
 - Carry the `style` line into the `context` verbatim; a clip in another medium is a miss.
 - Use the `negative_prompt` when the workflow has a negative prompt port.

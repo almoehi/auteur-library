@@ -206,7 +206,7 @@ designs (others: in `Action` only); `Location` names only a linked location desi
 
 ## Phase 2 — Render the initial drafts (all shots, batched)
 
-Follow "Prompt writing" of `workflow-calling-conventions` for every prompted `wf_*` call:
+Follow "Prompt route" of `workflow-calling-conventions` for every prompted `wf_*` call:
 initial keyframes from the shot list are drafted with `draft_prompts_batch` (pass `image_inputs`
 per item - the shot's references - and, in a workspace with `contentPolicy.nudity: allowed`, the
 shot's `Act:` text as `verbatim_phrases`); a short user-typed chat edit on an edit workflow is a
