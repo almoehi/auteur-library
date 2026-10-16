@@ -17,6 +17,7 @@ lora_index()
 → [ { name: "krea2_vintage_style", modelFamily: "krea2", triggers: ["V1nt4geStyle"],
       description: "vintage style lora for krea2" } ]
 
+# the person's own text; the selected LoRA's trigger word sits at the very start (the route check ignores it there)
 wf_xxx(
   prompt="V1nt4geStyle, 1970s faded polaroid of a man in a rainy piazza",
   lora_1="krea2_vintage_style"
@@ -26,11 +27,13 @@ wf_xxx(
 ## Prompt writing (the person typed "make the raccoon look left" in the studio chat on an edit workflow)
 
 ```
-# pass through: short, explicit, concrete -> the person's text + image naming, no prompt-writer tools
-wf_xxx(prompt="Make the raccoon look left. Picture 1 is the frame to edit.", ...)
+# pass through: short, explicit, concrete -> the person's text ALONE, word for word. Nothing added, not even
+# a sentence naming the images (an added sentence is refused); no prompt-writer tools
+wf_xxx(prompt="Make the raccoon look left", ...)
 
-# draft: vague or agent-derived -> the person's text goes in `instruction`, the writer keeps it LOCKED;
-# image_inputs lets the code write the "Picture N is ..." lines, verbatim_phrases protects must-keep text
+# draft: vague, agent-derived, or any call that needs the images named -> the person's text goes in
+# `instruction`, the writer keeps it LOCKED; image_inputs lets the code write the "Picture N is ..." lines,
+# verbatim_phrases protects must-keep text. Pass the drafted prompt UNCHANGED (never edit or extend it)
 draft_prompt(workflow_name="<wf>", instruction="make it feel more menacing", context="<scene brief>",
              image_inputs=[{"port": "ref0", "ref": "artifact://<id>/frame_1.png"}],
              verbatim_phrases=["<the shot's Act: text>"])

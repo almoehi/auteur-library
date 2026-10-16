@@ -30,13 +30,13 @@ Only when the `wf_xxx` tool exposes LoRA slot parameters (`lora_1`, `style_lora`
 
 1. Call `lora_index()` once before the first render: name, description, default strength, **trigger words**, `modelFamily`.
 2. Pick a candidate when its trigger word appears (or belongs) in the prompt or its description fits what the prompt asks for. **Its `modelFamily` must match the workflow's model family** (in the `wf_xxx` tool description; infer from name/description if absent) - a mismatched LoRA produces garbage and is rejected at call time, so leave it out.
-3. Pass the **exact catalog name** as the slot parameter; never invent a name. **Put the trigger word in the prompt.** Omit the strength unless the task or catalog says otherwise.
+3. Pass the **exact catalog name** as the slot parameter; never invent a name. **Trigger words**: for a drafted prompt, put them in the writer's `context` (it keeps them); for the person's verbatim text, put them at the very start or end of the prompt - the route check ignores the trigger words of the LoRAs selected on this call at those two places, nowhere else. Never edit a drafted prompt yourself. Omit the strength unless the task or catalog says otherwise.
 4. An unset slot is always safe (built-in LoRAs still run). Never load a LoRA just because the catalog has one.
-5. **Obey each LoRA's description** - it carries usage rules: "already baked into <workflow>: never select it there", a phrase the prompt must START with, a trigger that renders as a watermark (leave it out unless the effect is missing), a lower strength when stacked, "edits well" / "text-to-image only".
+5. **Obey each LoRA's description** - it carries usage rules: "already baked into <workflow>: never select it there", a phrase the prompt must START with (tell the writer in `context`; never edit the draft), a trigger that renders as a watermark (leave it out unless the effect is missing), a lower strength when stacked, "edits well" / "text-to-image only".
 
 ### Prompt route — code decides, you do not state it
 
-There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its prompt is accepted only when it is (a) the unchanged OUTPUT of a prompt-writer tool of this task for the SAME workflow, or (b) the person's own text word for word (found unchanged in your task prompt or a person's chat message). Anything else — a prompt you typed or edited, or the person's text plus an added sentence — is refused with "Run draft_prompt (or draft_prompts_batch) for this call, or pass the person's own text verbatim."
+There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its prompt is accepted only when it is (a) the unchanged OUTPUT of a prompt-writer tool of this task for the SAME workflow, or (b) the person's own text word for word (found unchanged in your task prompt or a person's chat message). Anything else — a prompt you typed or edited, or the person's text plus an added sentence — is refused (naming workflow and port): run draft_prompt, pass its prompt unchanged.
 
 - **PASS THROUGH** only when ALL hold: it comes from the person (chat or studio); an explicit, concrete, short, unambiguous instruction that needs nothing adapted. Pass it VERBATIM and add nothing, not even a sentence naming the images. Do NOT call draft_prompt, review_prompt or enhance_prompt.
 - **REWRITE with the prompt writer** for everything else (agent-derived briefs, long or vague requests, generation from text or references, any call with images, variations, retries). Pass the person's text in `instruction` (kept LOCKED). Pass the call's images as `image_inputs` (`[{ "port": "<input>", "ref": "artifact://<id>/<file>" }]`): code writes the "Picture N is <name>" lines, never write or number pictures yourself. Pass wording that must survive as `verbatim_phrases`: code appends any the writer drops.
@@ -51,7 +51,7 @@ A task created with `prompt_writer: "skip"` passes its prompt as given (no draft
 
 ## Verbatim prompts - explicit override of Prompt route
 
-When the user or task asks to skip drafting/enhancement or use the prompt verbatim ("use this prompt as-is", "no prompt enhancement"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt`; pass the prompt to `wf_xxx` byte for byte (only addition allowed: a required LoRA trigger word, unless forbidden).
+When the user or task asks to skip drafting/enhancement or use the prompt verbatim ("use this prompt as-is", "no prompt enhancement"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt`; pass the prompt to `wf_xxx` byte for byte (only addition allowed: a required LoRA trigger word at its very start or end, unless forbidden).
 
 ## Render size (`width` / `height`)
 
