@@ -50,6 +50,10 @@ The system decides the route from where the prompt text comes from; you do not s
 
 When the user or task asks to skip drafting/enhancement or use the prompt verbatim ("use this prompt as-is", "no prompt enhancement"), do **NOT** call `draft_prompt`, `review_prompt` or `enhance_prompt`; pass the prompt to `wf_xxx` byte for byte (only addition allowed: a required LoRA trigger word, unless forbidden).
 
+## Render size (`width` / `height`)
+
+Do not pass `width` / `height` by default - the render profile (draft / preview / master) decides the size. Set them only when the story or shot needs a different format (e.g. a vertical smartphone clip inside the film, the storyboard's aspect ratio); the values you pass then override the profile's size.
+
 ## Output file routing
 
 Each `wf_xxx` output is auto-routed to the declared file slot whose name matches the output port name (`portrait.png` <- port `portrait`). If one call yields several outputs of the same kind and the declared names do not map 1:1 to the ports, pass `output_ports={"<port>": "/workspace/<artifact_uuid>/<file>"}` explicitly. One call may produce one or more files; your task description says how many calls are needed.
