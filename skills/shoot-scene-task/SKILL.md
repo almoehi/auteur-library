@@ -115,12 +115,12 @@ that shows the subject from several sides) - **sheets first**; a design that has
 its artifact's files) contributes its `primary.<ext>` instead. Take the scene's row from the
 `scene_list` artifact (`location_slug`, `Outfits` as `<character>:<look>`) and look the keys up in
 `artifact_index` (`location_<slug>`, `outfit_<character>_<look>`, `character_<character>`;
-tolerate a suffix). A pair with no outfit design is the character's base look (`base_look` in
-`design_plan.json`, when available): the character design's sheet (else primary) is its
-reference, and that is not a missing sheet. A reference is `artifact://<artifact id>/<file>`
+tolerate a suffix). A `<c>:nude` pair binds the character design (its sheet, else primary); any
+other look binds its outfit design. A look with no outfit design -> the character design plus the
+garments described in the prompt; note the gap. A reference is `artifact://<artifact id>/<file>`
 (read the artifact to get the real file name). Missing designs are not fatal: note them and
 continue without that reference. List them per clip: location first, then that shot's outfits
-(the character design for a base look), then any further character sheets ("Anchor (Picture 1)
+(the character design for `:nude`), then any further character sheets ("Anchor (Picture 1)
 by intent" of `workflow-calling-conventions`, compose intent). The clip's own first frame is NOT
 a reference: it is the `start_frame`.
 

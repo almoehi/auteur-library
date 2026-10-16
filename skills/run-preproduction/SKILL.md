@@ -54,9 +54,9 @@ intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 | `cast-quality` | `{input}` holds the `character_<slug>.md` files: every cast role of the story has a dedicated, complete profile. Animals and other non-human creatures with a story role (named, acting or plot-driving, in the title or premise, recurring) ARE cast roles and must be included; only pure background, props or set dressing (unnamed, no action, no plot function) are not. NEVER reject because a cast member is an animal; reject only if a required role is missing or a pure background element / prop was listed as cast |
 | `scenes-quality` | `{input}` holds `scene_list.md`: the scene list covers all narrative beats with numbered scenes, INT/EXT, location, one-line action |
 | `scenes-complete` | `{input}` holds `scene_list.md`: every scene row has a location slug and, for every character present, an outfit/look slug; every scene also has beats (the `Beats` section below the table) and EVERY beat names a camera move and a continuity (`continuous` | `parallel` | `new moment`; a `parallel` beat names its place) |
-| `design-plan-covers-scenes` | `{input}` holds ALL output files of the task: `design_plan.json` and `scene_list.md` (verbatim copy of the scene list, the ground truth). YES only if every character and location (by `location_slug`, including every place named by a `parallel` beat) occurring in the scene list has an entry in the plan, every (character, look) pair of the scene list is either that character's `base_look` (covered by the character entry, no outfit entry needed) or has an outfit entry, and no outfit's character is missing from the plan; otherwise NO naming the missing entries |
-| `designs-cover-plan` | `{input}` holds the plan (`design_plan.json`); `{toolCalls}` the task's tool calls (the worker's calls). Count the successful `create_design` calls (result "Design created: ..."), identified by `kind` + `display_name`, and compare with the plan entries; a design that already existed and is documented as skipped counts as covered. Tool-call args may be truncated at about 200 characters, so match on `kind` and `display_name` only. Base looks have no outfit entry and need no outfit design (the character design covers them). YES only if every plan entry is covered |
-| `storyboards-cover-scenes` | `{input}` holds ALL output files of the task: `scene_list.md` (verbatim copy of the scene list, the ground truth) and `design_plan.json`; `{toolCalls}` the task's tool calls. Count the successful `create_design` calls with `kind` `storyboard` (result "Design created: ..."); a storyboard that already existed (`storyboard_scene_<n>`) and is documented as skipped counts as covered. Tool-call args may be truncated at about 200 characters, so match on `kind` and `display_name` ("Scene <n>"). YES only if every scene number of the scene list has a storyboard; otherwise NO naming the scenes without one |
+| `design-plan-covers-scenes` | `{input}` holds ALL output files of the task: `design_plan.json` and `scene_list.md` (verbatim copy of the scene list, the ground truth). YES only if every character and location (by `location_slug`, including every place named by a `parallel` beat) occurring in the scene list has an entry in the plan, every (character, look) pair of the scene list other than `<character>:nude` has an `outfits` entry with that `character_slug` and `look_slug`, and no outfit's character is missing from the plan; otherwise NO naming the missing entries |
+| `designs-cover-plan` | `{input}` holds the plan (`design_plan.json`); `{toolCalls}` the task's tool calls (the worker's calls). Every key of the plan's `designs` list must be covered by a successful `create_design` call (result "Design created: key <key>"), or be documented in the `task_complete` summary as skipped (already existing) or renamed. YES only if every key is covered; otherwise NO naming the uncovered keys |
+| `storyboards-cover-scenes` | `{input}` holds ALL output files of the task: `scene_list.md` (verbatim copy of the scene list, the ground truth) and `design_plan.json`; `{toolCalls}` the task's tool calls. A scene is covered by a successful `create_design` result "Design created: key storyboard_scene_<n>" (match by that key), or a documented skip of an existing `storyboard_scene_<n>`. YES only if every scene number of the scene list has a storyboard; otherwise NO naming the scenes without one |
 
 Each check is attached to the task named in the Step 3 table and judges that task's output files.
 Never edit an existing policy here (see `modify-policy`).
@@ -78,20 +78,13 @@ description, see Key rules).
 
 ## Step 4 — Create the tasks (in this order)
 
-Each of the four steps is exactly ONE `create_task` call. It creates the task, its output
-artifact, the artifact's files and the task's checks together; there is no separate
-artifact call:
-
-```
-create_task({ id, title, description, prompt, agent, requires_tasks, requires_artifacts,
-              output_artifact_name, output_files, output_artifact_description, policies,
-              can_create_tasks })
-```
+Each of the four steps (4a-4d) is exactly ONE `create_task` call, written out literally in its
+subsection. It creates the task, its output artifact, the artifact's files and the task's checks
+together; there is no separate artifact call. `policies` are the Step 3 column; do not drop or move them.
 
 - `id` = the Step 3 task id; `output_artifact_name` = the Step 3 output artifact KEY (a valid
   free snake_case key); `output_files` = the exact files from the Step 3 table (for the open
-  `character_table` artifact use `[]`); `policies` = the checks from the Step 3 table
-  (task checks; they judge the task's output files).
+  `character_table` artifact use `[]`).
 - `can_create_tasks: true` ONLY on `plan_designs` (a planning task: its worker calls
   `create_design`); the writer tasks (`write_screenplay`, `character_table`, `create_scenes`)
   leave it unset, so their workers cannot create tasks. Without the flag a worker's `create_design`
@@ -120,12 +113,21 @@ steps were created (with the ids from their results) and which failed, with the 
 claim a task that `create_task` did not confirm. Skip any task/artifact that already exists.
 
 ### 4a. write_screenplay
-- agent: writer; `output_artifact_name: "screenplay"`, `output_artifact_description: "Screenplay"`, `output_files: ["screenplay.md"]`, `policies: ["screenplay-quality"]`
+```
+create_task({ id: "write_screenplay", title: "Write screenplay", description: "Adapt the story plot into a screenplay",
+  agent: <writer>, policies: ["screenplay-quality"],
+  prompt: <prompt below>, requires_tasks: [], requires_artifacts: [],
+  output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"] })
+```
 - prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX.
 
 ### 4b. character_table
-- agent: cast writer; `requires_tasks: ["write_screenplay"]`, `requires_artifacts: ["screenplay"]`
-- `output_artifact_name: "character_table"`, `output_artifact_description: "Character Breakdown Table"`, `output_files: []` (open), `policies: ["cast-quality"]`
+```
+create_task({ id: "character_table", title: "Character table", description: "One profile file per cast role",
+  agent: <cast writer>, policies: ["cast-quality"],
+  prompt: <prompt below>, requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"],
+  output_artifact_name: "character_table", output_artifact_description: "Character Breakdown Table", output_files: [] })
+```
 - prompt, verbatim requirements:
   - identify every cast role (speaking, named, meaningful presence; no props or walk-ons)
   - write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`
@@ -138,16 +140,19 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
     field open; in a workspace with `contentPolicy.nudity: allowed` (`{workspace.contentPolicy.nudity}`)
     and an adult character, add the anatomical details needed for a consistent depiction as
     `key: value` lines in the same section, concrete and non-euphemistic; a minor never gets
-    them), `WARDROBE TRACKER` (a table: look slug | description |
+    them), `WARDROBE TRACKER` (a table with ONE row per look the character wears in the story - garment looks only; nudity is not a row, it is the `nude` pair in the scene list: look slug | description |
     garments, colors, material, fit, accessories | scenes where worn; look slugs are
     lowercase, `[a-z0-9]+(_[a-z0-9]+)*`, e.g. `raincoat`, `evening_dress`)
   - files are registered automatically; then `task_complete`
   - the prompt states the output artifact `character_table` and the file pattern `character_<slug>.md`
 
 ### 4c. create_scenes
-- agent: director; `requires_tasks: ["write_screenplay","character_table"]`,
-  `requires_artifacts: ["screenplay","character_table"]`
-- `output_artifact_name: "scene_list"`, `output_artifact_description: "Scene List"`, `output_files: ["scene_list.md"]`, `policies: ["scenes-quality","scenes-complete"]`
+```
+create_task({ id: "create_scenes", title: "Scene list", description: "Scene table with outfits and beats",
+  agent: <director>, policies: ["scenes-quality","scenes-complete"],
+  prompt: <prompt below>, requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"],
+  output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"] })
+```
 - prompt: write the single output file `scene_list.md` as plain Markdown (never PDF or DOCX), containing ONE markdown table with exactly these columns:
   `Scene #` | `INT/EXT` | `Location` (display name) | `location_slug` (lowercase slug, stable:
   the same place has the same slug in every scene) | `Time of day` | `Summary` (one sentence) |
@@ -155,9 +160,10 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
   `<character_slug>:<look_slug>` pairs separated by `; ` (e.g. `mira:raincoat; jonas:work_suit`).
   The Summary names every entrance, exit and spoken line that matters to the story, not only the
   main action.
-  Character slugs must equal the `character_<slug>.md` file stems from the character table; look
-  slugs must exist in that character's WARDROBE TRACKER (add a new look there only if the
-  screenplay demands one, and say so in the summary). Every present character needs a look.
+  Character slugs must equal the `character_<slug>.md` file stems from the character table; the
+  `Outfits` column uses ONLY look slugs from that character's WARDROBE TRACKER (copy them exactly; add a
+  new row there only if the screenplay demands one, and say so in the summary), or `nude` (only for an
+  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed). Every present character needs a look.
   Short-film default: no more than 4 scenes unless the story requires more.
   **Beats section (below the table, same file).** For EACH scene a `### Scene <n>` heading and a
   markdown table with one row per beat: `Beat #` | `Action` (what visibly happens) | `Framing`
@@ -188,17 +194,21 @@ claim a task that `create_task` did not confirm. Skip any task/artifact that alr
   that barely move and cut where they should flow.
 
 ### 4d. plan_designs (the orchestrator)
-- agent: `design_planner`; `difficulty: "hard"`; `can_create_tasks: true` (the only task of the chain that gets it)
-- `requires_tasks: ["create_scenes","character_table"]`,
-  `requires_artifacts: ["character_table","scene_list"]`
-- `output_artifact_name: "design_plan"`, `output_artifact_description: "Design Plan"`, `output_files: ["scene_list.md","design_plan.json"]` (BOTH must be declared in this call; `scene_list.md` is a verbatim copy of the scene list, so the task check judge sees both in `{input}`), X
-- description/prompt (the first line is exact, the worker keys on it):
+```
+create_task({ id: "plan_designs", title: "Plan and create designs", description: "Create the designs of the pre-production",
+  agent: "design_planner", policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
+  difficulty: "hard", can_create_tasks: true,
+  prompt: <prompt below>, requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list"],
+  output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
+  output_files: ["scene_list.md","design_plan.json"] })
+```
+`can_create_tasks: true` is set only here. BOTH output files must be declared (`scene_list.md` is a verbatim copy of the scene list, so the task check judge sees both in `{input}`). The prompt (the first line is exact, the worker keys on it):
 
 ```
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Deliverable: the designs. Create one design per plan entry with `create_design` (characters, locations, outfits), then one storyboard design per scene (`kind: "storyboard"`, see the skill). Writing files is NOT completion: call `task_complete` only after every `create_design` call and the audit, and report only counts the tool results show.
+Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, locations, outfits, then one storyboard per scene; see the skill). Writing files is NOT completion: call `task_complete` only after every `create_design` call and the audit, and report only counts the tool results show.
 Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`.
 ```
 
@@ -208,8 +218,14 @@ Reconcile before replying: call `task_index` once. All four tasks of the Step 3 
 present with the expected `requires`; create any planned task that is missing (Step 4 rules, one
 per round) and call `task_index` again. Report only tasks confirmed by `create_task` results and
 this index; list only what still failed, precisely, and do not use the success message below for
-a chain that is incomplete. Then tell the user, in at most 3 short lines
-(see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`; no policy lists):
+a chain that is incomplete.
+
+Then verify the checks: `task_index` does not show them, so call `task_info` for each created task
+(one per round). Its `**Policies:**` list must equal the Step 3 `policies` column; attach any
+missing check with `assign_policy` (one per round) and re-check, before the report.
+
+Then tell the user, in at most 3 short lines
+(see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`; the reply lists no policies):
 
 > "Scheduled pre-production: task://<screenplay> -> task://<cast> -> task://<scene_list> -> task://<plan_designs>.
 > Skipped (already existed): task://<id>, ... (only if any).
@@ -221,6 +237,6 @@ a chain that is incomplete. Then tell the user, in at most 3 short lines
 2. All four `create_task` calls in the same turn, one per round, in order, no prose between them; later `requires_*` use the keys/ids returned by earlier results.
 3. Idempotent: skip existing tasks, artifacts and policies; never duplicate.
 4. Canonical ids and filenames from the Step 3 table, identical in every prompt and in every `create_task` call.
-5. Never write check/policy names into a task's prompt or description (a worker would pass them on, e.g. as `create_design` policies); checks are attached only through `create_task.policies`.
+5. Each task's checks go in its `policies` field (Step 3 column) - and only there, never in prompt or description text.
 6. Policies exist before the `create_task` that references them (create missing ones with `create_policy` first, Step 2); an unknown check key is refused and nothing is created.
 7. Never claim an unconfirmed task. Do not read artifacts or run `create_design` yourself; the `plan_designs` worker does it (it is the only task created with `can_create_tasks: true`).
