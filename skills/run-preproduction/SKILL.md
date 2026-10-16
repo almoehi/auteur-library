@@ -187,7 +187,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   Character slugs must equal the `character_<slug>.md` file stems from the character table; the
   `Outfits` column uses ONLY look slugs from that character's WARDROBE TRACKER (copy them exactly; add a
   new row there only if the screenplay demands one, and say so in the summary), , `nude` (only for an
-  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed), or `none` (a character that wears nothing, e.g. an animal). Every present character needs a look in every beat they are visible in.
+  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed), or `none` (a character that wears nothing, e.g. an animal). Every present character needs a look in every beat they are visible in. A point-of-view character whose hands or body are in frame counts as visible: list them in that beat's `Outfits`. A character who appears only in a `parallel` cutaway beat at another place need not be in the scene row's `Characters present`, but is still listed in that beat's `Outfits` and in the row's `Outfits` union.
   **A scene row = ONE place and ONE continuous time.** A change of place starts a new scene; never
   merge two places into one row ("Backyard terrace / Hallway" is two scenes). The short-film
   default of about 4 scenes never overrides this: add scenes rather than merge places.

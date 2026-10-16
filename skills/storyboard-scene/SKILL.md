@@ -68,7 +68,7 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
 - **A shot's `Outfits:` line comes from the beat(s) the shot shows, never from the scene row**: looks
   change inside a scene (`sister:bikini_cardigan` in beat 2, `sister:nude` from beat 3), so shots of the
   same scene can differ. A shot spanning several beats takes the look at its opening frame (the first
-  beat it shows). A scene list without a beat `Outfits` column (older) falls back to the scene row.
+  beat it shows). A point-of-view character whose hands or body are visible in the frame counts as visible: list them in the shot's `Outfits:` (the beat's `Outfits` names them too). A `parallel` cutaway beat's characters come from that beat even when the scene row's `Characters present` omits them. A scene list without a beat `Outfits` column (older) falls back to the scene row.
 - Bind each `<character_slug>:<look_slug>` pair (THE binding rule for nude vs clothed; keys in
   `design.json.links` are the truth): a shot's `Outfits:` pair `<c>:nude` or `<c>:none` binds the
   character design primary (`character_<c>`, in a nudity-allowed workspace that primary IS the nude base sheet); `<c>:<look>` binds the outfit design primary: the
