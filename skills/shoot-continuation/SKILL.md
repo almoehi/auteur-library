@@ -67,8 +67,8 @@ what is missing.
 3. Gather every **reference image** the workflow's ports require or allow, **sheets first**: the
    published `sheet.<ext>` of finished designs (`artifact_index`: artifacts keyed `character_*`,
    `location_*`, `outfit_*`); a design without a sheet contributes its `primary.<ext>`; else
-   approved artifacts that show the subject. A character without an `outfit_*` design wears its
-   base look: the `character_*` sheet (else primary) is its reference. Pass
+   approved artifacts that show the subject. A `:nude` or `:none` character binds its `character_*` sheet (else
+   primary); any other look binds its `outfit_*` design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else `outfit_<c>_<look>`, suffix tolerated) (missing -> the `character_*` sheet plus the garments in the prompt). Pass
    them as `artifact://<artifactId>/<file>` (never paste URLs), placed per "Anchor (Picture 1)
    by intent" of `workflow-calling-conventions` (continuation is COMPOSE intent: the place
    first, then the characters). If a required reference
