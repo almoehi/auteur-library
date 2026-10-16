@@ -63,7 +63,7 @@ State the workflow and path used in your summary.
 
 Pass the shot's references to the video workflow, not just the start frame: the character
 design's primary (or sheet), the outfit design's primary, the location design's primary - the ones
-the shot's `Characters`, `Outfits` and `Location` (design KEYS, e.g. `character_the_wife`,
+the shot's own `Characters`, `Outfits` (per shot: a look can change within the scene, never take a scene-level look) and `Location` (design KEYS, e.g. `character_the_wife`,
 `character_the_wife:outfit_the_wife_gown`, `location_harbor`) and its `Visible:` line name (a POV shot's
 `Visible:` shows hands or forearms only: do not pass a full-body reference of the POV character).
 The task's `references` list is the source; when it is thin, look the designs up in `artifact_index`

@@ -54,7 +54,7 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   `Location:` is the key of a linked location design (see "One shot = one place").
 - Read `scene_list` (the scene's row: location, time of day, summary, characters, outfits as
   `<character_slug>:<look_slug>`; below the table the scene's **Beats**: per beat the action,
-  `Location` (the beat's `location_slug`), framing, camera move and continuity - `continuous`, `parallel` (happens at the same time somewhere
+  `Location` (the beat's `location_slug`), `Outfits` (the looks of the characters visible in the beat, `<character_slug>:<look_slug>` pairs - the scene row's `Outfits` is only their union), framing, camera move and continuity - `continuous`, `parallel` (happens at the same time somewhere
   ELSE, names its place) or `new moment`) and the `screenplay` (if it exists; use the scene's slice for
   action and mood) exactly ONCE each. Never re-read them later.
 - Read each linked design ONCE, compactly: `read_artifact` of a design returns a server-side
@@ -65,9 +65,13 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   derive one from a display name). A shot takes its beat's `Location`. A place with no
   linked location design cannot be a shot's `Location:`: use the nearest linked location and name
   the gap in the summary.
+- **A shot's `Outfits:` line comes from the beat(s) the shot shows, never from the scene row**: looks
+  change inside a scene (`sister:bikini_cardigan` in beat 2, `sister:nude` from beat 3), so shots of the
+  same scene can differ. A shot spanning several beats takes the look at its opening frame (the first
+  beat it shows). A scene list without a beat `Outfits` column (older) falls back to the scene row.
 - Bind each `<character_slug>:<look_slug>` pair (THE binding rule for nude vs clothed; keys in
   `design.json.links` are the truth): a shot's `Outfits:` pair `<c>:nude` or `<c>:none` binds the
-  character design primary (`character_<c>`); `<c>:<look>` binds the outfit design primary: the
+  character design primary (`character_<c>`, in a nudity-allowed workspace that primary IS the nude base sheet); `<c>:<look>` binds the outfit design primary: the
   key from `design_plan.json` `outfits[]` (character_slug + look_slug) when present, else
   `outfit_<c>_<look>` (suffix tolerated). A missing outfit design -> bind the character primary,
   describe the garments in the prompt and name the gap in the summary - never let a clothed shot

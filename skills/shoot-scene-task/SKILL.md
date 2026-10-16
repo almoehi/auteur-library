@@ -113,10 +113,10 @@ Find the scene's reference images: for the location design, the outfit designs a
 designs used in the scene, the published **sheet** (`sheet.<ext>`: the model sheet / turnaround
 that shows the subject from several sides) - **sheets first**; a design that has no sheet (read
 its artifact's files) contributes its `primary.<ext>` instead. Take the scene's row from the
-`scene_list` artifact (`location_slug` and the beats' `Location` slugs, `Outfits` as `<character>:<look>`; the slugs are the character-table file stems) and look the keys up in
+`scene_list` artifact (`location_slug` and the beats' `Location` slugs, `Outfits` as `<character>:<look>` - per BEAT in the Beats tables, the scene row only lists their union, so a clip uses the looks of the beat(s) it shows; the slugs are the character-table file stems) and look the keys up in
 `artifact_index` (`location_<slug>`, `outfit_<character>_<look>`, `character_<character>`;
 tolerate a suffix). The storyboard's `shotlist.md` already names each shot's designs as KEYS
-(`Location:`, `Characters:`, `Outfits:` = `<characterKey>:<outfitKey>`): for a shot, use those keys
+(`Location:`, `Characters:`, `Outfits:` = `<characterKey>:<outfitKey>`; the `Outfits:` line is per shot, so shots of the same scene may differ - never apply one scene-level look to all clips): for a shot, use those keys
 directly in `artifact_index` - no slug mapping needed (an older shotlist that still has slugs:
 map them as above). A `<c>:nude` or `<c>:none` pair binds the character design (its sheet, else primary); any
 other look binds its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else the pattern above). A look with no outfit design -> the character design plus the

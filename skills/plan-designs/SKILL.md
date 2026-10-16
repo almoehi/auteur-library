@@ -41,7 +41,11 @@ things below: the look of a character design ("Characters and outfits") and the 
   and trousers"). A creature or animal that wears nothing has `wardrobe` `none`, NO tracker rows
   and the scene pair `<c>:none`. Minors are always clothed. The character design carries
   identity; outfits carry everything worn.
-- **Scene-list pairs**: `<c>:<look>` -> that look's outfit design (the look MUST be a tracker row,
+- **Scene-list pairs**: the scene rows' `Outfits` are the UNION of the looks their beats use (the Beats
+  tables' `Outfits` column carries the per-beat looks; a character may appear with several looks in one
+  row, e.g. `sister:bikini_cardigan; sister:nude`). Plan from the scene rows' pairs (equal to the beat
+  looks), excluding `nude` / `none`: those need no design - in a nudity-allowed workspace the character
+  design's primary IS the nude base sheet. `<c>:<look>` -> that look's outfit design (the look MUST be a tracker row,
   Phase 0 step 3b); `<c>:nude` (valid only for a nude adult as above) and `<c>:none` (a character
   that wears nothing) -> the character design only, no outfit entry. An invalid `<c>:nude` (minor,
   creature, nudity forbidden; a minor is never nude) -> an outfit entry built from the scene
@@ -53,9 +57,9 @@ things below: the look of a character design ("Characters and outfits") and the 
    approved and readable. Note your own output artifact id (the task's artifact) for paths.
 2. `read_artifact(artifactId="scene_list")`: must contain a table with columns
    `Scene #`, `INT/EXT`, `Location`, `location_slug`, `Time of day`, `Summary`,
-   `Characters present`, `Outfits` (`<character_slug>:<look_slug>` pairs separated by `; `).
+   `Characters present`, `Outfits` (`<character_slug>:<look_slug>` pairs separated by `; `, the union of the looks of the scene's beats).
    Below the scene table a `Beats` section (per scene: beat, action, framing, camera move,
-   continuity: `continuous` | `parallel` | `new moment`, and a `Location` column holding the
+   continuity: `continuous` | `parallel` | `new moment`, an `Outfits` column (the looks visible per beat) and a `Location` column holding the
    `location_slug` where the beat happens) may follow. Your `scene_list.md` copy stays
    verbatim, Beats included. A beat whose `Location` differs from its row's `location_slug` (a
    `parallel` beat) is an extra location of the scene.

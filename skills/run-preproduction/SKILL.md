@@ -53,7 +53,7 @@ intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 | `screenplay-quality` | `{input}` holds `screenplay.md`: the screenplay faithfully adapts the plot with proper format (INT./EXT. headings, action, dialogue) |
 | `cast-quality` | `{input}` holds the `character_<slug>.md` files: every cast role of the story has a dedicated, complete profile. Animals and other non-human creatures with a story role (named, acting or plot-driving, in the title or premise, recurring) ARE cast roles and must be included; only pure background, props or set dressing (unnamed, no action, no plot function) are not. NEVER reject because a cast member is an animal; reject only if a required role is missing or a pure background element / prop was listed as cast |
 | `scenes-quality` | `{input}` holds `scene_list.md`: the scene list covers all narrative beats with numbered scenes, INT/EXT, location, one-line action |
-| `scenes-complete` | `{input}` holds `scene_list.md`: every scene row has a location slug and, for every character present, an outfit/look slug; every scene also has beats (the `Beats` section below the table) and EVERY beat names a camera move and a continuity (`continuous` | `parallel` | `new moment`; a `parallel` beat names its place) and a `Location` slug; every scene row has exactly one place (one `location_slug`, `INT/EXT` exactly `INT` or `EXT`, never `INT/EXT` or two places in one row) |
+| `scenes-complete` | `{input}` holds `scene_list.md`: every scene row has a location slug and, for every character present, an outfit/look slug; EVERY beat has an `Outfits` entry (the looks of the characters visible in it) and the scene row's `Outfits` is the union of its beats' looks, `nude` only where the workspace allows it and never for a minor; every scene also has beats (the `Beats` section below the table) and EVERY beat names a camera move and a continuity (`continuous` | `parallel` | `new moment`; a `parallel` beat names its place) and a `Location` slug; every scene row has exactly one place (one `location_slug`, `INT/EXT` exactly `INT` or `EXT`, never `INT/EXT` or two places in one row) |
 | `design-plan-covers-scenes` | `{input}` holds ALL output files of the task: `design_plan.json` and `scene_list.md` (verbatim copy of the scene list, the ground truth). YES only if every character and location (by `location_slug`, including every slug in the Beats `Location` column) occurring in the scene list has an entry in the plan, every (character, look) pair of the scene list other than `<character>:nude` and `<character>:none` (these need no outfit entry) has an `outfits` entry with that `character_slug` and `look_slug`, and no outfit's character is missing from the plan; otherwise NO naming the missing entries |
 | `designs-cover-plan` | `{input}` holds the plan (`design_plan.json`); `{toolCalls}` the task's tool calls (the worker's calls). PLANNED = the character, location and outfit keys of the plan's `designs` list (fallback: the keys of the plan's entries); storyboards belong to `storyboards-cover-scenes`. A key is covered by a `Design created: key <key>` tool result, by appearing in an `artifact_index` result, or by the summary's `skipped (existing)` / `renamed: <old> -> <new>` lines (a renamed new key must appear in a `Design created` result). YES only if every planned key is covered; otherwise NO naming the uncovered keys |
 | `storyboards-cover-scenes` | `{input}` holds ALL output files of the task: `scene_list.md` (verbatim copy of the scene list, the ground truth) and `design_plan.json`; `{toolCalls}` the task's tool calls. A scene is covered by a successful `create_design` result "Design created: key storyboard_scene_<n>" (match by that key), or a documented skip of an existing `storyboard_scene_<n>`. YES only if every scene number of the scene list has a storyboard; otherwise NO naming the scenes without one |
@@ -178,19 +178,21 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   Then write the single output file `scene_list.md` as plain Markdown (never PDF or DOCX), containing ONE markdown table with exactly these columns:
   `Scene #` | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` or `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug, stable:
   the same place has the same slug in every scene) | `Time of day` | `Summary` (one sentence) |
-  `Characters present` | then per present character its outfit: `Outfits` as
-  `<character_slug>:<look_slug>` pairs separated by `; ` (e.g. `mira:raincoat; jonas:work_suit`).
+  `Characters present` | `Outfits` = the set of ALL looks the scene's beats use, as
+  `<character_slug>:<look_slug>` pairs separated by `; ` (e.g. `mira:raincoat; jonas:work_suit`; a
+  character who changes look inside the scene appears once per look: `sister:bikini_cardigan; sister:nude`).
+  The row's `Outfits` is exactly the UNION of the `Outfits` of its beats (below): nothing missing, nothing extra.
   The Summary names every entrance, exit and spoken line that matters to the story, not only the
   main action.
   Character slugs must equal the `character_<slug>.md` file stems from the character table; the
   `Outfits` column uses ONLY look slugs from that character's WARDROBE TRACKER (copy them exactly; add a
   new row there only if the screenplay demands one, and say so in the summary), , `nude` (only for an
-  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed), or `none` (a character that wears nothing, e.g. an animal). Every present character needs a look.
+  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed), or `none` (a character that wears nothing, e.g. an animal). Every present character needs a look in every beat they are visible in.
   **A scene row = ONE place and ONE continuous time.** A change of place starts a new scene; never
   merge two places into one row ("Backyard terrace / Hallway" is two scenes). The short-film
   default of about 4 scenes never overrides this: add scenes rather than merge places.
   **Beats section (below the table, same file).** For EACH scene a `### Scene <n>` heading and a
-  markdown table with one row per beat: `Beat #` | `Action` (what visibly happens) | `Location` (the `location_slug` of where the beat happens: for every beat that is not `parallel` EXACTLY this scene row's own slug; only a `parallel` beat / cutaway names another place) | `Framing`
+  markdown table with one row per beat: `Beat #` | `Action` (what visibly happens) | `Location` (the `location_slug` of where the beat happens: for every beat that is not `parallel` EXACTLY this scene row's own slug; only a `parallel` beat / cutaway names another place) | `Outfits` (REQUIRED, right after `Location`: the looks of the characters VISIBLE in this beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `husband:linen_shorts; sister:nude`; `none` when nobody is visible. Written out explicitly for EVERY beat - never "same as above" or an empty cell. Looks are the character's WARDROBE TRACKER slugs, `nude` or `none`. **A look change mid-scene is a change in the `Outfits` of the beat where it happens and of every later beat** - a character who undresses gets `<character_slug>:nude` from that beat on, but only when nudity is allowed (`{workspace.contentPolicy.nudity}` is `allowed`) and the character is an adult; otherwise keep a tracker look. The beat that shows the change itself carries the look the character has AFTER it) | `Framing`
   (shot size and angle of the beat) | `Camera move` (how the camera moves during the beat of the
   video clip: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift,
   orbit, or `hold` ONLY when the beat asks for stillness) | `Continuity` (how the beat relates to
@@ -212,10 +214,10 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   figure, and the character is not listed as visible in `Blocking`.
   One beat = one place (its `Location`) and one opening framing: split a beat that packs two places or two framings. Every scene has at least one beat
   (typically 2-6, one per distinct action or change of framing) and EVERY beat names a camera
-  move and a continuity. Downstream, the storyboard's `Movement:` and `Transition:` lines and the
+  move, a continuity and its `Outfits`. Downstream, the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the
   shoot skills' video prompts are taken from these beats (`continuous` becomes a `continue`
   transition: the clip carries on from the previous one; a `parallel` beat becomes a cutaway shot at
-  its named place, and the storyboard links that place's location design; the extra location designs are planned from the beat `Location` slugs); a scene list without them yields clips
+  its named place, and the storyboard links that place's location design; the extra location designs are planned from the beat `Location` slugs, the outfit designs from the scene rows' `Outfits` = the union of the beat looks); a scene list without them yields clips
   that barely move and cut where they should flow.
 
 ### 4d. plan_designs (the orchestrator)
