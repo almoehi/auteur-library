@@ -113,7 +113,7 @@ Find the scene's reference images: for the location design, the outfit designs a
 designs used in the scene, the published **sheet** (`sheet.<ext>`: the model sheet / turnaround
 that shows the subject from several sides) - **sheets first**; a design that has no sheet (read
 its artifact's files) contributes its `primary.<ext>` instead. Take the scene's row from the
-`scene_list` artifact (`location_slug`, `Outfits` as `<character>:<look>`) and look the keys up in
+`scene_list` artifact (`location_slug` and the beats' `Location` slugs, `Outfits` as `<character>:<look>`; the slugs are the character-table file stems) and look the keys up in
 `artifact_index` (`location_<slug>`, `outfit_<character>_<look>`, `character_<character>`;
 tolerate a suffix). The storyboard's `shotlist.md` already names each shot's designs as KEYS
 (`Location:`, `Characters:`, `Outfits:` = `<characterKey>:<outfitKey>`): for a shot, use those keys
@@ -161,7 +161,7 @@ camera move of the VIDEO; absent in older storyboards), `Duration`, `Transition`
 storyboards), characters and outfits (design keys, used as written for the reference lookup). When a
 shot has no `Movement:`, take it from the matching beat in the `Beats` section of the
 `scene_list` artifact (read it once; the scene's `### Scene <n>` table: beat, action, framing,
-camera move); no beat either: derive it from the action and say so. Never turn a missing
+location, camera move); no beat either: derive it from the action and say so. Never turn a missing
 movement into "static".
 
 ### 2a-2. Frame edits

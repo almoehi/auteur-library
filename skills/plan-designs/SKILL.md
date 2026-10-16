@@ -41,11 +41,11 @@ things below: the look of a character design ("Characters and outfits") and the 
   and trousers"). A creature or animal that wears nothing has `wardrobe` `none`, NO tracker rows
   and the scene pair `<c>:none`. Minors are always clothed. The character design carries
   identity; outfits carry everything worn.
-- **Scene-list pairs**: `<c>:<look>` -> that look's outfit design; `<c>:nude` (valid only for a
-  nude adult as above) and `<c>:none` (a character that wears nothing) -> the character design
-  only, no outfit entry. Any other pair - a look with no tracker row, or an invalid `<c>:nude`
-  (minor, creature, nudity forbidden; a minor is never nude) - -> an outfit entry built from the
-  scene context, flagged in the summary.
+- **Scene-list pairs**: `<c>:<look>` -> that look's outfit design (the look MUST be a tracker row,
+  Phase 0 step 3b); `<c>:nude` (valid only for a nude adult as above) and `<c>:none` (a character
+  that wears nothing) -> the character design only, no outfit entry. An invalid `<c>:nude` (minor,
+  creature, nudity forbidden; a minor is never nude) -> an outfit entry built from the scene
+  context, flagged in the summary.
 
 ## Phase 0 - Preflight
 
@@ -55,11 +55,19 @@ things below: the look of a character design ("Characters and outfits") and the 
    `Scene #`, `INT/EXT`, `Location`, `location_slug`, `Time of day`, `Summary`,
    `Characters present`, `Outfits` (`<character_slug>:<look_slug>` pairs separated by `; `).
    Below the scene table a `Beats` section (per scene: beat, action, framing, camera move,
-   continuity: `continuous` | `parallel` | `new moment`) may follow. Your `scene_list.md` copy stays
-   verbatim, Beats included. A `parallel` beat happens at the same time somewhere ELSE and names
-   its place: that place is an extra location of the scene.
+   continuity: `continuous` | `parallel` | `new moment`, and a `Location` column holding the
+   `location_slug` where the beat happens) may follow. Your `scene_list.md` copy stays
+   verbatim, Beats included. A beat whose `Location` differs from its row's `location_slug` (a
+   `parallel` beat) is an extra location of the scene.
 3. Read the character table files (pass `artifact_file`): `character_<slug>.md`, each with
    `VISUAL PROFILE` and `WARDROBE TRACKER`.
+3b. **Reconcile the scene list with the character table (mandatory, before any planning).**
+   Collect (a) the character slugs of every `Characters present` and `Outfits` pair, (b) the file
+   stems `<slug>` of the character table, (c) each character's tracker look slugs. If a scene-list
+   character slug is not a character-table stem, or a look slug (other than `nude` / `none`) is
+   not in that character's tracker, call `task_failed` naming BOTH sets (the offending scene-list
+   slugs and the table's stems / looks). Never map names by guesswork, never plan a character
+   without a file.
 4. Existing designs (idempotency, mandatory: always run it, never assume nothing exists): `artifact_index` keys starting `character_`, `outfit_`,
    `location_`, `storyboard_`, plus `task_index`. Remember them as `existing`.
 5. Nudity `allowed`: call `lora_index()` ONCE now (never skip or guess it), before any planning.
@@ -70,24 +78,25 @@ If an input is missing or unparseable: `task_failed` with a clear message naming
 Build every entry mechanically, with its FINAL key, then the work list. Nothing is decided later.
 
 1. **Entries**:
-   - **characters**: every `character_<slug>.md` file; plus any character named in the scene
-     list but without a file (flag in the summary; build it from the scene context only). Look
-     per "Characters and outfits".
-   - **locations**: EVERY distinct `location_slug` of the scene list PLUS every place named by a
-     `parallel` beat (re-scan all scene rows AND all beats, including places that appear once). A
-     parallel beat's place is matched to a table slug when it is the same place, else it is a new
-     location (slug = the lowercase slug of the place, display name from the beat). Per scene the
-     ordered places: the row's `location_slug` first, then parallel-beat places in beat order, no
-     duplicates. A location's `scenes` includes every scene whose parallel beats use it.
+   - **characters**: every `character_<slug>.md` file, slug = the file stem (step 3b guarantees
+     the scene list uses no other). Look per "Characters and outfits".
+   - **locations**: ONE per distinct `location_slug`, collected from the scene rows PLUS the Beats
+     `Location` column (re-scan all rows AND all beats, including slugs that appear once). Never
+     create a second location for a slug already collected. Per scene the ordered places: the
+     row's `location_slug` first, then other beat-`Location` slugs in beat order, no duplicates.
+     A location's `scenes` includes every scene whose beats use it. Display name: the scene row's
+     `Location` text for a row slug, else the slug's words in Title Case.
    - **outfits**: per "Characters and outfits".
    - **storyboards**: one per scene (see step 6).
 2. **Slugs and keys** (single rule, apply everywhere): slug = lowercase, ASCII, non-alphanumerics
    to `_`, collapse repeats, trim `_`; it matches `[a-z0-9]+(_[a-z0-9]+)*`. `create_design`
-   derives the key itself as `<kind>_` + slug of the `display_name` (there is no key argument), so
-   set `display_name` = the slug's words in Title Case: `sister` -> "Sister", `pool_terrace` ->
-   "Pool Terrace", outfit -> "Sister - Bikini Cardigan"; the key is then exactly `<kind>_<slug>` /
-   `outfit_<character_slug>_<look_slug>`. Never use the story's full name as `display_name` (put it
-   in an attribute or notes if useful). Keys are at most 64 characters: shorten the look part
+   takes the key from its `key_slug` argument: key = `<kind>_<key_slug>`. Every entry's `key_slug`
+   is its planned key without the `<kind>_` prefix (`sister`, `pool_terrace`,
+   `<character_slug>_<look_slug>` for an outfit, `scene_<n>` for a storyboard) and goes into
+   `design_plan.json`. `display_name` is the human name and independent of the key (Title Case
+   of the slug words, e.g. "Pool Terrace", "Sister - Bikini Cardigan"); never derive a key from
+   it. Never use the story's full name as `display_name` (put it in an attribute or notes if
+   useful). Keys are at most 64 characters: shorten the look part
    and note it in `flagged:`. Design names are unique across ALL kinds, so a location slug must
    not equal a character slug (suffix `_place` to the location slug, display "Harbor Place").
    Merge duplicates ("Mira", "MIRA", "young Mira" = slug `mira`; another age or costume is a
@@ -142,7 +151,8 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
    uses (the row's `location_slug` design FIRST, then parallel-beat places - links can ONLY be
    given at creation, and `storyboard-scene` can only place a shot at a linked location), one
    `character` link per character in `Characters present`, one `outfit` link per pair of the
-   `Outfits` column that has an outfit entry ("Characters and outfits").
+   `Outfits` column that has an outfit entry ("Characters and outfits"). Location links: row slug
+   first, then the other beat-`Location` slugs.
 7. **`designs`**: THE work list - every key in creation order: characters, locations, outfits,
    storyboards. Keys are fixed here, once.
 8. Write BOTH output files into `/workspace/<your artifact id>/` with `sandbox_write_file`:
@@ -151,26 +161,26 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
 ```json
 {
   "characters": [
-    { "display_name": "Mira", "slug": "mira", "key": "character_mira", "character_type": "woman",
+    { "display_name": "Mira", "slug": "mira", "key_slug": "mira", "key": "character_mira", "character_type": "woman",
       "attributes": [ { "key": "age", "value": "late 20s" }, { "key": "hair", "value": "auburn, shoulder length" },
                       { "key": "wardrobe", "value": "plain neutral clothing: simple fitted grey t-shirt and trousers" } ],
       "loras": [], "scenes": [1, 2, 4] },
-    { "display_name": "Lena", "slug": "lena", "key": "character_lena", "character_type": "woman",
+    { "display_name": "Lena", "slug": "lena", "key_slug": "lena", "key": "character_lena", "character_type": "woman",
       "attributes": [ { "key": "age", "value": "early 30s" }, { "key": "wardrobe", "value": "nude" } ],
       "loras": [ { "name": "<catalog name>" } ], "scenes": [3] }
   ],
   "locations": [
-    { "display_name": "Harbor", "slug": "harbor", "key": "location_harbor",
+    { "display_name": "Harbor", "slug": "harbor", "key_slug": "harbor", "key": "location_harbor",
       "attributes": [ { "key": "place", "value": "foggy fishing harbor" }, { "key": "time_of_day", "value": "dusk" } ],
       "scenes": [1, 3] }
   ],
   "outfits": [
-    { "character_slug": "mira", "look_slug": "raincoat", "key": "outfit_mira_raincoat", "display_name": "Mira - Raincoat",
+    { "character_slug": "mira", "look_slug": "raincoat", "key_slug": "mira_raincoat", "key": "outfit_mira_raincoat", "display_name": "Mira - Raincoat",
       "attributes": [ { "key": "garments", "value": "yellow raincoat" }, { "key": "colors", "value": "mustard yellow" } ],
       "scenes": [1, 3] }
   ],
   "storyboards": [
-    { "scene": 1, "key": "storyboard_scene_1", "notes": "Mira reaches the harbor in the rain.",
+    { "scene": 1, "key_slug": "scene_1", "key": "storyboard_scene_1", "notes": "Mira reaches the harbor in the rain.",
       "links": [ { "role": "location", "key": "location_harbor" }, { "role": "character", "key": "character_mira" },
                  { "role": "outfit", "key": "outfit_mira_raincoat" } ],
       "loras": [] }
@@ -193,17 +203,17 @@ Both file names are canonical: write exactly `scene_list.md` and `design_plan.js
 ## Phase 2 - Create the designs
 
 Walk `designs` in order: one `create_design` per key, arguments copied from its entry (kind from the
-entry list the key belongs to; `start: "attributes"`, `initial_drafts: 1`, `display_name`,
+entry list the key belongs to; `start: "attributes"`, `initial_drafts: 1`, `display_name`, `key_slug`,
 `character_type` for characters, `attributes`, `links`, `loras`). Never re-judge, skip, merge or
 add entries - that was decided in Phase 1; an entry that looks wrong is created anyway and noted.
 Only a key in `existing` is skipped (record it).
 
-- character: `create_design({ kind: "character", display_name, start: "attributes", character_type, attributes, initial_drafts: 1, loras })`
-- location: `create_design({ kind: "location", display_name, start: "attributes", attributes, initial_drafts: 1 })`
-- outfit: `create_design({ kind: "outfit", display_name, start: "attributes", attributes, initial_drafts: 1, links: [{ "role": "character", "key": "character_<character_slug>" }] })`
-- storyboard: `create_design({ kind: "storyboard", display_name: "Scene <n>", start: "attributes", attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<notes>" } ], initial_drafts: 1, links, loras })`
+- character: `create_design({ kind: "character", display_name, key_slug, start: "attributes", character_type, attributes, initial_drafts: 1, loras })`
+- location: `create_design({ kind: "location", display_name, key_slug, start: "attributes", attributes, initial_drafts: 1 })`
+- outfit: `create_design({ kind: "outfit", display_name, key_slug, start: "attributes", attributes, initial_drafts: 1, links: [{ "role": "character", "key": "character_<character_slug>" }] })`
+- storyboard: `create_design({ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", start: "attributes", attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<notes>" } ], initial_drafts: 1, links, loras })`
 
-Omit `loras` when the entry has none. `display_name` is the entry's (storyboard: `Scene <n>`); check that
+Omit `loras` when the entry has none. `display_name` is the entry's (storyboard: `Scene <n>`), `key_slug` the entry's `key_slug`; check that
 the result's key equals the entry's key.
 `start: "attributes"` needs a non-sheet text-to-image workflow in the workspace (an outfit needs an image-to-image one: it is drafted as edits of its character's primary and only starts once that design is finished - always pass the character link); `character_type` is REQUIRED for characters (custom text allowed, e.g. "ghost"). A refusal result starts with `error:`; a success reads `Design created: key <key>, @<name>, task id <id>, status <status>`. Treat any result not starting with `Design created` as not created.
 
@@ -219,7 +229,8 @@ those designs are finished): if a link key is refused as unknown, re-check the r
 
 **Refusals:**
 - `design name "<n>" is already used by "<key>"`: same kind as yours -> reuse it (skipped,
-  noted); different kind -> retry once with a suffixed display name (`<name> (place)`) and record the rename.
+  noted); different kind -> retry once with a suffixed display name (`<name> (place)`) and the SAME
+  `key_slug` (the key stays the planned one) and record it.
 - Outfit refused for a missing character: create the character first, then retry.
 - A `loras` name refused as unknown: re-check `lora_index`, retry once with the exact names (or
   without the unknown one); never drop the design over a LoRA - note it under `missing`.
@@ -228,7 +239,10 @@ those designs are finished): if a link key is refused as unknown, re-check the r
 ## Phase 3 - Pre-completion audit
 
 1. MANDATORY: re-run `artifact_index` (never skip it). Missing = every key of `designs` (after
-   renames and skips) that is not in the index. Create each missing one (Phase 2 rules) and
+   renames and skips) that is not in the index. **Before creating a missing one, check for a
+   rename**: a design of the SAME kind created in this run under another key (compare the
+   `Design created` registry with the index) is that entry under a different key: record it as
+   `renamed: <planned key> -> <actual key>` and do NOT create a second design for it. Create each missing one (Phase 2 rules) and
    re-audit. `task_complete` is forbidden while any key is missing, unless each is listed under
    `failed:` with its error. Zero `create_design` calls so far means Phase 2 never ran: do it now.
 2. `design_plan.json` and `scene_list.md` both exist in your artifact directory and equal what you used.
@@ -245,13 +259,14 @@ failed: <key: error> or none
 loras: <n> sent in create_design calls; missing: <scene: tags> or none
 ```
 
-(the `loras` line only when nudity is `allowed`.) Add `file mismatch:` and `flagged:` lines (characters without a file, scene pairs without a tracker row, entries that looked wrong) only when they occurred.
+(the `loras` line only when nudity is `allowed`.) Add `file mismatch:` and `flagged:` lines (invalid `nude` pairs, entries that looked wrong) only when they occurred.
 
 ## Key rules
 
+0. Names are never mapped by guesswork: a scene-list character or look that is not in the character table is `task_failed` (Phase 0, step 3b); one location per `location_slug` (rows + beat `Location`).
 1. Outfit rule, character look and scene pairs: "Characters and outfits" - nowhere else.
 2. Characters before outfits; outfits always link `{role:"character", key:"character_<slug>"}`.
-3. Slugs follow one normalization; keys <= 64 chars; names unique across kinds.
+3. Slugs follow one normalization; keys <= 64 chars; names unique across kinds. Every `create_design` passes `key_slug` (the planned key's slug); `display_name` never decides a key.
 4. `start` is always `"attributes"`, `initial_drafts` 1.
 5. Idempotent: never recreate an existing design.
 6. Never write `design.json` or any design file; only `design_plan.json` and `scene_list.md`.

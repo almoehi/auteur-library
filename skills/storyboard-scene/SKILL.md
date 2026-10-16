@@ -54,14 +54,15 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   `Location:` is the key of a linked location design (see "One shot = one place").
 - Read `scene_list` (the scene's row: location, time of day, summary, characters, outfits as
   `<character_slug>:<look_slug>`; below the table the scene's **Beats**: per beat the action,
-  framing, camera move and continuity - `continuous`, `parallel` (happens at the same time somewhere
+  `Location` (the beat's `location_slug`), framing, camera move and continuity - `continuous`, `parallel` (happens at the same time somewhere
   ELSE, names its place) or `new moment`) and the `screenplay` (if it exists; use the scene's slice for
   action and mood) exactly ONCE each. Never re-read them later.
 - Read each linked design ONCE, compactly: `read_artifact` of a design returns a server-side
   compact digest in later turns; use only `artifact_index` / the published description. Never
   copy or restate design documents, takes history or file lists.
-- Map each place name (the scene row's location slug and the place named by every `parallel` beat)
-  to the linked key `location_<slug>` (keys in `design.json.links` are the truth). A place with no
+- Map each place slug (the scene row's `location_slug` and the `Location` slug of every beat)
+  to the linked location key (`location_<slug>`; the keys in `design.json.links` are the truth, never
+  derive one from a display name). A shot takes its beat's `Location`. A place with no
   linked location design cannot be a shot's `Location:`: use the nearest linked location and name
   the gap in the summary.
 - Bind each `<character_slug>:<look_slug>` pair (THE binding rule for nude vs clothed; keys in
