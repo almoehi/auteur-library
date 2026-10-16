@@ -86,6 +86,11 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
      row's `location_slug` first, then other beat-`Location` slugs in beat order, no duplicates.
      A location's `scenes` includes every scene whose beats use it. Display name: the scene row's
      `Location` text for a row slug, else the slug's words in Title Case.
+   - **`distinct_place`**: a location entry whose `key_slug` words overlap another location
+     entry's - the shorter slug has at least two `_` words and all of them are in the longer one
+     (`backyard_pool` / `backyard_pool_terrace`; a one-word slug like `harbor` never counts) -
+     gets `"distinct_place": true` (the plan says they are different places; `create_design`
+     otherwise refuses the second as a near-duplicate of the first). No other entry has it.
    - **outfits**: per "Characters and outfits".
    - **storyboards**: one per scene (see step 6).
 2. **Slugs and keys** (single rule, apply everywhere): slug = lowercase, ASCII, non-alphanumerics
@@ -204,12 +209,12 @@ Both file names are canonical: write exactly `scene_list.md` and `design_plan.js
 
 Walk `designs` in order: one `create_design` per key, arguments copied from its entry (kind from the
 entry list the key belongs to; `start: "attributes"`, `initial_drafts: 1`, `display_name`, `key_slug`,
-`character_type` for characters, `attributes`, `links`, `loras`). Never re-judge, skip, merge or
+`character_type` for characters, `attributes`, `links`, `loras`, `distinct_place`). Never re-judge, skip, merge or
 add entries - that was decided in Phase 1; an entry that looks wrong is created anyway and noted.
 Only a key in `existing` is skipped (record it).
 
 - character: `create_design({ kind: "character", display_name, key_slug, start: "attributes", character_type, attributes, initial_drafts: 1, loras })`
-- location: `create_design({ kind: "location", display_name, key_slug, start: "attributes", attributes, initial_drafts: 1 })`
+- location: `create_design({ kind: "location", display_name, key_slug, start: "attributes", attributes, initial_drafts: 1 })`; add `distinct_place: true` when the entry has `"distinct_place": true` (see below)
 - outfit: `create_design({ kind: "outfit", display_name, key_slug, start: "attributes", attributes, initial_drafts: 1, links: [{ "role": "character", "key": "character_<character_slug>" }] })`
 - storyboard: `create_design({ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", start: "attributes", attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<notes>" } ], initial_drafts: 1, links, loras })`
 
@@ -229,8 +234,10 @@ those designs are finished): if a link key is refused as unknown, re-check the r
 
 **Refusals:**
 - `design name "<n>" is already used by "<key>"`: same kind as yours -> reuse it (skipped,
-  noted); different kind -> retry once with a suffixed display name (`<name> (place)`) and the SAME
-  `key_slug` (the key stays the planned one) and record it.
+  noted); different kind -> retry once with a DIFFERENT `key_slug` (the name derives from
+  `key_slug`, so a new display name alone never helps): append the kind (`harbor` ->
+  `harbor_location`, key `location_harbor_location`), and record `renamed: <planned key> ->
+  <created key>` (`designs-cover-plan` accepts the rename; links of later entries use the created key).
 - Outfit refused for a missing character: create the character first, then retry.
 - A `loras` name refused as unknown: re-check `lora_index`, retry once with the exact names (or
   without the unknown one); never drop the design over a LoRA - note it under `missing`.

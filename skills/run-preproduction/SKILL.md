@@ -190,7 +190,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   merge two places into one row ("Backyard terrace / Hallway" is two scenes). The short-film
   default of about 4 scenes never overrides this: add scenes rather than merge places.
   **Beats section (below the table, same file).** For EACH scene a `### Scene <n>` heading and a
-  markdown table with one row per beat: `Beat #` | `Action` (what visibly happens) | `Location` (the `location_slug` of where the beat happens: the row's slug, or another place's slug for a `parallel` beat / cutaway) | `Framing`
+  markdown table with one row per beat: `Beat #` | `Action` (what visibly happens) | `Location` (the `location_slug` of where the beat happens: for every beat that is not `parallel` EXACTLY this scene row's own slug; only a `parallel` beat / cutaway names another place) | `Framing`
   (shot size and angle of the beat) | `Camera move` (how the camera moves during the beat of the
   video clip: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift,
   orbit, or `hold` ONLY when the beat asks for stillness) | `Continuity` (how the beat relates to
@@ -198,7 +198,8 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   same people, even when the framing changes; `parallel` = the beat happens at the SAME TIME
   somewhere ELSE (a car arriving outside while the reaction inside goes on) and MUST give its place in the
   `Location` column as a `location_slug` (reuse a slug of the table or define a new stable one,
-  e.g. `driveway`; places are not characters, so inventing a place slug is allowed); `new moment` = a jump in time, place or subject, or an
+  e.g. `driveway`; any slug of lowercase a-z0-9 words joined by `_` is accepted for a `parallel` beat -
+  places are not characters, so inventing a place slug is allowed); `new moment` = a jump in time, place or subject, or an
   insert; the first beat of a scene is `new moment`).
   Beyond those columns every Beats table also has `Blocking` (who is where, facing which way) and
   `Contact` (who touches whom or what, where; `none` when nothing does). In a workspace with
