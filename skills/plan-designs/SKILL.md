@@ -186,7 +186,7 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
 
 (`nsfw_loras` only when nudity is `allowed`; `loras` omitted or `[]` when none.)
 
-**Writing these files is NOT completion.** Phase 2 (one `create_design` per key of `designs`) must follow. A tool message saying the file was written, or listing `task_complete` as a next action, never ends the task: call `task_complete` only after all create calls and the Phase 3 audit.
+**Writing these files is NOT completion.** Phase 2 (one `create_design` per key of `designs`) must follow. A tool message about files being written, a file count, or one listing `task_complete` as a next action is never completion: the task is complete only after EVERY planned design was created with `create_design` and the Phase 3 `artifact_index` audit passed. If `task_complete` is refused because no tasks/designs were created, do not retry it: continue with Phase 2.
 
 Both file names are canonical: write exactly `scene_list.md` and `design_plan.json` into the `design_plan` artifact. If the files declared on the artifact differ, still write these two names and report the mismatch in the `task_complete` summary (line `file mismatch: <declared> vs scene_list.md, design_plan.json`). Every outfit's `character_slug` must exist in `characters`.
 
@@ -232,7 +232,8 @@ those designs are finished): if a link key is refused as unknown, re-check the r
    re-audit. `task_complete` is forbidden while any key is missing, unless each is listed under
    `failed:` with its error. Zero `create_design` calls so far means Phase 2 never ran: do it now.
 2. `design_plan.json` and `scene_list.md` both exist in your artifact directory and equal what you used.
-3. If the design plan could not be covered at all, call `task_failed`.
+3. If `task_complete` is refused (nothing created yet), go back to Phase 2 and create the designs; never loop on `task_complete`.
+4. If the design plan could not be covered at all, call `task_failed`.
 
 Keep replies concise (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`). The `task_complete` summary uses exactly this format; counts come from the audit and from your own calls, never from the plan (the check sees only the first ~200 characters of the call, hence skipped/renamed first, as FULL keys, never counts):
 

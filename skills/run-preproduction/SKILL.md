@@ -44,7 +44,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 
 ## Step 2 — Policies
 
-All seven policies are attached as TASK checks (`create_task.policies`). In a task check, `{input}` is the contents of the task's output files and `{toolCalls}` the task's tool calls. They normally already exist in the workspace template. Check `policy_index` and call `create_policy` ONLY for those that are missing, in a workspace that lacks them with text modality,
+All seven policies are TASK checks. The workspace's `autoAttach` rules (e.g. `task://plan_designs*`) attach them automatically to the tasks created by key, so the checks never depend on you; passing `create_task.policies` (Step 3 column) is optional reinforcement only. In a task check, `{input}` is the contents of the task's output files and `{toolCalls}` the task's tool calls. They normally already exist in the workspace template. Check `policy_index` and call `create_policy` ONLY for those that are missing, in a workspace that lacks them with text modality,
 `Binary` grading and the model the other quality policies in `policy_index` use, with the
 intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 
@@ -73,14 +73,13 @@ Never edit an existing policy here (see `modify-policy`).
 **Format rule:** every declared output file is Markdown (`.md`) or JSON (`.json`), never `.pdf`, `.docx`, `.rtf` or any other binary/office format; downstream agents cannot read those. Every task prompt below tells the worker to write Markdown.
 
 These names are canonical. Embed the exact output file names in each task's prompt; never rename
-later. Checks are attached ONLY through `create_task.policies` (never in a task's prompt or
-description, see Key rules).
+later. Checks are attached by the workspace's `autoAttach` rules; `create_task.policies` only reinforces them (never put checks in a task's prompt or description, see Key rules).
 
 ## Step 4 — Create the tasks (in this order)
 
 Each of the four steps (4a-4d) is exactly ONE `create_task` call, written out literally in its
 subsection. It creates the task, its output artifact, the artifact's files and the task's checks
-together; there is no separate artifact call. `policies` are the Step 3 column; do not drop or move them.
+together; there is no separate artifact call. Pass `policies` (the Step 3 column) as reinforcement; auto-attach is the mechanism, so a call without them is still valid.
 
 - `id` = the Step 3 task id; `output_artifact_name` = the Step 3 output artifact KEY (a valid
   free snake_case key); `output_files` = the exact files from the Step 3 table (for the open
@@ -132,6 +131,16 @@ create_task({ id: "character_table", title: "Character table", description: "One
   - identify every cast role (speaking, named, meaningful presence; no props or walk-ons)
   - write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`
     where `<slug>` is the lowercase name, `[a-z0-9]+(_[a-z0-9]+)*`
+  - the prompt MUST contain this required-sections checklist, copied verbatim, and tell the worker that a file missing ANY of the five sections is incomplete and must not be submitted:
+    ```
+    REQUIRED SECTIONS in every character_<slug>.md (all five, as ## headings, in this order):
+    [ ] NAME
+    [ ] ROLE
+    [ ] PERSONALITY
+    [ ] VISUAL PROFILE
+    [ ] WARDROBE TRACKER  (table, one row per look worn in the story; creature/animal wearing nothing: no rows)
+    Before task_complete, re-open every file and confirm all five headings are present.
+    ```
   - each file has exactly these sections as `##` headings: `NAME`, `ROLE`, `PERSONALITY`,
     `VISUAL PROFILE` (character type, age, ethnicity, height, hair, eyes, build, build detail,
     proportions, posture, distinguishing features — one `key: value` line each; NO `[...]`
@@ -143,7 +152,7 @@ create_task({ id: "character_table", title: "Character table", description: "One
     them), `WARDROBE TRACKER` (a table with ONE row per look the character wears in the story - garment looks only; nudity is not a row (it is the `nude` pair in the scene list), and a creature or animal that wears nothing has NO rows (pair `none`): look slug | description |
     garments, colors, material, fit, accessories | scenes where worn; look slugs are
     lowercase, `[a-z0-9]+(_[a-z0-9]+)*`, e.g. `raincoat`, `evening_dress`)
-  - files are registered automatically; then `task_complete`
+  - files are registered automatically; run the checklist audit above, then `task_complete`
   - the prompt states the output artifact `character_table` and the file pattern `character_<slug>.md`
 
 ### 4c. create_scenes
@@ -208,7 +217,7 @@ create_task({ id: "plan_designs", title: "Plan and create designs", description:
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, locations, outfits, then one storyboard per scene; see the skill). Writing files is NOT completion: call `task_complete` only after every `create_design` call and the audit, and report only counts the tool results show.
+Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, locations, outfits, then one storyboard per scene; see the skill). Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design was created with `create_design` and the `artifact_index` audit passed; if `task_complete` is refused because no tasks were created, continue creating designs, and report only counts the tool results show.
 Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`.
 ```
 
@@ -220,14 +229,13 @@ per round) and call `task_index` again. Report only tasks confirmed by `create_t
 this index; list only what still failed, precisely, and do not use the success message below for
 a chain that is incomplete.
 
-Then verify the checks: `task_index` does not show them, so call `task_info` for each created task
-(one per round). Its `**Policies:**` list must equal the Step 3 `policies` column; attach any
-missing check with `assign_policy` (one per round) and re-check, before the report.
+Checks need no verification calls: each `create_task` result shows the checks attached to the task, with "(auto)" marking auto-attached ones. The final reply lists each created task with the checks its result showed (no extra tool calls).
 
-Then tell the user, in at most 3 short lines
-(see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`; the reply lists no policies):
+Then tell the user, in at most 4 short lines
+(see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`):
 
 > "Scheduled pre-production: task://<screenplay> -> task://<cast> -> task://<scene_list> -> task://<plan_designs>.
+> Checks: <task id>: <checks from its create_task result>; ... (one entry per created task).
 > Skipped (already existed): task://<id>, ... (only if any).
 > Designs and storyboards appear in the Pre-production tab once plan-designs finishes."
 
@@ -237,6 +245,6 @@ Then tell the user, in at most 3 short lines
 2. All four `create_task` calls in the same turn, one per round, in order, no prose between them; later `requires_*` use the keys/ids returned by earlier results.
 3. Idempotent: skip existing tasks, artifacts and policies; never duplicate.
 4. Canonical ids and filenames from the Step 3 table, identical in every prompt and in every `create_task` call.
-5. Each task's checks go in its `policies` field (Step 3 column) - and only there, never in prompt or description text.
-6. Policies exist before the `create_task` that references them (create missing ones with `create_policy` first, Step 2); an unknown check key is refused and nothing is created.
+5. Checks come from the workspace's `autoAttach` rules; `policies` (Step 3 column) is optional reinforcement, never the only mechanism, and checks never go in prompt or description text. No `task_info` / `assign_policy` verification: report the checks from the `create_task` results.
+6. Policies exist before the `create_task` that references them (create missing ones with `create_policy` first, Step 2); an unknown key in `policies` is refused and nothing is created.
 7. Never claim an unconfirmed task. Do not read artifacts or run `create_design` yourself; the `plan_designs` worker does it (it is the only task created with `can_create_tasks: true`).
