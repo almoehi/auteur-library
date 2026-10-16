@@ -63,11 +63,12 @@ State the workflow and path used in your summary.
 
 Pass the shot's references to the video workflow, not just the start frame: the character
 design's primary (or sheet), the outfit design's primary, the location design's primary - the ones
-the shot's `Characters`, `Outfits` and `Location` and its `Visible:` line name (a POV shot's
+the shot's `Characters`, `Outfits` and `Location` (design KEYS, e.g. `character_the_wife`,
+`character_the_wife:outfit_the_wife_gown`, `location_harbor`) and its `Visible:` line name (a POV shot's
 `Visible:` shows hands or forearms only: do not pass a full-body reference of the POV character).
 The task's `references` list is the source; when it is thin, look the designs up in `artifact_index`
-(`character_<slug>`, `outfit_<character>_<look>`, `location_<slug>`; `primary.<ext>`, else the
-sheet). Fill the workflow's labelled image ports in port order, location first and then people
+by the shot block's keys (`character_<slug>`, `outfit_<character>_<look>`, `location_<slug>`;
+`primary.<ext>`, else the sheet). Fill the workflow's labelled image ports in port order, location first and then people
 (compose intent, "Anchor (Picture 1) by intent" of `workflow-calling-conventions`). Do NOT type
 "Picture N is ..." lines: pass the same images as `image_inputs` (Step 3) and the code writes them.
 

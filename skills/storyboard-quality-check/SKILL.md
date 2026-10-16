@@ -111,8 +111,10 @@ and perform VLM review. Check:
 > "Shot description: [summary from shot_prompts for this frame].
 > Does this image depict that content? Answer: PASS or FAIL + one-sentence reason."
 
+(The shotlist's `Characters:` / `Outfits:` / `Location:` lines are design KEYS: put the designs' names and looks into the judge's question, never the raw keys.)
+
 **F-07 People count:**
-> "The shot lists these characters: [Characters line]. Count the people visible. Does the count
+> "The shot lists these characters: [the designs' names for the keys of the Characters line]. Count the people visible. Does the count
 > match? Exception: in a POV shot the POV character is the camera and appears as hands or
 > forearms only. Answer: PASS or FAIL + one-sentence reason."
 
@@ -122,7 +124,7 @@ and perform VLM review. Check:
 > removed, a missing bed)? Answer: PASS or FAIL + one-sentence reason."
 
 **F-09 Outfits visible:**
-> "Each visible character should wear the look in the shot's Outfits line: [Outfits]. Is it
+> "Each visible character should wear the look in the shot's Outfits line: [the outfit designs' names/looks for its keys]. Is it
 > visible (and nude only where the line says nude)? Answer: PASS or FAIL + one-sentence reason."
 
 **F-10 Single moment:**

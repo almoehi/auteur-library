@@ -71,6 +71,11 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   `outfit_<c>_<look>` (suffix tolerated). A missing outfit design -> bind the character primary,
   describe the garments in the prompt and name the gap in the summary - never let a clothed shot
   come out nude.
+- Write the bound designs as linked design KEYS - never slugs or display names - in the shotlist's
+  `Location:`, `Characters:` and `Outfits:` lines (`Outfits:` entries are
+  `<characterKey>:<outfitKey>`, separated by `;`; a `:nude` / `:none` look has no `Outfits:` entry - the character's
+  key in `Characters:` covers it). The server refuses a `shotlist.md` naming a key the storyboard
+  does not link, and lists the valid keys: fix the line and write it again.
 - **Preflight** — if any fails do not guess: render nothing, `task_complete` saying exactly what
   is missing: the scene number (`scene` attribute or task id); a readable `scene_list` with a row
   for it; at least one linked location; each linked design readable with a published `primary.<ext>`
@@ -93,8 +98,8 @@ Pose: body orientation, hands and head per person (e.g. "Mira: torso square to t
 Frame: where each person sits in the frame, left / centre / right, foreground / background (e.g. "Mira right foreground, Jonas left background")
 Visible: who must be visible and who must NOT be (e.g. "Mira and Jonas full length; nobody else")
 Act: plain words for who does what to whom (ONLY when contentPolicy.nudity is allowed; see below)
-Characters: mira, jonas        (character slugs, comma-separated, or "none")
-Outfits: mira:raincoat; jonas:work_suit      (<character>:<look> pairs, "; "-separated, or "none")
+Characters: character_mira, character_jonas        (design KEYS of linked character designs, comma-separated, or "none")
+Outfits: character_mira:outfit_mira_raincoat; character_jonas:outfit_jonas_work_suit      (<characterKey>:<outfitKey> pairs, "; "-separated, or "none")
 Duration: 5
 Transition: cut — new moment, first shot of the scene
 ```
@@ -170,6 +175,14 @@ Transition: cut — back to the sister's reaction
 (`location_driveway`), never a free name. A shot at the scene's default place uses the first
 linked location.
 
+**`Characters` / `Outfits` / `Location` are design KEYS, matched exactly** against the designs
+linked in `design.json.links`: `Characters: character_the_wife, character_the_husband`,
+`Outfits: character_the_wife:outfit_the_wife_gown`. A name or slug (`wife`, `the wife`), a wrong
+case or a key of a design that is not linked is REFUSED: the `sandbox_write_file` of
+`shotlist.md` returns an error naming the bad keys and listing every valid one, and nothing is
+written - fix the keys and write the whole file again (the refused write does not count as your
+one write). Copy the keys from `design.json.links`; never derive them from display names.
+
 **`Movement`** = the camera move of the video clip shot from this frame, taken from the shot's
 beat in the scene list's **Beats** (one shot per beat, in order; the beat's `Camera move` verbatim,
 e.g. `slow push-in`, `pan left`, `handheld drift`). Write `hold` ONLY when the beat asks for
@@ -197,7 +210,7 @@ Bad: `Action: Mira, who just learned the ship is late, walks to the rail and say
 two framings is split into several shots), an establishing shot first when the location is not
 yet known. `Duration` = whole seconds (3–10). Ids consecutive from 01, never
 renumbered except by a rewrite the person asked for. `Characters` / `Outfits` name only linked
-designs (others: in `Action` only); `Location` names only a linked location design.
+designs by KEY (others: in `Action` only); `Location` names only a linked location design key.
 
 ## Phase 2 — Render the initial drafts (all shots, batched)
 
@@ -296,7 +309,7 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 Audit before completing:
 
 - [ ] `shotlist.md` written exactly once; every shot has `## <shotId> — <title>` plus `Action`,
-      `Location` (a linked location key), `Camera`, `Movement`, `Characters`, `Outfits`, `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
+      `Location` (a linked location key), `Camera`, `Movement`, `Characters` (linked character keys), `Outfits` (`<characterKey>:<outfitKey>` linked keys), `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
       every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
       a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings

@@ -115,7 +115,10 @@ that shows the subject from several sides) - **sheets first**; a design that has
 its artifact's files) contributes its `primary.<ext>` instead. Take the scene's row from the
 `scene_list` artifact (`location_slug`, `Outfits` as `<character>:<look>`) and look the keys up in
 `artifact_index` (`location_<slug>`, `outfit_<character>_<look>`, `character_<character>`;
-tolerate a suffix). A `<c>:nude` or `<c>:none` pair binds the character design (its sheet, else primary); any
+tolerate a suffix). The storyboard's `shotlist.md` already names each shot's designs as KEYS
+(`Location:`, `Characters:`, `Outfits:` = `<characterKey>:<outfitKey>`): for a shot, use those keys
+directly in `artifact_index` - no slug mapping needed (an older shotlist that still has slugs:
+map them as above). A `<c>:nude` or `<c>:none` pair binds the character design (its sheet, else primary); any
 other look binds its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else the pattern above). A look with no outfit design -> the character design plus the
 garments described in the prompt; note the gap. A reference is `artifact://<artifact id>/<file>`
 (read the artifact to get the real file name). Missing designs are not fatal: note them and
@@ -145,7 +148,9 @@ Process one artifact at a time.
 `read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")` — pass the key
 directly, not the UUID. Sections are `## <shotId> — <title>` with lines `Action:`, `Camera:`,
 `Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds), `Transition:` (`continue — <reason>`
-or `cut — <reason>`, absent in older storyboards).
+or `cut — <reason>`, absent in older storyboards). `Location:`, `Characters:` and `Outfits:` hold
+design KEYS of designs linked to the storyboard (`location_harbor`, `character_the_wife`,
+`character_the_wife:outfit_the_wife_gown`), not names.
 
 Keep each shot's complete block (the `## <shotId> — <title>` heading and every line up to the
 next heading) verbatim: it goes into the clip task unchanged, including `Blocking:`, `Pose:`,
@@ -153,7 +158,7 @@ next heading) verbatim: it goes into the clip task unchanged, including `Blockin
 
 Extract for every shot: shot ID and title, `Action`, `Camera` (keyframe framing), `Movement` (the
 camera move of the VIDEO; absent in older storyboards), `Duration`, `Transition` (absent in older
-storyboards), characters and outfits. When a
+storyboards), characters and outfits (design keys, used as written for the reference lookup). When a
 shot has no `Movement:`, take it from the matching beat in the `Beats` section of the
 `scene_list` artifact (read it once; the scene's `### Scene <n>` table: beat, action, framing,
 camera move); no beat either: derive it from the action and say so. Never turn a missing

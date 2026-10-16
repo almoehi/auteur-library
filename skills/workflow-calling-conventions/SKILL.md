@@ -98,6 +98,11 @@ FINDING: one line on what is missing, contradicted or invented (MISS), or why it
 FIX: one concrete corrective instruction - what to change and what to keep (MISS only)
 ```
 
+A shot's `Characters:`, `Outfits:` and `Location:` lines are design **keys** (`character_the_wife`,
+`character_the_wife:outfit_the_wife_gown`, `location_harbor`), not names. Use them to find the linked design (and its
+`primary.<ext>`); in a prompt or a `check_take` `request` describe the people and the place by the
+design's name and look (from its `design.json`), never by pasting the key.
+
 A `match` needs no further call. On a `miss` (use its `fix`):
 
 1. Retry ONCE: render again from the SAME source (not the missed take) as a NEW take named base + `-r2` (`take_wide-rain.png` -> `take_wide-rain-r2.png`; a skill owning the naming may define a variant). Keep the missed take. Batch several retries into ONE `draft_prompts_batch` and ONE render response. Keep the original medium/style and every lock VERBATIM and change only what the finding names (pass the original prompt in `context`); draft with the prompt writer, the person's original instruction as `instruction`.
