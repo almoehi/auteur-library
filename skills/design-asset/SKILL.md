@@ -76,7 +76,7 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
    reference image of one subject* — character: full body or three-quarter, neutral pose, plain
    background, face clearly visible; outfit: an edit instruction dressing the person of the linked
    character's primary in the outfit (keep face, hair, body unchanged), full body; location: an
-   establishing wide shot, no people. Never restate design descriptions or what reference images
+   establishing wide shot (see step 5 for subjects without people). Never restate design descriptions or what reference images
    show. The prompt writer applies `prompt-writer-<family>` itself (without `draft_prompt`,
    `load_skill` it).
 3. Carry the workspace's medium/style (`{workspace.story.plot}`, see "Medium / style is kept" in
@@ -100,7 +100,15 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
    - **Outfit**: always dresses the linked character primary (edit): exactly the outfit's garments,
      face, hair, body and skin unchanged. Use the [nsfw] image-edit workflow only when the outfit
      itself leaves nudity visible (lingerie, open robe).
-5. LoRAs: `design.json.loras` were attached by the planner for this design (e.g. NSFW anatomy
+5. **A design kind that shows no people** (locations, props, any kind registered as depicting no
+   people): describe the subject POSITIVELY as empty and uninhabited ("an empty, uninhabited
+   <place or subject>", "deserted", "unoccupied") and never with negation in the positive prompt
+   (negated terms are weak in these models: naming people, even to exclude them, tends to
+   summon them). Also put the people terms (`people, person, human figure, crowd`) into the
+   negative prompt (the workflow's negative-prompt port, keeping its default text before them);
+   the server appends them too, so this is belt and braces. Applies to every render of such a
+   design, chat-phase edits and variations included.
+6. LoRAs: `design.json.loras` were attached by the planner for this design (e.g. NSFW anatomy
    LoRAs of a nude character): pass EVERY one whose `modelFamily` matches the workflow on its lora
    ports, with its `strength`, and put its trigger words in the prompt (`context`); a LoRA of
    another family is skipped (say so in the summary). Also pass a `lora_index` LoRA whose trigger

@@ -35,12 +35,20 @@ things below: the look of a character design ("Characters and outfits") and the 
 - **Outfits**: exactly ONE outfit design per row of a character's WARDROBE TRACKER (look slug = the
   row's look slug). No exceptions: no "most worn" look, no "differs visibly" judgement, no
   garment-state mapping. A tracker row that is nudity itself (no garments) is not an outfit.
-- **The character design's own look** (its `wardrobe` attribute): `nude` when nudity is `allowed`
-  AND the character is a human adult (age stated or clearly implied 18+) with no look younger than
-  18; otherwise plain neutral clothing (e.g. "plain neutral clothing: simple fitted grey t-shirt
-  and trousers"). A creature or animal that wears nothing has `wardrobe` `none`, NO tracker rows
-  and the scene pair `<c>:none`. Minors are always clothed. The character design carries
-  identity; outfits carry everything worn.
+- **The character design's own look** (its `wardrobe` attribute) is decided by AGE and the
+  workspace POLICY only:
+  - nudity `allowed` AND a human adult (age stated or clearly implied 18+, no look younger than
+    18): `wardrobe` is ALWAYS `nude` - every adult human character, without exception.
+  - Plain neutral clothing (e.g. "plain neutral clothing: simple fitted grey t-shirt and
+    trousers") ONLY for a minor, a workspace where nudity is `forbidden`, or a clothed non-human.
+  - A creature or animal that wears nothing: `wardrobe` `none`, NO tracker rows and the scene pair
+    `<c>:none`.
+  `nude` is NEVER decided by whether the character appears nude in a scene or on camera, nor by
+  character-table notes like "face never shown", "not shown nude" or "always clothed on screen":
+  the character design is the identity/anatomy reference, not a scene. An outfit's garments never
+  go into the character's `wardrobe` (outfits carry everything worn). Every `nude` character gets
+  the general anatomy/realism NSFW LoRAs of each image family (Phase 1 step 4) and is recorded in
+  `nsfw_loras.characters`.
 - **Scene-list pairs**: the scene rows' `Outfits` are the UNION of the looks their beats use (the Beats
   tables' `Outfits` column carries the per-beat looks; a character may appear with several looks in one
   row, e.g. `sister:bikini_cardigan; sister:nude`). Plan from the scene rows' pairs (equal to the beat
@@ -124,6 +132,9 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
    **One moment per design picture**: a design (a location above all) gets ONE `time_of_day`,
    `lighting`, `weather` and season - the one its first scene uses (else the most common one). Never
    list several together in one attribute; other moments are later edits of the finished design.
+   **Location attributes describe ONLY the place.** A character's action, emotion or dialogue
+   never goes into a location's `mood` (or any location attribute). Set `mood` only when the
+   source describes the place's own atmosphere (e.g. "dim, tense"); otherwise omit it.
    Put only what the sources state; omit unknown keys (except the character `wardrobe`).
    `character_type` is passed as its own argument, not inside `attributes`.
 4. **NSFW LoRA plan** (only when nudity is `allowed`; never for a scene with a minor in it). The
@@ -172,11 +183,15 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
   "characters": [
     { "display_name": "Mira", "slug": "mira", "key_slug": "mira", "key": "character_mira", "character_type": "woman",
       "attributes": [ { "key": "age", "value": "late 20s" }, { "key": "hair", "value": "auburn, shoulder length" },
-                      { "key": "wardrobe", "value": "plain neutral clothing: simple fitted grey t-shirt and trousers" } ],
-      "loras": [], "scenes": [1, 2, 4] },
+                      { "key": "wardrobe", "value": "nude" } ],
+      "loras": [ { "name": "<catalog name>" } ], "scenes": [1, 2, 4] },
     { "display_name": "Lena", "slug": "lena", "key_slug": "lena", "key": "character_lena", "character_type": "woman",
       "attributes": [ { "key": "age", "value": "early 30s" }, { "key": "wardrobe", "value": "nude" } ],
-      "loras": [ { "name": "<catalog name>" } ], "scenes": [3] }
+      "loras": [ { "name": "<catalog name>" } ], "scenes": [3] },
+    { "display_name": "Tim", "slug": "tim", "key_slug": "tim", "key": "character_tim", "character_type": "child",
+      "attributes": [ { "key": "age", "value": "9" },
+                      { "key": "wardrobe", "value": "plain neutral clothing: simple fitted grey t-shirt and trousers" } ],
+      "loras": [], "scenes": [2] }
   ],
   "locations": [
     { "display_name": "Harbor", "slug": "harbor", "key_slug": "harbor", "key": "location_harbor",
@@ -197,13 +212,13 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
   "designs": [ "character_mira", "character_lena", "location_harbor", "outfit_mira_raincoat", "storyboard_scene_1" ],
   "nsfw_loras": {
     "scenes": [ { "scene": 3, "acts": ["blowjob"], "anatomy": ["breasts", "penis"], "poses": ["kneeling", "pov"] } ],
-    "characters": [ { "slug": "lena", "tags": ["nude body"] } ],
+    "characters": [ { "slug": "mira", "tags": ["nude body"] }, { "slug": "lena", "tags": ["nude body"] } ],
     "missing": [ { "scene": 3, "family": "krea2", "tags": ["cowgirl"] } ]
   }
 }
 ```
 
-(`nsfw_loras` only when nudity is `allowed`; `loras` omitted or `[]` when none.)
+(The example is a nudity-`allowed` workspace: the adults Mira and Lena are `nude`; only the minor Tim is clothed. Under `forbidden` every character, adults included, gets plain neutral clothing. `nsfw_loras` only when nudity is `allowed`; `loras` omitted or `[]` when none.)
 
 **Writing these files is NOT completion.** Phase 2 (one `create_design` per key of `designs`) must follow. A tool message about files being written, a file count, or one listing `task_complete` as a next action is never completion: the task is complete only after EVERY planned design was created with `create_design` and the Phase 3 `artifact_index` audit passed. If `task_complete` is refused because no tasks/designs were created, do not retry it: continue with Phase 2.
 
