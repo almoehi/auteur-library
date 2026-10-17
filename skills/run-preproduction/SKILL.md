@@ -111,6 +111,8 @@ that list and correct the call; never retry an identical call.
 steps were created (with the ids from their results) and which failed, with the error text. Never
 claim a task that `create_task` did not confirm. Skip any task/artifact that already exists.
 
+**Task prompts are verbatim and skill-led.** Each worker prompt below opens with `Load and use skill: <name>` (the worker skills `create-character-table`, `create-scene-list`, `plan-designs`; the screenplay task has none) and the fenced blocks are copied word for word. Never paraphrase them: a paraphrase once dropped every nudity-conditional rule (no `Act` column, no `nude` look). `{workspace.*}` placeholders stay literal in the prompt (the server substitutes them).
+
 ### 4a. write_screenplay
 ```
 create_task({ id: "write_screenplay", title: "Write screenplay", description: "Adapt the story plot into a screenplay",
@@ -127,39 +129,17 @@ create_task({ id: "character_table", title: "Character table", description: "One
   prompt: <prompt below>, requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"],
   output_artifact_name: "character_table", output_artifact_description: "Character Breakdown Table", output_files: [] })
 ```
-- prompt, verbatim requirements:
-  - identify every cast role (speaking, named, meaningful presence; no props or walk-ons)
-  - **Character identity is decided here, once.** `NAME` = the story's proper name if the story
-    names the character; otherwise the role in Title Case ("Sister", "Husband"). NEVER invent a name
-    the story does not give. `<character_slug>` = NAME lowercased snake_case,
-    `[a-z0-9]+(_[a-z0-9]+)*`; it is the file stem. The prompt states that every later step uses
-    this slug exactly (scene list `Characters present` / `Outfits`, `design_plan.json`, design keys)
-    and that no later step may introduce a character or a new name.
-  - write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`
-    with the `<character_slug>` above
-  - the prompt MUST contain this required-sections checklist, copied verbatim, and tell the worker that a file missing ANY of the five sections is incomplete and must not be submitted:
-    ```
-    REQUIRED SECTIONS in every character_<slug>.md (all five, as ## headings, in this order):
-    [ ] NAME
-    [ ] ROLE
-    [ ] PERSONALITY
-    [ ] VISUAL PROFILE
-    [ ] WARDROBE TRACKER  (table, one row per look worn in the story; creature/animal wearing nothing: no rows)
-    Before task_complete, re-open every file and confirm all five headings are present.
-    ```
-  - each file has exactly these sections as `##` headings: `NAME`, `ROLE`, `PERSONALITY`,
-    `VISUAL PROFILE` (character type, age, ethnicity, height, hair, eyes, build, build detail,
-    proportions, posture, distinguishing features — one `key: value` line each; NO `[...]`
-    placeholders or blanks: every field gets a concrete value, or the explicit word `n/a` when it
-    does not apply; invent a fitting value the screenplay does not contradict rather than leave a
-    field open; in a workspace with `contentPolicy.nudity: allowed` (`{workspace.contentPolicy.nudity}`)
-    and an adult character, add the anatomical details needed for a consistent depiction as
-    `key: value` lines in the same section, concrete and non-euphemistic; a minor never gets
-    them), `WARDROBE TRACKER` (a table with ONE row per look the character wears in the story - garment looks only; nudity is not a row (it is the `nude` pair in the scene list), and a creature or animal that wears nothing has NO rows (pair `none`): look slug | description |
-    garments, colors, material, fit, accessories | scenes where worn; look slugs are
-    lowercase, `[a-z0-9]+(_[a-z0-9]+)*`, e.g. `raincoat`, `evening_dress`)
-  - files are registered automatically; run the checklist audit above, then `task_complete`
-  - the prompt states the output artifact `character_table` and the file pattern `character_<slug>.md`
+- prompt (VERBATIM: copy this block word for word, never paraphrase, shorten or reorder it):
+  ```
+  Load and use skill: create-character-table
+
+  Inputs: artifact `screenplay` (screenplay.md).
+  Deliverable: artifact `character_table`, ONE plain Markdown file per cast role (speaking, named, meaningful presence; no props or walk-ons), named `character_<slug>.md` (never PDF or DOCX). Every later step uses these slugs exactly; no later step may introduce a character or a new name.
+  Required sections in every file, all five as ## headings, in this order: NAME, ROLE, PERSONALITY, VISUAL PROFILE, WARDROBE TRACKER. A file missing any of them is incomplete and must not be submitted.
+  Workspace content policy (nudity): {workspace.contentPolicy.nudity}. When it is `allowed`, an adult character's VISUAL PROFILE also carries the anatomical details needed for a consistent depiction (concrete, non-euphemistic `key: value` lines); a minor never does. Otherwise add none.
+  The skill holds the full rules; follow them. Before `task_complete`, re-open every file and confirm all five headings are present.
+  ```
+  The character-table rules (identity and slug, section contents, wardrobe tracker, checklist) live in the worker skill `create-character-table`, not here.
 
 ### 4c. create_scenes
 ```
@@ -168,57 +148,23 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   prompt: <prompt below>, requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"],
   output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"] })
 ```
-- prompt: start with the line
-  `Inputs: artifact character_table (all character_*.md files), artifact screenplay.`
-  and an explicit FIRST STEP: before writing anything, read every `character_<slug>.md` of the
-  character table and list (a) the character stems (`<character_slug>`) and (b) each character's
-  WARDROBE TRACKER look slugs; from then on copy those slugs EXACTLY. Never invent a name, a
-  character or a look slug (a character the story names only by role keeps the role slug, e.g.
-  `sister`).
-  Then write the single output file `scene_list.md` as plain Markdown (never PDF or DOCX), containing ONE markdown table with exactly these columns:
-  `Scene #` | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` or `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug, stable:
-  the same place has the same slug in every scene) | `Time of day` | `Summary` (one sentence) |
-  `Characters present` | `Outfits` = the set of ALL looks the scene's beats use, as
-  `<character_slug>:<look_slug>` pairs separated by `; ` (e.g. `mira:raincoat; jonas:work_suit`; a
-  character who changes look inside the scene appears once per look: `sister:bikini_cardigan; sister:nude`).
-  The row's `Outfits` is exactly the UNION of the `Outfits` of its beats (below): nothing missing, nothing extra.
-  The Summary names every entrance, exit and spoken line that matters to the story, not only the
-  main action.
-  Character slugs must equal the `character_<slug>.md` file stems from the character table; the
-  `Outfits` column uses ONLY look slugs from that character's WARDROBE TRACKER (copy them exactly; add a
-  new row there only if the screenplay demands one, and say so in the summary), , `nude` (only for an
-  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed; a character's BASE look - the `wardrobe` of its character design in `plan-designs` - is `nude` for EVERY such adult, decided by age and policy only, never by whether the character is shown nude in a scene or by character-table notes like "face never shown"; garments belong to outfit looks, never to the base look), or `none` (a character that wears nothing, e.g. an animal). Every present character needs a look in every beat they are visible in. A point-of-view character whose hands or body are in frame counts as visible: list them in that beat's `Outfits`. A character who appears only in a `parallel` cutaway beat at another place need not be in the scene row's `Characters present`, but is still listed in that beat's `Outfits` and in the row's `Outfits` union.
-  **A scene row = ONE place and ONE continuous time.** A change of place starts a new scene; never
-  merge two places into one row ("Backyard terrace / Hallway" is two scenes). The short-film
-  default of about 4 scenes never overrides this: add scenes rather than merge places.
-  **Beats section (below the table, same file).** For EACH scene a `### Scene <n>` heading and a
-  markdown table with one row per beat: `Beat #` | `Action` (what visibly happens) | `Location` (the `location_slug` of where the beat happens: for every beat that is not `parallel` EXACTLY this scene row's own slug; only a `parallel` beat / cutaway names another place) | `Outfits` (REQUIRED, right after `Location`: the looks of the characters VISIBLE in this beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `husband:linen_shorts; sister:nude`; `none` when nobody is visible. Written out explicitly for EVERY beat - never "same as above" or an empty cell. Looks are the character's WARDROBE TRACKER slugs, `nude` or `none`. **A look change mid-scene is a change in the `Outfits` of the beat where it happens and of every later beat** - a character who undresses gets `<character_slug>:nude` from that beat on, but only when nudity is allowed (`{workspace.contentPolicy.nudity}` is `allowed`) and the character is an adult; otherwise keep a tracker look. The beat that shows the change itself carries the look the character has AFTER it) | `Framing`
-  (shot size and angle of the beat) | `Camera move` (how the camera moves during the beat of the
-  video clip: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift,
-  orbit, or `hold` ONLY when the beat asks for stillness) | `Continuity` (how the beat relates to
-  the PREVIOUS beat: `continuous` = the action carries straight on - same place, same moment,
-  same people, even when the framing changes; `parallel` = the beat happens at the SAME TIME
-  somewhere ELSE (a car arriving outside while the reaction inside goes on) and MUST give its place in the
-  `Location` column as a `location_slug` (reuse a slug of the table or define a new stable one,
-  e.g. `driveway`; any slug of lowercase a-z0-9 words joined by `_` is accepted for a `parallel` beat -
-  places are not characters, so inventing a place slug is allowed); `new moment` = a jump in time, place or subject, or an
-  insert; the first beat of a scene is `new moment`).
-  Beyond those columns every Beats table also has `Blocking` (who is where, facing which way) and
-  `Contact` (who touches whom or what, where; `none` when nothing does). In a workspace with
-  `contentPolicy.nudity: allowed` it also has an `Act` column: plain, explicit words for who does
-  what to whom, the positions and contact points, no euphemisms (`none` for a beat without an act;
-  never for a depicted minor). **One beat per distinct happening**: each entrance, each exit and
-  each dialogue line that changes the picture is its own beat (a character leaving gets an exit
-  beat, not a clause of the previous one). **POV scenes**: say which character is the POV; that
-  character is the camera - their beats show their hands or forearms only, never a full-body
-  figure, and the character is not listed as visible in `Blocking`.
-  One beat = one place (its `Location`) and one opening framing: split a beat that packs two places or two framings. Every scene has at least one beat
-  (typically 2-6, one per distinct action or change of framing) and EVERY beat names a camera
-  move, a continuity and its `Outfits`. Downstream, the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the
-  shoot skills' video prompts are taken from these beats (`continuous` becomes a `continue`
-  transition: the clip carries on from the previous one; a `parallel` beat becomes a cutaway shot at
-  its named place, and the storyboard links that place's location design; the extra location designs are planned from the beat `Location` slugs, the outfit designs from the scene rows' `Outfits` = the union of the beat looks); a scene list without them yields clips
-  that barely move and cut where they should flow.
+- prompt (VERBATIM: copy this block word for word, including the nudity-conditional lines with `{workspace.contentPolicy.nudity}`; never paraphrase, shorten or drop a line):
+  ```
+  Load and use skill: create-scene-list
+
+  Inputs: artifact `character_table` (all character_*.md files), artifact `screenplay`.
+  Deliverable: artifact `scene_list`, the single plain Markdown file `scene_list.md` (never PDF or DOCX): ONE scene table (one place and one continuous time per row, `INT/EXT` exactly INT or EXT, `Outfits` per scene) plus, per scene, a Beats table. Character and look slugs are copied EXACTLY from the character table; never invent a name, character or look slug.
+  EVERY beat row of EVERY Beats table has ALL of these columns, none empty: Beat #, Action, Location, Outfits, Framing, Camera move, Continuity (continuous | parallel | new moment), Blocking, Contact.
+  - Contact: who touches whom or what, and where; `none` when nothing does.
+  Workspace content policy (nudity): {workspace.contentPolicy.nudity}. When it is `allowed`:
+  - Beats tables ALSO have the column Act, filled in every beat: plain, explicit words for who does what to whom, with the positions and contact points, no euphemisms; `none` for a beat without an act. Never an act for a minor.
+  - A character who undresses has `<character_slug>:nude` in the Outfits of that beat and of EVERY later beat, and in the scene row's Outfits (adults only; a minor keeps a tracker look).
+  When it is not `allowed` (`forbidden` or empty): no Act column, no `nude` look.
+  The skill holds the full rules; follow them. Before `task_complete`, re-open scene_list.md and check the columns and the nudity rules above.
+  ```
+- **Beats columns, the contract** (the block above and the `create-scene-list` skill both state it; the `scenes-complete` check judges it): `Contact` is always required; `Act` is required whenever `{workspace.contentPolicy.nudity}` is `allowed`; both filled in EVERY beat.
+- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with `Load and use skill: create-scene-list`, (2) contains the line `- Contact: who touches whom or what`, (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server substitutes it), and (4) contains the `Act` and `nude` bullets. A missing item means the block was paraphrased: re-copy it from this file and check again. Do the same for 4b (`Load and use skill: create-character-table`, the five headings, the nudity line).
+- The scene-list rules themselves (columns, slugs, Outfits union, POV, beats, downstream use) live in the worker skill `create-scene-list`; do not restate them in the prompt.
 
 ### 4d. plan_designs (the orchestrator)
 ```
@@ -229,7 +175,7 @@ create_task({ id: "plan_designs", title: "Plan and create designs", description:
   output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
   output_files: ["scene_list.md","design_plan.json"] })
 ```
-`can_create_tasks: true` is set only here. BOTH output files must be declared (`scene_list.md` is a verbatim copy of the scene list, so the task check judge sees both in `{input}`). The prompt (the first line is exact, the worker keys on it):
+`can_create_tasks: true` is set only here. BOTH output files must be declared (`scene_list.md` is a verbatim copy of the scene list, so the task check judge sees both in `{input}`). The prompt is VERBATIM (copy it word for word; the first line is exact, the worker keys on it):
 
 ```
 Load and use skill: plan-designs
