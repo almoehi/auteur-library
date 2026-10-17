@@ -9,9 +9,7 @@ description: >
   Do NOT invoke for shooting or rendering video clips, creating a single
   character/outfit/location/storyboard design, or editing an existing screenplay, cast list or
   scene list.
-  A worker loads this skill ONLY when its task prompt says "Load and use skill: run-preproduction"
-  and names section 4b or 4c; it then follows that section's prompt block and nothing else here.
-agentType: workspace,worker
+agentType: workspace
 ---
 
 # Run Pre-production
@@ -113,7 +111,7 @@ that list and correct the call; never retry an identical call.
 steps were created (with the ids from their results) and which failed, with the error text. Never
 claim a task that `create_task` did not confirm. Skip any task/artifact that already exists.
 
-**Task prompts are verbatim and skill-led.** Each worker prompt below opens with `Load and use skill: <name>` (`run-preproduction` itself for 4b/4c, naming the section; `plan-designs`; the screenplay task has none) and the fenced blocks are copied word for word. Never paraphrase them: a paraphrase once dropped every nudity-conditional rule (no `Act` column, no `nude` look). `{workspace.*}` placeholders stay literal in the prompt (the server substitutes them).
+**Task prompts are verbatim.** The fenced prompt blocks below (4b, 4c, and the `plan-designs` prompt, which opens with `Load and use skill: plan-designs`) are copied word for word; the worker cannot load this skill, so the block IS its whole instruction. Never paraphrase them: a paraphrase once dropped every nudity-conditional rule (no `Act` column, no `nude` look). `{workspace.*}` placeholders stay literal in the prompt (the server substitutes them).
 
 ### 4a. write_screenplay
 ```
@@ -133,8 +131,6 @@ create_task({ id: "character_table", title: "Character table", description: "One
 ```
 - prompt (VERBATIM: copy the block below word for word, including the nudity-conditional lines with `{workspace.contentPolicy.nudity}`; never paraphrase, shorten, reorder or drop a line). It is addressed to the worker:
   ````
-  Load and use skill: run-preproduction — follow section 4b (character table)
-
   Inputs: artifact `screenplay` (screenplay.md). Deliverable: artifact `character_table`, files `character_<slug>.md`.
   Workspace content policy (nudity): {workspace.contentPolicy.nudity} (absent or empty = forbidden).
 
@@ -172,7 +168,7 @@ create_task({ id: "character_table", title: "Character table", description: "One
 
   Pre-completion audit: before task_complete, re-open every file and confirm all five headings are present and the VISUAL PROFILE has no blank or `[...]` field.
   ````
-- Pre-send self-check (before the call): the prompt starts with `Load and use skill: run-preproduction — follow section 4b`, contains the five-heading checklist, the `Workspace content policy (nudity):` line with the placeholder still literal, and the adult-anatomy rule. Anything missing: re-copy the block from this file.
+- Pre-send self-check (before the call): the prompt starts with `Inputs: artifact \`screenplay\``, contains the five-heading checklist, the `Workspace content policy (nudity):` line with the placeholder still literal, and the adult-anatomy rule. Anything missing: re-copy the block from this file.
 
 ### 4c. create_scenes
 ```
@@ -183,8 +179,6 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
 ```
 - prompt (VERBATIM: copy the block below word for word, including the nudity-conditional lines with `{workspace.contentPolicy.nudity}`; never paraphrase, shorten, reorder or drop a line). It is addressed to the worker:
   ````
-  Load and use skill: run-preproduction — follow section 4c (scene list)
-
   Inputs: artifact `character_table` (all character_*.md files), artifact `screenplay`. Deliverable: artifact `scene_list`, the single file `scene_list.md`.
   Workspace content policy (nudity): {workspace.contentPolicy.nudity} (absent or empty = forbidden).
   Beats tables: `Contact` is ALWAYS a column; `Act` is a REQUIRED column whenever nudity is `allowed`; both filled in EVERY beat.
@@ -246,7 +240,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   Before `task_complete`, re-open `scene_list.md` and confirm: every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` columns, plus `Act` when nudity is allowed, with no empty cell; every row's `Outfits` equals the union of its beats' looks; after any undressing beat the character stays `nude` until a later beat dresses them.
   ````
 - **Beats columns, the contract** (the `scenes-complete` check judges it): `Contact` always required; `Act` required whenever `{workspace.contentPolicy.nudity}` is `allowed`; both filled in EVERY beat; after an undressing beat the character is `nude` from that beat on.
-- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with `Load and use skill: run-preproduction — follow section 4c`, (2) contains the `Contact` bullet ("who touches whom or what"), (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server's interpolation resolves it in the worker's prompt), and (4) contains the `Act` bullet and the nude-from-that-beat-on rule. A missing item means the block was paraphrased: re-copy it from this file and check again. Do the same for 4b.
+- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with the block's `Inputs:` line, (2) contains the `Contact` bullet ("who touches whom or what"), (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server's interpolation resolves it in the worker's prompt), and (4) contains the `Act` bullet and the nude-from-that-beat-on rule. A missing item means the block was paraphrased: re-copy it from this file and check again. Do the same for 4b.
 
 ### 4d. plan_designs (the orchestrator)
 ```
