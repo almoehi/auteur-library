@@ -297,6 +297,8 @@ prompt:
     scene<N>_clip<M>_<slug>_prompt.txt
 ```
 
+The clip prompt template above is VERBATIM: fill its `<...>` slots from the sources named there and copy every other line (and every slot marked verbatim, including `Act:` in a nudity-allowed workspace) word for word. Never paraphrase or shorten a slot's text, and never drop a policy-conditional line; a paraphrase would hide rules from the worker.
+
 The task `prompt` MUST open with the exact line `Load and use skill: shoot-clip` — the worker
 relies on it to `load_skill()` before doing anything else. Name the preferred workflow from the
 workspace's `wf_` tool list for the clip's mode (never from memory): the continuation workflow
