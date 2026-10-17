@@ -100,7 +100,7 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
    - **Outfit**: always dresses the linked character primary (edit): exactly the outfit's garments,
      face, hair, body and skin unchanged. Use the [nsfw] image-edit workflow only when the outfit
      itself leaves nudity visible (lingerie, open robe).
-5. **A design kind that shows no people** (locations, props, any kind registered as depicting no
+5. **A design kind without people in it** (locations, props, any kind registered as depicting no
    people): describe the subject POSITIVELY as empty and uninhabited ("an empty, uninhabited
    <place or subject>", "deserted", "unoccupied") and never with negation in the positive prompt
    (negated terms are weak in these models: naming people, even to exclude them, tends to
