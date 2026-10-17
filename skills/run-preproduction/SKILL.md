@@ -144,7 +144,7 @@ create_task({ id: "character_table", title: "Character table", description: "One
     the story does not give. `<character_slug>` = NAME lowercased snake_case,
     `[a-z0-9]+(_[a-z0-9]+)*`; it is the file stem. Every later step uses
     this slug exactly (scene list `Characters present` / `Outfits`, `design_plan.json`, design keys)
-    and that no later step may introduce a character or a new name.
+    No later step may introduce a character or a new name.
   - write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`
     with the `<character_slug>` above
   - required-sections checklist (a file missing ANY of the five sections is incomplete and must not be submitted):
