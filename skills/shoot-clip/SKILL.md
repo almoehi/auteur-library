@@ -89,9 +89,19 @@ hard cut, a new scene or a "cuts to". Subjects, place, lighting and wardrobe sta
 
 ## 3. Prepare the prompt
 
+**Re-run with instructions.** When the kickoff has "## Instructions for this run", they are the
+person's corrections to the previous clip and OVERRIDE the shot block wherever they conflict: drop
+the contradicted lines (e.g. "no contact", "neutral expression") from the `context` you build below
+and pass the instructions VERBATIM as `instruction` (never only inside `context`). If the previous
+prompt is available (the old `_prompt.txt` or `render_info`), revise it with `enhance_prompt`
+(`original_prompt` = that prompt, `instruction` = the instructions) INSTEAD of `draft_prompt`; then
+`review_prompt` once with the same `instruction` and `enhance_prompt` once more only on severity
+"significant" (at most 2 enhances + 1 review). All of it happens BEFORE the one render of step 4.
+
 Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it). The shot brief is
 agent-derived, so: ONE `draft_prompt` for this clip - no per-step loops; at most one `review_prompt`,
-and one `enhance_prompt` only if it flags a gap. Always pass:
+and one `enhance_prompt` only if it flags a gap (a re-run with instructions: the flow above replaces
+the draft by an enhance of the previous prompt). Always pass:
 
 - `workflow_name`, `context`, `duration_seconds`;
 - `image_inputs`: every image the render call passes, as `{port, ref}` (start frame, references,
