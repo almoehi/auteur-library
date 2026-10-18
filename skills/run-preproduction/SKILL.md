@@ -33,11 +33,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
    - artifacts `screenplay`, `character_table`, `scene_list`, `design_plan`
    - policies `screenplay-quality`, `cast-quality`, `scenes-quality`, `scenes-complete`,
      `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes`
-3. **Agents.** You need a writer for the screenplay, one for the cast table, one for the scene
-   list, and a plain LLM planner for `plan_designs` (a tool-capable agent without a
-   task-specific toolset, the agent `design_planner`, which has `create_design`). Pick by objective from `available_agents`
-   (spec defaults: `screenwriter`, `casting_director`, `director`, `design_planner`). Never use the generic `planner` for `plan_designs`. If no suitable
-   agent exists, tell the user which role is missing and stop.
+3. **Agents.** Choose one agent per task with the rule "Pick agents by role" in Step 3. If no suitable agent exists, tell the user which role is missing and stop.
 4. **Idempotency.** Every task/artifact/policy that already exists is skipped, not recreated.
    If all four tasks exist, report their statuses and stop. If only a tail of the chain is missing,
    create just that tail (existing tasks are referenced in `requires_tasks` / `requires_artifacts`).
@@ -48,7 +44,7 @@ All seven policies are TASK checks. The workspace's `autoAttach` rules (e.g. `ta
 `Binary` grading and the model the other quality policies in `policy_index` use, with the
 intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 
-| id | intent (answer YES/NO only) |
+| id | intent |
 |---|---|
 | `screenplay-quality` | `{input}` holds `screenplay.md`: the screenplay faithfully adapts the plot with proper format (INT./EXT. headings, action, dialogue) |
 | `cast-quality` | `{input}` holds the `character_<slug>.md` files: every cast role of the story has a dedicated, complete profile. Animals and other non-human creatures with a story role (named, acting or plot-driving, in the title or premise, recurring) ARE cast roles and must be included; only pure background, props or set dressing (unnamed, no action, no plot function) are not. NEVER reject because a cast member is an animal; reject only if a required role is missing or a pure background element / prop was listed as cast |
@@ -68,7 +64,7 @@ Never edit an existing policy here (see `modify-policy`).
 | `write_screenplay` | writer | `screenplay` | `["screenplay.md"]` | none | `screenplay-quality` |
 | `character_table` | cast writer | `character_table` | open: `character_<slug>.md` per character (`files: []`) | tasks `write_screenplay`; artifacts `screenplay` | `cast-quality` |
 | `create_scenes` | director | `scene_list` | `["scene_list.md"]` | tasks `write_screenplay`, `character_table`; artifacts `screenplay`, `character_table` | `scenes-quality`, `scenes-complete` |
-| `plan_designs` | `design_planner` | `design_plan` | `["scene_list.md","design_plan.json"]` (BOTH, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
+| `plan_designs` | design planner | `design_plan` | `["scene_list.md","design_plan.json"]` (BOTH, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
 
 **Format rule:** every declared output file is Markdown (`.md`) or JSON (`.json`), never `.pdf`, `.docx`, `.rtf` or any other binary/office format; downstream agents cannot read those. Every task prompt below tells the worker to write Markdown.
 
@@ -100,6 +96,8 @@ ENDS your turn and the rest of the chain is never created. Do not re-read or re-
 prompts; trust each `create_task` result. Only after the 4th result (or after a stop on failure,
 below) may you write your single final report (Step 5), short per "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
 
+**Pick agents by role, never by guessing ids.** Agent ids differ per workspace: choose from `available_agents` the agent whose `role` / `objective` matches the task (stock workspaces: `screenwriter`, `casting_director`, `director`, `design_planner`). Planning tasks (they create other tasks or designs: `plan_designs`) go to the planner-type agent that plans designs: a plain LLM, tool-capable agent with `create_design` and no task-specific toolset (`design_planner`); never the generic `planner`. Production tasks (`write_screenplay`, `character_table`, `create_scenes`) go to the agent whose role is that work (screenwriter / cast writer / director) or, when none fits, the general-purpose worker agent. Never give a production task to a planner, and never give a planning task to a general-purpose worker.
+
 **Use returned identifiers, never assumed ones.** `requires_tasks` / `requires_artifacts` accept
 keys (or runtime ids). After every `create_task`, read the task id and artifact key FROM THE
 RESULT TEXT (e.g. `key: <key>`) and use exactly those in later `requires_*` (the Step 3 names
@@ -111,7 +109,7 @@ that list and correct the call; never retry an identical call.
 steps were created (with the ids from their results) and which failed, with the error text. Never
 claim a task that `create_task` did not confirm. Skip any task/artifact that already exists.
 
-**Task prompts are verbatim.** The fenced prompt blocks below (4b, 4c, and the `plan-designs` prompt, which opens with `Load and use skill: plan-designs`) are copied word for word; the worker cannot load this skill, so the block IS its whole instruction. Never paraphrase them: a paraphrase once dropped every nudity-conditional rule (no `Act` column, no `nude` look). `{workspace.*}` placeholders stay literal in the prompt (the server substitutes them).
+**Task prompts are verbatim.** The fenced prompt blocks below (4b, 4c, and the `plan-designs` prompt, which opens with `Load and use skill: plan-designs`) are copied word for word; the worker cannot load this skill, so the block IS its whole instruction. Never paraphrase them: a paraphrase once dropped every nudity-conditional rule (no `Sex act` / `Sex position` columns, no `nude` look). `{workspace.*}` placeholders stay literal in the prompt (the server substitutes them).
 
 ### 4a. write_screenplay
 ```
@@ -181,7 +179,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   ````
   Inputs: artifact `character_table` (all character_*.md files), artifact `screenplay`. Deliverable: artifact `scene_list`, the single file `scene_list.md`.
   Workspace content policy (nudity): {workspace.contentPolicy.nudity} (absent or empty = forbidden).
-  Beats tables: `Contact` is ALWAYS a column; `Act` is a REQUIRED column whenever nudity is `allowed`; both filled in EVERY beat.
+  Beats tables: `Contact` is ALWAYS a column; `Sex act` and `Sex position` are REQUIRED columns whenever nudity is `allowed`; all filled in EVERY beat. When nudity is `allowed`, load skill `workflow-calling-conventions` first and use the names of its section "Explicit acts and positions".
 
   FIRST STEP, before writing anything: read every `character_<slug>.md` of the character table and
   list (a) the character stems (`<character_slug>`) and (b) each character's WARDROBE TRACKER look
@@ -218,7 +216,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   Beyond those columns every Beats table also has these columns (all REQUIRED, filled in EVERY beat; an empty cell fails the `scenes-complete` check):
   - `Blocking`: who is where, facing which way.
   - `Contact`: who touches whom or what, and where on the body or object; `none` when nothing does.
-  - `Act` - REQUIRED whenever nudity is allowed (`{workspace.contentPolicy.nudity}` is `allowed`; under `forbidden` or absent leave the column out): plain, explicit words for who does what to whom, with the positions and contact points, no euphemisms (e.g. `Lena kneels on the bed, Jonas enters her from behind, both facing the window`); `none` for a beat without an act. Never an act for a depicted minor. `Contact` and `Act` are separate: `Contact` is the touch, `Act` is what the characters are doing.
+  - `Sex act` and `Sex position` - REQUIRED whenever nudity is allowed (`{workspace.contentPolicy.nudity}` is `allowed`; under `forbidden` or absent leave both columns out), placed after `Contact`. The names come from section "Explicit acts and positions" of skill `workflow-calling-conventions` (load it; use the names exactly as listed, or `other (<plain words>)`). Value: `none`, or `<name>[ + <name>]*[: <detail>]`; `Sex act` may combine several acts with ` + `, `Sex position` names exactly ONE position (a position change is a new beat); `<detail>` = who does what to whom and the contact points in plain explicit words, no euphemisms (e.g. `Sex act: vaginal penetration: Jonas enters Lena from behind`, `Sex position: doggy style: Lena on hands and knees on the bed, Jonas kneeling behind her`). `Sex act` is `none` exactly when `Sex position` is `none`. Nudity alone, undressing, posing nude, kissing, hugging, caressing and touching are NOT a sex act (both `none`; nudity is the `Outfits` look, touch is `Contact`). Never an act for a depicted minor. `Contact` and the sex columns are separate: `Contact` is the touch, `Sex act` / `Sex position` are the act itself.
   Undressing: when a character undresses in a beat (nudity allowed, adult only), that beat's `Outfits` already carries `<character_slug>:nude` and so does EVERY later beat of the character; the scene row's `Outfits` lists the `nude` pair as well.
   **One beat per distinct happening**: each entrance, each exit and
   each dialogue line that changes the picture is its own beat (a character leaving gets an exit
@@ -241,15 +239,15 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
 
   ## Pre-completion audit
 
-  Before `task_complete`, re-open `scene_list.md` and confirm: every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` columns, plus `Act` when nudity is allowed, with no empty cell; every row's `Outfits` equals the union of its beats' looks; after any undressing beat the character stays `nude` until a later beat dresses them.
+  Before `task_complete`, re-open `scene_list.md` and confirm: every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` columns, plus `Sex act` and `Sex position` when nudity is allowed (each `none` or starting with listed names / `other (...)`, `none` in both or neither), with no empty cell; every row's `Outfits` equals the union of its beats' looks; after any undressing beat the character stays `nude` until a later beat dresses them.
   ````
-- **Beats columns, the contract** (the `scenes-complete` check judges it): `Contact` always required; `Act` required whenever `{workspace.contentPolicy.nudity}` is `allowed`; both filled in EVERY beat; after an undressing beat the character is `nude` from that beat on.
-- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with the block's `Inputs:` line, (2) contains the `Contact` bullet ("who touches whom or what"), (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server's interpolation resolves it in the worker's prompt), and (4) contains the `Act` bullet and the nude-from-that-beat-on rule. A missing item means the block was paraphrased: re-copy it from this file and check again. Do the same for 4b.
+- **Beats columns, the contract** (the `scenes-complete` check judges it): `Contact` always required; `Sex act` and `Sex position` required whenever `{workspace.contentPolicy.nudity}` is `allowed` (names from `workflow-calling-conventions`, `none` in both or neither); all filled in EVERY beat; after an undressing beat the character is `nude` from that beat on.
+- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with the block's `Inputs:` line, (2) contains the `Contact` bullet ("who touches whom or what"), (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server's interpolation resolves it in the worker's prompt), and (4) contains the `Sex act` / `Sex position` bullet and the nude-from-that-beat-on rule. A missing item means the block was paraphrased: re-copy it from this file and check again. Do the same for 4b.
 
 ### 4d. plan_designs (the orchestrator)
 ```
 create_task({ id: "plan_designs", title: "Plan and create designs", description: "Create the designs of the pre-production",
-  agent: "design_planner", policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
+  agent: <design planner: the agent whose role plans designs and calls create_design (`design_planner` in the stock workspaces)>, policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
   difficulty: "hard", can_create_tasks: true,
   prompt: <prompt below>, requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list"],
   output_artifact_name: "design_plan", output_artifact_description: "Design Plan",

@@ -21,7 +21,7 @@ Your task prompt must carry: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`
 `duration_seconds`, `start_frame`, `style`, the canonical output files (a `.mp4` and a
 `_prompt.txt`), and for `continue` also `prior_clip`. `action`, `camera`, `references`,
 `framing_change`, `negative_prompt`, `preferred_workflow`, `shot_block` (the shot's full block from
-`shotlist.md`: Blocking, Pose, Frame, Visible, Act ...), `frame_edits` and `width` / `height` are used
+`shotlist.md`: Blocking, Pose, Frame, Visible, Sex act, Sex position ...), `frame_edits` and `width` / `height` are used
 when present. You never create tasks (no `create_task`): this task renders ONE clip and nothing else.
 
 - A required field is missing -> render nothing, `task_complete` with a summary starting
@@ -105,13 +105,13 @@ the draft by an enhance of the previous prompt). Always pass:
 - `workflow_name`, `context`, `duration_seconds`;
 - `image_inputs`: every image the render call passes, as `{port, ref}` (start frame, references,
   and for a framing change the target frame) - the code writes the Picture lines;
-- `verbatim_phrases`: the shot's `Act:` text (only when the task's `shot_block` has one; it is
+- `verbatim_phrases`: the shot's `Sex act:` and `Sex position:` values (only when the task's `shot_block` has one; it is
   read only in a workspace with `contentPolicy.nudity: allowed`) and any dialogue that must be kept.
 
 - `duration_seconds` = the task's planned duration, passed to `draft_prompt` AND as the render
   call's duration parameter (the value the `wf_*` tool description names, e.g. `video_length`) —
   the same number in both.
-- `context`: the shot's full `shot_block` VERBATIM (Blocking, Pose, Frame, Visible, Act stay as
+- `context`: the shot's full `shot_block` VERBATIM (Blocking, Pose, Frame, Visible, Sex act, Sex position stay as
   written - they are how the people are placed and posed), the characters / outfits / location, the
   path used, and the `movement` VERBATIM ("hold" = a locked-off frame; any other move is written as
   that move). With no Movement asking for a move, the frame never moves: no push-in, no
@@ -122,6 +122,8 @@ the draft by an enhance of the previous prompt). Always pass:
 - Use the `negative_prompt` when the workflow has a negative prompt port.
 
 ## 4. Render
+
+When the kickoff lists checks that gate this clip task, call `run_checks` BEFORE the render (see "Checks that gate the task" in `workflow-calling-conventions`) and fix every listed problem first.
 
 ONE `wf_*` call with the frames / clip / references, the drafted prompt, the planned
 duration and (continue) `prior_clip_start_time`. Keep the `draft` quality unless the task asks

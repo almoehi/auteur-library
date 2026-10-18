@@ -39,8 +39,9 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
 5. **One render per take.** Leave `seed` at its default; never request batches.
 6. **Never name a workflow from memory** — choose among the `wf_*` tools you have, by capability.
 7. **Write `shotlist.md` in ONE go**: compose the complete shotlist silently first, then ONE
-   `sandbox_write_file`. Never a partial/draft shotlist, never a rewrite in the same drafting
-   run (the write-once guard ends the attempt). A chat change to the shots = exactly ONE full
+   `sandbox_write_file`. Never a partial/draft shotlist; the only rewrite in a drafting run is
+   the single one a failing `run_checks` grants (see "Check early"), any other rewrite ends the
+   attempt (write-once guard). A chat change to the shots = exactly ONE full
    rewrite. Write every other file once, complete.
 8. **Never end the drafting turn early.** No text-only reply and no `task_complete` before every
    shot has its draft render(s) dispatched; a storyboard with 0 takes is a failure.
@@ -104,18 +105,19 @@ Pose: body orientation, hands and head per person (e.g. "Mira: torso square to t
 Frame: where each person sits in the frame, left / centre / right, foreground / background (e.g. "Mira right foreground, Jonas left background")
 Visible: character_mira (full figure); character_jonas (upper body); nobody else        (design KEYS, structured, see below)
 POV: character_jonas (seated)        (OPTIONAL, omit for an objective camera; see "Who is in the frame")
-Act: plain words for who does what to whom (ONLY when contentPolicy.nudity is allowed; see below)
+Sex act: <name>[ + <name>][: detail] or none        (ONLY when contentPolicy.nudity is allowed; see below)
+Sex position: <name>[: detail] or none        (ONLY when contentPolicy.nudity is allowed; see below)
 Characters: character_mira, character_jonas        (design KEYS, exactly the characters with a Visible entry, or "none")
 Outfits: character_mira:outfit_mira_raincoat; character_jonas:outfit_jonas_work_suit      (<characterKey>:<outfitKey> pairs, "; "-separated, or "none")
 Duration: 5
 Transition: cut — new moment, first shot of the scene
 ```
 
-### Blocking, Pose, Frame, Visible, Act - the instant the keyframe must show
+### Blocking, Pose, Frame, Visible, Sex act, Sex position - the instant the keyframe must show
 
 Every shot carries `Blocking:`, `Pose:`, `Frame:` and `Visible:`; they keep a keyframe (and the
 clip rendered from it) from drifting, so write them concretely, from the beat and the scene
-list's Blocking / Contact (and Act) columns:
+list's Blocking / Contact (and Sex act / Sex position) columns:
 
 - **`Blocking:`** who is where, facing which way, and the contact points (who touches whom or
   what, where); "no contact" when there is none. A character who matters to the moment but is
@@ -126,11 +128,14 @@ list's Blocking / Contact (and Act) columns:
   If the change is lasting (it stays that way in later beats), it is its own look: use that look's
   `Outfits:` pair (the scene list / `plan-designs` define it) instead of improvising.
 - **`Frame:`** left, centre or right, foreground or background, per person.
-- **`Act:`** written ONLY when the workspace's `contentPolicy.nudity` (`{workspace.contentPolicy.nudity}`)
-  is `allowed`, and only for adults (any depicted minor: never; the line is left out). Plain,
-  explicit words for who does what to whom, the positions and contact points - no euphemisms,
-  no metaphors. Copy the scene list's `Act` column wording where it has one. Under `forbidden`
-  (or absent) leave the line out entirely: it is ignored there.
+- **`Sex act:` and `Sex position:`** written ONLY when the workspace's `contentPolicy.nudity`
+  (`{workspace.contentPolicy.nudity}`) is `allowed`, and only for adults (any depicted minor: never;
+  the lines are left out). Copy the beat's `Sex act` / `Sex position` columns (names from section
+  "Explicit acts and positions" of skill `workflow-calling-conventions`; detail after `: ` allowed:
+  who does what to whom, contact points, plain explicit words). A shot without a sex act omits both
+  lines or writes `none` in both; one is `none` exactly when the other is. Nudity, undressing and
+  touch alone are not a sex act. Under `forbidden` (or absent) leave both lines out entirely: they
+  are ignored there. An older shot list's `Act:` line reads as the sex act with no position.
 
 #### Who is in the frame (`Visible:`, `Characters:`, `Outfits:`, `POV:`)
 
@@ -188,6 +193,14 @@ location design), its own `Camera`, `Transition: cut — cutaway (parallel actio
 action continues afterwards, it resumes in a FOLLOWING shot (back in the first place,
 `Transition: cut — back to <the main action>`). A scene-list beat with Continuity `parallel` is
 exactly such a cutaway shot, at the place the beat names.
+
+**One moment per keyframe** - short bad -> good pairs (a keyframe freezes one instant):
+
+- Sequence: `X enters, drops the keys, then calls out` -> `X stands in the open doorway, keys on the floor at her feet`.
+- Camera move as the frame: `camera pans from A to B` -> `Camera:` is the opening frame only (A); the pan goes in `Movement:`.
+- Two framings: `close-up and wide` -> ONE framing in `Camera:`.
+- Dialogue as action: `X shouts "come here"` -> the pose while speaking: `mouth open, calling toward the doors`.
+- Event at another place -> its own (parallel) cutaway shot, not a clause of this one.
 
 Worked example (beats: "sister freezes at the wall" - continuous; "car pulls up at the driveway" -
 parallel, driveway; "sister reacts" - continuous):
@@ -258,12 +271,21 @@ yet known. `Duration` = whole seconds (3–10). Ids consecutive from 01, never
 renumbered except by a rewrite the person asked for. `Characters` / `Outfits` name only linked
 designs by KEY (others: in `Action` only); `Location` names only a linked location design key.
 
+### Check early
+
+When the kickoff lists checks (and `run_checks` is available): after writing `shotlist.md` and BEFORE drafting or rendering any keyframe, call `run_checks` once.
+It runs the task's checks on the current files and returns a verdict per check; it does not
+complete the task. A rejection lists EVERY failing shot with its rule: fix all of them in ONE full
+rewrite of `shotlist.md` (the one permitted rewrite), then continue with the drafts. Call
+`run_checks` again after the renders and before `task_complete` to see the checks about tool calls. `run_checks` is capped at 3 calls per attempt: one after the shot
+list, one before `task_complete`, one spare - never one per shot.
+
 ## Phase 2 — Render the initial drafts (all shots, batched)
 
 Follow "Prompt route" of `workflow-calling-conventions` for every prompted `wf_*` call:
 initial keyframes from the shot list are drafted with `draft_prompts_batch` (pass `image_inputs`
 per item - the shot's references - and, in a workspace with `contentPolicy.nudity: allowed`, the
-shot's `Act:` text as `verbatim_phrases`); a short user-typed chat edit on an edit workflow is a
+shot's `Sex act:` and `Sex position:` values as `verbatim_phrases`); a short user-typed chat edit on an edit workflow is a
 pass-through candidate. Never loop shot by shot; single
 `draft_prompt` / `review_prompt` / `enhance_prompt` calls are serialized, the `*_prompts_batch`
 tools run in parallel.
@@ -275,7 +297,7 @@ tools run in parallel.
    round for shots already drafted. If refused for size, split into the fewest batches, all in
    the same response.
 3. **Review**: at most ONE `review_prompts_batch` and ONE `enhance_prompts_batch` per scene run.
-   The review is REQUIRED for every shot with 2+ characters, body contact or an `Act:` line (put
+   The review is REQUIRED for every shot with 2+ characters, body contact or a `Sex act:` line (put
    those shots in the batch; other shots may join it); `enhance_prompts_batch` only for flagged
    items, with the feedback as `additional_context`. No single-item tools for several shots.
 4. **ONE render round**: ALL `wf_*` calls for ALL shots (`initialDrafts` per shot, never more) in
@@ -351,7 +373,7 @@ the choice and reason in the summary.
 binding by extent"), the image labels (slot map by port label: "Picture 1 is the harbor, Picture 2
 is Mira"), one style line (`{workspace.story.plot}` medium/style verbatim, see "Medium / style is
 kept"), and the goal: *one cinematic keyframe of this shot, consistent with the reference images;
-compose as the camera line says; no text, captions or panels*. The `Act:` text goes in
+compose as the camera line says; no text, captions or panels*. The `Sex act:` and `Sex position:` values go in
 `verbatim_phrases`. Never pass `Movement`, `Transition` or `Duration` (a keyframe is a still), and
 never restate what the reference images show or the design descriptions. **The goal line belongs
 in `context`, NEVER in `instruction`**: `instruction` is only for a person's own explicit
@@ -362,13 +384,17 @@ applies `prompt-writer-<family>` itself.
 
 `design.json.loras` holds the scene's planned LoRAs (in a nudity-allowed workspace: the NSFW
 acts / anatomy / poses LoRAs of `plan-designs`). Per shot pass only those that FIT that shot -
-an act LoRA only on shots showing that act, anatomy LoRAs only where those body parts are
-visible, a pose LoRA only for that pose - with their `strength`, same `modelFamily` as the shot's
+an act LoRA only on shots whose `Sex act` names that act, anatomy LoRAs only where those body parts are
+visible, a position / pose LoRA only where `Sex position` names it - with their `strength`, same `modelFamily` as the shot's
 workflow only, and put their trigger words in the shot's `context`. A clothed or non-sexual shot
 gets none of them. An explicit shot whose content has no planned LoRA: check `lora_index` (once
 per turn) for a matching one before rendering without; name content left without a LoRA in the
 summary. Two-step explicit acts ("NSFW-marked workflows" in `workflow-calling-conventions`): the
 act LoRA goes on step 1 (the act frame), anatomy LoRAs on both steps.
+
+### Keyframe-ready check rejection
+
+A rejection of check `shotlist-keyframe-ready` under rule (d) or (e) is about the tool calls, not the file: fix it by redrafting that shot's prompt (with `review_prompts_batch` for (e), the right `is_portrait` for (d)) and rendering its keyframe again - editing `shotlist.md` alone never fixes it.
 
 ### Check, retry once, suggest
 
@@ -380,7 +406,7 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 
 Audit before completing:
 
-- [ ] `shotlist.md` written exactly once; every shot has `## <shotId> — <title>` plus `Action`,
+- [ ] `shotlist.md` written in one go (at most the single rewrite a failing `run_checks` granted); every shot has `## <shotId> — <title>` plus `Action`,
       `Location` (a linked location key), `Camera`, `Movement`, `Characters` (linked character keys), `Outfits` (`<characterKey>:<outfitKey>` linked keys), `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
       `Visible:` / `Characters:` / `Outfits:` / `POV:` / `Format:` follow "Who is in the frame"; every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
@@ -393,7 +419,7 @@ Audit before completing:
       framing per shot (no "then"); `Pose` states the garment's state where the look covers the
       body part; `Visible:` covers everyone `Blocking` places in frame and only them; no event from
       another place; every keyframe call of a workflow that takes it passed `is_portrait` from `Format:`; every shot with 2+
-      characters, contact or `Act` went through the review batch
+      characters, contact or a `Sex act` went through the review batch
 - [ ] every shot has `take_<shotId>-draft-<n>.<ext>` for n = 1 … drafts per shot (re-read the
       artifact), except drafts that failed twice (name them); all from `wf_*` renders
 - [ ] no other file written; `design.json` untouched; no published names

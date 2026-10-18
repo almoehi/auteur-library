@@ -154,7 +154,7 @@ design KEYS of designs linked to the storyboard (`location_harbor`, `character_t
 
 Keep each shot's complete block (the `## <shotId> — <title>` heading and every line up to the
 next heading) verbatim: it goes into the clip task unchanged, including `Blocking:`, `Pose:`,
-`Frame:`, `Visible:`, `POV:` and, in a workspace with `contentPolicy.nudity: allowed`, `Act:` (the file's `Format:` header line stays in the shotlist copy).
+`Frame:`, `Visible:`, `POV:` and, in a workspace with `contentPolicy.nudity: allowed`, `Sex act:` and `Sex position:` (the file's `Format:` header line stays in the shotlist copy).
 
 Extract for every shot: shot ID and title, `Action`, `Camera` (keyframe framing), `Movement` (the
 camera move of the VIDEO; absent in older storyboards), `Duration`, `Transition` (absent in older
@@ -257,7 +257,8 @@ id:                   shoot_scene<N>_clip<M>
 title:                "Shoot <Scene Name> – clip <M> (<shot title>)"
 description:          one line: what the clip shows
 agent:                <an agent from available_agents that has the wf_* workflow tools and the
-                       sandbox — in the default workspace `generic`; never one that is not listed>
+                       sandbox — in the default workspace `generic`, the general-purpose worker; never a planner,
+                       coordinator or director agent, never one that is not listed>
 requires_tasks:       ["shoot_scene<N>_clip<M-1>"]    — ONLY for a `continue` clip; omit for start / cut
 requires_artifacts:   ["scene<N>_clip<M-1>"]          — ONLY for a `continue` clip; omit for start / cut
                        (a `continue` clip depends on its previous clip so it can continue from that
@@ -277,7 +278,7 @@ prompt:
   shot_block: |
     <the shot's FULL block from shotlist.md, verbatim, every line: Action, Location, Camera,
      Movement, Transition, Characters, Outfits, Blocking, Pose, Frame, Visible, Duration and the
-     Act: line when present>
+     Sex act: / Sex position: lines when present>
   frame_edits: <the frame's published `edits`, verbatim; "none" when it has none>
   action: <the shot's Action>
   camera: <the shot's Camera - keyframe framing>
@@ -297,7 +298,7 @@ prompt:
     scene<N>_clip<M>_<slug>_prompt.txt
 ```
 
-The clip prompt template above is VERBATIM: fill its `<...>` slots from the sources named there and copy every other line (and every slot marked verbatim, including `Act:` in a nudity-allowed workspace) word for word. Never paraphrase or shorten a slot's text, and never drop a policy-conditional line; a paraphrase would hide rules from the worker.
+The clip prompt template above is VERBATIM: fill its `<...>` slots from the sources named there and copy every other line (and every slot marked verbatim, including `Sex act:` and `Sex position:` in a nudity-allowed workspace) word for word. Never paraphrase or shorten a slot's text, and never drop a policy-conditional line; a paraphrase would hide rules from the worker.
 
 The task `prompt` MUST open with the exact line `Load and use skill: shoot-clip` — the worker
 relies on it to `load_skill()` before doing anything else. Name the preferred workflow from the
@@ -361,5 +362,5 @@ After the Step 4c reconciliation is clean, reply in 1-3 short lines (see "Concis
 7. **Each `create_task` carries its output artifact inline**, issued one per round using the identifiers the previous result reported.
 8. **Image-to-video only for fresh starts** - the storyboard frame is the first frame; no i2v / i2va workflow in the workspace -> stop with a clear message, never text-to-video.
 9. **Transitions are decided upstream** - take the shot's `Transition:`; decide yourself only when it is absent.
-10. **Clip tasks never get `can_create_tasks`** - only planning tasks do; the clip prompt embeds the canonical output files, the storyboard artifact URI + exact frame file, the full shot block (with any `Act:` line) and the frame's `edits`.
+10. **Clip tasks never get `can_create_tasks`** - only planning tasks do; the clip prompt embeds the canonical output files, the storyboard artifact URI + exact frame file, the full shot block (with any `Sex act:` / `Sex position:` lines) and the frame's `edits`.
 11. **Reconcile** - `task_index` against the written plan before replying; create what is missing.

@@ -36,7 +36,7 @@ wf_xxx(prompt="Make the raccoon look left", ...)
 # verbatim_phrases protects must-keep text. Pass the drafted prompt UNCHANGED (never edit or extend it)
 draft_prompt(workflow_name="<wf>", instruction="make it feel more menacing", context="<scene brief>",
              image_inputs=[{"port": "ref0", "ref": "artifact://<id>/frame_1.png"}],
-             verbatim_phrases=["<the shot's Act: text>"])
+             verbatim_phrases=["<the shot's Sex act: value>", "<the shot's Sex position: value>"])
 wf_xxx(prompt="<the drafted prompt>", ...)
 ```
 

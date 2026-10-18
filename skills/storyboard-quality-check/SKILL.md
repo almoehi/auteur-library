@@ -131,10 +131,10 @@ and perform VLM review. Check:
 > "Is this ONE continuous instant - no panels, split screen, collage, repeated figures or several
 > stages of an action? Answer: PASS or FAIL + one-sentence reason."
 
-**F-11 Act matches (only when the workspace's `contentPolicy.nudity` is `allowed` and the shot
-has an `Act:` line):**
-> "The shot's act: [Act text]. Does the image show exactly that act - who does what to whom, the
-> positions and contact points? Answer: PASS or FAIL + one-sentence reason."
+**F-11 Sex act and position match (only when the workspace's `contentPolicy.nudity` is `allowed` and the shot's
+`Sex act:` is not `none`; a legacy `Act:` line counts as the sex act):**
+> "The shot's sex act: [Sex act text]. Its sex position: [Sex position text, or \"not stated\"]. Does the image show exactly that act in that position - who does what to whom, the
+> contact points? Answer: PASS or FAIL + one-sentence reason."
 
 A check the vision model refuses, answers emptily or with something that is neither PASS nor
 FAIL is **UNCHECKED**, with the reason. UNCHECKED is never a pass: a person must review that
