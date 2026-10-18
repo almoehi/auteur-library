@@ -166,7 +166,7 @@ create_task({ id: "character_table", title: "Character table", description: "One
 
   Pre-completion audit: before task_complete, re-open every file and confirm all five headings are present and the VISUAL PROFILE has no blank or `[...]` field.
   ````
-- Pre-send self-check (before the call): the prompt starts with `Inputs: artifact \`screenplay\``, contains the five-heading checklist, the `Workspace content policy (nudity):` line with the placeholder still literal, and the adult-anatomy rule. Anything missing: re-copy the block from this file.
+- Pre-send self-check (before the call): the prompt starts with `Inputs: artifact \`screenplay\``, contains the five-heading checklist, the `Workspace content policy (nudity):` line with the placeholder still literal, and the adult-anatomy rule. Anything missing: re-copy the block from this file. Every `create_task` call also carries the block's `policies` list exactly - checks attach only when passed (except those that auto-attach).
 
 ### 4c. create_scenes
 ```
@@ -242,7 +242,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   Before `task_complete`, re-open `scene_list.md` and confirm: every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` columns, plus `Sex act` and `Sex position` when nudity is allowed (each `none` or starting with listed names / `other (...)`, `none` in both or neither), with no empty cell; every row's `Outfits` equals the union of its beats' looks; after any undressing beat the character stays `nude` until a later beat dresses them.
   ````
 - **Beats columns, the contract** (the `scenes-complete` check judges it): `Contact` always required; `Sex act` and `Sex position` required whenever `{workspace.contentPolicy.nudity}` is `allowed` (names from `workflow-calling-conventions`, `none` in both or neither); all filled in EVERY beat; after an undressing beat the character is `nude` from that beat on.
-- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with the block's `Inputs:` line, (2) contains the `Contact` bullet ("who touches whom or what"), (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server's interpolation resolves it in the worker's prompt), and (4) contains the `Sex act` / `Sex position` bullet and the nude-from-that-beat-on rule. A missing item means the block was paraphrased: re-copy it from this file and check again. Do the same for 4b.
+- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with the block's `Inputs:` line, (2) contains the `Contact` bullet ("who touches whom or what"), (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server's interpolation resolves it in the worker's prompt), and (4) contains the `Sex act` / `Sex position` bullet and the nude-from-that-beat-on rule. A missing item means the block was paraphrased: re-copy it from this file and check again. Also confirm the call passes the block's `policies` list exactly. Do the same for 4b.
 
 ### 4d. plan_designs (the orchestrator)
 ```
