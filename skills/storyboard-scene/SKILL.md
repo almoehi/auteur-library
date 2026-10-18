@@ -68,14 +68,15 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
 - **A shot's `Outfits:` line comes from the beat(s) the shot shows, never from the scene row**: looks
   change inside a scene (`sister:bikini_cardigan` in beat 2, `sister:nude` from beat 3), so shots of the
   same scene can differ. A shot spanning several beats takes the look at its opening frame (the first
-  beat it shows). A point-of-view character whose hands or body are visible in the frame counts as visible: list them in the shot's `Outfits:` (the beat's `Outfits` names them too). A `parallel` cutaway beat's characters come from that beat even when the scene row's `Characters present` omits them. A scene list without a beat `Outfits` column (older) falls back to the scene row.
+  beat it shows). `Outfits:` follows the shot's `Characters:` exactly (one pair per character in frame, nobody else; see "Who is in the frame"). A `parallel` cutaway beat's characters come from that beat even when the scene row's `Characters present` omits them. A scene list without a beat `Outfits` column (older) falls back to the scene row.
 - Bind each `<character_slug>:<look_slug>` pair (THE binding rule for nude vs clothed; keys in
   `design.json.links` are the truth): a shot's `Outfits:` pair `<c>:nude` or `<c>:none` binds the
   character design primary (`character_<c>`, in a nudity-allowed workspace that primary IS the nude base sheet); `<c>:<look>` binds the outfit design primary: the
   key from `design_plan.json` `outfits[]` (character_slug + look_slug) when present, else
   `outfit_<c>_<look>` (suffix tolerated). A missing outfit design -> bind the character primary,
   describe the garments in the prompt and name the gap in the summary - never let a clothed shot
-  come out nude.
+  come out nude. WHICH image a character gets also depends on how much of them is in frame: see
+  "Reference binding by extent" (rule 3).
 - Write the bound designs as linked design KEYS - never slugs or display names - in the shotlist's
   `Location:`, `Characters:` and `Outfits:` lines (`Outfits:` entries are
   `<characterKey>:<outfitKey>`, separated by `;`; a `:nude` / `:none` look has no `Outfits:` entry - the character's
@@ -92,6 +93,7 @@ ONE write of `/workspace/<artifact id>/shotlist.md`, one section per shot, exact
 
 ```
 # Scene <n> shot list
+Format: portrait        (or "landscape" - ONE line, the frame orientation = the storyboard's `format` attribute in design.json)
 
 ## s3-01 — Short title
 Action: what is VISIBLE in the frame, in one or two sentences
@@ -101,9 +103,10 @@ Movement: the camera move of the VIDEO clip of this shot, within the same place 
 Blocking: who is where, facing which way, who touches whom or what (e.g. "Mira at the rail, back to camera, facing the sea; Jonas on the crate 2 m behind her, facing her back; no contact")
 Pose: body orientation, hands and head per person (e.g. "Mira: torso square to the rail, both hands on it, head turned left; Jonas: seated, elbows on knees, head down")
 Frame: where each person sits in the frame, left / centre / right, foreground / background (e.g. "Mira right foreground, Jonas left background")
-Visible: who must be visible and who must NOT be (e.g. "Mira and Jonas full length; nobody else")
+Visible: Mira (full figure); Jonas (upper body); nobody else        (structured, see below)
+POV: character_jonas        (OPTIONAL - only when the camera IS this character's eyes)
 Act: plain words for who does what to whom (ONLY when contentPolicy.nudity is allowed; see below)
-Characters: character_mira, character_jonas        (design KEYS of linked character designs, comma-separated, or "none")
+Characters: character_mira, character_jonas        (design KEYS, exactly the characters with a Visible entry, or "none")
 Outfits: character_mira:outfit_mira_raincoat; character_jonas:outfit_jonas_work_suit      (<characterKey>:<outfitKey> pairs, "; "-separated, or "none")
 Duration: 5
 Transition: cut — new moment, first shot of the scene
@@ -111,27 +114,65 @@ Transition: cut — new moment, first shot of the scene
 
 ### Blocking, Pose, Frame, Visible, Act - the instant the keyframe must show
 
-Every shot carries `Blocking:`, `Pose:`, `Frame:` and `Visible:`; they are what keeps a keyframe
-(and the clip rendered from it) from drifting, so write them concretely, from the beat and the
-scene list's Blocking / Contact (and Act) columns:
+Every shot carries `Blocking:`, `Pose:`, `Frame:` and `Visible:`; they keep a keyframe (and the
+clip rendered from it) from drifting, so write them concretely, from the beat and the scene
+list's Blocking / Contact (and Act) columns:
 
 - **`Blocking:`** who is where, facing which way, and the contact points (who touches whom or
-  what, where). "no contact" when there is none.
-- **`Pose:`** body orientation, hands and head, per person.
+  what, where); "no contact" when there is none. A character who matters to the moment but is
+  NOT in the frame appears here only marked "(off-frame)".
+- **`Pose:`** body orientation, hands and head, per person IN the frame. When the action needs a
+  body part the person's look covers (applying lotion to shoulders under a cardigan, a hand on bare
+  skin under a sleeve), state the garment's state here ("cardigan slipped off both shoulders").
+  If the change is lasting (it stays that way in later beats), it is its own look: use that look's
+  `Outfits:` pair (the scene list / `plan-designs` define it) instead of improvising.
 - **`Frame:`** left, centre or right, foreground or background, per person.
-- **`Visible:`** who must be visible and who must NOT be. **POV shots**: the POV character is the
-  camera, so `Visible:` lists their hands or forearms only, never their face or body, and the POV
-  character is NOT a visible subject: do not put them in `Characters:` as a full-body figure and
-  do not bind a full-body reference of them.
 - **`Act:`** written ONLY when the workspace's `contentPolicy.nudity` (`{workspace.contentPolicy.nudity}`)
   is `allowed`, and only for adults (any depicted minor: never; the line is left out). Plain,
   explicit words for who does what to whom, the positions and contact points - no euphemisms,
   no metaphors. Copy the scene list's `Act` column wording where it has one. Under `forbidden`
   (or absent) leave the line out entirely: it is ignored there.
 
-**A shot asks for ONE instant, never a sequence.** The keyframe is a single moment; "she opens
-the door, steps in and turns" is three shots, not one `Action`/`Blocking`. Describe the state at
-the opening frame, and let `Movement` / the video carry the change.
+#### Who is in the frame (`Visible:`, `Characters:`, `Outfits:`, `POV:`)
+
+`Visible:` is a structured line, one entry per character with ANY body part in the frame:
+
+`Visible: <characterKey> (<extent>[: detail]); <characterKey> (<extent>[: detail]); <exclusion>`
+
+- `<extent>` is EXACTLY one of `full figure` | `upper body` | `face` | `back` | `limbs` |
+  `lower body`. `detail` narrows it and states counts: `character_b (limbs: one pair of hands)`,
+  `character_a (limbs: forearms and hands)`.
+- The LAST `;` segment has no brackets and is the **exclusion clause**: `nobody else`, `no other
+  hands`, ... Required in every shot.
+- Example: `Visible: character_a (upper body); character_b (limbs: forearms and hands); nobody else`.
+
+Then, mechanically:
+
+- **`Characters:`** = exactly the characters that have a `Visible:` entry, and no one else. A
+  character whose hands, back or shadow-less limbs are in frame IS in `Characters:`; a character
+  who is off-frame is NOT (only "(off-frame)" in `Blocking:`).
+- **`Outfits:`** = exactly one `<characterKey>:<outfitKey>` pair per `Characters:` entry (a
+  `:nude` / `:none` look has no entry, as before) - no pair for anyone not in `Characters:`.
+- **`POV: <characterKey>`** (optional line, absent = objective camera): the camera is that
+  character's eyes. Never write it for a normal over-the-shoulder or objective shot. A POV
+  character with nothing of theirs in frame is simply not in `Characters:`; with their own limbs
+  in frame (hands, knees, feet) the extent is `limbs` or `lower body`, never a full-body
+  figure, and they ARE in `Characters:`.
+- **`Format:`** (file header) is the production's frame orientation, `portrait` or `landscape`:
+  copy the storyboard's `format` attribute in `design.json`; if absent, the orientation the
+  story/plot states, else `landscape`. ONE line per file.
+
+The server and the studio check these mechanically (set equality of `Characters:` and
+`Visible:`, one `Outfits:` pair per character, valid extents and exclusion clause, `POV:` names a
+linked character and its extent, `Format:` equals the attribute) and disable Generate for a shot
+that breaks them: fix the line and rewrite. A shotlist without a `Format:` line is the older
+format and is not checked - always write it.
+
+**A shot asks for ONE moment, never a sequence.** The keyframe is a single instant: one framing,
+one place, one state of the action. "She opens the door, steps in, then turns" or "stands, turns,
+unties, then dives" is several shots, not one `Action` / `Blocking`; any "then", "and then",
+"before", "after" in `Action` is a sign to split. Describe the state at the opening frame and let
+`Movement` / the video carry the change. Never show an event from another place in the frame.
 
 ### One shot = one place + one opening framing
 
@@ -174,7 +215,7 @@ Movement: slow pan toward the window
 Transition: cut — back to the sister's reaction
 ```
 
-(each shot also carries `Blocking`, `Pose`, `Frame`, `Visible`, `Characters`, `Outfits` and `Duration`; omitted here for brevity.)
+(each shot also carries `Blocking`, `Pose`, `Frame`, `Visible`, `Characters`, `Outfits` and `Duration`, and the file starts with its `Format:` line; omitted here for brevity.)
 
 **`Location`** (ALWAYS written) = the key of the linked location design this shot takes place in
 (`location_driveway`), never a free name. A shot at the scene's default place uses the first
@@ -233,9 +274,10 @@ tools run in parallel.
    one call per workflow; shots may use different workflows, see "Choosing the workflow"). Never repeat it per shot subset or retry
    round for shots already drafted. If refused for size, split into the fewest batches, all in
    the same response.
-3. **Review at most once**: ONE `review_prompts_batch` over all prompts, then only for flagged
-   items ONE `enhance_prompts_batch` with the feedback as `additional_context`. No single-item
-   tools for several shots.
+3. **Review**: at most ONE `review_prompts_batch` and ONE `enhance_prompts_batch` per scene run.
+   The review is REQUIRED for every shot with 2+ characters, body contact or an `Act:` line (put
+   those shots in the batch; other shots may join it); `enhance_prompts_batch` only for flagged
+   items, with the feedback as `additional_context`. No single-item tools for several shots.
 4. **ONE render round**: ALL `wf_*` calls for ALL shots (`initialDrafts` per shot, never more) in
    ONE response; never wait for one shot before issuing the next:
 
@@ -244,11 +286,27 @@ wf_<tool>(prompt_positive="<prompt>", <image ports with artifact:// refs>, …,
   output_ports={"<primary output port>": "/workspace/<artifact id>/take_s3-01-draft-<n>.png"})
 ```
 
-Same prompt for all drafts of a shot (the random seed varies them). Keyframes match the story's
-intended format: pass `is_portrait` (`true` for a vertical phone clip, `false` for landscape) on every
-keyframe call when the story calls for a specific orientation; omit it otherwise. A failed draft fails only
+Same prompt for all drafts of a shot (the random seed varies them). Pass `is_portrait` on EVERY keyframe
+call (initial drafts, chat re-renders, retries), derived from the shotlist's `Format:` line
+(`portrait` -> `true`, `landscape` -> `false`); never omit it, never leave it to the workflow default. A failed draft fails only
 its own take: re-read the workflow instructions, fix the call, retry that draft once (same file
 name); if it fails again leave it (the studio shows a failed take with Retry) and report it.
+
+### Reference binding by extent (rule 3)
+
+For each character in `Characters:` read their `Visible:` extent:
+
+- `full figure` / `upper body` / `face` / `back` -> the character's outfit design primary (the
+  character primary for a `:nude` / `:none` pair or when no outfit design exists), as above.
+- `limbs` / `lower body` -> NOT the full-body primary: bind that character's published SHEET
+  (`sheet.<ext>` of the outfit design when the pair names an outfit, else of the character
+  design), named by the display name ("<Name>'s sheet"), and add to the shot's `context`: "use
+  only its POV <seated|lying> tile: <detail> seen from their own eyes, never their face or
+  torso" (`seated` by default, `lying` when `Pose` says lying / reclining; `<detail>` from the
+  `Visible:` detail). A design with no published sheet gets NO image: describe the visible parts
+  in words from the design's description.
+- a character NOT in `Characters:` (off-frame, or a POV owner with nothing in frame) gets no image
+  and is never mentioned as a figure in the prompt.
 
 ### Choosing the workflow (capability, never name)
 
@@ -262,6 +320,8 @@ line, not necessarily the scene's first - is the anchor, Picture 1; see
 "Anchor (Picture 1) by intent"): 1. primary of the shot's `Location:` design; 2. outfit primary of the shot's main
 character (the outfit primary for a `<c>:<look>` pair, the character primary for `<c>:nude`/`<c>:none`
 or a missing outfit design, see the binding rule above); 3. further outfits / characters by presence.
+   Only characters in the shot's `Characters:` get an image, and WHICH image follows "Reference
+   binding by extent" below.
 
 - **Reference-to-image (ref2i)**: preferred - composes a NEW frame from the references (location =
   Picture 1), any camera.
@@ -282,14 +342,19 @@ the `wf_*` tool description, which ends with the type display name (e.g. "(refer
 A workflow with a required input you cannot supply (mask, pose, prior clip) is disqualified. Say
 the choice and reason in the summary.
 
-### Prompt `context` (per shot, SHORT)
+### Prompt `context` (per shot)
 
-Shot text (Action + Camera - never Movement: a keyframe is a still), image labels (slot map by port label: "Picture 1 is the harbor,
-Picture 2 is Mira"), one style line (`{workspace.story.plot}` medium/style verbatim, see "Medium /
-style is kept"), and the goal: *one cinematic keyframe of this shot, consistent with the
-reference images; compose as the camera line says; no text, captions or panels*. Never restate
-what the reference images show or the design descriptions. The prompt writer applies
-`prompt-writer-<family>` itself.
+`context` carries, per shot: the shot's `Action`, `Camera`, `Blocking`, `Pose`, `Frame` and
+`Visible` lines VERBATIM (plus the `POV:` line when present, and the POV-tile phrase of "Reference
+binding by extent"), the image labels (slot map by port label: "Picture 1 is the harbor, Picture 2
+is Mira"), one style line (`{workspace.story.plot}` medium/style verbatim, see "Medium / style is
+kept"), and the goal: *one cinematic keyframe of this shot, consistent with the reference images;
+compose as the camera line says; no text, captions or panels*. The `Act:` text goes in
+`verbatim_phrases`. Never pass `Movement`, `Transition` or `Duration` (a keyframe is a still), and
+never restate what the reference images show or the design descriptions. **The goal line belongs
+in `context`, NEVER in `instruction`**: `instruction` is only for a person's own explicit
+correction (see "Prompt route"); anything else there is pasted into the prompt. The prompt writer
+applies `prompt-writer-<family>` itself.
 
 ### LoRAs per shot
 
@@ -315,15 +380,24 @@ Audit before completing:
 
 - [ ] `shotlist.md` written exactly once; every shot has `## <shotId> — <title>` plus `Action`,
       `Location` (a linked location key), `Camera`, `Movement`, `Characters` (linked character keys), `Outfits` (`<characterKey>:<outfitKey>` linked keys), `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
-      every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
+      `Visible:` / `Characters:` / `Outfits:` / `POV:` / `Format:` follow "Who is in the frame"; every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
       a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings
+- [ ] **self-audit of the shotlist before the write and again here** (the studio checks R1-R5
+      mechanically; a policy `shotlist-keyframe-ready` judges the rest after drafting):
+      R1 `Characters:` = the `Visible:` entries; R2 one `Outfits:` pair per character, no extra;
+      R3 valid extents + an exclusion clause; R4 `POV:` names a linked character, extent `limbs` /
+      `lower body` if in frame; R5 `Format:` line = the `format` attribute; ONE moment and ONE
+      framing per shot (no "then"); `Pose` states the garment's state where the look covers the
+      body part; `Visible:` covers everyone `Blocking` places in frame and only them; no event from
+      another place; every keyframe call passed `is_portrait` from `Format:`; every shot with 2+
+      characters, contact or `Act` went through the review batch
 - [ ] every shot has `take_<shotId>-draft-<n>.<ext>` for n = 1 … drafts per shot (re-read the
       artifact), except drafts that failed twice (name them); all from `wf_*` renders
 - [ ] no other file written; `design.json` untouched; no published names
 - [ ] every take checked; at most one retry per take (`<base>-r2`); `suggest_edit` exactly for
       takes whose retry also missed
-- [ ] one `draft_prompts_batch` per workflow, at most one review and one enhance batch, all
+- [ ] one `draft_prompts_batch` per workflow, one review batch (required per the rule above) and at most one enhance batch, all
       renders in one response
 
 Then `task_complete(summary="Storyboard scene <n>: <N> shots drafted; failed: …")` (1-3 lines; no
