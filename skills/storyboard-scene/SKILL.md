@@ -39,8 +39,8 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
 5. **One render per take.** Leave `seed` at its default; never request batches.
 6. **Never name a workflow from memory** — choose among the `wf_*` tools you have, by capability.
 7. **Write `shotlist.md` in ONE go**: compose the complete shotlist silently first, then ONE
-   `sandbox_write_file` (a line missing from the format block, found by the self-check right after the
-   write, is fixed in the same write - it still counts as that first write). Never a partial/draft shotlist; the only rewrite in a drafting run is
+   `sandbox_write_file` (self-check the content BEFORE that write, step 1 of "Check early": a second
+   write is refused). Never a partial/draft shotlist; the only rewrite in a drafting run is
    the single one a failing `run_checks` grants (see "Check early"), any other rewrite ends the
    attempt (write-once guard). A chat change to the shots = exactly ONE full
    rewrite. Write every other file once, complete.
@@ -288,19 +288,19 @@ shot's newest take matches its current text.
 When the kickoff lists checks and `run_checks` is available, these steps happen in this order:
 
 1. Write `shotlist.md` (ONE write).
-2. **Self-check the file**: re-read `shotlist.md` and confirm EVERY shot carries every line of the format
-   block - `Action`, `Location`, `Camera`, `Movement`, `Transition`, `Blocking`, `Pose`, `Frame`,
-   `Visible` (one entry per `Characters:` key, then an exclusion clause), `Characters`, `Outfits`,
-   `Duration` (plus `POV` / `Sex act` / `Sex position` where they apply). A missing line is fixed
-   in a full rewrite right now; this counts as the first write, NOT the rewrite a rejection grants.
-3. **Call `run_checks` right now - BEFORE any `draft_prompt(s)` and BEFORE any `wf_*` keyframe call.**
+   **Before** that write, self-check the content you are about to write: EVERY shot carries every line
+   of the format block - `Action`, `Location`, `Camera`, `Movement`, `Transition`, `Blocking`, `Pose`,
+   `Frame`, `Visible` (one entry per `Characters:` key, then an exclusion clause), `Characters`,
+   `Outfits`, `Duration` (plus `POV` / `Sex act` / `Sex position` where they apply). The file is written
+   ONCE; a second write in the same attempt is refused (only a rejecting `run_checks` grants a rewrite).
+2. **Call `run_checks` right now - BEFORE any `draft_prompt(s)` and BEFORE any `wf_*` keyframe call.**
    A shot list rejected after the renders wastes every keyframe and an attempt; the same
    rejection costs nothing here.
-4. Rejected verdict: it quotes each failing shot with the rule and the words that break it. Fix ALL of
+3. Rejected verdict: it quotes each failing shot with the rule and the words that break it. Fix ALL of
    them in ONE full rewrite of `shotlist.md` (the one rewrite a rejection grants), then continue.
    Never start rendering with a rejected shot list.
-5. Render the keyframes (Phase 2).
-6. Call `run_checks` again after the renders and BEFORE `task_complete`, to see the checks about
+4. Render the keyframes (Phase 2).
+5. Call `run_checks` again after the renders and BEFORE `task_complete`, to see the checks about
    tool calls.
 
 `run_checks` is capped at 3 calls per attempt: one after the shot list, one before
@@ -441,7 +441,7 @@ Audit before completing:
       `Visible:` / `Characters:` / `Outfits:` / `POV:` / `Format:` follow "Who is in the frame"; every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
       a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings
-- [ ] re-read `shotlist.md` after writing it: every shot has every line of the format block (`Blocking`, `Pose`, `Frame`, `Visible`, ... - none missing)
+- [ ] before writing `shotlist.md`: every shot has every line of the format block (`Blocking`, `Pose`, `Frame`, `Visible`, ... - none missing)
 - [ ] **self-audit of the shotlist before the write and again here** (the studio checks R1-R5
       mechanically; a policy `shotlist-keyframe-ready` judges the rest after drafting):
       R1 `Characters:` = the `Visible:` entries; R2 one `Outfits:` pair per character, no extra;
