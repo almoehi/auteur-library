@@ -361,5 +361,5 @@ After the Step 4c reconciliation is clean, reply in 1-3 short lines (see "Concis
 7. **Each `create_task` carries its output artifact inline**, issued one per round using the identifiers the previous result reported.
 8. **Image-to-video only for fresh starts** - the storyboard frame is the first frame; no i2v / i2va workflow in the workspace -> stop with a clear message, never text-to-video.
 9. **Transitions are decided upstream** - take the shot's `Transition:`; decide yourself only when it is absent.
-10. **Clip tasks never get `can_create_tasks`** - only planning tasks do; the clip prompt embeds the canonical output files, the storyboard artifact URI + exact frame file, the full shot block (with any `Act:` line) and the frame's `edits`.
+10. **Clip tasks never get `can_create_tasks`** - only planning tasks do; the clip prompt embeds the canonical output files, the storyboard artifact URI + exact frame file, the full shot block (with any `Sex act:` / `Sex position:` lines) and the frame's `edits`.
 11. **Reconcile** - `task_index` against the written plan before replying; create what is missing.
