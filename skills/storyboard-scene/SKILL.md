@@ -267,20 +267,42 @@ Bad: `Action: Mira, who just learned the ship is late, walks to the rail and say
 
 4–10 shots, covering the WHOLE action in order, one beat per shot (a beat that packs two places or
 two framings is split into several shots), an establishing shot first when the location is not
-yet known. `Duration` = whole seconds (3–10). Ids consecutive from 01, never
-renumbered except by a rewrite the person asked for. `Characters` / `Outfits` name only linked
+yet known. `Duration` = whole seconds (3–10). First write: ids consecutive from 01.
+**Stable ids**: a rewrite of `shotlist.md` never renumbers an existing shot (its takes are filed
+under its id). A split shot keeps its id for the first part; the new parts get new ids appended
+after the highest existing id (`s3-08`, `s3-09`). `##` sections follow story order; ids need not be sequential. `Characters` / `Outfits` name only linked
 designs by KEY (others: in `Action` only); `Location` names only a linked location design key.
 
-### Check early
+### Rewrite means re-render
 
-When the kickoff lists checks (and `run_checks` is available): after writing `shotlist.md` and BEFORE drafting or rendering any keyframe, call `run_checks` once.
-It runs the task's checks on the current files and returns a verdict per check; it does not
-complete the task. A rejection lists EVERY failing shot with its rule: fix all of them in ONE full
-rewrite of `shotlist.md` (the one permitted rewrite), then continue with the drafts. Call
-`run_checks` again after the renders and before `task_complete` to see the checks about tool calls. `run_checks` is capped at 3 calls per attempt: one after the shot
-list, one before `task_complete`, one spare - never one per shot.
+After ANY rewrite of `shotlist.md` (also the one a rejected `run_checks` grants), every shot whose
+`Action` / `Camera` / `Blocking` / `Pose` / `Frame` / `Visible` / `Characters` / `Outfits` /
+`Sex act` / `Sex position` changed, and every new shot, is redrafted (prompt writer, review where
+required) and rendered in the SAME attempt, before `task_complete`. You never discard takes: leave
+the takes of removed shots and the old takes of changed shots, but render a NEW take so the
+shot's newest take matches its current text.
+
+### Check early (a numbered step, not optional)
+
+When the kickoff lists checks and `run_checks` is available, these steps happen in this order:
+
+1. Write `shotlist.md` (ONE write).
+2. **Call `run_checks` right now - BEFORE any `draft_prompt(s)` and BEFORE any `wf_*` keyframe call.**
+   A shot list rejected after the renders wastes every keyframe and an attempt; the same
+   rejection costs nothing here.
+3. Rejected verdict: it quotes each failing shot with the rule and the words that break it. Fix ALL of
+   them in ONE full rewrite of `shotlist.md` (the one rewrite a rejection grants), then continue.
+   Never start rendering with a rejected shot list.
+4. Render the keyframes (Phase 2).
+5. Call `run_checks` again after the renders and BEFORE `task_complete`, to see the checks about
+   tool calls.
+
+`run_checks` is capped at 3 calls per attempt: one after the shot list, one before
+`task_complete`, one spare - never one per shot.
 
 ## Phase 2 — Render the initial drafts (all shots, batched)
+
+**Gate: do not start until `run_checks` (see "Check early") returned no rejected shot for the current `shotlist.md`** (or the kickoff lists no checks).
 
 Follow "Prompt route" of `workflow-calling-conventions` for every prompted `wf_*` call:
 initial keyframes from the shot list are drafted with `draft_prompts_batch` (pass `image_inputs`
@@ -406,8 +428,10 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 
 Audit before completing:
 
+- [ ] every shot in `shotlist.md` has a take rendered from its current text
+- [ ] `run_checks` returned no rejected shot BEFORE the first `draft_prompt(s)` / `wf_*` keyframe call (when the kickoff lists checks), and ran again before `task_complete`
 - [ ] `shotlist.md` written in one go (at most the single rewrite a failing `run_checks` granted); every shot has `## <shotId> — <title>` plus `Action`,
-      `Location` (a linked location key), `Camera`, `Movement`, `Characters` (linked character keys), `Outfits` (`<characterKey>:<outfitKey>` linked keys), `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
+      `Location` (a linked location key), `Camera`, `Movement`, `Characters` (linked character keys), `Outfits` (`<characterKey>:<outfitKey>` linked keys), `Duration`, `Transition`; ids unique and stable (`s<scene>-01…` on the first write, never renumbered by a rewrite);
       `Visible:` / `Characters:` / `Outfits:` / `POV:` / `Format:` follow "Who is in the frame"; every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
       a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings
@@ -439,9 +463,9 @@ For each message:
 1. `read_artifact` again; read `design.json` for takes, primary/selection and discarded takes. A
    take you rendered earlier that is gone was discarded on purpose — never re-render it or its name.
 2. **Shot list changes** (add / remove / reorder / retitle / change action, location, camera, movement or transition): rewrite
-   `shotlist.md` as a whole file (the one allowed overwrite), ids renumbered consecutively; re-derive `Transition` of every shot whose predecessor changed (the first stays `cut`).
-   Existing takes keep their file names — say takes of a renumbered shot stay under their old id;
-   render nothing unless asked or the shot is new (new shots get drafts as in Phase 2, one batch).
+   `shotlist.md` as a whole file (the one allowed overwrite), existing ids kept (new shots get new ids after the highest, see "Stable ids"); re-derive `Transition` of every shot whose predecessor changed (the first stays `cut`).
+   Existing takes keep their file names.
+   Render nothing unless asked or the shot is new (new shots get drafts as in Phase 2, one batch).
 3. **Re-render a shot** ("another angle for shot 4"): one new take `take_<shotId>-<slug>.<ext>`
    from the take the person names, else the selected, else the newest. A change to an existing
    take is an **i2i edit with that take as the FIRST image** (+ references by priority); "start

@@ -123,7 +123,7 @@ the draft by an enhance of the previous prompt). Always pass:
 
 ## 4. Render
 
-When the kickoff lists checks that gate this clip task, call `run_checks` BEFORE the render (see "Checks that gate the task" in `workflow-calling-conventions`) and fix every listed problem first.
+When the kickoff lists checks that gate this clip task, you MUST call `run_checks` BEFORE the render (a rejection after rendering wastes the render and an attempt) (see "Checks that gate the task" in `workflow-calling-conventions`) and fix every listed problem first.
 
 ONE `wf_*` call with the frames / clip / references, the drafted prompt, the planned
 duration and (continue) `prior_clip_start_time`. Keep the `draft` quality unless the task asks
