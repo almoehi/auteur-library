@@ -142,7 +142,7 @@ start with `take_draft-`, so it never collides with the draft id `draft_<k>`.
 
 ## Phase 4 — Hand over
 
-When the kickoff lists checks that gate this design, call `run_checks` once before `task_complete` (see "Checks that gate the task" in `workflow-calling-conventions`) and fix every listed problem first.
+When the kickoff lists checks that gate this design, you MUST call `run_checks` before `task_complete` (a rejection found after completing wastes the attempt) (see "Checks that gate the task" in `workflow-calling-conventions`) and fix every listed problem first.
 
 Audit before completing:
 

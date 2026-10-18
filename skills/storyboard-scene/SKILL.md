@@ -271,16 +271,27 @@ yet known. `Duration` = whole seconds (3–10). Ids consecutive from 01, never
 renumbered except by a rewrite the person asked for. `Characters` / `Outfits` name only linked
 designs by KEY (others: in `Action` only); `Location` names only a linked location design key.
 
-### Check early
+### Check early (a numbered step, not optional)
 
-When the kickoff lists checks (and `run_checks` is available): after writing `shotlist.md` and BEFORE drafting or rendering any keyframe, call `run_checks` once.
-It runs the task's checks on the current files and returns a verdict per check; it does not
-complete the task. A rejection lists EVERY failing shot with its rule: fix all of them in ONE full
-rewrite of `shotlist.md` (the one permitted rewrite), then continue with the drafts. Call
-`run_checks` again after the renders and before `task_complete` to see the checks about tool calls. `run_checks` is capped at 3 calls per attempt: one after the shot
-list, one before `task_complete`, one spare - never one per shot.
+When the kickoff lists checks and `run_checks` is available, these steps happen in this order:
+
+1. Write `shotlist.md` (ONE write).
+2. **Call `run_checks` right now - BEFORE any `draft_prompt(s)` and BEFORE any `wf_*` keyframe call.**
+   A shot list rejected after the renders wastes every keyframe and an attempt; the same
+   rejection costs nothing here.
+3. Rejected verdict: it quotes each failing shot with the rule and the words that break it. Fix ALL of
+   them in ONE full rewrite of `shotlist.md` (the one rewrite a rejection grants), then continue.
+   Never start rendering with a rejected shot list.
+4. Render the keyframes (Phase 2).
+5. Call `run_checks` again after the renders and BEFORE `task_complete`, to see the checks about
+   tool calls.
+
+`run_checks` is capped at 3 calls per attempt: one after the shot list, one before
+`task_complete`, one spare - never one per shot.
 
 ## Phase 2 — Render the initial drafts (all shots, batched)
+
+**Gate: do not start until `run_checks` (see "Check early") returned no rejected shot for the current `shotlist.md`** (or the kickoff lists no checks).
 
 Follow "Prompt route" of `workflow-calling-conventions` for every prompted `wf_*` call:
 initial keyframes from the shot list are drafted with `draft_prompts_batch` (pass `image_inputs`
@@ -406,6 +417,7 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 
 Audit before completing:
 
+- [ ] `run_checks` returned no rejected shot BEFORE the first `draft_prompt(s)` / `wf_*` keyframe call (when the kickoff lists checks), and ran again before `task_complete`
 - [ ] `shotlist.md` written in one go (at most the single rewrite a failing `run_checks` granted); every shot has `## <shotId> — <title>` plus `Action`,
       `Location` (a linked location key), `Camera`, `Movement`, `Characters` (linked character keys), `Outfits` (`<characterKey>:<outfitKey>` linked keys), `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
       `Visible:` / `Characters:` / `Outfits:` / `POV:` / `Format:` follow "Who is in the frame"; every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
