@@ -12,7 +12,7 @@ The graph re-poses one character (port character_image) into the mannequin pose 
 the chosen gender (female; male AND other use the male set, with gender-neutral wording) with Krea 2 Identity Edit (two-reference mode: image 1 = template, image 2 =
 character), one sampler chain per sheet slot, and lays the panels out as one sheet. Every gender /
 background choice is a lazy core ComfySwitchNode, so only the chosen template set is downloaded and
-each slot is sampled once.
+each slot is sampled once (the female POV tiles twice: see pov_chain; the POV tiles use the character without its head).
 
 Sheet layout (each group 1280x1080, 16 px gutters between groups; white gutters on the grey background, black ones
 with white_background):
@@ -109,9 +109,8 @@ PANELS = {
 
 # POV panels (separate from the grid above)
 POV_PANELS = {
-    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face. The male set uses
-    # the standard edit prompt (minus its facial-expression clause) with this text; the female set a recolour of the
-    # template (POV_FEMALE_EDIT_PROMPT).
+    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face. Both sets use the
+    # standard edit prompt (minus its facial-expression clause) with this text; see pov_chain() for how they are sampled.
     "pov_lying": (WIDE, "First-person view from {his} own eyes while {he} lie{s} flat on {his} back on the floor, looking down along {his} own body: only {his} belly, hips, both legs and feet are in frame, strongly foreshortened, legs straight and slightly apart; no head, no face, no neck and no other person anywhere: the camera is {his} own eyes, so everything above {his} chest is outside the picture. {His} skin tone and body build are those of the person in image 2."),
     "pov_seated": (WIDE, "First-person view from {his} own eyes while {he} sit{s} upright on the floor, looking down at {his} own lap: only {his} thighs, knees, feet, both forearms and both hands resting on {his} thighs are in frame; no head, no face, no neck and no other person anywhere: the camera is {his} own eyes, so everything above {his} chest is outside the picture. {His} skin tone and body build are those of the person in image 2."),
 }
@@ -178,15 +177,11 @@ if VARIANT == "sfw":
 # Krea2EditModelPatch pull of the person (ref_boost) and of the template (ref_boost_a); `identity` = whether the
 # identity_prompt sentence is appended.
 TUNED = {"ref_boost": 4.0, "ref_boost_a": 2.5, "identity": True}
-# The POV tiles show no face: the identity sentence (face / hair / eyes) is left out; the panel text names skin and build
-# and puts the head outside the frame. (A stronger template pull, ref_boost_a 5, drew the female face in - spike 2026-10-17.)
-POV_TUNE = {n: {"identity": False} for n in POV_PANELS}
 NSFW_PANEL_TUNE = {
     # Looked back over the shoulder unless the template pulls harder and the face-feature sentence is left out.
     "fullbody_back": {"ref_boost": 2.0, "ref_boost_a": 5.0, "identity": False},
     # Sat back on the heels instead of kneeling upright as the template does.
     "kneel_back": {"ref_boost": 2.0, "ref_boost_a": 5.0},
-    **POV_TUNE,
 }
 _EXPRESSION_TUNE = {"ref_boost": 3.0, "ref_boost_a": 4.0}  # the template pulls harder so the close-up framing holds
 SFW_PANEL_TUNE: dict[str, dict] = {
@@ -194,7 +189,6 @@ SFW_PANEL_TUNE: dict[str, dict] = {
     **{n: _EXPRESSION_TUNE for n in ("expr_smile", "expr_frightened", "expr_mouth_open", "expr_strained", "expr_pleasure")},
     # Same rear-view problem as the NSFW one.
     "fullbody_back": {"ref_boost": 2.0, "ref_boost_a": 5.0, "identity": False},
-    **POV_TUNE,
 }
 PANEL_TUNE = NSFW_PANEL_TUNE if VARIANT == "nsfw" else SFW_PANEL_TUNE
 
@@ -210,18 +204,27 @@ EDIT_PROMPT = (
 )
 KEPT_WITH_FACE = "camera angle, framing and facial expression"
 KEPT_WITHOUT_FACE = "camera angle and framing"  # POV tiles: no face to keep
-# POV tiles, female set: a plain edit ("replace the mannequin with the woman") draws her head and face into the
-# first-person view whatever the boost settings (spike 2026-10-17); a recolour of the template keeps its framing and
-# body parts. Says nothing about the background: the background sentence appended to every prompt governs it.
-POV_FEMALE_EDIT_PROMPT = (
-    "Recolour every visible grey mannequin body part in image 1 (belly, hips, thighs, legs, feet, forearms and hands) "
-    "with the skin tone, skin texture and body hair of the {subject} in image 2, so no grey mannequin skin remains.{clothes} "
-    "Keep the same pose and framing, nothing added. Realistic skin texture and soft even studio lighting."
-)
-POV_CLOTHES = {
-    "nsfw": "",
-    "sfw": " Recolour the grey clothes of the mannequin to be exactly the clothing of the {subject} in image 2.",
-}
+# POV tiles, female set, second pass (pov_chain): an edit of the template-anchored first pass that restores the character's
+# colours and clothing (the template latent leaves grey / bare patches) and sets the background (the sentence appended
+# to it). Per variant, as measured (spike 2026-10-18): on the nude tiles "any grey mannequin skin becomes ..." turned
+# whole legs grey on the white background, so they only keep the image; on the clothed tiles the keep-only wording
+# drew a second person or left the belly bare, the recolour wording did neither.
+POV_FIX_PROMPT = {
+    "nsfw": (
+        "Keep image 1 exactly as it is: the same first-person view of {his} own body, the same pose, framing, skin and "
+        "body parts; nothing added, no head, no face. {He} {is} nude as in image 2, with the skin tone of the {subject} "
+        "in image 2."
+    ),
+    "sfw": (
+        "Keep image 1 exactly as it is - the same first-person view of the {subject}'s own body, the same pose, framing "
+        "and body parts - and only fix its colours: any grey mannequin skin becomes the skin tone, skin texture and body "
+        "hair of the {subject} in image 2, and any grey clothing becomes exactly the clothing of the {subject} in image 2, "
+        "in its colours. No head, no face, nothing added."
+    ),
+}[VARIANT]
+# First pass of the female POV tiles: sampled from the template's own latent at this denoise (the first-person geometry
+# survives; from an empty latent the SFW lying tile turned into a third-person view with a head - spike 2026-10-18).
+POV_FEMALE_DENOISE = 0.85
 OUTFIT = {"nsfw": "{He} {is} nude as in image 2,", "sfw": "{He} wear{s} exactly the clothing of image 2,"}[VARIANT]
 # Keep in sync with the identity_prompt default in workflow.yaml.
 DEFAULT_IDENTITY = (
@@ -250,8 +253,6 @@ def switch(node_id: int, on_male: list, on_female: list) -> list:
 
 def edit_prompt(panel: str, gender: str) -> str:
     p = PRONOUNS[gender]
-    if panel in POV_PANELS and gender == "female":
-        return POV_FEMALE_EDIT_PROMPT.format(clothes=POV_CLOTHES[VARIANT].format(**p), **p)
     kept = KEPT_WITHOUT_FACE if panel in POV_PANELS else KEPT_WITH_FACE
     return EDIT_PROMPT.format(kept=kept, keep=PANELS[panel][1].format(**p), outfit=OUTFIT.format(**p), **p)
 
@@ -273,6 +274,15 @@ for nid, name, strength in lora_chain:
     model = node(nid, "LoraLoaderModelOnly", lora_name=name, strength_model=strength, model=model)
 CHARACTER = node(21, "LoadImage", image="character_image.png")
 CHARACTER_LATENT = node(23, "VAEEncode", pixels=CHARACTER, vae=VAE)
+# The POV tiles' character reference: the input without its head (scaled to 1536 px high, the top quarter cut off). A
+# POV tile shows no face; with the face in image 2 the edit drew it in (spike 2026-10-18). Assumes the full-body input
+# the character_image port asks for.
+HEADLESS = node(
+    25, "ImageCrop+", width=16384, height=1152, position="bottom-center", x_offset=0, y_offset=0,
+    image=node(24, "ImageResize+", image=CHARACTER, width=0, height=1536, interpolation="lanczos",
+               method="keep proportion", condition="always", multiple_of=0),
+)
+HEADLESS_LATENT = node(26, "VAEEncode", pixels=HEADLESS, vae=VAE)
 
 GENDER = node(60, "PrimitiveString", value="female")
 IS_FEMALE = node(61, "StringCompare", string_a=GENDER, string_b="female", mode="Equal", case_sensitive=False)
@@ -336,8 +346,57 @@ def slot_chain(i: int, female: str, male: str) -> list:
     return node(b + 26, "VAEDecode", samples=samples, vae=VAE)
 
 
+def edit_pass(b: int, image: list, prompt: list, latent: list, denoise, target: list, tune: dict) -> list:
+    """One identity edit of `image` (image 1) with the headless character (image 2); ids b..b+6."""
+    patched = node(
+        b + 1, "Krea2EditModelPatch", model=model, vae=VAE, fit_mode="fit", target_latent=target,
+        source_image=image, source_latent=node(b, "VAEEncode", pixels=image, vae=VAE),
+        source_image_b=HEADLESS, source_latent_b=HEADLESS_LATENT,
+        ref_boost=tune["ref_boost"], ref_boost_a=tune["ref_boost_a"],
+    )
+    positive = node(b + 2, "Krea2EditGroundedEncode", clip=["2", 0], prompt=prompt, image=image, image_b=HEADLESS,
+                    grounding_px=768, system_prompt="")
+    samples = node(
+        b + 4, "KSampler", seed=SEED, steps=STEPS, cfg=1.0, sampler_name="euler", scheduler="simple", denoise=denoise,
+        model=patched, positive=positive, negative=node(b + 3, "ConditioningZeroOut", conditioning=positive),
+        latent_image=latent,
+    )
+    return node(b + 5, "VAEDecode", samples=samples, vae=VAE)
+
+
+def pov_chain(i: int, panel: str) -> list:
+    """A POV tile: the template's first-person view re-filled from the headless character (HEADLESS).
+    male / other: one edit from an empty latent (the slot_chain recipe).
+    female: the same edit sampled from the template's own latent (POV_FEMALE_DENOISE) on the grey background - the only
+    way the SFW lying tile kept its first-person geometry - then a second edit of that result (POV_FIX_PROMPT) that
+    replaces the mannequin's remaining grey and sets the background. Lazy switches: only the chosen gender's path runs.
+    (One male recipe for female failed the SFW lying tile; the female one left the male SFW belly grey - spike 2026-10-18.)"""
+    b = 1000 + i * 100
+    template = switch(
+        b + 3,
+        node(b + 2, "Image Load", image_path=TEMPLATES["male"][panel], RGBA="false", filename_text_extension="true"),
+        node(b + 1, "Image Load", image_path=TEMPLATES["female"][panel], RGBA="false", filename_text_extension="true"),
+    )
+    tune = tune_of(panel)  # the default boosts; no identity sentence - the tile shows no face
+    body = gendered(b + 4, edit_prompt(panel, "female"), edit_prompt(panel, "male"), "PrimitiveStringMultiline")
+    background = switch(b + 8, BACKGROUND, ["64", 0])  # female first pass: always the grey (template) background
+    prompt = node(b + 7, "StringConcatenate", string_a=body, string_b=background, delimiter=" ")
+    w, h = PANELS[panel][0]
+    empty = node(b + 21, "EmptySD3LatentImage", width=w, height=h, batch_size=1)
+    template_latent = node(b + 11, "VAEEncode", vae=VAE,
+                           pixels=node(b + 10, "ImageScale", image=template, upscale_method="lanczos", width=w, height=h,
+                                       crop="disabled"))
+    first = edit_pass(b + 40, template, prompt, switch(b + 12, empty, template_latent),
+                      gendered(b + 13, POV_FEMALE_DENOISE, 1.0, "PrimitiveFloat"), empty, tune)
+    p = PRONOUNS["female"]
+    fix = node(b + 50, "StringConcatenate", delimiter=" ", string_b=BACKGROUND, string_a=node(
+        b + 51, "PrimitiveStringMultiline", value=POV_FIX_PROMPT.format(**p)))
+    second = edit_pass(b + 60, first, fix, empty, 1.0, empty, tune)
+    return switch(b + 70, first, second)
+
+
 POV_SLOTS = tuple(i for i, (f, _) in enumerate(SLOTS) if f in POV_PANELS)  # POV lying, POV seated (the right column)
-PANEL_IMAGES = [slot_chain(i, f, m) for i, (f, m) in enumerate(SLOTS)]
+PANEL_IMAGES = [pov_chain(i, f) if i in POV_SLOTS else slot_chain(i, f, m) for i, (f, m) in enumerate(SLOTS)]
 
 # ── layout ──────────────────────────────────────────────────────────────────
 _next_id = 3000
