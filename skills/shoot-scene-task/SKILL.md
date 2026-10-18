@@ -257,7 +257,8 @@ id:                   shoot_scene<N>_clip<M>
 title:                "Shoot <Scene Name> – clip <M> (<shot title>)"
 description:          one line: what the clip shows
 agent:                <an agent from available_agents that has the wf_* workflow tools and the
-                       sandbox — in the default workspace `generic`; never one that is not listed>
+                       sandbox — in the default workspace `generic`, the general-purpose worker; never a planner,
+                       coordinator or director agent, never one that is not listed>
 requires_tasks:       ["shoot_scene<N>_clip<M-1>"]    — ONLY for a `continue` clip; omit for start / cut
 requires_artifacts:   ["scene<N>_clip<M-1>"]          — ONLY for a `continue` clip; omit for start / cut
                        (a `continue` clip depends on its previous clip so it can continue from that

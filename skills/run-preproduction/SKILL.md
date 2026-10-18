@@ -100,6 +100,8 @@ ENDS your turn and the rest of the chain is never created. Do not re-read or re-
 prompts; trust each `create_task` result. Only after the 4th result (or after a stop on failure,
 below) may you write your single final report (Step 5), short per "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
 
+**Pick agents by role, never by guessing ids.** Agent ids differ per workspace: choose from the workspace's agent list the agent whose `role` / `objective` matches the task. Planning tasks (they create other tasks or designs: `plan_designs`) go to the planner-type agent that plans designs; production tasks (`write_screenplay`, `character_table`, `create_scenes`) go to the agent whose role is that work (screenwriter / cast writer / director) or, when none fits, the general-purpose worker agent. Never give a production task to a planner, and never give a planning task to a general-purpose worker.
+
 **Use returned identifiers, never assumed ones.** `requires_tasks` / `requires_artifacts` accept
 keys (or runtime ids). After every `create_task`, read the task id and artifact key FROM THE
 RESULT TEXT (e.g. `key: <key>`) and use exactly those in later `requires_*` (the Step 3 names
@@ -249,7 +251,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
 ### 4d. plan_designs (the orchestrator)
 ```
 create_task({ id: "plan_designs", title: "Plan and create designs", description: "Create the designs of the pre-production",
-  agent: "design_planner", policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
+  agent: <design planner: the agent whose role plans designs and calls create_design (`design_planner` in the stock workspaces)>, policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
   difficulty: "hard", can_create_tasks: true,
   prompt: <prompt below>, requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list"],
   output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
