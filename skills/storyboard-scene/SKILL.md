@@ -39,8 +39,9 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
 5. **One render per take.** Leave `seed` at its default; never request batches.
 6. **Never name a workflow from memory** — choose among the `wf_*` tools you have, by capability.
 7. **Write `shotlist.md` in ONE go**: compose the complete shotlist silently first, then ONE
-   `sandbox_write_file`. Never a partial/draft shotlist, never a rewrite in the same drafting
-   run (the write-once guard ends the attempt). A chat change to the shots = exactly ONE full
+   `sandbox_write_file`. Never a partial/draft shotlist; the only rewrite in a drafting run is
+   the single one a failing `run_checks` grants (see "Check early"), any other rewrite ends the
+   attempt (write-once guard). A chat change to the shots = exactly ONE full
    rewrite. Write every other file once, complete.
 8. **Never end the drafting turn early.** No text-only reply and no `task_complete` before every
    shot has its draft render(s) dispatched; a storyboard with 0 takes is a failure.
@@ -272,12 +273,11 @@ designs by KEY (others: in `Action` only); `Location` names only a linked locati
 
 ### Check early
 
-After writing `shotlist.md` and BEFORE drafting or rendering any keyframe, call `run_checks` once.
+When the kickoff lists checks (and `run_checks` is available): after writing `shotlist.md` and BEFORE drafting or rendering any keyframe, call `run_checks` once.
 It runs the task's checks on the current files and returns a verdict per check; it does not
 complete the task. A rejection lists EVERY failing shot with its rule: fix all of them in ONE full
 rewrite of `shotlist.md` (the one permitted rewrite), then continue with the drafts. Call
-`run_checks` again after the renders and before `task_complete` to see the tool-call checks
-(review batch, `is_portrait`). `run_checks` is capped at 3 calls per attempt: one after the shot
+`run_checks` again after the renders and before `task_complete` to see the checks about tool calls. `run_checks` is capped at 3 calls per attempt: one after the shot
 list, one before `task_complete`, one spare - never one per shot.
 
 ## Phase 2 — Render the initial drafts (all shots, batched)
@@ -406,7 +406,7 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 
 Audit before completing:
 
-- [ ] `shotlist.md` written exactly once; every shot has `## <shotId> — <title>` plus `Action`,
+- [ ] `shotlist.md` written in one go (at most the single rewrite a failing `run_checks` granted); every shot has `## <shotId> — <title>` plus `Action`,
       `Location` (a linked location key), `Camera`, `Movement`, `Characters` (linked character keys), `Outfits` (`<characterKey>:<outfitKey>` linked keys), `Duration`, `Transition`; ids consecutive `s<scene>-01…`;
       `Visible:` / `Characters:` / `Outfits:` / `POV:` / `Format:` follow "Who is in the frame"; every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;

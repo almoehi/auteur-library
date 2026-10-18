@@ -33,11 +33,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
    - artifacts `screenplay`, `character_table`, `scene_list`, `design_plan`
    - policies `screenplay-quality`, `cast-quality`, `scenes-quality`, `scenes-complete`,
      `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes`
-3. **Agents.** You need a writer for the screenplay, one for the cast table, one for the scene
-   list, and a plain LLM planner for `plan_designs` (a tool-capable agent without a
-   task-specific toolset, the agent `design_planner`, which has `create_design`). Pick by objective from `available_agents`
-   (spec defaults: `screenwriter`, `casting_director`, `director`, `design_planner`). Never use the generic `planner` for `plan_designs`. If no suitable
-   agent exists, tell the user which role is missing and stop.
+3. **Agents.** Choose one agent per task with the rule "Pick agents by role" in Step 3. If no suitable agent exists, tell the user which role is missing and stop.
 4. **Idempotency.** Every task/artifact/policy that already exists is skipped, not recreated.
    If all four tasks exist, report their statuses and stop. If only a tail of the chain is missing,
    create just that tail (existing tasks are referenced in `requires_tasks` / `requires_artifacts`).
@@ -48,7 +44,7 @@ All seven policies are TASK checks. The workspace's `autoAttach` rules (e.g. `ta
 `Binary` grading and the model the other quality policies in `policy_index` use, with the
 intent below, using `{input}` and `{workspace.story.plot}` in the `evalPrompt`:
 
-| id | intent (answer YES/NO only) |
+| id | intent |
 |---|---|
 | `screenplay-quality` | `{input}` holds `screenplay.md`: the screenplay faithfully adapts the plot with proper format (INT./EXT. headings, action, dialogue) |
 | `cast-quality` | `{input}` holds the `character_<slug>.md` files: every cast role of the story has a dedicated, complete profile. Animals and other non-human creatures with a story role (named, acting or plot-driving, in the title or premise, recurring) ARE cast roles and must be included; only pure background, props or set dressing (unnamed, no action, no plot function) are not. NEVER reject because a cast member is an animal; reject only if a required role is missing or a pure background element / prop was listed as cast |
@@ -68,7 +64,7 @@ Never edit an existing policy here (see `modify-policy`).
 | `write_screenplay` | writer | `screenplay` | `["screenplay.md"]` | none | `screenplay-quality` |
 | `character_table` | cast writer | `character_table` | open: `character_<slug>.md` per character (`files: []`) | tasks `write_screenplay`; artifacts `screenplay` | `cast-quality` |
 | `create_scenes` | director | `scene_list` | `["scene_list.md"]` | tasks `write_screenplay`, `character_table`; artifacts `screenplay`, `character_table` | `scenes-quality`, `scenes-complete` |
-| `plan_designs` | `design_planner` | `design_plan` | `["scene_list.md","design_plan.json"]` (BOTH, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
+| `plan_designs` | design planner | `design_plan` | `["scene_list.md","design_plan.json"]` (BOTH, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
 
 **Format rule:** every declared output file is Markdown (`.md`) or JSON (`.json`), never `.pdf`, `.docx`, `.rtf` or any other binary/office format; downstream agents cannot read those. Every task prompt below tells the worker to write Markdown.
 
@@ -100,7 +96,7 @@ ENDS your turn and the rest of the chain is never created. Do not re-read or re-
 prompts; trust each `create_task` result. Only after the 4th result (or after a stop on failure,
 below) may you write your single final report (Step 5), short per "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
 
-**Pick agents by role, never by guessing ids.** Agent ids differ per workspace: choose from the workspace's agent list the agent whose `role` / `objective` matches the task. Planning tasks (they create other tasks or designs: `plan_designs`) go to the planner-type agent that plans designs; production tasks (`write_screenplay`, `character_table`, `create_scenes`) go to the agent whose role is that work (screenwriter / cast writer / director) or, when none fits, the general-purpose worker agent. Never give a production task to a planner, and never give a planning task to a general-purpose worker.
+**Pick agents by role, never by guessing ids.** Agent ids differ per workspace: choose from `available_agents` the agent whose `role` / `objective` matches the task (stock workspaces: `screenwriter`, `casting_director`, `director`, `design_planner`). Planning tasks (they create other tasks or designs: `plan_designs`) go to the planner-type agent that plans designs: a plain LLM, tool-capable agent with `create_design` and no task-specific toolset (`design_planner`); never the generic `planner`. Production tasks (`write_screenplay`, `character_table`, `create_scenes`) go to the agent whose role is that work (screenwriter / cast writer / director) or, when none fits, the general-purpose worker agent. Never give a production task to a planner, and never give a planning task to a general-purpose worker.
 
 **Use returned identifiers, never assumed ones.** `requires_tasks` / `requires_artifacts` accept
 keys (or runtime ids). After every `create_task`, read the task id and artifact key FROM THE
