@@ -31,7 +31,7 @@ workflow_type: i2i
 model_family: krea2
 content: nsfw
 capabilities: [character-sheet]
-gpu_types: [l40s, a100, h100]
+gpu_types: [h100]
 ports:
   inputs:
     - name: character_image
