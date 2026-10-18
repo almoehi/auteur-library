@@ -72,6 +72,14 @@ Pass `artifact://<artifactId>/<fileKey>` directly as the input-port argument (UU
 
 The stated medium/style (comic, watercolor, anime, 3D render, ...) lives in `{workspace.story.plot}` (the "Workspace facts" block) and the design brief. Carry it VERBATIM into the `context` of every `draft_prompt` / `draft_prompts_batch` / `enhance_prompt` (inside the locked `instruction` when the person gave it). A take in a different medium is a MISS.
 
+## Checks that gate the task
+
+The task kickoff lists the checks that gate the task: read them before you start. When `run_checks`
+is available, call it BEFORE an expensive step (a batch of renders, a long write you cannot
+cheaply redo) - it runs the task's text checks on the current files and tool calls, returns the
+verdicts and does NOT complete the task (at most 3 calls per attempt). A rejection lists EVERY
+failing item: fix all of them in one attempt, not one per attempt.
+
 ## Check, retry once, suggest
 
 Applies to EVERY take you render with a `wf_xxx` tool (drafts, chat edits, re-renders); skills that render takes reference this section and add only their naming. Never re-check a take you did not render (the studio server checks takes made with its buttons).

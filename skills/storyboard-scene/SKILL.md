@@ -193,6 +193,14 @@ action continues afterwards, it resumes in a FOLLOWING shot (back in the first p
 `Transition: cut — back to <the main action>`). A scene-list beat with Continuity `parallel` is
 exactly such a cutaway shot, at the place the beat names.
 
+**One moment per keyframe** - short bad -> good pairs (a keyframe freezes one instant):
+
+- Sequence: `X enters, drops the keys, then calls out` -> `X stands in the open doorway, keys on the floor at her feet`.
+- Camera move as the frame: `camera pans from A to B` -> `Camera:` is the opening frame only (A); the pan goes in `Movement:`.
+- Two framings: `close-up and wide` -> ONE framing in `Camera:`.
+- Dialogue as action: `X shouts "come here"` -> the pose while speaking: `mouth open, calling toward the doors`.
+- Event at another place -> its own (parallel) cutaway shot, not a clause of this one.
+
 Worked example (beats: "sister freezes at the wall" - continuous; "car pulls up at the driveway" -
 parallel, driveway; "sister reacts" - continuous):
 
@@ -261,6 +269,16 @@ two framings is split into several shots), an establishing shot first when the l
 yet known. `Duration` = whole seconds (3–10). Ids consecutive from 01, never
 renumbered except by a rewrite the person asked for. `Characters` / `Outfits` name only linked
 designs by KEY (others: in `Action` only); `Location` names only a linked location design key.
+
+### Check early
+
+After writing `shotlist.md` and BEFORE drafting or rendering any keyframe, call `run_checks` once.
+It runs the task's checks on the current files and returns a verdict per check; it does not
+complete the task. A rejection lists EVERY failing shot with its rule: fix all of them in ONE full
+rewrite of `shotlist.md` (the one permitted rewrite), then continue with the drafts. Call
+`run_checks` again after the renders and before `task_complete` to see the tool-call checks
+(review batch, `is_portrait`). `run_checks` is capped at 3 calls per attempt: one after the shot
+list, one before `task_complete`, one spare - never one per shot.
 
 ## Phase 2 — Render the initial drafts (all shots, batched)
 
