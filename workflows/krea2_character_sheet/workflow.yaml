@@ -1,6 +1,6 @@
 # GENERATED from krea2_character_sheet_nsfw by its build_workflow.py --variant sfw - do not edit by hand.
 # ─── Source ───────────────────────────────────────────────────────────────────
-# One character image -> a 13-panel clothed character reference sheet. Each panel re-poses the
+# One character image -> a 15-panel clothed character reference sheet. Each panel re-poses the
 # character into a grey-mannequin pose template with Krea 2 Identity Edit (two-reference mode:
 # image 1 = template, image 2 = character) on the Krea 2 realism stack, then the panels are
 # laid out as one sheet. workflow.json is GENERATED (see above); the NSFW sibling is the source.
@@ -8,7 +8,7 @@
 #   LoRA:  https://huggingface.co/conradlocke/krea2-identity-edit (v1.2, Krea 2 Community License)
 #
 # ─── Pose templates ───────────────────────────────────────────────────────────
-# 13 per gender, bundle assets (assets/<gender>/<panel>_<content hash>.png, listed under `assets:`).
+# 15 per gender, bundle assets (assets/<gender>/<panel>_<content hash>.png, listed under `assets:`).
 # At load each asset name in the graph becomes the file's URL in this repo, which the WAS
 # "Image Load" node (was-node-suite, nodes.lock) fetches. Only the chosen gender's set is
 # downloaded: every gender/background choice is a lazy core ComfySwitchNode.
@@ -20,9 +20,10 @@
 
 name: krea2_character_sheet
 description: >
-  Turns ONE image of a character into a 13-panel clothed character reference sheet with fixed poses:
-  full body front, side and back; front, back and profile portraits; four facial expressions; and
-  kneeling, squatting and sitting poses. Choose the gender of the pose set; optionally a pure white
+  Turns ONE image of a character into a 15-panel clothed character reference sheet with fixed poses:
+  full body front, side and back; front, back and profile portraits; four facial expressions;
+  kneeling, squatting and sitting poses; and two first-person POV tiles (own lower body and legs
+  seen while lying, own thighs, knees, feet and hands seen while seated). Choose the gender of the pose set; optionally a pure white
   panel background instead of grey. Identity (face, hair, skin, build, clothing) comes from the image.
   Best input: the character full-body, clothed, on a plain backdrop. Not for nude sheets, custom
   poses, text-to-image or video.
@@ -55,7 +56,7 @@ ports:
       default: false
     - name: identity_prompt
       kind: string
-      description: "Identity sentence appended to every panel's instruction except the rear view (there it pulls the face toward the camera). The default asks to keep face, hair, eyes, skin and build of the image. Naming the character's distinctive features (e.g. \"green eyes, freckles, long wavy copper-red hair\") makes them more consistent across panels."
+      description: "Identity sentence appended to every panel's instruction except the rear view (there it pulls the face toward the camera) and the two POV tiles (they show no face). The default asks to keep face, hair, eyes, skin and build of the image. Naming the character's distinctive features (e.g. \"green eyes, freckles, long wavy copper-red hair\") makes them more consistent across panels."
       binding: value@63
       required: false
       default: "Preserve the exact facial identity, hairstyle, hair colour, eye colour, skin tone and body build of the person in image 2."
@@ -68,7 +69,7 @@ ports:
       default: -1
     - name: steps
       kind: int
-      description: "Sampling steps per panel (13 panels are sampled one after another). 8 favors pose adherence, 12 face detail; 10 is balanced."
+      description: "Sampling steps per panel (15 panels are sampled one after another). 8 favors pose adherence, 12 face detail; 10 is balanced."
       binding: value@69
       constraints: { min: 4, max: 20 }
       required: false
@@ -83,7 +84,7 @@ ports:
   outputs:
     - name: character_sheet
       kind: image
-      description: "The 13-panel sheet, 5168x2176: full body front|side|back, front portrait, back portrait, profile portrait; 2x2 expressions, kneeling side, squatting front, sitting."
+      description: "The 15-panel sheet, 6464x2176: full body front|side|back, front portrait, back portrait, profile portrait; 2x2 expressions, kneeling side, squatting front, sitting; a right column of the two POV tiles (POV lying over POV seated, the character's own body seen from their eyes)."
       node_id: "9000"
       role: primary
     - name: view_1
@@ -112,7 +113,7 @@ customNodes:
     commitHash: 86f886dac23013d88996e3a2e99093ba44d322fb
 
 context: >
-  Renders the character clothed in fixed poses; give it one clear image of the character. The 13
+  Renders the character clothed in fixed poses; give it one clear image of the character. The 15
   panels are sampled sequentially in one job (several minutes). Composition comes from the pose
   templates and cannot be changed by text; the identity_prompt only sharpens identity.
 
@@ -172,6 +173,8 @@ assets:
   - assets/female/portrait_back_wide_651b027b16d29127.png
   - assets/female/portrait_front_wide_02e5f27b175b983a.png
   - assets/female/portrait_side_wide_0d1c15433882074e.png
+  - assets/female/pov_lying_0a0499f0086430ea.png
+  - assets/female/pov_seated_81410fdf2cab4ae2.png
   - assets/female/sit_pose_e0a55bd5043058f8.png
   - assets/female/squat_front_3176f22fe2c273a4.png
   - assets/male/expr_frightened_40ff0a85219fcbc5.png
@@ -185,5 +188,7 @@ assets:
   - assets/male/portrait_back_wide_d1f213853cabf49b.png
   - assets/male/portrait_front_wide_39edf4956800054b.png
   - assets/male/portrait_side_wide_fd5d41f55958776c.png
+  - assets/male/pov_lying_8088c0fe620dbd28.png
+  - assets/male/pov_seated_c08c808fd7921da8.png
   - assets/male/sit_pose_45ca49b633ce3b5a.png
   - assets/male/squat_front_2847aa3c64043c0a.png

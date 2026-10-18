@@ -3,13 +3,13 @@
 /**
  * WorkflowAgent E2E — krea2_character_sheet
  *
- * Two 13-panel clothed character-sheet renders on ONE provisioned a100 endpoint, submitted together so they
+ * Two 15-panel clothed character-sheet renders on ONE provisioned a100 endpoint, submitted together so they
  * run concurrently (E2E_ONLY=A|B runs just one of them):
  *   A. female fixture (character_image.png),      gender=female, white_background=false (grey), seed 3003
  *   B. male fixture   (character_image_male.png), gender=other,  white_background=true  (white), seed 3003
  * (other = the male pose set with gender-neutral they/their prompt wording, like male)
  * Plus manifest checks (ports / params / outputs). For each render: phase succeeded, all 5 declared
- * outputs returned and PNG, character_sheet is 5168x2176, view_1 is 768x1920, portrait is 1216x1024. The sheets are saved next
+ * outputs returned and PNG, character_sheet is 6464x2176, view_1 is 768x1920, portrait is 1216x1024. The sheets are saved next
  * to this script as out_female_grey.png / out_other_white.png for visual review.
  *
  * The pose templates are bundle assets resolved against BUNDLE_JSON_URL: push the bundle first and set
@@ -34,7 +34,7 @@ const WF_NAME              = "krea2_character_sheet";
 const GPU_TYPE             = "a100";
 const TIMEOUT_SEC          = 5400;
 const PROVISION_TIMEOUT_MS = 5400000;          // 90 min — large model download
-const RENDER_TIMEOUT_MS    = 2700000;          // 45 min per render — 13 panels sampled sequentially
+const RENDER_TIMEOUT_MS    = 2700000;          // 45 min per render — 15 panels sampled sequentially
 const RENDER_POLL_MS       = 30_000;
 
 const COMPUTE_BACKEND = process.env.COMPUTE_BACKEND ?? 'modal';
@@ -72,7 +72,7 @@ const S3_FIXTURE_PREFIX = `e2e-fixtures/${WF_NAME}`;
 const BUNDLE_REF        = process.env.E2E_BUNDLE_REF ?? 'main';
 const BUNDLE_JSON_URL   = `https://raw.githubusercontent.com/almoehi/auteur-library/${BUNDLE_REF}/workflows/${WF_NAME}/workflow.json`;
 
-const SHEET_WIDTH   = 5168;
+const SHEET_WIDTH   = 6464;
 const SHEET_HEIGHT  = 2176;
 const VIEW_WIDTH    = 768;
 const VIEW_HEIGHT   = 1920;
