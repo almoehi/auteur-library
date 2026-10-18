@@ -9,8 +9,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-REV = sys.argv[1] if len(sys.argv) > 1 else "HEAD"
 ROOT = Path(__file__).resolve().parent.parent
+# default: the graph before the POV column = the merge base with main
+REV = sys.argv[1] if len(sys.argv) > 1 else subprocess.check_output(["git", "merge-base", "HEAD", "main"], cwd=ROOT, text=True).strip()
 bad = 0
 for bundle in ("krea2_character_sheet_nsfw", "krea2_character_sheet"):
     old = json.loads(subprocess.check_output(["git", "show", f"{REV}:workflows/{bundle}/workflow.json"], cwd=ROOT))

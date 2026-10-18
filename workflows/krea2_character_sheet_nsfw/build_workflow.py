@@ -104,9 +104,10 @@ PANELS = {
     "pose_hands_on_hips": (WIDE, "{He} stand{s} facing the camera, feet shoulder-width apart, both hands on {his} hips with the elbows out, confident neutral expression, the whole body from head to toes in frame."),
     "expr_strained": (WIDE, "{He} look{s} physically exhausted and strained, not angry: eyebrows raised and pulled together, eyes half closed, mouth hanging open as {he} gasp{s} for breath, head tipped slightly back."),
     "lying_side": (STRIP, "{He} lie{s} flat on {his} back on the floor in exact side profile, body stretched out in one straight horizontal line, face pointing up at the ceiling, not at the camera, the whole body from head to feet in frame."),
-    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face.
-    "pov_lying": (WIDE, "First-person view from {his} own eyes while {he} lie{s} flat on {his} back on the floor, looking down along {his} own body: only {his} belly, hips, both legs and feet are in frame, strongly foreshortened, legs straight and slightly apart; no head, no face, no neck and no other person anywhere. {His} skin tone and body build are those of the person in image 2."),
-    "pov_seated": (WIDE, "First-person view from {his} own eyes while {he} sit{s} upright on the floor, looking down at {his} own lap: only {his} thighs, knees, feet, both forearms and both hands resting on {his} thighs are in frame; no head, no face, no neck and no other person anywhere. {His} skin tone and body build are those of the person in image 2."),
+    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face. Their edit prompt
+    # is POV_EDIT_PROMPT (a recolour of the template), the text here only documents what the template shows.
+    "pov_lying": (WIDE, "First-person view while lying flat on the back, looking down along the own body: belly (nsfw) or waistband (sfw), thighs, knees, shins and feet."),
+    "pov_seated": (WIDE, "First-person view while seated, looking down at the own lap: thighs, knees, feet, forearms and hands."),
     "lying_top": (STRIP, "Seen from directly overhead, {he} lie{s} flat on {his} back on the floor, body stretched out in one straight horizontal line, arms along {his} sides, face looking straight up into the camera, the whole body from head to feet in frame. " + NO_MANNEQUIN),
 }
 
@@ -171,7 +172,8 @@ if VARIANT == "sfw":
 # Krea2EditModelPatch pull of the person (ref_boost) and of the template (ref_boost_a); `identity` = whether the
 # identity_prompt sentence is appended.
 TUNED = {"ref_boost": 4.0, "ref_boost_a": 2.5, "identity": True}
-# The POV tiles show no face: the identity sentence (face / hair / eyes) is left out, the panel text names skin and build.
+# The POV tiles show no face: the identity sentence (face / hair / eyes) is left out; the panel text names skin and build
+# and puts the head outside the frame. (A stronger template pull, ref_boost_a 5, drew the female face in - spike 2026-10-17.)
 POV_TUNE = {n: {"identity": False} for n in ("pov_lying", "pov_seated")}
 NSFW_PANEL_TUNE = {
     # Looked back over the shoulder unless the template pulls harder and the face-feature sentence is left out.
@@ -200,6 +202,17 @@ EDIT_PROMPT = (
     "angle, framing and facial expression of the mannequin in image 1. {keep} {outfit} with "
     "realistic skin texture and soft even studio lighting."
 )
+# POV tiles: a plain edit ("replace the mannequin with the person") draws the character's head and face into the
+# first-person view (spike 2026-10-17, every boost setting); a recolour of the template keeps its framing and body parts.
+POV_EDIT_PROMPT = (
+    "Recolour the grey mannequin legs and hands in image 1 with the skin tone, skin texture and body hair of the "
+    "{subject} in image 2.{clothes} Keep everything else in image 1 exactly as it is: the same pose, the same framing, "
+    "the same empty background, nothing added. Realistic skin texture and soft even studio lighting."
+)
+POV_CLOTHES = {
+    "nsfw": "",
+    "sfw": " Recolour the grey clothes of the mannequin to be exactly the clothing of the {subject} in image 2.",
+}
 OUTFIT = {"nsfw": "{He} {is} nude as in image 2,", "sfw": "{He} wear{s} exactly the clothing of image 2,"}[VARIANT]
 # Keep in sync with the identity_prompt default in workflow.yaml.
 DEFAULT_IDENTITY = (
@@ -228,6 +241,8 @@ def switch(node_id: int, on_male: list, on_female: list) -> list:
 
 def edit_prompt(panel: str, gender: str) -> str:
     p = PRONOUNS[gender]
+    if panel in POV_TUNE:
+        return POV_EDIT_PROMPT.format(clothes=POV_CLOTHES[VARIANT].format(**p), **p)
     return EDIT_PROMPT.format(keep=PANELS[panel][1].format(**p), outfit=OUTFIT.format(**p), **p)
 
 
