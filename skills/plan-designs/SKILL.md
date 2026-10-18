@@ -167,7 +167,9 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
 5. **`nsfw_loras`** (only when nudity is `allowed`) keeps the tags and `missing`; the LoRA names
    live on the entries.
 6. **Storyboards and links**: per scene an entry with key `storyboard_scene_<n>`, `notes` (the
-   Summary) and `links` computed from the entries' keys: one `location` link per place the scene
+   Summary), `format` (`portrait` | `landscape`: the frame orientation the story / plot states (the task prompt's story line or the "Workspace facts" block), e.g.
+   a vertical phone film is `portrait`; derive it, never ask; `landscape` when the story states
+   nothing; the SAME value for every scene) and `links` computed from the entries' keys: one `location` link per place the scene
    uses (the row's `location_slug` design FIRST, then parallel-beat places - links can ONLY be
    given at creation, and `storyboard-scene` can only place a shot at a linked location), one
    `character` link per character in `Characters present`, one `outfit` link per pair of the
@@ -204,7 +206,7 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
       "scenes": [1, 3] }
   ],
   "storyboards": [
-    { "scene": 1, "key_slug": "scene_1", "key": "storyboard_scene_1", "notes": "Mira reaches the harbor in the rain.",
+    { "scene": 1, "key_slug": "scene_1", "key": "storyboard_scene_1", "notes": "Mira reaches the harbor in the rain.", "format": "landscape",
       "links": [ { "role": "location", "key": "location_harbor" }, { "role": "character", "key": "character_mira" },
                  { "role": "outfit", "key": "outfit_mira_raincoat" } ],
       "loras": [] }
@@ -235,7 +237,7 @@ Only a key in `existing` is skipped (record it).
 - character: `create_design({ kind: "character", display_name, key_slug, start: "attributes", character_type, attributes, initial_drafts: 1, loras })`
 - location: `create_design({ kind: "location", display_name, key_slug, start: "attributes", attributes, initial_drafts: 1 })`; add `distinct_place: true` when the entry has `"distinct_place": true` (see below)
 - outfit: `create_design({ kind: "outfit", display_name, key_slug, start: "attributes", attributes, initial_drafts: 1, links: [{ "role": "character", "key": "character_<character_slug>" }] })`
-- storyboard: `create_design({ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", start: "attributes", attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<notes>" } ], initial_drafts: 1, links, loras })`
+- storyboard: `create_design({ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", start: "attributes", attributes: [ { key: "scene", value: "<n>" }, { key: "notes", value: "<notes>" }, { key: "format", value: "<portrait|landscape>" } ], initial_drafts: 1, links, loras })`
 
 Omit `loras` when the entry has none. `display_name` is the entry's (storyboard: `Scene <n>`), `key_slug` the entry's `key_slug`; check that
 the result's key equals the entry's key.

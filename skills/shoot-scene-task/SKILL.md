@@ -154,7 +154,7 @@ design KEYS of designs linked to the storyboard (`location_harbor`, `character_t
 
 Keep each shot's complete block (the `## <shotId> — <title>` heading and every line up to the
 next heading) verbatim: it goes into the clip task unchanged, including `Blocking:`, `Pose:`,
-`Frame:`, `Visible:` and, in a workspace with `contentPolicy.nudity: allowed`, `Act:`.
+`Frame:`, `Visible:`, `POV:` and, in a workspace with `contentPolicy.nudity: allowed`, `Act:` (the file's `Format:` header line stays in the shotlist copy).
 
 Extract for every shot: shot ID and title, `Action`, `Camera` (keyframe framing), `Movement` (the
 camera move of the VIDEO; absent in older storyboards), `Duration`, `Transition` (absent in older

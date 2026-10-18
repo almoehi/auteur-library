@@ -115,8 +115,8 @@ and perform VLM review. Check:
 
 **F-07 People count:**
 > "The shot lists these characters: [the designs' names for the keys of the Characters line]. Count the people visible. Does the count
-> match? Exception: in a POV shot the POV character is the camera and appears as hands or
-> forearms only. Answer: PASS or FAIL + one-sentence reason."
+> match? Exception: a character whose `Visible:` extent is `limbs` / `lower body` (e.g. the
+> `POV:` character) appears only as that body part. Answer: PASS or FAIL + one-sentence reason."
 
 **F-08 Location and furniture:**
 > "The shot text names this place and these objects / furniture: [Location + Action/Blocking].

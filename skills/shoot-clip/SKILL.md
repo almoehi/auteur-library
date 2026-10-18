@@ -64,8 +64,7 @@ State the workflow and path used in your summary.
 Pass the shot's references to the video workflow, not just the start frame: the character
 design's primary (or sheet), the outfit design's primary, the location design's primary - the ones
 the shot's own `Characters`, `Outfits` (per shot: a look can change within the scene, never take a scene-level look) and `Location` (design KEYS, e.g. `character_the_wife`,
-`character_the_wife:outfit_the_wife_gown`, `location_harbor`) and its `Visible:` line name (a POV shot's
-`Visible:` shows hands or forearms only: do not pass a full-body reference of the POV character).
+`character_the_wife:outfit_the_wife_gown`, `location_harbor`) and its `Visible:` line name: only characters with a `Visible:` entry get an image, and one whose extent is `limbs` / `lower body` (e.g. a POV owner's hands) gets no full-body reference - use their published sheet's POV tile or words (see "Reference binding by extent" in `storyboard-scene`). A `POV:` line means the camera is that character's eyes.
 The task's `references` list is the source; when it is thin, look the designs up in `artifact_index`
 by the shot block's keys (`character_<slug>`, `outfit_<character>_<look>`, `location_<slug>`;
 `primary.<ext>`, else the sheet). Fill the workflow's labelled image ports in port order, location first and then people
