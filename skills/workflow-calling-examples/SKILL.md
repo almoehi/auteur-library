@@ -60,7 +60,7 @@ task_complete(summary="Rendered 3 shots for Scene 2")
 
 ## One call, multiple same-kind outputs
 
-A character-sheet workflow (`krea2_character_sheet` / `_nsfw`: input `character_image`; params `gender` female|male|other, `white_background`, `identity_prompt`, ...) returns the sheet plus three full-body views and a portrait. Declared files: `character_sheet.png`, `view_1.png`, `view_2.png`, `view_3.png`, `portrait.png`. One call returns all these image ports; the names do not all follow the port names 1:1 in every task, so bind explicitly:
+A character-sheet workflow (`krea2_character_sheet` / `_nsfw`: input `character_image`; params `gender` female|male|other, `white_background`, `identity_prompt`, ...) returns the sheet (including two first-person POV tiles of the character's own body, a right column of the sheet only) plus three full-body views and a portrait. Declared files: `character_sheet.png`, `view_1.png`, `view_2.png`, `view_3.png`, `portrait.png`. One call returns all these image ports; the names do not all follow the port names 1:1 in every task, so bind explicitly:
 
 ```
 wf_xxx(

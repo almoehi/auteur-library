@@ -16,13 +16,15 @@ each slot is sampled once.
 
 Sheet layout (each group 1280x1080, 16 px gutters between groups; white gutters on the grey background, black ones
 with white_background):
-  nsfw (15 panels, 3872x2176):
+  nsfw (17 panels, 5168x2176):
     row 1: full body front|side|back | 2x2 poses | standing pose
     row 2: front portrait | female: looking-up portraits side|front, male: expressions 2x2
                           | female: expressions 2x2,           male: lying side over lying top
-  sfw (13 panels, 5168x2176; the mannequin sheet of toolchain/mannequin-sheet/compose_sheet.py):
+    right column (both rows, appended last): POV lying over POV seated, the character's own body seen from their eyes
+  sfw (15 panels, 6464x2176; the mannequin sheet of toolchain/mannequin-sheet/compose_sheet.py):
     row 1: full body front|side|back | front portrait | back portrait | profile portrait
     row 2: expressions 2x2 | kneeling side | squatting front | sitting
+    right column (both rows, appended last): POV lying over POV seated
 """
 import argparse
 import re
@@ -102,6 +104,9 @@ PANELS = {
     "pose_hands_on_hips": (WIDE, "{He} stand{s} facing the camera, feet shoulder-width apart, both hands on {his} hips with the elbows out, confident neutral expression, the whole body from head to toes in frame."),
     "expr_strained": (WIDE, "{He} look{s} physically exhausted and strained, not angry: eyebrows raised and pulled together, eyes half closed, mouth hanging open as {he} gasp{s} for breath, head tipped slightly back."),
     "lying_side": (STRIP, "{He} lie{s} flat on {his} back on the floor in exact side profile, body stretched out in one straight horizontal line, face pointing up at the ceiling, not at the camera, the whole body from head to feet in frame."),
+    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face.
+    "pov_lying": (WIDE, "First-person view from {his} own eyes while {he} lie{s} flat on {his} back on the floor, looking down along {his} own body: only {his} belly, hips, both legs and feet are in frame, strongly foreshortened, legs straight and slightly apart; no head, no face, no neck and no other person anywhere. {His} skin tone and body build are those of the person in image 2."),
+    "pov_seated": (WIDE, "First-person view from {his} own eyes while {he} sit{s} upright on the floor, looking down at {his} own lap: only {his} thighs, knees, feet, both forearms and both hands resting on {his} thighs are in frame; no head, no face, no neck and no other person anywhere. {His} skin tone and body build are those of the person in image 2."),
     "lying_top": (STRIP, "Seen from directly overhead, {he} lie{s} flat on {his} back on the floor, body stretched out in one straight horizontal line, arms along {his} sides, face looking straight up into the camera, the whole body from head to feet in frame. " + NO_MANNEQUIN),
 }
 
@@ -136,6 +141,8 @@ NSFW_SLOTS = [
     ("expr_frightened", "expr_pleasure"),
     ("expr_mouth_open", "lying_side"),
     ("expr_pleasure", "lying_top"),
+    ("pov_lying", "pov_lying"),
+    ("pov_seated", "pov_seated"),
 ]
 SFW_SLOTS = [
     ("fullbody_front", "fullbody_front"),
@@ -151,6 +158,8 @@ SFW_SLOTS = [
     ("kneel_side", "kneel_side"),
     ("squat_front", "squat_front"),
     ("sit_pose", "sit_pose"),
+    ("pov_lying", "pov_lying"),
+    ("pov_seated", "pov_seated"),
 ]
 SLOTS = NSFW_SLOTS if VARIANT == "nsfw" else SFW_SLOTS
 PORTRAIT_SLOT = 8 if VARIANT == "nsfw" else 3  # the slot of the front portrait (output `portrait`)
@@ -162,11 +171,14 @@ if VARIANT == "sfw":
 # Krea2EditModelPatch pull of the person (ref_boost) and of the template (ref_boost_a); `identity` = whether the
 # identity_prompt sentence is appended.
 TUNED = {"ref_boost": 4.0, "ref_boost_a": 2.5, "identity": True}
+# The POV tiles show no face: the identity sentence (face / hair / eyes) is left out, the panel text names skin and build.
+POV_TUNE = {n: {"identity": False} for n in ("pov_lying", "pov_seated")}
 NSFW_PANEL_TUNE = {
     # Looked back over the shoulder unless the template pulls harder and the face-feature sentence is left out.
     "fullbody_back": {"ref_boost": 2.0, "ref_boost_a": 5.0, "identity": False},
     # Sat back on the heels instead of kneeling upright as the template does.
     "kneel_back": {"ref_boost": 2.0, "ref_boost_a": 5.0},
+    **POV_TUNE,
 }
 _EXPRESSION_TUNE = {"ref_boost": 3.0, "ref_boost_a": 4.0}  # the template pulls harder so the close-up framing holds
 SFW_PANEL_TUNE: dict[str, dict] = {
@@ -174,6 +186,7 @@ SFW_PANEL_TUNE: dict[str, dict] = {
     **{n: _EXPRESSION_TUNE for n in ("expr_smile", "expr_frightened", "expr_mouth_open", "expr_strained", "expr_pleasure")},
     # Same rear-view problem as the NSFW one.
     "fullbody_back": {"ref_boost": 2.0, "ref_boost_a": 5.0, "identity": False},
+    **POV_TUNE,
 }
 PANEL_TUNE = NSFW_PANEL_TUNE if VARIANT == "nsfw" else SFW_PANEL_TUNE
 
@@ -298,6 +311,7 @@ def slot_chain(i: int, female: str, male: str) -> list:
     return node(b + 26, "VAEDecode", samples=samples, vae=VAE)
 
 
+POV_SLOTS = (len(SLOTS) - 2, len(SLOTS) - 1)  # the last two slots: POV lying, POV seated (the new right column)
 PANEL_IMAGES = [slot_chain(i, f, m) for i, (f, m) in enumerate(SLOTS)]
 
 # ── layout ──────────────────────────────────────────────────────────────────
@@ -375,7 +389,20 @@ def sfw_layout():
 sheet = nsfw_layout() if VARIANT == "nsfw" else sfw_layout()
 
 # White gutters vanish on white panels: black gutters there, white ones on grey.
-SHEET = node(_id(), "ComfySwitchNode", switch=WHITE, on_false=sheet("white"), on_true=sheet("black"))
+# The POV column is appended LAST: the existing layout nodes (and their ids) are built exactly as before and the
+# column is stitched onto their right edge, so every existing panel keeps its position and size.
+_SHEET_ID = _id()
+_sheet_white, _sheet_black = sheet("white"), sheet("black")
+_POV_TILES = [fit(PANEL_IMAGES[i], GROUP_W, GROUP_H) for i in POV_SLOTS]
+
+
+def with_pov_column(existing: list, gap_color: str) -> list:
+    """The existing sheet, a GUTTER, then the POV column (lying over seated, 16 px apart, each a 1280x1080 group)."""
+    return stitch(existing, stitch(*_POV_TILES, "down", GUTTER, gap_color), "right", GUTTER, gap_color)
+
+
+SHEET = node(_SHEET_ID, "ComfySwitchNode", switch=WHITE,
+             on_false=with_pov_column(_sheet_white, "white"), on_true=with_pov_column(_sheet_black, "black"))
 
 # ── outputs (node ids are the yaml's output bindings) ────────────────────────
 node(9000, "SaveImage", filename_prefix="charsheet", images=SHEET)
@@ -389,7 +416,7 @@ node(9004, "SaveImage", filename_prefix="charsheet_portrait", images=PANEL_IMAGE
 # (each `old` must occur, so an NSFW wording change that breaks one fails loudly instead of drifting).
 SFW_HEADER = """# GENERATED from krea2_character_sheet_nsfw by its build_workflow.py --variant sfw - do not edit by hand.
 # ─── Source ───────────────────────────────────────────────────────────────────
-# One character image -> a 13-panel clothed character reference sheet. Each panel re-poses the
+# One character image -> a 15-panel clothed character reference sheet. Each panel re-poses the
 # character into a grey-mannequin pose template with Krea 2 Identity Edit (two-reference mode:
 # image 1 = template, image 2 = character) on the Krea 2 realism stack, then the panels are
 # laid out as one sheet. workflow.json is GENERATED (see above); the NSFW sibling is the source.
@@ -397,7 +424,7 @@ SFW_HEADER = """# GENERATED from krea2_character_sheet_nsfw by its build_workflo
 #   LoRA:  https://huggingface.co/conradlocke/krea2-identity-edit (v1.2, Krea 2 Community License)
 #
 # ─── Pose templates ───────────────────────────────────────────────────────────
-# 13 per gender, bundle assets (assets/<gender>/<panel>_<content hash>.png, listed under `assets:`).
+# 15 per gender, bundle assets (assets/<gender>/<panel>_<content hash>.png, listed under `assets:`).
 # At load each asset name in the graph becomes the file's URL in this repo, which the WAS
 # "Image Load" node (was-node-suite, nodes.lock) fetches. Only the chosen gender's set is
 # downloaded: every gender/background choice is a lazy core ComfySwitchNode.
@@ -413,20 +440,21 @@ SFW_YAML_EDITS = [
     (r"name: krea2_character_sheet_nsfw\n", "name: krea2_character_sheet\n"),
     (r"content: nsfw\n", ""),
     (r"description: >\n.*?\nurl:", """description: >
-  Turns ONE image of a character into a 13-panel clothed character reference sheet with fixed poses:
-  full body front, side and back; front, back and profile portraits; four facial expressions; and
-  kneeling, squatting and sitting poses. Choose the gender of the pose set; optionally a pure white
+  Turns ONE image of a character into a 15-panel clothed character reference sheet with fixed poses:
+  full body front, side and back; front, back and profile portraits; four facial expressions;
+  kneeling, squatting and sitting poses; and two first-person POV tiles (own lower body and legs
+  seen while lying, own thighs, knees, feet and hands seen while seated). Choose the gender of the pose set; optionally a pure white
   panel background instead of grey. Identity (face, hair, skin, build, clothing) comes from the image.
   Best input: the character full-body, clothed, on a plain backdrop. Not for nude sheets, custom
   poses, text-to-image or video.
 url:"""),
     (r"one person, full body, nude, standing", "one person, full body, clothed, standing"),
     (r'description: "Which pose set and sheet layout to use:[^\n]*', 'description: "Which pose set to use: female (the female mannequin) or male / other (the male mannequin, with gender-neutral prompt wording). The sheet layout is the same."'),
-    (r"\(15 panels are sampled", "(13 panels are sampled"),
+    (r"\(17 panels are sampled", "(15 panels are sampled"),
     (r"    - name: nsfw_strength\n(?:      [^\n]*\n)+", ""),
-    (r'description: "The 15-panel sheet, 3872x2176:[^\n]*', 'description: "The 13-panel sheet, 5168x2176: full body front|side|back, front portrait, back portrait, profile portrait; 2x2 expressions, kneeling side, squatting front, sitting."'),
+    (r'description: "The 17-panel sheet, 5168x2176:[^\n]*', 'description: "The 15-panel sheet, 6464x2176: full body front|side|back, front portrait, back portrait, profile portrait; 2x2 expressions, kneeling side, squatting front, sitting; a right column of the two POV tiles (POV lying over POV seated, the character\'s own body seen from their eyes)."'),
     (r"context: >\n.*?\n\nmodels:", """context: >
-  Renders the character clothed in fixed poses; give it one clear image of the character. The 13
+  Renders the character clothed in fixed poses; give it one clear image of the character. The 15
   panels are sampled sequentially in one job (several minutes). Composition comes from the pose
   templates and cannot be changed by text; the identity_prompt only sharpens identity.
 
