@@ -111,7 +111,7 @@ that list and correct the call; never retry an identical call.
 steps were created (with the ids from their results) and which failed, with the error text. Never
 claim a task that `create_task` did not confirm. Skip any task/artifact that already exists.
 
-**Task prompts are verbatim.** The fenced prompt blocks below (4b, 4c, and the `plan-designs` prompt, which opens with `Load and use skill: plan-designs`) are copied word for word; the worker cannot load this skill, so the block IS its whole instruction. Never paraphrase them: a paraphrase once dropped every nudity-conditional rule (no `Act` column, no `nude` look). `{workspace.*}` placeholders stay literal in the prompt (the server substitutes them).
+**Task prompts are verbatim.** The fenced prompt blocks below (4b, 4c, and the `plan-designs` prompt, which opens with `Load and use skill: plan-designs`) are copied word for word; the worker cannot load this skill, so the block IS its whole instruction. Never paraphrase them: a paraphrase once dropped every nudity-conditional rule (no `Sex act` / `Sex position` columns, no `nude` look). `{workspace.*}` placeholders stay literal in the prompt (the server substitutes them).
 
 ### 4a. write_screenplay
 ```
