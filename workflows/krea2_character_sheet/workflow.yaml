@@ -56,7 +56,7 @@ ports:
       default: false
     - name: identity_prompt
       kind: string
-      description: "Identity sentence appended to every panel's instruction except the rear view (there it pulls the face toward the camera). The default asks to keep face, hair, eyes, skin and build of the image. Naming the character's distinctive features (e.g. \"green eyes, freckles, long wavy copper-red hair\") makes them more consistent across panels."
+      description: "Identity sentence appended to every panel's instruction except the rear view (there it pulls the face toward the camera) and the two POV tiles (they show no face). The default asks to keep face, hair, eyes, skin and build of the image. Naming the character's distinctive features (e.g. \"green eyes, freckles, long wavy copper-red hair\") makes them more consistent across panels."
       binding: value@63
       required: false
       default: "Preserve the exact facial identity, hairstyle, hair colour, eye colour, skin tone and body build of the person in image 2."

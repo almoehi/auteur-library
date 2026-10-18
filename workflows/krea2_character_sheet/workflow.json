@@ -2936,13 +2936,13 @@
   "2305": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. First-person view from their own eyes while they lie flat on their back on the floor, looking down along their own body: only their belly, hips, both legs and feet are in frame, strongly foreshortened, legs straight and slightly apart; no head, no face, no neck and no other person anywhere: the camera is their own eyes, so everything above their chest is outside the picture. Their skin tone and body build are those of the person in image 2. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle and framing of the mannequin in image 1. First-person view from their own eyes while they lie flat on their back on the floor, looking down along their own body: only their belly, hips, both legs and feet are in frame, strongly foreshortened, legs straight and slightly apart; no head, no face, no neck and no other person anywhere: the camera is their own eyes, so everything above their chest is outside the picture. Their skin tone and body build are those of the person in image 2. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "2304": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Recolour the grey mannequin legs and hands in image 1 with the skin tone, skin texture and body hair of the woman in image 2. Recolour the grey clothes of the mannequin to be exactly the clothing of the woman in image 2. Keep everything else in image 1 exactly as it is: the same pose, the same framing, the same empty background, nothing added. Realistic skin texture and soft even studio lighting."
+      "value": "Recolour every visible grey mannequin body part in image 1 (belly, hips, thighs, legs, feet, forearms and hands) with the skin tone, skin texture and body hair of the woman in image 2, so no grey mannequin skin remains. Recolour the grey clothes of the mannequin to be exactly the clothing of the woman in image 2. Keep the same pose and framing, nothing added. Realistic skin texture and soft even studio lighting."
     }
   },
   "2306": {
@@ -3147,13 +3147,13 @@
   "2405": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle, framing and facial expression of the mannequin in image 1. First-person view from their own eyes while they sit upright on the floor, looking down at their own lap: only their thighs, knees, feet, both forearms and both hands resting on their thighs are in frame; no head, no face, no neck and no other person anywhere: the camera is their own eyes, so everything above their chest is outside the picture. Their skin tone and body build are those of the person in image 2. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
+      "value": "Replace the grey mannequin in image 1 with the person from image 2. Keep the exact pose, body position, camera angle and framing of the mannequin in image 1. First-person view from their own eyes while they sit upright on the floor, looking down at their own lap: only their thighs, knees, feet, both forearms and both hands resting on their thighs are in frame; no head, no face, no neck and no other person anywhere: the camera is their own eyes, so everything above their chest is outside the picture. Their skin tone and body build are those of the person in image 2. They wear exactly the clothing of image 2, with realistic skin texture and soft even studio lighting."
     }
   },
   "2404": {
     "class_type": "PrimitiveStringMultiline",
     "inputs": {
-      "value": "Recolour the grey mannequin legs and hands in image 1 with the skin tone, skin texture and body hair of the woman in image 2. Recolour the grey clothes of the mannequin to be exactly the clothing of the woman in image 2. Keep everything else in image 1 exactly as it is: the same pose, the same framing, the same empty background, nothing added. Realistic skin texture and soft even studio lighting."
+      "value": "Recolour every visible grey mannequin body part in image 1 (belly, hips, thighs, legs, feet, forearms and hands) with the skin tone, skin texture and body hair of the woman in image 2, so no grey mannequin skin remains. Recolour the grey clothes of the mannequin to be exactly the clothing of the woman in image 2. Keep the same pose and framing, nothing added. Realistic skin texture and soft even studio lighting."
     }
   },
   "2406": {

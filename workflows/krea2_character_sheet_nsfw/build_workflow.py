@@ -21,7 +21,7 @@ with white_background):
     row 2: front portrait | female: looking-up portraits side|front, male: expressions 2x2
                           | female: expressions 2x2,           male: lying side over lying top
     right column (both rows, appended last): POV lying over POV seated, the character's own body seen from their eyes
-  sfw (15 panels, 6464x2176; the mannequin sheet of toolchain/mannequin-sheet/compose_sheet.py):
+  sfw (15 panels, 6464x2176; compose_sheet.py's mannequin sheet plus the POV column, which compose_sheet.py does not have):
     row 1: full body front|side|back | front portrait | back portrait | profile portrait
     row 2: expressions 2x2 | kneeling side | squatting front | sitting
     right column (both rows, appended last): POV lying over POV seated
@@ -104,12 +104,18 @@ PANELS = {
     "pose_hands_on_hips": (WIDE, "{He} stand{s} facing the camera, feet shoulder-width apart, both hands on {his} hips with the elbows out, confident neutral expression, the whole body from head to toes in frame."),
     "expr_strained": (WIDE, "{He} look{s} physically exhausted and strained, not angry: eyebrows raised and pulled together, eyes half closed, mouth hanging open as {he} gasp{s} for breath, head tipped slightly back."),
     "lying_side": (STRIP, "{He} lie{s} flat on {his} back on the floor in exact side profile, body stretched out in one straight horizontal line, face pointing up at the ceiling, not at the camera, the whole body from head to feet in frame."),
-    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face. The male set uses
-    # the standard edit prompt with this text; the female set a recolour of the template (POV_EDIT_PROMPT).
-    "pov_lying": (WIDE, "First-person view from {his} own eyes while {he} lie{s} flat on {his} back on the floor, looking down along {his} own body: only {his} belly, hips, both legs and feet are in frame, strongly foreshortened, legs straight and slightly apart; no head, no face, no neck and no other person anywhere: the camera is {his} own eyes, so everything above {his} chest is outside the picture. {His} skin tone and body build are those of the person in image 2."),
-    "pov_seated": (WIDE, "First-person view from {his} own eyes while {he} sit{s} upright on the floor, looking down at {his} own lap: only {his} thighs, knees, feet, both forearms and both hands resting on {his} thighs are in frame; no head, no face, no neck and no other person anywhere: the camera is {his} own eyes, so everything above {his} chest is outside the picture. {His} skin tone and body build are those of the person in image 2."),
     "lying_top": (STRIP, "Seen from directly overhead, {he} lie{s} flat on {his} back on the floor, body stretched out in one straight horizontal line, arms along {his} sides, face looking straight up into the camera, the whole body from head to feet in frame. " + NO_MANNEQUIN),
 }
+
+# POV panels (separate from the grid above)
+POV_PANELS = {
+    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face. The male set uses
+    # the standard edit prompt (minus its facial-expression clause) with this text; the female set a recolour of the
+    # template (POV_FEMALE_EDIT_PROMPT).
+    "pov_lying": (WIDE, "First-person view from {his} own eyes while {he} lie{s} flat on {his} back on the floor, looking down along {his} own body: only {his} belly, hips, both legs and feet are in frame, strongly foreshortened, legs straight and slightly apart; no head, no face, no neck and no other person anywhere: the camera is {his} own eyes, so everything above {his} chest is outside the picture. {His} skin tone and body build are those of the person in image 2."),
+    "pov_seated": (WIDE, "First-person view from {his} own eyes while {he} sit{s} upright on the floor, looking down at {his} own lap: only {his} thighs, knees, feet, both forearms and both hands resting on {his} thighs are in frame; no head, no face, no neck and no other person anywhere: the camera is {his} own eyes, so everything above {his} chest is outside the picture. {His} skin tone and body build are those of the person in image 2."),
+}
+PANELS.update(POV_PANELS)
 
 # Head-and-shoulders, not waist-up: the male templates' portraits were drawn as medium shots without it.
 SFW_PORTRAIT_FRAMING = "Tight head-and-shoulders portrait, the head filling the upper part of the frame and the image ending at the chest. "
@@ -174,7 +180,7 @@ if VARIANT == "sfw":
 TUNED = {"ref_boost": 4.0, "ref_boost_a": 2.5, "identity": True}
 # The POV tiles show no face: the identity sentence (face / hair / eyes) is left out; the panel text names skin and build
 # and puts the head outside the frame. (A stronger template pull, ref_boost_a 5, drew the female face in - spike 2026-10-17.)
-POV_TUNE = {n: {"identity": False} for n in ("pov_lying", "pov_seated")}
+POV_TUNE = {n: {"identity": False} for n in POV_PANELS}
 NSFW_PANEL_TUNE = {
     # Looked back over the shoulder unless the template pulls harder and the face-feature sentence is left out.
     "fullbody_back": {"ref_boost": 2.0, "ref_boost_a": 5.0, "identity": False},
@@ -198,17 +204,19 @@ def tune_of(panel: str) -> dict:
 
 
 EDIT_PROMPT = (
-    "Replace the grey mannequin in image 1 with the {subject} from image 2. Keep the exact pose, body position, camera "
-    "angle, framing and facial expression of the mannequin in image 1. {keep} {outfit} with "
+    "Replace the grey mannequin in image 1 with the {subject} from image 2. Keep the exact pose, body position, {kept} "
+    "of the mannequin in image 1. {keep} {outfit} with "
     "realistic skin texture and soft even studio lighting."
 )
+KEPT_WITH_FACE = "camera angle, framing and facial expression"
+KEPT_WITHOUT_FACE = "camera angle and framing"  # POV tiles: no face to keep
 # POV tiles, female set: a plain edit ("replace the mannequin with the woman") draws her head and face into the
 # first-person view whatever the boost settings (spike 2026-10-17); a recolour of the template keeps its framing and
-# body parts. The male set does not have the problem and keeps the standard edit prompt.
-POV_EDIT_PROMPT = (
-    "Recolour the grey mannequin legs and hands in image 1 with the skin tone, skin texture and body hair of the "
-    "{subject} in image 2.{clothes} Keep everything else in image 1 exactly as it is: the same pose, the same framing, "
-    "the same empty background, nothing added. Realistic skin texture and soft even studio lighting."
+# body parts. Says nothing about the background: the background sentence appended to every prompt governs it.
+POV_FEMALE_EDIT_PROMPT = (
+    "Recolour every visible grey mannequin body part in image 1 (belly, hips, thighs, legs, feet, forearms and hands) "
+    "with the skin tone, skin texture and body hair of the {subject} in image 2, so no grey mannequin skin remains.{clothes} "
+    "Keep the same pose and framing, nothing added. Realistic skin texture and soft even studio lighting."
 )
 POV_CLOTHES = {
     "nsfw": "",
@@ -242,9 +250,10 @@ def switch(node_id: int, on_male: list, on_female: list) -> list:
 
 def edit_prompt(panel: str, gender: str) -> str:
     p = PRONOUNS[gender]
-    if panel in POV_TUNE and gender == "female":
-        return POV_EDIT_PROMPT.format(clothes=POV_CLOTHES[VARIANT].format(**p), **p)
-    return EDIT_PROMPT.format(keep=PANELS[panel][1].format(**p), outfit=OUTFIT.format(**p), **p)
+    if panel in POV_PANELS and gender == "female":
+        return POV_FEMALE_EDIT_PROMPT.format(clothes=POV_CLOTHES[VARIANT].format(**p), **p)
+    kept = KEPT_WITHOUT_FACE if panel in POV_PANELS else KEPT_WITH_FACE
+    return EDIT_PROMPT.format(kept=kept, keep=PANELS[panel][1].format(**p), outfit=OUTFIT.format(**p), **p)
 
 
 # ── shared: models, character, settings ─────────────────────────────────────
@@ -327,7 +336,7 @@ def slot_chain(i: int, female: str, male: str) -> list:
     return node(b + 26, "VAEDecode", samples=samples, vae=VAE)
 
 
-POV_SLOTS = (len(SLOTS) - 2, len(SLOTS) - 1)  # the last two slots: POV lying, POV seated (the new right column)
+POV_SLOTS = tuple(i for i, (f, _) in enumerate(SLOTS) if f in POV_PANELS)  # POV lying, POV seated (the right column)
 PANEL_IMAGES = [slot_chain(i, f, m) for i, (f, m) in enumerate(SLOTS)]
 
 # ── layout ──────────────────────────────────────────────────────────────────
