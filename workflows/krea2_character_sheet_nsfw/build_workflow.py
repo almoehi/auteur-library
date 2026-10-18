@@ -104,10 +104,10 @@ PANELS = {
     "pose_hands_on_hips": (WIDE, "{He} stand{s} facing the camera, feet shoulder-width apart, both hands on {his} hips with the elbows out, confident neutral expression, the whole body from head to toes in frame."),
     "expr_strained": (WIDE, "{He} look{s} physically exhausted and strained, not angry: eyebrows raised and pulled together, eyes half closed, mouth hanging open as {he} gasp{s} for breath, head tipped slightly back."),
     "lying_side": (STRIP, "{He} lie{s} flat on {his} back on the floor in exact side profile, body stretched out in one straight horizontal line, face pointing up at the ceiling, not at the camera, the whole body from head to feet in frame."),
-    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face. Their edit prompt
-    # is POV_EDIT_PROMPT (a recolour of the template), the text here only documents what the template shows.
-    "pov_lying": (WIDE, "First-person view while lying flat on the back, looking down along the own body: belly (nsfw) or waistband (sfw), thighs, knees, shins and feet."),
-    "pov_seated": (WIDE, "First-person view while seated, looking down at the own lap: thighs, knees, feet, forearms and hands."),
+    # POV tiles (both sheets): the character's own body seen from their own eyes - no head, no face. The male set uses
+    # the standard edit prompt with this text; the female set a recolour of the template (POV_EDIT_PROMPT).
+    "pov_lying": (WIDE, "First-person view from {his} own eyes while {he} lie{s} flat on {his} back on the floor, looking down along {his} own body: only {his} belly, hips, both legs and feet are in frame, strongly foreshortened, legs straight and slightly apart; no head, no face, no neck and no other person anywhere: the camera is {his} own eyes, so everything above {his} chest is outside the picture. {His} skin tone and body build are those of the person in image 2."),
+    "pov_seated": (WIDE, "First-person view from {his} own eyes while {he} sit{s} upright on the floor, looking down at {his} own lap: only {his} thighs, knees, feet, both forearms and both hands resting on {his} thighs are in frame; no head, no face, no neck and no other person anywhere: the camera is {his} own eyes, so everything above {his} chest is outside the picture. {His} skin tone and body build are those of the person in image 2."),
     "lying_top": (STRIP, "Seen from directly overhead, {he} lie{s} flat on {his} back on the floor, body stretched out in one straight horizontal line, arms along {his} sides, face looking straight up into the camera, the whole body from head to feet in frame. " + NO_MANNEQUIN),
 }
 
@@ -202,8 +202,9 @@ EDIT_PROMPT = (
     "angle, framing and facial expression of the mannequin in image 1. {keep} {outfit} with "
     "realistic skin texture and soft even studio lighting."
 )
-# POV tiles: a plain edit ("replace the mannequin with the person") draws the character's head and face into the
-# first-person view (spike 2026-10-17, every boost setting); a recolour of the template keeps its framing and body parts.
+# POV tiles, female set: a plain edit ("replace the mannequin with the woman") draws her head and face into the
+# first-person view whatever the boost settings (spike 2026-10-17); a recolour of the template keeps its framing and
+# body parts. The male set does not have the problem and keeps the standard edit prompt.
 POV_EDIT_PROMPT = (
     "Recolour the grey mannequin legs and hands in image 1 with the skin tone, skin texture and body hair of the "
     "{subject} in image 2.{clothes} Keep everything else in image 1 exactly as it is: the same pose, the same framing, "
@@ -241,7 +242,7 @@ def switch(node_id: int, on_male: list, on_female: list) -> list:
 
 def edit_prompt(panel: str, gender: str) -> str:
     p = PRONOUNS[gender]
-    if panel in POV_TUNE:
+    if panel in POV_TUNE and gender == "female":
         return POV_EDIT_PROMPT.format(clothes=POV_CLOTHES[VARIANT].format(**p), **p)
     return EDIT_PROMPT.format(keep=PANELS[panel][1].format(**p), outfit=OUTFIT.format(**p), **p)
 
