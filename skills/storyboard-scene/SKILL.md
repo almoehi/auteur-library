@@ -79,8 +79,7 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   "Reference binding by extent" (rule 3).
 - Write the bound designs as linked design KEYS - never slugs or display names - in the shotlist's
   `Location:`, `Characters:` and `Outfits:` lines (`Outfits:` entries are
-  `<characterKey>:<outfitKey>`, separated by `;`; a `:nude` / `:none` look has no `Outfits:` entry - the character's
-  key in `Characters:` covers it). The server refuses a `shotlist.md` naming a key the storyboard
+  `<characterKey>:<outfitKey>`, separated by `;`; a nude or no-garment character is `<characterKey>:nude` / `<characterKey>:none`, still one pair). The server refuses a `shotlist.md` naming a key the storyboard
   does not link, and lists the valid keys: fix the line and write it again.
 - **Preflight** — if any fails do not guess: render nothing, `task_complete` saying exactly what
   is missing: the scene number (`scene` attribute or task id); a readable `scene_list` with a row
@@ -103,8 +102,8 @@ Movement: the camera move of the VIDEO clip of this shot, within the same place 
 Blocking: who is where, facing which way, who touches whom or what (e.g. "Mira at the rail, back to camera, facing the sea; Jonas on the crate 2 m behind her, facing her back; no contact")
 Pose: body orientation, hands and head per person (e.g. "Mira: torso square to the rail, both hands on it, head turned left; Jonas: seated, elbows on knees, head down")
 Frame: where each person sits in the frame, left / centre / right, foreground / background (e.g. "Mira right foreground, Jonas left background")
-Visible: Mira (full figure); Jonas (upper body); nobody else        (structured, see below)
-POV: character_jonas        (OPTIONAL - only when the camera IS this character's eyes)
+Visible: character_mira (full figure); character_jonas (upper body); nobody else        (design KEYS, structured, see below)
+POV: character_jonas (seated)        (OPTIONAL, omit for an objective camera; see "Who is in the frame")
 Act: plain words for who does what to whom (ONLY when contentPolicy.nudity is allowed; see below)
 Characters: character_mira, character_jonas        (design KEYS, exactly the characters with a Visible entry, or "none")
 Outfits: character_mira:outfit_mira_raincoat; character_jonas:outfit_jonas_work_suit      (<characterKey>:<outfitKey> pairs, "; "-separated, or "none")
@@ -151,13 +150,14 @@ Then, mechanically:
 - **`Characters:`** = exactly the characters that have a `Visible:` entry, and no one else. A
   character whose hands, back or any limb is in frame IS in `Characters:`; a character
   who is off-frame is NOT (only "(off-frame)" in `Blocking:`).
-- **`Outfits:`** = exactly one `<characterKey>:<outfitKey>` pair per `Characters:` entry (a
-  `:nude` / `:none` look has no entry, as before) - no pair for anyone not in `Characters:`.
-- **`POV: <characterKey>`** (optional line, absent = objective camera): the camera is that
+- **`Outfits:`** = exactly one pair per `Characters:` entry - `<characterKey>:<outfitKey>`, or
+  `<characterKey>:nude` / `<characterKey>:none` (valid looks, they bind the character primary) - and no pair for anyone not in `Characters:`.
+- **`POV: <characterKey> (seated|lying)`** (optional line, absent = objective camera; the posture is optional, default `seated`, and picks the sheet's POV tile): the camera is that
   character's eyes. Never write it for a normal over-the-shoulder or objective shot. A POV
   character with nothing of theirs in frame is simply not in `Characters:`; with their own limbs
   in frame (hands, knees, feet) the extent is `limbs` or `lower body`, never a full-body
-  figure, and they ARE in `Characters:`.
+  figure, and they ARE in `Characters:`. Example of a POV shot: `POV: character_jonas (seated)`,
+  `Visible: character_jonas (limbs: forearms and hands); character_mira (upper body); nobody else`.
 - **`Format:`** (file header) is the production's frame orientation, `portrait` or `landscape`:
   copy the storyboard's `format` attribute in `design.json`; if absent, the orientation the
   story/plot states, else `landscape`. ONE line per file.
@@ -286,9 +286,10 @@ wf_<tool>(prompt_positive="<prompt>", <image ports with artifact:// refs>, …,
   output_ports={"<primary output port>": "/workspace/<artifact id>/take_s3-01-draft-<n>.png"})
 ```
 
-Same prompt for all drafts of a shot (the random seed varies them). Pass `is_portrait` on EVERY keyframe
+Same prompt for all drafts of a shot (the random seed varies them). Pass `is_portrait` on every keyframe
 call (initial drafts, chat re-renders, retries), derived from the shotlist's `Format:` line
-(`portrait` -> `true`, `landscape` -> `false`); never omit it, never leave it to the workflow default. A failed draft fails only
+(`portrait` -> `true`, `landscape` -> `false`); on every keyframe call of a workflow that takes it (a workflow with a render size; the code
+injects it only there); never leave it to the default. A failed draft fails only
 its own take: re-read the workflow instructions, fix the call, retry that draft once (same file
 name); if it fails again leave it (the studio shows a failed take with Retry) and report it.
 
@@ -298,13 +299,14 @@ For each character in `Characters:` read their `Visible:` extent:
 
 - `full figure` / `upper body` / `face` / `back` -> the character's outfit design primary (the
   character primary for a `:nude` / `:none` pair or when no outfit design exists), as above.
-- `limbs` / `lower body` -> NOT the full-body primary: bind that character's published SHEET
-  (`sheet.<ext>` of the outfit design when the pair names an outfit, else of the character
-  design), named by the display name ("<Name>'s sheet"), and add to the shot's `context`: "use
+- `limbs` / `lower body` of the **POV owner** (the `POV:` character) -> NOT the full-body primary:
+  bind their published SHEET (`sheet.<ext>` of the outfit design when the pair names an outfit,
+  else of the character design), named "<Name>'s sheet", and add to the shot's `context`: "use
   only its POV <seated|lying> tile: <detail> seen from their own eyes, never their face or
-  torso" (`seated` by default, `lying` when `Pose` says lying / reclining; `<detail>` from the
-  `Visible:` detail). A design with no published sheet gets NO image: describe the visible parts
-  in words from the design's description.
+  torso" (posture from the `POV:` line, default `seated`; `<detail>` from the `Visible:`
+  detail). Without a published sheet bind their normal primary with the limbs-only phrase below.
+- `limbs` / `lower body` of **any other character** -> their normal primary, plus in `context`:
+  "only their <detail> are in frame, never their face or the rest of their body".
 - a character NOT in `Characters:` (off-frame, or a POV owner with nothing in frame) gets no image
   and is never mentioned as a figure in the prompt.
 
@@ -390,7 +392,7 @@ Audit before completing:
       `lower body` if in frame; R5 `Format:` line = the `format` attribute; ONE moment and ONE
       framing per shot (no "then"); `Pose` states the garment's state where the look covers the
       body part; `Visible:` covers everyone `Blocking` places in frame and only them; no event from
-      another place; every keyframe call passed `is_portrait` from `Format:`; every shot with 2+
+      another place; every keyframe call of a workflow that takes it passed `is_portrait` from `Format:`; every shot with 2+
       characters, contact or `Act` went through the review batch
 - [ ] every shot has `take_<shotId>-draft-<n>.<ext>` for n = 1 … drafts per shot (re-read the
       artifact), except drafts that failed twice (name them); all from `wf_*` renders
@@ -419,6 +421,9 @@ For each message:
    take is an **i2i edit with that take as the FIRST image** (+ references by priority); "start
    over" re-renders from the references as in Phase 2. SEVERAL shots in one message = ONE
    `draft_prompts_batch` and ONE response of renders; a single `draft_prompt` only for one shot.
+   The shot lines are authoritative for who is visible: a note or edit cannot remove a person the
+   shot lists (and cannot add one) - change `Visible:` / `Characters:` / `Outfits:` in the shotlist
+   first (the one allowed rewrite), then render.
 4. Render only what THIS message asks (one take unless it names a count); check every take. Reply
    with one short line (new take name(s), what changed), then stop.
 5. Never pick a primary / frame, discard takes, write descriptions, or finish the design — point
