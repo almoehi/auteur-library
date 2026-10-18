@@ -149,7 +149,7 @@ list's Blocking / Contact (and Act) columns:
 Then, mechanically:
 
 - **`Characters:`** = exactly the characters that have a `Visible:` entry, and no one else. A
-  character whose hands, back or shadow-less limbs are in frame IS in `Characters:`; a character
+  character whose hands, back or any limb is in frame IS in `Characters:`; a character
   who is off-frame is NOT (only "(off-frame)" in `Blocking:`).
 - **`Outfits:`** = exactly one `<characterKey>:<outfitKey>` pair per `Characters:` entry (a
   `:nude` / `:none` look has no entry, as before) - no pair for anyone not in `Characters:`.

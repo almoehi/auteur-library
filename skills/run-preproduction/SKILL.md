@@ -199,7 +199,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   Character slugs must equal the `character_<slug>.md` file stems from the character table; the
   `Outfits` column uses ONLY look slugs from that character's WARDROBE TRACKER (copy them exactly; add a
   new row there only if the screenplay demands one, and say so in the summary), `nude` (only for an
-  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed; a character's BASE look - the `wardrobe` of its character design in `plan-designs` - is `nude` for EVERY such adult, decided by age and policy only, never by whether the character is shown nude in a scene or by character-table notes like "face never shown"; garments belong to outfit looks, never to the base look), or `none` (a character that wears nothing, e.g. an animal). Every present character needs a look in every beat they are visible in. A point-of-view character whose hands or body are in frame counts as visible: list them in that beat's `Outfits`. A character who appears only in a `parallel` cutaway beat at another place need not be in the scene row's `Characters present`, but is still listed in that beat's `Outfits` and in the row's `Outfits` union.
+  adult in a workspace with `{workspace.contentPolicy.nudity}` allowed; a character's BASE look - the `wardrobe` of its character design in `plan-designs` - is `nude` for EVERY such adult, decided by age and policy only, never by whether the character is shown nude in a scene or by character-table notes like "face never shown"; garments belong to outfit looks, never to the base look), or `none` (a character that wears nothing, e.g. an animal). Every present character needs a look in every beat they are visible in. A character with ANY body part in frame in a beat (a point-of-view character's hands or knees included) counts as visible: list them in that beat's `Outfits`; a character who is off-frame is not listed. A character who appears only in a `parallel` cutaway beat at another place need not be in the scene row's `Characters present`, but is still listed in that beat's `Outfits` and in the row's `Outfits` union.
   **A scene row = ONE place and ONE continuous time.** A change of place starts a new scene; never
   merge two places into one row ("Backyard terrace / Hallway" is two scenes). The short-film
   default of about 4 scenes never overrides this: add scenes rather than merge places.
@@ -222,11 +222,15 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   Undressing: when a character undresses in a beat (nudity allowed, adult only), that beat's `Outfits` already carries `<character_slug>:nude` and so does EVERY later beat of the character; the scene row's `Outfits` lists the `nude` pair as well.
   **One beat per distinct happening**: each entrance, each exit and
   each dialogue line that changes the picture is its own beat (a character leaving gets an exit
-  beat, not a clause of the previous one). **POV scenes**: say which character is the POV; that
-  character is the camera - their beats show their hands or forearms only, never a full-body
-  figure, and the character is not listed as visible in `Blocking`.
+  beat, not a clause of the previous one). **POV beats**: a beat seen through one character's eyes names that character as the POV in
+  `Blocking` ("POV: <character_slug>"); that character is the camera - they show only their own limbs
+  (hands, forearms, knees, feet) and only when those are in frame, never a full-body figure.
+  **Garments vs action**: when a beat's action needs a body part the character's current look covers
+  (touching bare shoulders under a cardigan), the beat's `Action` / `Blocking` names the garment state
+  ("cardigan slipped off her shoulders"); when that state lasts into later beats, it is its own
+  look (a WARDROBE TRACKER look slug) in this and every later beat's `Outfits`, not an improvisation.
   One beat = one place (its `Location`) and one opening framing: split a beat that packs two places or two framings. Every scene has at least one beat
-  (typically 2-6, one per distinct action or change of framing) and EVERY beat names a camera
+  (typically 2-6, one per distinct action or change of framing; a beat is ONE moment - split "then" sequences) and EVERY beat names a camera
   move, a continuity and its `Outfits`. Downstream, the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the
   shoot skills' video prompts are taken from these beats (`continuous` becomes a `continue`
   transition: the clip carries on from the previous one; a `parallel` beat becomes a cutaway shot at
@@ -257,7 +261,8 @@ create_task({ id: "plan_designs", title: "Plan and create designs", description:
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, locations, outfits, then one storyboard per scene; see the skill). Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design was created with `create_design` and the `artifact_index` audit passed; if `task_complete` is refused because no tasks were created, continue creating designs, and report only counts the tool results show.
+Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` derived from the story below, default `landscape`; see the skill). Story (medium / format): {workspace.story.plot}
+Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design was created with `create_design` and the `artifact_index` audit passed; if `task_complete` is refused because no tasks were created, continue creating designs, and report only counts the tool results show.
 Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`.
 ```
 
