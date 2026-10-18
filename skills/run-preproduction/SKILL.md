@@ -181,7 +181,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   ````
   Inputs: artifact `character_table` (all character_*.md files), artifact `screenplay`. Deliverable: artifact `scene_list`, the single file `scene_list.md`.
   Workspace content policy (nudity): {workspace.contentPolicy.nudity} (absent or empty = forbidden).
-  Beats tables: `Contact` is ALWAYS a column; `Act` is a REQUIRED column whenever nudity is `allowed`; both filled in EVERY beat.
+  Beats tables: `Contact` is ALWAYS a column; `Sex act` and `Sex position` are REQUIRED columns whenever nudity is `allowed`; all filled in EVERY beat. When nudity is `allowed`, load skill `workflow-calling-conventions` first and use the names of its section "Explicit acts and positions".
 
   FIRST STEP, before writing anything: read every `character_<slug>.md` of the character table and
   list (a) the character stems (`<character_slug>`) and (b) each character's WARDROBE TRACKER look
@@ -218,7 +218,7 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
   Beyond those columns every Beats table also has these columns (all REQUIRED, filled in EVERY beat; an empty cell fails the `scenes-complete` check):
   - `Blocking`: who is where, facing which way.
   - `Contact`: who touches whom or what, and where on the body or object; `none` when nothing does.
-  - `Act` - REQUIRED whenever nudity is allowed (`{workspace.contentPolicy.nudity}` is `allowed`; under `forbidden` or absent leave the column out): plain, explicit words for who does what to whom, with the positions and contact points, no euphemisms (e.g. `Lena kneels on the bed, Jonas enters her from behind, both facing the window`); `none` for a beat without an act. Never an act for a depicted minor. `Contact` and `Act` are separate: `Contact` is the touch, `Act` is what the characters are doing.
+  - `Sex act` and `Sex position` - REQUIRED whenever nudity is allowed (`{workspace.contentPolicy.nudity}` is `allowed`; under `forbidden` or absent leave both columns out), placed after `Contact`. The names come from section "Explicit acts and positions" of skill `workflow-calling-conventions` (load it; use the names exactly as listed, or `other (<plain words>)`). Value: `none`, or `<name>[ + <name>]*[: <detail>]`; `Sex act` may combine several acts with ` + `, `Sex position` names exactly ONE position (a position change is a new beat); `<detail>` = who does what to whom and the contact points in plain explicit words, no euphemisms (e.g. `Sex act: vaginal penetration: Jonas enters Lena from behind`, `Sex position: doggy style: Lena on hands and knees on the bed, Jonas kneeling behind her`). `Sex act` is `none` exactly when `Sex position` is `none`. Nudity alone, undressing, posing nude, kissing, hugging, caressing and touching are NOT a sex act (both `none`; nudity is the `Outfits` look, touch is `Contact`). Never an act for a depicted minor. `Contact` and the sex columns are separate: `Contact` is the touch, `Sex act` / `Sex position` are the act itself.
   Undressing: when a character undresses in a beat (nudity allowed, adult only), that beat's `Outfits` already carries `<character_slug>:nude` and so does EVERY later beat of the character; the scene row's `Outfits` lists the `nude` pair as well.
   **One beat per distinct happening**: each entrance, each exit and
   each dialogue line that changes the picture is its own beat (a character leaving gets an exit
@@ -241,10 +241,10 @@ create_task({ id: "create_scenes", title: "Scene list", description: "Scene tabl
 
   ## Pre-completion audit
 
-  Before `task_complete`, re-open `scene_list.md` and confirm: every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` columns, plus `Act` when nudity is allowed, with no empty cell; every row's `Outfits` equals the union of its beats' looks; after any undressing beat the character stays `nude` until a later beat dresses them.
+  Before `task_complete`, re-open `scene_list.md` and confirm: every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` columns, plus `Sex act` and `Sex position` when nudity is allowed (each `none` or starting with listed names / `other (...)`, `none` in both or neither), with no empty cell; every row's `Outfits` equals the union of its beats' looks; after any undressing beat the character stays `nude` until a later beat dresses them.
   ````
-- **Beats columns, the contract** (the `scenes-complete` check judges it): `Contact` always required; `Act` required whenever `{workspace.contentPolicy.nudity}` is `allowed`; both filled in EVERY beat; after an undressing beat the character is `nude` from that beat on.
-- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with the block's `Inputs:` line, (2) contains the `Contact` bullet ("who touches whom or what"), (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server's interpolation resolves it in the worker's prompt), and (4) contains the `Act` bullet and the nude-from-that-beat-on rule. A missing item means the block was paraphrased: re-copy it from this file and check again. Do the same for 4b.
+- **Beats columns, the contract** (the `scenes-complete` check judges it): `Contact` always required; `Sex act` and `Sex position` required whenever `{workspace.contentPolicy.nudity}` is `allowed` (names from `workflow-calling-conventions`, `none` in both or neither); all filled in EVERY beat; after an undressing beat the character is `nude` from that beat on.
+- **Pre-send self-check (before the `create_task` call).** Re-read the prompt you are about to send and confirm it (1) starts with the block's `Inputs:` line, (2) contains the `Contact` bullet ("who touches whom or what"), (3) contains the `Workspace content policy (nudity):` line with the placeholder `{workspace.contentPolicy.nudity}` still literal (the server's interpolation resolves it in the worker's prompt), and (4) contains the `Sex act` / `Sex position` bullet and the nude-from-that-beat-on rule. A missing item means the block was paraphrased: re-copy it from this file and check again. Do the same for 4b.
 
 ### 4d. plan_designs (the orchestrator)
 ```

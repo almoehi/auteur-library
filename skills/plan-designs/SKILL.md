@@ -141,10 +141,12 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
    base model renders explicit content only with the right LoRAs, so plan them per design now -
    the design workers load what you attach, and ONLY what the `create_design` call carries:
    1. From each scene's row and Beats, list the explicit **content** it shows as short tags in
-      three groups: **acts** (blowjob, missionary, cowgirl, doggystyle, masturbation, kissing
-      nude ...), **anatomy / detail** (breasts, nipples, genitals (female / male), pubic hair,
-      erection ...), **poses** (kneeling, spread legs, lying on back, POV ...). A scene without
-      nudity or sex has none. Every `nude` character has the fixed tag `nude body`.
+      three groups: **acts** = the names in the Beats' `Sex act` column, **poses** = the names in
+      the `Sex position` column (plus other pose words the beats state, e.g. POV, spread legs), both
+      in the canonical names of section "Explicit acts and positions" of skill
+      `workflow-calling-conventions` (`none` gives no tag; an `other (...)` value gives its plain
+      words), **anatomy / detail** (breasts, nipples, genitals (female / male), pubic hair,
+      erection ...). A scene without nudity or sex has none. Every `nude` character has the fixed tag `nude body`.
    2. With the `lora_index` result of Phase 0, pick for every tag the catalog LoRAs whose **trigger
       words or description** match it (several tags may share one LoRA), in EVERY image model
       family the catalog has (e.g. krea2 and flux2): the design worker keeps only the LoRAs of its
@@ -213,7 +215,7 @@ Build every entry mechanically, with its FINAL key, then the work list. Nothing 
   ],
   "designs": [ "character_mira", "character_lena", "location_harbor", "outfit_mira_raincoat", "storyboard_scene_1" ],
   "nsfw_loras": {
-    "scenes": [ { "scene": 3, "acts": ["blowjob"], "anatomy": ["breasts", "penis"], "poses": ["kneeling", "pov"] } ],
+    "scenes": [ { "scene": 3, "acts": ["blowjob"], "anatomy": ["breasts", "penis"], "poses": ["kneeling", "POV"] } ],
     "characters": [ { "slug": "mira", "tags": ["nude body"] }, { "slug": "lena", "tags": ["nude body"] } ],
     "missing": [ { "scene": 3, "family": "krea2", "tags": ["cowgirl"] } ]
   }

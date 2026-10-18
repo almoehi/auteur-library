@@ -46,7 +46,7 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 A task created with `prompt_writer: "skip"` passes its prompt as given (no draft needed). Details for the rewrite route:
 
 - **`image_inputs`** (`draft_prompt` / `draft_prompts_batch`, per item): a list of `{port, ref}` (the workflow's input port name and the `artifact://` ref passed to it). The code writes the "Picture N is <name>" lines from the workflow's port labels and the artifact titles - never type or renumber Picture lines yourself.
-- **`verbatim_phrases`**: phrases that must survive unchanged in the written prompt (a shot's `Act:` text in an NSFW workspace, dialogue to keep). The code appends any phrase the writer dropped.
+- **`verbatim_phrases`**: phrases that must survive unchanged in the written prompt (a shot's `Sex act:` and `Sex position:` values in an NSFW workspace, dialogue to keep). The code appends any phrase the writer dropped.
 - **Video clip duration**: for a video workflow (one whose duration parameter, e.g. `video_length`, the `wf_xxx` tool description names), pass `duration_seconds` (the clip's planned duration) to `draft_prompt` / `draft_prompts_batch` (per item) / `enhance_prompt` / `review_prompt` - it MUST equal the value you pass as the `wf_xxx` call's duration parameter; the prompt then states exactly that duration.
 - **Batch prompt tools** (`draft_prompts_batch` / `enhance_prompts_batch` / `review_prompts_batch`): `items` is a real JSON array of objects, written out in full. When some items of a batch fail (e.g. a timeout), retry ONLY the failed items - never re-send the whole batch.
 
@@ -89,7 +89,7 @@ Check the image against the request. Judge only what can be seen in the image; i
 - Setting: the furniture, props and location match the request's text (a lounger is not a chair, the named place is not another one).
 - Outfits: every outfit the request lists is visible and as described; no listed garment is missing, no other garment replaces it.
 - Moment: the image shows a single moment of the action, not a sequence.
-- Act: only when the request has an "Act (must show)" line - the participants, their body positions and the contact points match it.
+- Sex act / position: only when the request has a "Sex act (must show)" or "Sex position (must show)" line (legacy "Act (must show)") - the participants, their body positions and the contact points match it.
 - Invented or contradicted: nothing was added that the request does not ask for, and nothing the request rules out is shown.
 PASS when every point holds. Otherwise MISS. Be strict about what the request names and lenient about what it leaves open.
 If you cannot judge the image (it is unreadable, or you decline), answer UNCHECKED with the reason - never guess PASS.
@@ -124,6 +124,18 @@ A workflow whose description starts with **[nsfw]** renders nudity and sex. Choo
 - **Explicit sex acts**: prefer an [nsfw] **reference-to-image** workflow - it composes the act directly from the place (Picture 1) and the characters (Pictures 2, 3), with a general NSFW LoRA (an act LoRA is optional). An [nsfw] multi-reference EDIT cannot produce an act (the people keep their reference poses); without a reference-to-image one use two steps: (1) render the act with the [nsfw] text-to-image workflow plus the act LoRA from the catalog (`lora_index`: missionary, blowjob, deepthroat, ...), describing the room of the location design; (2) put each character in with the [nsfw] multi-reference edit, ONE person per call (Picture 1 = the act frame, then the previous output; Picture 2 = that character's primary): "Replace the woman in image 1 with the adult woman from image 2 ... Leave the man unchanged. Keep the exact poses, camera angle, framing and room of image 1." Never pass two people as one picture for a swap. Frame people large: small figures in a wide shot barely take the identity.
 - **NSFW LoRAs**: `design.json.loras` (planned by `plan-designs`) first, `lora_index` only for content they do not cover. A nudity EDIT (undressing, a swap step that must show a nude body) uses the catalog's image-edit nudity LoRA of the edit workflow's family (solo nudity only, never for an act). The "general NSFW LoRA" above is the planned one, else one from `lora_index`.
 - Call every depicted person an adult in the prompt.
+
+## Explicit acts and positions
+
+The single source of the names used by every skill, scene list, shot list and check. Applies ONLY when `{workspace.contentPolicy.nudity}` is `allowed` and no depicted character is a minor; otherwise there is no such field.
+
+- **Fields**: the scene list Beats columns `Sex act` and `Sex position`; the shot list lines `Sex act:` and `Sex position:`.
+- **Value**: `none` (no sexual act), or `<name>[ + <name>]*[: <detail>]`. `<name>` is lower case, exactly as listed below, or `other (<plain words>)` for an act / position the list lacks. `Sex act` may combine acts with ` + ` (`blowjob + fingering`); `Sex position` names exactly ONE position (a position change is a new beat / shot). `<detail>` (optional) = who does what to whom and the contact points, in plain explicit words (`Sex position: doggy style: Lena on hands and knees on the bed, Jonas kneeling behind her`).
+- **Pairing**: `Sex act` is `none` exactly when `Sex position` is `none`.
+- **Not a sex act**: nudity alone, undressing, posing nude, kissing, hugging, caressing, touching. Nudity is the look (`<character>:nude` in Outfits), touch is `Contact` / `Blocking`; such beats and shots have `none`.
+- **Sex acts**: vaginal penetration, anal penetration, double penetration, blowjob, deepthroat, cunnilingus, 69, rimming, handjob, fingering, titjob, footjob, masturbation, cumshot.
+- **Sex positions**: missionary, doggy style, cowgirl, reverse cowgirl, spooning, prone bone, lotus, lap sitting, standing face to face, standing from behind, kneeling, squatting, face sitting, lying on back, lying on side, 69.
+- An older shot list may carry `Act: <free text>`: read it as the sex act, with no position; never write it.
 
 ## Key rules
 

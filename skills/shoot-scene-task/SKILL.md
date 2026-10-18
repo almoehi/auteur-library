@@ -154,7 +154,7 @@ design KEYS of designs linked to the storyboard (`location_harbor`, `character_t
 
 Keep each shot's complete block (the `## <shotId> — <title>` heading and every line up to the
 next heading) verbatim: it goes into the clip task unchanged, including `Blocking:`, `Pose:`,
-`Frame:`, `Visible:`, `POV:` and, in a workspace with `contentPolicy.nudity: allowed`, `Act:` (the file's `Format:` header line stays in the shotlist copy).
+`Frame:`, `Visible:`, `POV:` and, in a workspace with `contentPolicy.nudity: allowed`, `Sex act:` and `Sex position:` (the file's `Format:` header line stays in the shotlist copy).
 
 Extract for every shot: shot ID and title, `Action`, `Camera` (keyframe framing), `Movement` (the
 camera move of the VIDEO; absent in older storyboards), `Duration`, `Transition` (absent in older
@@ -277,7 +277,7 @@ prompt:
   shot_block: |
     <the shot's FULL block from shotlist.md, verbatim, every line: Action, Location, Camera,
      Movement, Transition, Characters, Outfits, Blocking, Pose, Frame, Visible, Duration and the
-     Act: line when present>
+     Sex act: / Sex position: lines when present>
   frame_edits: <the frame's published `edits`, verbatim; "none" when it has none>
   action: <the shot's Action>
   camera: <the shot's Camera - keyframe framing>
@@ -297,7 +297,7 @@ prompt:
     scene<N>_clip<M>_<slug>_prompt.txt
 ```
 
-The clip prompt template above is VERBATIM: fill its `<...>` slots from the sources named there and copy every other line (and every slot marked verbatim, including `Act:` in a nudity-allowed workspace) word for word. Never paraphrase or shorten a slot's text, and never drop a policy-conditional line; a paraphrase would hide rules from the worker.
+The clip prompt template above is VERBATIM: fill its `<...>` slots from the sources named there and copy every other line (and every slot marked verbatim, including `Sex act:` and `Sex position:` in a nudity-allowed workspace) word for word. Never paraphrase or shorten a slot's text, and never drop a policy-conditional line; a paraphrase would hide rules from the worker.
 
 The task `prompt` MUST open with the exact line `Load and use skill: shoot-clip` — the worker
 relies on it to `load_skill()` before doing anything else. Name the preferred workflow from the
