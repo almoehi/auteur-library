@@ -29,7 +29,7 @@
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const WF_NAME              = "krea2_character_sheet_nsfw";
-const GPU_TYPE             = "a100";
+const GPU_TYPE             = "h100";
 const TIMEOUT_SEC          = 5400;
 const PROVISION_TIMEOUT_MS = 5400000;          // 90 min — large model download
 const RENDER_TIMEOUT_MS    = 2700000;          // 45 min per render — 17 panels sampled sequentially
