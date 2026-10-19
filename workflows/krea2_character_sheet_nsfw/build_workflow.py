@@ -214,7 +214,7 @@ POV_FEMALE_DENOISE = 0.92
 # Image 2 of the first pass: the bottom 60 % of the character (scaled to 1536 px high). The male path's top-quarter cut
 # (HEADLESS) leaves the chin and hair of a thigh-up reference in image 2, which the edit drew in as a head; at 50 % a
 # dress shows only as a skirt and a lying tile turned third-person.
-POV_FEMALE_BODY_HEIGHT = 921
+POV_FEMALE_BODY_FRACTION = 0.6
 # First pass, female only: text appended to the panel's instruction (the male prompt is untouched). Without it the
 # seated tile drew the reference's dress-wearing torso beyond the feet as a second person.
 POV_FEMALE_EXTRA = {
@@ -284,15 +284,14 @@ CHARACTER_LATENT = node(23, "VAEEncode", pixels=CHARACTER, vae=VAE)
 # The male / other POV tiles' character reference: the input without its head (scaled to 1536 px high, the top quarter
 # cut off). A POV tile shows no face; with the face in image 2 the edit drew it in (spike 2026-10-18). Assumes the
 # full-body input the character_image port asks for; the female tiles use the tighter FEMALE_BODY below.
-HEADLESS = node(
-    25, "ImageCrop+", width=16384, height=1152, position="bottom-center", x_offset=0, y_offset=0,
-    image=node(24, "ImageResize+", image=CHARACTER, width=0, height=1536, interpolation="lanczos",
-               method="keep proportion", condition="always", multiple_of=0),
-)
+CHARACTER_1536 = node(24, "ImageResize+", image=CHARACTER, width=0, height=1536, interpolation="lanczos",
+                      method="keep proportion", condition="always", multiple_of=0)
+HEADLESS = node(25, "ImageCrop+", width=16384, height=1152, position="bottom-center", x_offset=0, y_offset=0,
+                image=CHARACTER_1536)
 HEADLESS_LATENT = node(26, "VAEEncode", pixels=HEADLESS, vae=VAE)
-# The female POV tiles' character reference (POV_FEMALE_BODY_HEIGHT): only the body below the chest.
-FEMALE_BODY = node(27, "ImageCrop+", width=16384, height=POV_FEMALE_BODY_HEIGHT, position="bottom-center",
-                   x_offset=0, y_offset=0, image=["24", 0])
+# The female POV tiles' character reference (POV_FEMALE_BODY_FRACTION): only the body below the chest.
+FEMALE_BODY = node(27, "ImageCrop+", width=16384, height=int(1536 * POV_FEMALE_BODY_FRACTION),
+                   position="bottom-center", x_offset=0, y_offset=0, image=CHARACTER_1536)
 FEMALE_BODY_LATENT = node(28, "VAEEncode", pixels=FEMALE_BODY, vae=VAE)
 
 GENDER = node(60, "PrimitiveString", value="female")
