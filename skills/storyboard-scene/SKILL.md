@@ -42,7 +42,8 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
    `sandbox_write_file` (self-check the content BEFORE that write, step 1 of "Check early": a second
    write is refused). Never a partial/draft shotlist; the only rewrite in a drafting run is
    the single one a failing `run_checks` grants (see "Check early"), any other rewrite ends the
-   attempt (write-once guard). A chat change to the shots = exactly ONE full
+   attempt (write-once guard); a write the server refuses for rule breaks writes nothing and does
+   not count. A chat change to the shots = exactly ONE full
    rewrite. Write every other file once, complete.
 8. **Never end the drafting turn early.** No text-only reply and no `task_complete` before every
    shot has its draft render(s) dispatched; a storyboard with 0 takes is a failure.
@@ -374,10 +375,11 @@ For each character in `Characters:` read their `Visible:` extent:
 ### Reference plan per keyframe call (mandatory)
 
 Before EVERY keyframe call - first drafts, `-r2` retries, chat re-renders - write the reference
-plan of `workflow-calling-conventions` ("Reference plan") into the shot's `context`, derived from
-the shot's `Location:` / `Characters:` / `Outfits:` / `Visible:`:
+plan of `workflow-calling-conventions` ("Reference plan") at the start of the shot's `context`
+(the check `shotlist-keyframe-ready` judges it there), derived from the shot's `Location:` /
+`Characters:` / `Outfits:` / `Visible:`:
 
-- compose: the shot's `Location:` design is Picture 1;
+- compose: the shot's `Location:` design is the first image (Picture 1);
 - EXACTLY ONE image per person in `Characters:`, nobody else (not a person absent from
   `Characters:`, not a character merely mentioned in `Action`);
 - that image is the person's OUTFIT design from their `Outfits:` pair
@@ -385,11 +387,11 @@ the shot's `Location:` / `Characters:` / `Outfits:` / `Visible:`:
   `:nude` / `:none` pair or when no outfit design is linked; a sheet only per the POV / extent
   rule below;
 - never cross outfits: the outfit design's character must equal the person it is bound for;
-- the prompt describes each person's outfit in words (garments, colour) beside "the <role> from
-  Picture N", and shot-specific blocking is the shot's own - never copy another shot's people or
-  "Picture N" labels into the prompt.
+- `context` gives each person's outfit in words (garments, colour), so the prompt says it beside
+  "the <role> from Picture N"; shot-specific blocking is the shot's own - never copy another
+  shot's people or Picture labels.
 
-Example (`Characters: character_wife; character_sister`, `Outfits: character_wife:outfit_wife_office_ready; character_sister:outfit_sister_casual`): Picture 1 (reference_image_1) = location_kitchen (primary) - place; Picture 2 = outfit_wife_office_ready (primary) - wife; Picture 3 = outfit_sister_casual (primary) - sister.
+Example (`Characters: character_wife; character_sister`, `Outfits: character_wife:outfit_wife_office_ready; character_sister:outfit_sister_casual`): `reference_image_1 = location_kitchen (primary) - place; reference_image_2 = outfit_wife_office_ready (primary) - wife; reference_image_3 = outfit_sister_casual (primary) - sister`.
 
 ### Choosing the workflow (capability, never name)
 
@@ -410,7 +412,7 @@ or a missing outfit design, see the binding rule above); 3. further outfits / ch
   Picture 1), any camera.
 - **Multi-image i2i edit**: for shots matching the location plate's framing; the fillable i2i
   workflow with the MOST image slots able to hold references (not masks/depth/control); fewer
-  slots → drop from the end of the list.
+  slots → drop from the end of the list, never a person in `Characters:` (see "Slot budget").
 - **Single-image i2i only** → edit the location primary into the scene (characters in the prompt).
 - **No usable i2i** → t2i with characters, outfits and location described in the prompt.
 - **INTERIM**: when no ref2i workflow exists and the shot's Camera differs from the plate's
@@ -429,12 +431,13 @@ the choice and reason in the summary.
 
 `context` carries, per shot: the shot's `Action`, `Camera`, `Blocking`, `Pose`, `Frame` and
 `Visible` lines VERBATIM (plus the `POV:` line when present, and the POV-tile phrase of "Reference
-binding by extent"), the image labels (slot map by port label: "Picture 1 is the harbor, Picture 2
-is Mira"), one style line (`{workspace.story.plot}` medium/style verbatim, see "Medium / style is
+binding by extent"), the reference plan first (see "Reference plan per keyframe call"; code adds
+the Picture lines from `image_inputs`), one style line (`{workspace.story.plot}` medium/style verbatim, see "Medium / style is
 kept"), and the goal: *one cinematic keyframe of this shot, consistent with the reference images;
 compose as the camera line says; no text, captions or panels*. The `Sex act:` and `Sex position:` values go in
 `verbatim_phrases`. Never pass `Movement`, `Transition` or `Duration` (a keyframe is a still), and
-never restate what the reference images show or the design descriptions. **The goal line belongs
+never restate what the reference images show or the design descriptions (beyond the plan's
+one outfit phrase per person). **The goal line belongs
 in `context`, NEVER in `instruction`**: `instruction` is only for a person's own explicit
 correction (see "Prompt route"); anything else there is pasted into the prompt. The prompt writer
 applies `prompt-writer-<family>` itself.
@@ -475,11 +478,12 @@ Audit before completing:
 - [ ] before writing `shotlist.md`: every shot's `Characters:` count fits the keyframe workflow's slot budget (slots minus the place), else the moment is split ("Slot budget")
 - [ ] before EVERY keyframe call (also retries and chat re-renders): the reference plan is written per "Reference plan per keyframe call"; bound images match it, and the prompt names exactly its Pictures with each outfit in words
 - [ ] before writing `shotlist.md`: the `Format:` line is present right after the title, and every shot has every line of the format block (`Blocking`, `Pose`, `Frame`, `Visible`, ... - none missing); a refused write (rule breaks listed) is fixed and written again
-- [ ] **self-audit of the shotlist before the write and again here** (the studio checks R1-R5
-      mechanically; a policy `shotlist-keyframe-ready` judges the rest after drafting):
+- [ ] **self-audit of the shotlist before the write and again here** (the server checks R1-R7
+      mechanically at the write; a policy `shotlist-keyframe-ready` judges the rest after drafting):
       R1 `Characters:` = the `Visible:` entries; R2 one `Outfits:` pair per character, no extra;
       R3 valid extents + an exclusion clause; R4 `POV:` names a linked character, extent `limbs` /
-      `lower body` if in frame; R5 `Format:` line = the `format` attribute; ONE moment and ONE
+      `lower body` if in frame; R5 `Format:` line = the `format` attribute; R6 `Sex act` and
+      `Sex position` set together; R7 `Blocking` / `Pose` / `Frame` / `Visible` present; ONE moment and ONE
       framing per shot (no "then"); `Pose` states the garment's state where the look covers the
       body part; `Visible:` covers everyone `Blocking` places in frame and only them; no event from
       another place; every keyframe call of a workflow that takes it passed `is_portrait` from `Format:`; every shot with 2+

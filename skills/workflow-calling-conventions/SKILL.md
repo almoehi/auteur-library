@@ -120,16 +120,17 @@ A `match` needs no further call. On a `miss` (use its `fix`):
 
 ## Reference plan (before EVERY call with reference images)
 
-Before each `wf_*` call that takes reference images (first render, retry, chat re-render), write a
-plan, one line per bound image, into the call's `context` (the slot map; no free-text `context`:
-state it in your message before the call): `Picture N (<port>) = <design key> (<primary|sheet>) - <why>`,
-with N and the port from the workflow's port labels. The plan, the bound ports and the prompt must
-agree:
-- the prompt names every planned `Picture N` and NEVER a Picture without a bound image (no
-  "Picture 4" on a 3-slot workflow); an unbound optional slot is not mentioned;
+Before each `wf_*` call that takes reference images (first render, retry, chat re-render), plan
+one line per bound image, `<port> = <design key> (<primary|sheet>) - <who/what>`, and put the
+lines FIRST in the prompt writer's `context` (no writer call: state them in your message before
+the call). Use port names, never "Picture N" numbers: code writes the Picture lines from
+`image_inputs` (see "Prompt route"). The plan, the writer's `image_inputs` and the call's image
+ports must be the same images:
+- the drafted prompt names no Picture beyond the bound images (no "Picture 4" on a 3-slot
+  workflow); an unbound optional slot is not mentioned;
 - each referenced person or garment is also described in words next to its Picture ("the husband
-  from Picture 2, in a navy suit and white shirt") - the image alone is not trusted to carry the
-  clothing;
+  from Picture 2, in a navy suit and white shirt") - put that phrase in `context`; the image alone
+  is not trusted to carry the clothing;
 - an image whose subject is not in the shot is never bound; a person bound to an image of another
   person's design is a defect.
 
