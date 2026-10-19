@@ -118,6 +118,21 @@ A `match` needs no further call. On a `miss` (use its `fix`):
 2. If the retry also misses, call `suggest_edit(file, instruction, reason)` on the better take (`instruction`: one concrete corrective edit, what to change and keep, max ~1000 chars; `reason`: one line, max ~300). Report both takes and stop. It is fire-and-forget. A suggested fix the person sends from the Edit box is their explicit instruction: pass it through when it meets the pass-through conditions of "Prompt route".
 3. Never retry a `-r2` take (its miss goes straight to `suggest_edit`); sandbox-derived files (crop, conversion, sheet) are not checked.
 
+## Reference plan (before EVERY call with reference images)
+
+Before each `wf_*` call that takes reference images (first render, retry, chat re-render), write a
+plan, one line per bound image, into the call's `context` (the slot map; no free-text `context`:
+state it in your message before the call): `Picture N (<port>) = <design key> (<primary|sheet>) - <why>`,
+with N and the port from the workflow's port labels. The plan, the bound ports and the prompt must
+agree:
+- the prompt names every planned `Picture N` and NEVER a Picture without a bound image (no
+  "Picture 4" on a 3-slot workflow); an unbound optional slot is not mentioned;
+- each referenced person or garment is also described in words next to its Picture ("the husband
+  from Picture 2, in a navy suit and white shirt") - the image alone is not trusted to carry the
+  clothing;
+- an image whose subject is not in the shot is never bound; a person bound to an image of another
+  person's design is a defect.
+
 ## Anchor (Picture 1) by intent
 
 In multi-reference image workflows Picture 1 is the anchor (keeps framing and look best). **EDIT**: the image being edited is Picture 1, other references follow, named by the workflow's port labels. **COMPOSE** (new scene): the ENVIRONMENT image is Picture 1, then people/objects by priority. Never anchor a composed scene on an outfit or character image.

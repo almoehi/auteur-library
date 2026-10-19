@@ -279,6 +279,12 @@ under its id). A split shot keeps its id for the first part; the new parts get n
 after the highest existing id (`s3-08`, `s3-09`). `##` sections follow story order; ids need not be sequential. `Characters` / `Outfits` name only linked
 designs by KEY (others: in `Action` only); `Location` names only a linked location design key.
 
+**Slot budget (plan it BEFORE writing the shot list):** read the image ports of the keyframe
+workflow you will use (`get_workflow_instructions`). Image slots minus the place (Picture 1) = the
+most people a shot can show with a reference. If a shot's `Characters:` needs more, pick a qualifying
+workflow with more slots; if none, split the moment into several shots (e.g. a wide shot plus
+cutaways) so each fits. Never drop a person silently and never list more people than fit.
+
 ### Rewrite means re-render
 
 After ANY rewrite of `shotlist.md` (also the one a rejected `run_checks` grants), every shot whose
@@ -365,6 +371,26 @@ For each character in `Characters:` read their `Visible:` extent:
 - a character NOT in `Characters:` (off-frame, or a POV owner with nothing in frame) gets no image
   and is never mentioned as a figure in the prompt.
 
+### Reference plan per keyframe call (mandatory)
+
+Before EVERY keyframe call - first drafts, `-r2` retries, chat re-renders - write the reference
+plan of `workflow-calling-conventions` ("Reference plan") into the shot's `context`, derived from
+the shot's `Location:` / `Characters:` / `Outfits:` / `Visible:`:
+
+- compose: the shot's `Location:` design is Picture 1;
+- EXACTLY ONE image per person in `Characters:`, nobody else (not a person absent from
+  `Characters:`, not a character merely mentioned in `Action`);
+- that image is the person's OUTFIT design from their `Outfits:` pair
+  (`<characterKey>:<outfitKey>` -> `<outfitKey>` primary); the CHARACTER design only for a
+  `:nude` / `:none` pair or when no outfit design is linked; a sheet only per the POV / extent
+  rule below;
+- never cross outfits: the outfit design's character must equal the person it is bound for;
+- the prompt describes each person's outfit in words (garments, colour) beside "the <role> from
+  Picture N", and shot-specific blocking is the shot's own - never copy another shot's people or
+  "Picture N" labels into the prompt.
+
+Example (`Characters: character_wife; character_sister`, `Outfits: character_wife:outfit_wife_office_ready; character_sister:outfit_sister_casual`): Picture 1 (reference_image_1) = location_kitchen (primary) - place; Picture 2 = outfit_wife_office_ready (primary) - wife; Picture 3 = outfit_sister_casual (primary) - sister.
+
 ### Choosing the workflow (capability, never name)
 
 Read each candidate's description and `get_workflow_instructions(<tool>)`. Prefer the manifest:
@@ -446,6 +472,8 @@ Audit before completing:
       `Visible:` / `Characters:` / `Outfits:` / `POV:` / `Format:` follow "Who is in the frame"; every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
       a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings
+- [ ] before writing `shotlist.md`: every shot's `Characters:` count fits the keyframe workflow's slot budget (slots minus the place), else the moment is split ("Slot budget")
+- [ ] before EVERY keyframe call (also retries and chat re-renders): the reference plan is written per "Reference plan per keyframe call"; bound images match it, and the prompt names exactly its Pictures with each outfit in words
 - [ ] before writing `shotlist.md`: the `Format:` line is present right after the title, and every shot has every line of the format block (`Blocking`, `Pose`, `Frame`, `Visible`, ... - none missing); a refused write (rule breaks listed) is fixed and written again
 - [ ] **self-audit of the shotlist before the write and again here** (the studio checks R1-R5
       mechanically; a policy `shotlist-keyframe-ready` judges the rest after drafting):
