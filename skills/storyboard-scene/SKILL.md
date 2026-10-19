@@ -94,7 +94,7 @@ ONE write of `/workspace/<artifact id>/shotlist.md`, one section per shot, exact
 
 ```
 # Scene <n> shot list
-Format: portrait        (or "landscape" - ONE line, the frame orientation = the storyboard's `format` attribute in design.json)
+Format: portrait        (REQUIRED, right after the title: "portrait" or "landscape", see **`Format:`** below)
 
 ## s3-01 — Short title
 Action: what is VISIBLE in the frame, in one or two sentences
@@ -164,15 +164,20 @@ Then, mechanically:
   in frame (hands, knees, feet) the extent is `limbs` or `lower body`, never a full-body
   figure, and they ARE in `Characters:`. Example of a POV shot: `POV: character_jonas (seated)`,
   `Visible: character_jonas (limbs: forearms and hands); character_mira (upper body); nobody else`.
-- **`Format:`** (file header) is the production's frame orientation, `portrait` or `landscape`:
-  copy the storyboard's `format` attribute in `design.json`; if absent, the orientation the
-  story/plot states, else `landscape`. ONE line per file.
+- **`Format:`** (file header, ALWAYS) is the production's frame orientation, `portrait` or `landscape`.
+  EVERY `shotlist.md` you write starts with it, on the line right after the title - never omitted,
+  also when rewriting or splitting a shot list. Copy the storyboard's `format` attribute in
+  `design.json`; if absent, the orientation the story/plot states (a vertical phone film is
+  `portrait`), else `landscape`. ONE line per file. Without it the studio treats the file as a
+  legacy "older format" shotlist and enforces NONE of the shot rules below, so a shotlist without it
+  is never acceptable output.
 
 The server and the studio check these mechanically (set equality of `Characters:` and
 `Visible:`, one `Outfits:` pair per character, valid extents and exclusion clause, `POV:` names a
 linked character and its extent, `Format:` equals the attribute) and disable Generate for a shot
-that breaks them: fix the line and rewrite. A shotlist without a `Format:` line is the older
-format and is not checked - always write it.
+that breaks them. The server REFUSES a `shotlist.md` write that breaks the shot rules: the refusal
+lists the problems; fix them and write the whole file again (the refused write does not count as
+your one write and nothing is written).
 
 **A shot asks for ONE moment, never a sequence.** The keyframe is a single instant: one framing,
 one place, one state of the action. "She opens the door, steps in, then turns" or "stands, turns,
@@ -441,7 +446,7 @@ Audit before completing:
       `Visible:` / `Characters:` / `Outfits:` / `POV:` / `Format:` follow "Who is in the frame"; every `Movement` comes from its beat (`hold` only when the beat asks for stillness);
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
       a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings
-- [ ] before writing `shotlist.md`: every shot has every line of the format block (`Blocking`, `Pose`, `Frame`, `Visible`, ... - none missing)
+- [ ] before writing `shotlist.md`: the `Format:` line is present right after the title, and every shot has every line of the format block (`Blocking`, `Pose`, `Frame`, `Visible`, ... - none missing); a refused write (rule breaks listed) is fixed and written again
 - [ ] **self-audit of the shotlist before the write and again here** (the studio checks R1-R5
       mechanically; a policy `shotlist-keyframe-ready` judges the rest after drafting):
       R1 `Characters:` = the `Visible:` entries; R2 one `Outfits:` pair per character, no extra;
