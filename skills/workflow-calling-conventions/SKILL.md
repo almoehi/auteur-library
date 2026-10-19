@@ -121,7 +121,7 @@ A `match` needs no further call. On a `miss` (use its `fix`):
 ## Reference plan (before EVERY call with reference images)
 
 Before each `wf_*` call that takes reference images (first render, retry, chat re-render), plan
-one line per bound image, `<port> = <design key> (<primary|sheet>) - <who/what>`, and put the
+one line per bound image, `<port> = <design key> (<primary|sheet>) - <who/what>` (a POV owner bound without a published sheet: `(primary, no sheet)`), and put the
 lines FIRST in the prompt writer's `context` (no writer call: state them in your message before
 the call). Use port names, never "Picture N" numbers: code writes the Picture lines from
 `image_inputs` (see "Prompt route"). The plan, the writer's `image_inputs` and the call's image

@@ -377,7 +377,8 @@ For each character in `Characters:` read their `Visible:` extent:
   else of the character design), named "<Name>'s sheet", and add to the shot's `context`: "use
   only its POV <seated|lying> tile: <detail> seen from their own eyes, never their face or
   torso" (posture from the `POV:` line, default `seated`; `<detail>` from the `Visible:`
-  detail). Without a published sheet bind their normal primary with the limbs-only phrase below.
+  detail). Without a published sheet bind their normal primary with the limbs-only phrase below, and write
+  its reference-plan line as `(primary, no sheet)`.
 - `limbs` / `lower body` of **any other character** -> their normal primary, plus in `context`:
   "only their <detail> are in frame, never their face or the rest of their body".
 - a character NOT in `Characters:` (off-frame, or a POV owner with nothing in frame) gets no image
