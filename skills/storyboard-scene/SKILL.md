@@ -289,10 +289,13 @@ after the highest existing id (`s3-08`, `s3-09`). `##` sections follow story ord
 designs by KEY (others: in `Action` only); `Location` names only a linked location design key.
 
 **Slot budget (plan it BEFORE writing the shot list):** read the image ports of the keyframe
-workflow you will use (`get_workflow_instructions`). Image slots minus the place (Picture 1) = the
-most people a shot can show with a reference. If a shot's `Characters:` needs more, pick a qualifying
-workflow with more slots; if none, split the moment into several shots (e.g. a wide shot plus
-cutaways) so each fits. Never drop a person silently and never list more people than fit.
+workflow you will use (`get_workflow_instructions`). Images needed = the place (Picture 1) + ONE per
+character in `Characters:`. This includes the POV owner whenever they are in `Characters:` (their
+`limbs` / `lower body` is a person who needs an image, their SHEET, exactly like anyone else). If the
+count exceeds the workflow's image slots, pick a qualifying workflow with more slots; if none, split
+when writing the shot list (e.g. the POV shot shows the POV owner's limbs + one other person; the
+third person gets a cutaway shot) so each shot fits. Never drop a person, never list more people than
+fit.
 
 ### Rewrite means re-render
 
@@ -379,6 +382,13 @@ For each character in `Characters:` read their `Visible:` extent:
   "only their <detail> are in frame, never their face or the rest of their body".
 - a character NOT in `Characters:` (off-frame, or a POV owner with nothing in frame) gets no image
   and is never mentioned as a figure in the prompt.
+
+**POV shots (`POV: <owner>`), in the shot's `context`:** the camera IS the owner's eyes. Only the
+parts named in `Visible:` are in frame, seen from their own eyes (e.g. "his own forearms and hands at
+the bottom of the frame"). Never describe the owner as a figure, their face, torso or position in the
+frame, and never add a body part of anyone that `Visible:` does not list (no "husband's right forearm"
+in a shot whose `Visible:` shows only the sister's face). These words go into `context`, never edited
+into the returned prompt.
 
 ### Reference plan per keyframe call (mandatory)
 
@@ -476,7 +486,7 @@ Retry naming: base + `-r2` (`take_s3-02-wide-rain.png` -> `take_s3-02-wide-rain-
 
 Audit before completing:
 
-- [ ] every shot in `shotlist.md` has a take rendered from its current text
+- [ ] every shot in `shotlist.md` has a take rendered from its current text: re-read the artifact's file list and verify EVERY shot id of `shotlist.md` has at least one `take_<shotId>-draft-<n>` file (or a render in flight for it); never claim coverage without checking the list, and render any missing shot first
 - [ ] `run_checks` returned no rejected shot BEFORE the first `draft_prompt(s)` / `wf_*` keyframe call (when the kickoff lists checks), and ran again before `task_complete`
 - [ ] `shotlist.md` written in one go (at most the single rewrite a failing `run_checks` granted); every shot has `## <shotId> — <title>` plus `Action`,
       `Location` (a linked location key), `Camera`, `Movement`, `Characters` (linked character keys), `Outfits` (`<characterKey>:<outfitKey>` linked keys), `Duration`, `Transition`; ids unique and stable (`s<scene>-01…` on the first write, never renumbered by a rewrite);
@@ -484,6 +494,7 @@ Audit before completing:
       every `Transition` is `continue` or `cut` with a reason, from the beat's continuity, the first is `cut`;
       a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings
 - [ ] before writing `shotlist.md`: every shot's `Characters:` count fits the keyframe workflow's slot budget (slots minus the place), else the moment is split ("Slot budget")
+- [ ] every POV owner in `Characters:` has their sheet bound (counted in the slot budget), and their `context` says the camera is the owner's eyes, no figure, no body part `Visible:` omits
 - [ ] before EVERY keyframe call (also retries and chat re-renders): the reference plan is written per "Reference plan per keyframe call"; bound images match it, and the prompt names exactly its Pictures with each outfit in words
 - [ ] before writing `shotlist.md`: the `Format:` line is present right after the title, and every shot has every line of the format block (`Blocking`, `Pose`, `Frame`, `Visible`, ... - none missing); a refused write (rule breaks listed) is fixed and written again
 - [ ] **self-audit of the shotlist before the write and again here** (the server checks R1-R7
