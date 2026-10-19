@@ -186,6 +186,13 @@ unties, then dives" is several shots, not one `Action` / `Blocking`; any "then",
 "before", "after" in `Action` is a sign to split. Describe the state at the opening frame and let
 `Movement` / the video carry the change. Never show an event from another place in the frame.
 
+**Split beats, never merge them.** A scene-list beat that holds several actions (enters, grabs the
+laptop, exits; places his hand, then sucks his finger) becomes SEVERAL shots, one per action, in
+order - never one shot that lists them. One `Action:` names ONE action of ONE moment: two verbs
+joined by "and" / "while" / commas that happen one after the other (not at the same instant) are
+two shots. Count actions, not beats: a scene with 4 beats can need 7 shots. Before the write, read
+every `Action:` line once more and split any that still lists a sequence.
+
 ### One shot = one place + one opening framing
 
 A keyframe is ONE image: the shot's opening frame. So a shot holds exactly ONE place
@@ -204,6 +211,7 @@ exactly such a cutaway shot, at the place the beat names.
 **One moment per keyframe** - short bad -> good pairs (a keyframe freezes one instant):
 
 - Sequence: `X enters, drops the keys, then calls out` -> `X stands in the open doorway, keys on the floor at her feet`.
+- Merged beat: `Wife enters, grabs her laptop and exits` -> three shots: `Wife steps through the glass doors` / `Wife lifts the laptop off the table` / `Wife walks out through the doors, laptop under her arm`.
 - Camera move as the frame: `camera pans from A to B` -> `Camera:` is the opening frame only (A); the pan goes in `Movement:`.
 - Two framings: `close-up and wide` -> ONE framing in `Camera:`.
 - Dialogue as action: `X shouts "come here"` -> the pose while speaking: `mouth open, calling toward the doors`.
@@ -484,7 +492,7 @@ Audit before completing:
       R3 valid extents + an exclusion clause; R4 `POV:` names a linked character, extent `limbs` /
       `lower body` if in frame; R5 `Format:` line = the `format` attribute; R6 `Sex act` and
       `Sex position` set together; R7 `Blocking` / `Pose` / `Frame` / `Visible` present; ONE moment and ONE
-      framing per shot (no "then"); `Pose` states the garment's state where the look covers the
+      framing per shot (no "then"; a multi-action beat was split into one shot per action); `Pose` states the garment's state where the look covers the
       body part; `Visible:` covers everyone `Blocking` places in frame and only them; no event from
       another place; every keyframe call of a workflow that takes it passed `is_portrait` from `Format:`; every shot with 2+
       characters, contact or a `Sex act` went through the review batch
