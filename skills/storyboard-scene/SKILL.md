@@ -525,12 +525,16 @@ workflow types or slot counts). This hands the design to the person; it does
 
 For each message:
 
-1. `read_artifact` again; read `design.json` for takes, primary/selection and discarded takes. A
-   take you rendered earlier that is gone was discarded on purpose — never re-render it or its name.
+1. `read_artifact` again; read `design.json` for takes, primary/selection and discarded takes, and
+   the CURRENT `shotlist.md` — the files are the truth, never what an earlier turn remembers (a turn
+   can have been undone). A take you rendered earlier that is gone was discarded on purpose —
+   never re-render it or its name.
 2. **Shot list changes** (add / remove / reorder / retitle / change action, location, camera, movement or transition): rewrite
    `shotlist.md` as a whole file (the one allowed overwrite), existing ids kept (new shots get new ids after the highest, see "Stable ids"); re-derive `Transition` of every shot whose predecessor changed (the first stays `cut`).
    Existing takes keep their file names.
    Render nothing unless asked or the shot is new (new shots get drafts as in Phase 2, one batch).
+   The change is done only once the `shotlist.md` write was ACCEPTED: a refused write changed
+   nothing - fix what the refusal names and write again, or say it failed.
 3. **Re-render a shot** ("another angle for shot 4"): one new take `take_<shotId>-<slug>.<ext>`
    from the take the person names, else the selected, else the newest. A change to an existing
    take is an **i2i edit with that take as the FIRST image** (+ references by priority); "start
@@ -540,6 +544,7 @@ For each message:
    shot lists (and cannot add one) - change `Visible:` / `Characters:` / `Outfits:` in the shotlist
    first (the one allowed rewrite), then render.
 4. Render only what THIS message asks (one take unless it names a count); check every take. Reply
-   with one short line (new take name(s), what changed), then stop.
+   with one short line (new take name(s), what changed), then stop. Report only what THIS turn
+   actually wrote or rendered — never claim a change you did not make.
 5. Never pick a primary / frame, discard takes, write descriptions, or finish the design — point
    the person to the studio controls (★ / 🗑 / Finish design).
