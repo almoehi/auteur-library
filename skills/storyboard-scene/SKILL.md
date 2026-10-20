@@ -414,10 +414,9 @@ plan of `workflow-calling-conventions` ("Reference plan") at the start of the sh
   rule below;
 - never cross outfits: the outfit design's character must equal the person it is bound for;
 - `context` gives each person's outfit in words (garments, colour) AND their distinguishing
-  features from the design digest's identity section (hair colour/length/style, build, age,
-  facial hair, skin tone), so the prompt says both beside "the <role> from Picture N"; with 2+
-  people add "different people - do not mix their features" (see `workflow-calling-conventions`,
-  "Reference plan"); shot-specific blocking is the shot's own - never copy another shot's people
+  features (copy the cue from the Picture line code writes; none there: derive it from the design
+  digest's identity section, see `workflow-calling-conventions`, "Reference plan"), so the prompt
+  says both beside "the <role> from Picture N"; shot-specific blocking is the shot's own - never copy another shot's people
   or Picture labels.
 
 Example (`Characters: character_wife; character_sister`, `Outfits: character_wife:outfit_wife_office_ready; character_sister:outfit_sister_casual`): `reference_image_1 = location_kitchen (full_body_shot) - place; reference_image_2 = outfit_wife_office_ready (full_body_shot) - wife; reference_image_3 = outfit_sister_casual (full_body_shot) - sister`.
@@ -506,7 +505,7 @@ Audit before completing:
       a `parallel` beat is its own cutaway shot at its named place; no shot holds two places or two framings
 - [ ] before writing `shotlist.md`: every shot's `Characters:` count fits the keyframe workflow's slot budget (slots minus the place), else the moment is split ("Slot budget")
 - [ ] every POV owner in `Characters:` has their sheet bound (counted in the slot budget), and their `context` says the camera is the owner's eyes, no figure, no body part `Visible:` omits
-- [ ] before EVERY keyframe call (also retries and chat re-renders): the reference plan is written per "Reference plan per keyframe call"; bound images match it, and the prompt names exactly its Pictures with each outfit in words and each person's identity features (2+ people: the "different people" line)
+- [ ] before EVERY keyframe call (also retries and chat re-renders): the reference plan is written per "Reference plan per keyframe call"; bound images match it, and the prompt names exactly its Pictures with each outfit in words and each person's identity features (the cue of the Picture line)
 - [ ] before writing `shotlist.md`: the `Format:` line is present right after the title, and every shot has every line of the format block (`Blocking`, `Pose`, `Frame`, `Visible`, ... - none missing); a refused write (rule breaks listed) is fixed and written again
 - [ ] **self-audit of the shotlist before the write and again here** (the server checks R1-R7
       mechanically at the write; a policy `shotlist-keyframe-ready` judges the rest after drafting):
