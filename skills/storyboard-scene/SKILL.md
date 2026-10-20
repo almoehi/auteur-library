@@ -289,13 +289,19 @@ after the highest existing id (`s3-08`, `s3-09`). `##` sections follow story ord
 designs by KEY (others: in `Action` only); `Location` names only a linked location design key.
 
 **Slot budget (plan it BEFORE writing the shot list):** read the image ports of the keyframe
-workflow you will use (`get_workflow_instructions`). Images needed = the place (Picture 1) + ONE per
-character in `Characters:`. This includes the POV owner whenever they are in `Characters:` (their
-`limbs` / `lower body` is a person who needs an image, their SHEET, exactly like anyone else). If the
-count exceeds the workflow's image slots, pick a qualifying workflow with more slots; if none, split
-when writing the shot list (e.g. the POV shot shows the POV owner's limbs + one other person; the
-third person gets a cutaway shot) so each shot fits. Never drop a person, never list more people than
-fit.
+workflow you will use (`get_workflow_instructions`). Images needed per shot = the place (1) + ONE
+per character in `Visible:` (their outfit stands in for them; a POV owner shown as `limbs` /
+`lower body` binds their SHEET, also 1). That count must be <= the workflow's image slots. If it
+exceeds them, pick a qualifying workflow with more slots; if none, SPLIT the shot.
+
+**A split reduces WHO IS IN FRAME per shot - never only the time or the beat.** Each new shot shows
+a subset of the people (e.g. the POV owner's limbs + one other person; the third person gets a
+cutaway shot); everyone not shown is off-frame in that shot and is removed from its `Visible:`,
+`Characters:` and `Outfits:` (named in `Action` only if the beat needs them). Splitting one
+moment into "enters" / "grabs" while all the same people stay in frame leaves the count unchanged:
+that is not a split. Never drop a person from the story, never list more people than fit.
+**Self-check before the write:** recount every new shot (place + one per `Visible:` character) and
+confirm each is <= the slots; any shot still over budget is split again.
 
 ### Rewrite means re-render
 
