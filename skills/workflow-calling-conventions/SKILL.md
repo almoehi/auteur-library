@@ -109,7 +109,7 @@ FIX: one concrete corrective instruction - what to change and what to keep (MISS
 
 A shot's `Characters:`, `Outfits:` and `Location:` lines are design **keys** (`character_the_wife`,
 `character_the_wife:outfit_the_wife_gown`, `location_harbor`), not names. Use them to find the linked design (and its
-`primary.<ext>`); in a prompt or a `check_take` `request` describe the people and the place by the
+`full_body_shot.<ext>`); in a prompt or a `check_take` `request` describe the people and the place by the
 design's name and look (from its `design.json`), never by pasting the key.
 
 A `match` needs no further call. On a `miss` (use its `fix`):
@@ -121,7 +121,7 @@ A `match` needs no further call. On a `miss` (use its `fix`):
 ## Reference plan (before EVERY call with reference images)
 
 Before each `wf_*` call that takes reference images (first render, retry, chat re-render), plan
-one line per bound image, `<port> = <design key> (<primary|sheet>) - <who/what>` (a POV owner bound without a published sheet: `(primary, no sheet)`), and put the
+one line per bound image, `<port> = <design key> (<full_body_shot|sheet>) - <who/what>` (a POV owner bound without a published sheet: `(full_body_shot, no sheet)`), and put the
 lines FIRST in the prompt writer's `context` (no writer call: state them in your message before
 the call). Use port names, never "Picture N" numbers: code writes the Picture lines from
 `image_inputs` (see "Prompt route"). The plan, the writer's `image_inputs` and the call's image
@@ -145,7 +145,7 @@ A ref2i (reference-to-image) prompt is a scene description naming the pictures b
 A workflow whose description starts with **[nsfw]** renders nudity and sex. Choose by the workspace content policy (`{workspace.contentPolicy.nudity}`; absent = forbidden), never by name:
 - `forbidden`, or any shot / design depicting a minor (whatever the policy): never use an [nsfw] workflow (a forbidden workspace refuses them anyway).
 - `allowed`, and the frame shows nudity or sex between adults: among workflows of the SAME capability prefer the [nsfw] one; capability still comes first (an [nsfw] edit never replaces a needed reference-to-image).
-- **Explicit sex acts**: prefer an [nsfw] **reference-to-image** workflow - it composes the act directly from the place (Picture 1) and the characters (Pictures 2, 3), with a general NSFW LoRA (an act LoRA is optional). An [nsfw] multi-reference EDIT cannot produce an act (the people keep their reference poses); without a reference-to-image one use two steps: (1) render the act with the [nsfw] text-to-image workflow plus the act LoRA from the catalog (`lora_index`: missionary, blowjob, deepthroat, ...), describing the room of the location design; (2) put each character in with the [nsfw] multi-reference edit, ONE person per call (Picture 1 = the act frame, then the previous output; Picture 2 = that character's primary): "Replace the woman in image 1 with the adult woman from image 2 ... Leave the man unchanged. Keep the exact poses, camera angle, framing and room of image 1." Never pass two people as one picture for a swap. Frame people large: small figures in a wide shot barely take the identity.
+- **Explicit sex acts**: prefer an [nsfw] **reference-to-image** workflow - it composes the act directly from the place (Picture 1) and the characters (Pictures 2, 3), with a general NSFW LoRA (an act LoRA is optional). An [nsfw] multi-reference EDIT cannot produce an act (the people keep their reference poses); without a reference-to-image one use two steps: (1) render the act with the [nsfw] text-to-image workflow plus the act LoRA from the catalog (`lora_index`: missionary, blowjob, deepthroat, ...), describing the room of the location design; (2) put each character in with the [nsfw] multi-reference edit, ONE person per call (Picture 1 = the act frame, then the previous output; Picture 2 = that character's full-body shot): "Replace the woman in image 1 with the adult woman from image 2 ... Leave the man unchanged. Keep the exact poses, camera angle, framing and room of image 1." Never pass two people as one picture for a swap. Frame people large: small figures in a wide shot barely take the identity.
 - **NSFW LoRAs**: `design.json.loras` (planned by `plan-designs`) first, `lora_index` only for content they do not cover. A nudity EDIT (undressing, a swap step that must show a nude body) uses the catalog's image-edit nudity LoRA of the edit workflow's family (solo nudity only, never for an act). The "general NSFW LoRA" above is the planned one, else one from `lora_index`.
 - Call every depicted person an adult in the prompt.
 
