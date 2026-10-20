@@ -131,6 +131,14 @@ ports must be the same images:
 - each referenced person or garment is also described in words next to its Picture ("the husband
   from Picture 2, in a navy suit and white shirt") - put that phrase in `context`; the image alone
   is not trusted to carry the clothing;
+- every PERSON picture carries that person's distinguishing features (hair colour/length/style,
+  build or figure, age, facial hair, skin tone). Code writes them into the Picture line from the
+  design (`Picture 2 is Wife: woman, age: 30, hair: short, wavy, blonde`) and adds the "different
+  people - do not mix their features" rule itself: copy the cue from that Picture line into the
+  role phrase in `context` ("the wife from Picture 2, short wavy blonde hair"), never invent or
+  paraphrase features. A person whose Picture line has no cue (design not finished, or no cue
+  stored) gets one derived from the design digest's identity section (`read_artifact` /
+  "Referenced designs"); never leave two similar-looking people told apart by name only;
 - an image whose subject is not in the shot is never bound; a person bound to an image of another
   person's design is a defect.
 
