@@ -374,7 +374,8 @@ For each character in `Characters:` read their `Visible:` extent:
   character primary for a `:nude` / `:none` pair or when no outfit design exists), as above.
 - `limbs` / `lower body` of the **POV owner** (the `POV:` character) -> NOT the full-body primary:
   bind their published SHEET (`sheet.<ext>` of the outfit design when the pair names an outfit,
-  else of the character design), named "<Name>'s sheet", and add to the shot's `context`: "use
+  else of the character design: the design's `sheet:` ref - listed under `primary:` in the
+  "Referenced designs" block and in `read_artifact`'s design digest), named "<Name>'s sheet", and add to the shot's `context`: "use
   only its POV <seated|lying> tile: <detail> seen from their own eyes, never their face or
   torso" (posture from the `POV:` line, default `seated`; `<detail>` from the `Visible:`
   detail). Without a published sheet bind their normal primary with the limbs-only phrase below, and write
