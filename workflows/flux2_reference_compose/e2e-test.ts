@@ -1,7 +1,7 @@
 /**
- * WorkflowAgent E2E — flux2_reference_compose (ref2i: new image from up to 3 references)
+ * WorkflowAgent E2E — flux2_reference_compose (ref2i: new image from up to 4 references)
  *
- * Renders one image per reference combination (0-3 references, incl. a gap in the ports) from the
+ * Renders one image per reference combination (0-4 references, incl. a gap in the ports) from the
  * single shipped graph. Model URLs come from workflow.yaml. Fixtures: fixture_*.png (this folder).
  *
  * Cost: REAL GPU + S3. The script tears the endpoint down in `finally`; still verify no
@@ -202,7 +202,7 @@ async function teardownAll(): Promise<void> {
 }
 
 // ── Test execution ────────────────────────────────────────────────────────────
-type PortName = 'reference_image_1' | 'reference_image_2' | 'reference_image_3';
+type PortName = 'reference_image_1' | 'reference_image_2' | 'reference_image_3' | 'reference_image_4';
 type Fixture = 'location' | 'character';
 
 interface Scenario {
@@ -217,6 +217,12 @@ const SIGNS = "(the same room: window with a toy castle, door with a 'No Boys Al
 
 // Pictures are numbered by the references actually SUPPLIED, in port order — a gap leaves no hole.
 const SCENARIOS: Scenario[] = [
+  {
+    id: 'four_ports_place_and_three_characters',
+    // FLUX.2 Klein's maximum: 4 references. Picture 4 is encoded at 0.5 MP (node 414).
+    refs: { reference_image_1: 'location', reference_image_2: 'character', reference_image_3: 'character', reference_image_4: 'character' },
+    prompt: STYLE + `Eye-level wide shot facing the room. Brianna from Picture 2, her twin from Picture 3 and her cousin from Picture 4 sit side by side on the bed in the bedroom from Picture 1 ${SIGNS}, smiling at the camera.`,
+  },
   {
     id: 'three_ports_place_and_characters',
     refs: { reference_image_1: 'location', reference_image_2: 'character', reference_image_3: 'character' },
@@ -265,7 +271,7 @@ try {
   console.log(`  Loaded: inputs=${manifest.inputs?.length ?? 0} outputs=${manifest.outputs?.length ?? 0}`);
   check('manifest id matches', manifest.id === WF_NAME, manifest.id ?? '(null)');
   check('is a ref2i workflow', manifest.workflowType === 'ref2i', String(manifest.workflowType));
-  for (const [n, label] of [['reference_image_1', 'Picture 1'], ['reference_image_2', 'Picture 2'], ['reference_image_3', 'Picture 3']]) {
+  for (const [n, label] of [['reference_image_1', 'Picture 1'], ['reference_image_2', 'Picture 2'], ['reference_image_3', 'Picture 3'], ['reference_image_4', 'Picture 4']]) {
     check(`${n} is optional, labelled "${label}"`, inputOf(n)?.required === false && inputOf(n)?.label === label, JSON.stringify(inputOf(n)));
   }
   check('reference_image_1 is the subject (anchor)', inputOf('reference_image_1')?.referenceRole === 'subject', JSON.stringify(inputOf('reference_image_1')));

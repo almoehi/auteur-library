@@ -54,7 +54,7 @@ y = must_replace(y, "(model family flux2, trained for FLUX.2 Klein 9B: style, ch
                  "(model family flux2, trained for FLUX.2 Klein 9B: act, detail, style)")
 y = must_replace(y, "  LoRAs: up to four flux2 catalog LoRAs on lora_1..lora_4",
                  "  NSFW: the general NSFW LoRA SNOFS (0.7) is always on - do not select it on a port. Explicit acts\n"
-                 "  compose in ONE call: Picture 1 = the place, Picture 2 / 3 = the two adult characters, the act and\n"
+                 "  compose in ONE call: Picture 1 = the place, Picture 2 / 3 = the two adult characters (Picture 4 optional: a third person, outfit or prop), the act and\n"
                  "  camera in the prompt (spike 2026-10-15: missionary 4/4 in the plate's room with both identities,\n"
                  "  with or without an act LoRA; blowjob 1/2). Call every person an adult. Swapping people into an\n"
                  "  existing frame is unreliable here - use krea2_image_edit_nsfw, one person per call.\n"

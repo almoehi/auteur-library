@@ -1,12 +1,13 @@
 /**
- * WorkflowAgent E2E — flux2_reference_compose_nsfw (ref2i, NSFW: new image from up to 3 references)
+ * WorkflowAgent E2E — flux2_reference_compose_nsfw (ref2i, NSFW: new image from up to 4 references)
  *
- * Three renders on ONE provisioned l40s endpoint, submitted together (E2E_ONLY=A|B|C runs just one):
+ * Four renders on ONE provisioned l40s endpoint, submitted together (E2E_ONLY=A|B|C|D runs just one):
  *   A. solo:   plate (Picture 1) + woman (Picture 2) -> nude woman on the bed       -> out_solo.png
  *   B. couple: plate + woman + man (Picture 3), missionary sex act, prompt only     -> out_couple.png
+ *   D. four references: as B plus the woman again as Picture 4 (the 4-reference maximum; 0.5 MP) -> out_four.png
  *   C. LoRA:   as B plus catalog LoRA FK_missionary on port lora_1 (strength 0.8,
  *              passed as the 6th agent.run() argument)                              -> out_lora.png
- * Plus manifest checks (3 optional image inputs, lora_1..lora_4 ports, primary `image` output).
+ * Plus manifest checks (4 optional image inputs, lora_1..lora_4 ports, primary `image` output).
  * A general NSFW LoRA (SNOFS) is baked into the graph. Each output must be a PNG of exactly
  * 1344x768 and is saved next to this script for visual review. Model URLs come from workflow.yaml.
  * Fixtures: fixture_*.png (this folder). Explicit content: run only where that is permitted.
@@ -80,7 +81,7 @@ const PLATE_FIXTURE          = 'fixture_plate.png';           // an empty hotel 
 const WOMAN_FIXTURE          = 'fixture_character.png';       // an adult red-haired woman
 const MAN_FIXTURE            = 'fixture_character_male.png';  // an adult dark-haired bearded man
 
-type PortName = 'reference_image_1' | 'reference_image_2' | 'reference_image_3';
+type PortName = 'reference_image_1' | 'reference_image_2' | 'reference_image_3' | 'reference_image_4';
 
 const LORA_NAME   = 'FK_missionary.safetensors';
 const LORA_SHA256 = '787faf79194659dba26bea0adba67b48e32ece24172544229116a9f680aef4a1';
@@ -120,6 +121,12 @@ const ALL_SCENARIOS: Scenario[] = [
   { label: 'C catalog LoRA', refs: { reference_image_1: PLATE_FIXTURE, reference_image_2: WOMAN_FIXTURE, reference_image_3: MAN_FIXTURE },
     prompt: 'missionary, vaginal sex. ' + COUPLE_PROMPT, loraJson: LORA_JSON, outFile: 'out_lora.png' },
 ];
+
+// D exercises the 4th (maximum) reference: the woman's fixture again as Picture 4 (a second look at her).
+const FOUR_PROMPT = COUPLE_PROMPT + ' Picture 4 shows the same woman again; keep her identity.';
+ALL_SCENARIOS.push({ label: 'D four references',
+  refs: { reference_image_1: PLATE_FIXTURE, reference_image_2: WOMAN_FIXTURE, reference_image_3: MAN_FIXTURE, reference_image_4: WOMAN_FIXTURE },
+  prompt: FOUR_PROMPT, loraJson: undefined, outFile: 'out_four.png' });
 
 const ONLY = process.env.E2E_ONLY ?? '';
 const SCENARIOS = ALL_SCENARIOS.filter(sc => !ONLY || sc.label.startsWith(ONLY));
@@ -296,7 +303,7 @@ try {
   check('manifest id matches', manifest.id === WF_NAME, manifest.id ?? '(null)');
   const wfType = manifest.workflowType ?? manifest.workflow_type;
   check('is a ref2i workflow', wfType === 'ref2i', String(wfType));
-  for (const n of ['reference_image_1', 'reference_image_2', 'reference_image_3']) {
+  for (const n of ['reference_image_1', 'reference_image_2', 'reference_image_3', 'reference_image_4']) {
     check(`${n} is an optional image input`, inputOf(n)?.kind === 'image' && inputOf(n)?.required === false, JSON.stringify(inputOf(n)));
   }
   check('width/height are required params', paramOf('width')?.required === true && paramOf('height')?.required === true, JSON.stringify([paramOf('width'), paramOf('height')]));

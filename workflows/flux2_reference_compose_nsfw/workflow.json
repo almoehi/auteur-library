@@ -37,11 +37,11 @@
         0
       ],
       "positive": [
-        "433",
+        "434",
         0
       ],
       "negative": [
-        "443",
+        "444",
         0
       ]
     },
@@ -390,6 +390,66 @@
       ],
       "latent": [
         "423",
+        0
+      ]
+    }
+  },
+  "404": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "reference_4.png"
+    },
+    "_meta": {
+      "title": "Picture 4"
+    }
+  },
+  "414": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 0.5,
+      "resolution_steps": 1,
+      "image": [
+        "404",
+        0
+      ]
+    }
+  },
+  "424": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "414",
+        0
+      ],
+      "vae": [
+        "127",
+        0
+      ]
+    }
+  },
+  "434": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "433",
+        0
+      ],
+      "latent": [
+        "424",
+        0
+      ]
+    }
+  },
+  "444": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "443",
+        0
+      ],
+      "latent": [
+        "424",
         0
       ]
     }
