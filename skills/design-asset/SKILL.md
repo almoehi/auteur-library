@@ -16,7 +16,7 @@ agentType: worker
 
 A design is an ordinary `llm+hitl` task plus one open artifact, both keyed `<kind>_<name>`
 (`character_mira`). The **web studio owns the design**: its `design.json` (attributes, takes,
-primary, description, LoRAs) and every published file (`primary.*`, `sheet.*`, `view_*`). You only
+primary, description, LoRAs) and every published file (`full_body_shot.*`, `sheet.*`, `view_*`). You only
 put **images** into the artifact; the studio picks them up as takes. Contract reference:
 `release/DESIGN_GUIDE.md`. Keep visible replies concise: see "Concise replies and task/artifact URIs" in
 `workflow-calling-conventions`.
@@ -26,7 +26,7 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
 1. **Never write, overwrite, rename or delete `design.json`** — read it only
    (`read_artifact(artifactId="<task id>")`, ONCE per turn, compactly: never copy or restate the
    document, takes history or file lists; later reads return a server-side compact digest).
-2. **Never write published names** (`primary.*`, `sheet.*`, `view_*`).
+2. **Never write published names** (`full_body_shot.*`, `sheet.*`, `view_*`).
 3. **File names are flat** — no `/`. Drafts: `take_draft-<n>-<slug>.<ext>` (n = 1 … initialDrafts;
    slug = a few lowercase hyphenated words naming the content, `[a-z0-9]+(-[a-z0-9]+)*`, no `_`).
    Chat-phase takes: `take_<slug>.<ext>` — slug summarizes what the take shows or the change
@@ -52,12 +52,12 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
    prompt names if it exists among your `wf_*` tools, else the text-to-image `wf_*` tool (per its
    description / `get_workflow_instructions`) whose model family matches the prompt or
    `design.json`. **Exception — an outfit (or any design drafted as image EDITS of a linked
-   design's primary):** an image-edit (`i2i`) workflow, never text-to-image; the linked design's
-   `primary:` line in the prompt's "Referenced designs" block (`artifact://<id>/primary.<ext>`) is
+   design's full-body shot):** an image-edit (`i2i`) workflow, never text-to-image; the linked design's
+   `full_body_shot:` line in the prompt's "Referenced designs" block (`artifact://<id>/full_body_shot.<ext>`) is
    its first image input; **how many drafts** (`initialDrafts`, default 4) and the **extension**
    (default `png`).
 3. Empty attributes, or no text-to-image `wf_*` tool (outfit: no image-edit `wf_*` tool with an
-   image input, or no `primary:` line for the linked character) → **do not guess**, and never
+   image input, or no `full_body_shot:` line for the linked character) → **do not guess**, and never
    fall back to text-to-image for an outfit (it invents a different person): render nothing and
    `task_complete` saying exactly what is missing. The person continues in the studio.
 
@@ -75,7 +75,7 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
    drafted. `context` is short: all attributes, the design kind and the goal *a clean, well-lit
    reference image of one subject* — character: full body or three-quarter, neutral pose, plain
    background, face clearly visible; outfit: an edit instruction dressing the person of the linked
-   character's primary in the outfit (keep face, hair, body unchanged), full body; location: an
+   character's full-body shot in the outfit (keep face, hair, body unchanged), full body; location: an
    establishing wide shot (see step 5 for subjects without people). Never restate design descriptions or what reference images
    show. The prompt writer applies `prompt-writer-<family>` itself (without `draft_prompt`,
    `load_skill` it).
@@ -97,7 +97,7 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
      [nsfw] text-to-image workflow (see "NSFW-marked workflows" in `workflow-calling-conventions`).
      `none` (creature/animal): no garments or accessories, natural appearance - never render the word.
      Anything else: the plain neutral clothing the attribute names.
-   - **Outfit**: always dresses the linked character primary (edit): exactly the outfit's garments,
+   - **Outfit**: always dresses the linked character full-body shot (edit): exactly the outfit's garments,
      face, hair, body and skin unchanged. Use the [nsfw] image-edit workflow only when the outfit
      itself leaves nudity visible (lingerie, open robe).
 5. **A design kind without people in it** (locations, props, any kind registered as depicting no
@@ -116,7 +116,7 @@ put **images** into the artifact; the studio picks them up as takes. Contract re
 
 ## Phase 3 — Render the drafts
 
-For an outfit each call edits the linked character's primary: pass the prompt's `primary:` ref
+For an outfit each call edits the linked character's full-body shot: pass the prompt's `full_body_shot:` ref
 (same `artifact://`, never a copied URL) as the image input and the edit instruction as the
 prompt; the description says who the person is, the image defines how they look.
 

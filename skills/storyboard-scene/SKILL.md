@@ -17,7 +17,7 @@ agentType: worker
 
 A storyboard is a design (an `llm+hitl` task plus one open artifact, both keyed
 `storyboard_scene_<n>`) for ONE scene. The **web studio owns the design**: its `design.json`
-and every published file (`primary.*`, `sheet.*`, `view_*`, `frame_*`, the published copy of
+and every published file (`full_body_shot.*`, `sheet.*`, `view_*`, `frame_*`, the published copy of
 `shotlist.md`). You write `shotlist.md`, then put keyframe **images** into the artifact; the
 studio shows each `take_<shotId>-…` file as a take of that shot and the person picks one per
 shot. Keep visible replies concise: see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
@@ -25,7 +25,7 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
 ## Hard rules
 
 1. **Never write, overwrite, rename or delete `design.json`** — read it only.
-2. **Never write published names** (`primary.*`, `sheet.*`, `view_*`, `frame_*`).
+2. **Never write published names** (`full_body_shot.*`, `sheet.*`, `view_*`, `frame_*`).
 3. **File names are flat** (no `/`). The only non-image file you write is `shotlist.md`.
    Initial drafts `take_<shotId>-draft-<n>.<ext>` (n = 1 … drafts per shot); chat-phase takes
    `take_<shotId>-<slug>.<ext>` (slug = a few lowercase hyphenated words naming the content or
@@ -74,9 +74,9 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   beat it shows). `Outfits:` follows the shot's `Characters:` exactly (one pair per character in frame, nobody else; see "Who is in the frame"). A `parallel` cutaway beat's characters come from that beat even when the scene row's `Characters present` omits them. A scene list without a beat `Outfits` column (older) falls back to the scene row.
 - Bind each `<character_slug>:<look_slug>` pair (THE binding rule for nude vs clothed; keys in
   `design.json.links` are the truth): a shot's `Outfits:` pair `<c>:nude` or `<c>:none` binds the
-  character design primary (`character_<c>`, in a nudity-allowed workspace that primary IS the nude base sheet); `<c>:<look>` binds the outfit design primary: the
+  character design full-body shot (`character_<c>`, in a nudity-allowed workspace that full-body shot IS the nude base sheet); `<c>:<look>` binds the outfit design full-body shot: the
   key from `design_plan.json` `outfits[]` (character_slug + look_slug) when present, else
-  `outfit_<c>_<look>` (suffix tolerated). A missing outfit design -> bind the character primary,
+  `outfit_<c>_<look>` (suffix tolerated). A missing outfit design -> bind the character full-body shot,
   describe the garments in the prompt and name the gap in the summary - never let a clothed shot
   come out nude. WHICH image a character gets also depends on how much of them is in frame: see
   "Reference binding by extent" (rule 3).
@@ -86,8 +86,8 @@ shot. Keep visible replies concise: see "Concise replies and task/artifact URIs"
   does not link, and lists the valid keys: fix the line and write it again.
 - **Preflight** — if any fails do not guess: render nothing, `task_complete` saying exactly what
   is missing: the scene number (`scene` attribute or task id); a readable `scene_list` with a row
-  for it; at least one linked location; each linked design readable with a published `primary.<ext>`
-  (`artifact://<id>/primary.<ext>`); at least one image-rendering `wf_*` tool.
+  for it; at least one linked location; each linked design readable with a published `full_body_shot.<ext>`
+  (`artifact://<id>/full_body_shot.<ext>`, `primary.<ext>` in an older design - use the `full_body_shot:` ref either way); at least one image-rendering `wf_*` tool.
 
 ## Phase 1 — Shot list
 
@@ -158,7 +158,7 @@ Then, mechanically:
   character whose hands, back or any limb is in frame IS in `Characters:`; a character
   who is off-frame is NOT (only "(off-frame)" in `Blocking:`).
 - **`Outfits:`** = exactly one pair per `Characters:` entry - `<characterKey>:<outfitKey>`, or
-  `<characterKey>:nude` / `<characterKey>:none` (valid looks, they bind the character primary) - and no pair for anyone not in `Characters:`.
+  `<characterKey>:nude` / `<characterKey>:none` (valid looks, they bind the character full-body shot) - and no pair for anyone not in `Characters:`.
 - **`POV: <characterKey> (seated|lying)`** (optional line, absent = objective camera; the posture is optional, default `seated`, and picks the sheet's POV tile): the camera is that
   character's eyes. Never write it for a normal over-the-shoulder or objective shot. A POV
   character with nothing of theirs in frame is simply not in `Characters:`; with their own limbs
@@ -370,17 +370,17 @@ name); if it fails again leave it (the studio shows a failed take with Retry) an
 
 For each character in `Characters:` read their `Visible:` extent:
 
-- `full figure` / `upper body` / `face` / `back` -> the character's outfit design primary (the
-  character primary for a `:nude` / `:none` pair or when no outfit design exists), as above.
-- `limbs` / `lower body` of the **POV owner** (the `POV:` character) -> NOT the full-body primary:
+- `full figure` / `upper body` / `face` / `back` -> the character's outfit design full-body shot (the
+  character full-body shot for a `:nude` / `:none` pair or when no outfit design exists), as above.
+- `limbs` / `lower body` of the **POV owner** (the `POV:` character) -> NOT the full-body shot:
   bind their published SHEET (`sheet.<ext>` of the outfit design when the pair names an outfit,
-  else of the character design: the design's `sheet:` ref - listed under `primary:` in the
+  else of the character design: the design's `sheet:` ref - listed under `full_body_shot:` in the
   "Referenced designs" block and in `read_artifact`'s design digest), named "<Name>'s sheet", and add to the shot's `context`: "use
   only its POV <seated|lying> tile: <detail> seen from their own eyes, never their face or
   torso" (posture from the `POV:` line, default `seated`; `<detail>` from the `Visible:`
-  detail). Without a published sheet bind their normal primary with the limbs-only phrase below, and write
-  its reference-plan line as `(primary, no sheet)`.
-- `limbs` / `lower body` of **any other character** -> their normal primary, plus in `context`:
+  detail). Without a published sheet bind their full-body shot with the limbs-only phrase below, and write
+  its reference-plan line as `(full_body_shot, no sheet)`.
+- `limbs` / `lower body` of **any other character** -> their full-body shot, plus in `context`:
   "only their <detail> are in frame, never their face or the rest of their body".
 - a character NOT in `Characters:` (off-frame, or a POV owner with nothing in frame) gets no image
   and is never mentioned as a figure in the prompt.
@@ -403,7 +403,7 @@ plan of `workflow-calling-conventions` ("Reference plan") at the start of the sh
 - EXACTLY ONE image per person in `Characters:`, nobody else (not a person absent from
   `Characters:`, not a character merely mentioned in `Action`);
 - that image is the person's OUTFIT design from their `Outfits:` pair
-  (`<characterKey>:<outfitKey>` -> `<outfitKey>` primary); the CHARACTER design only for a
+  (`<characterKey>:<outfitKey>` -> `<outfitKey>` full-body shot); the CHARACTER design only for a
   `:nude` / `:none` pair or when no outfit design is linked; a sheet only per the POV / extent
   rule below;
 - never cross outfits: the outfit design's character must equal the person it is bound for;
@@ -411,7 +411,7 @@ plan of `workflow-calling-conventions` ("Reference plan") at the start of the sh
   "the <role> from Picture N"; shot-specific blocking is the shot's own - never copy another
   shot's people or Picture labels.
 
-Example (`Characters: character_wife; character_sister`, `Outfits: character_wife:outfit_wife_office_ready; character_sister:outfit_sister_casual`): `reference_image_1 = location_kitchen (primary) - place; reference_image_2 = outfit_wife_office_ready (primary) - wife; reference_image_3 = outfit_sister_casual (primary) - sister`.
+Example (`Characters: character_wife; character_sister`, `Outfits: character_wife:outfit_wife_office_ready; character_sister:outfit_sister_casual`): `reference_image_1 = location_kitchen (full_body_shot) - place; reference_image_2 = outfit_wife_office_ready (full_body_shot) - wife; reference_image_3 = outfit_sister_casual (full_body_shot) - sister`.
 
 ### Choosing the workflow (capability, never name)
 
@@ -422,8 +422,8 @@ image inputs, required ports and port descriptions. Never pick by a tool's name 
 
 References in priority order (keyframe = COMPOSE intent, the SHOT's location - its `Location:`
 line, not necessarily the scene's first - is the anchor, Picture 1; see
-"Anchor (Picture 1) by intent"): 1. primary of the shot's `Location:` design; 2. outfit primary of the shot's main
-character (the outfit primary for a `<c>:<look>` pair, the character primary for `<c>:nude`/`<c>:none`
+"Anchor (Picture 1) by intent"): 1. the `full_body_shot` image of the shot's `Location:` design; 2. outfit full-body shot of the shot's main
+character (the outfit full-body shot for a `<c>:<look>` pair, the character full-body shot for `<c>:nude`/`<c>:none`
 or a missing outfit design, see the binding rule above); 3. further outfits / characters by presence.
    Only characters in the shot's `Characters:` get an image, and WHICH image follows "Reference
    binding by extent" below.
@@ -433,7 +433,7 @@ or a missing outfit design, see the binding rule above); 3. further outfits / ch
 - **Multi-image i2i edit**: for shots matching the location plate's framing; the fillable i2i
   workflow with the MOST image slots able to hold references (not masks/depth/control); fewer
   slots → drop from the end of the list, never a person in `Characters:` (see "Slot budget").
-- **Single-image i2i only** → edit the location primary into the scene (characters in the prompt).
+- **Single-image i2i only** → edit the location's `full_body_shot` image into the scene (characters in the prompt).
 - **No usable i2i** → t2i with characters, outfits and location described in the prompt.
 - **INTERIM**: when no ref2i workflow exists and the shot's Camera differs from the plate's
   framing, use the text-to-image workflow with a rich description of place, characters and

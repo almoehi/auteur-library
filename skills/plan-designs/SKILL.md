@@ -53,7 +53,7 @@ things below: the look of a character design ("Characters and outfits") and the 
   tables' `Outfits` column carries the per-beat looks; a character may appear with several looks in one
   row, e.g. `sister:bikini_cardigan; sister:nude`). Plan from the scene rows' pairs (equal to the beat
   looks), excluding `nude` / `none`: those need no design - in a nudity-allowed workspace the character
-  design's primary IS the nude base sheet. `<c>:<look>` -> that look's outfit design (the look MUST be a tracker row,
+  design's full-body shot IS the nude base sheet. `<c>:<look>` -> that look's outfit design (the look MUST be a tracker row,
   Phase 0 step 3b); `<c>:nude` (valid only for a nude adult as above) and `<c>:none` (a character
   that wears nothing) -> the character design only, no outfit entry. An invalid `<c>:nude` (minor,
   creature, nudity forbidden; a minor is never nude) -> an outfit entry built from the scene
@@ -243,7 +243,7 @@ Only a key in `existing` is skipped (record it).
 
 Omit `loras` when the entry has none. `display_name` is the entry's (storyboard: `Scene <n>`), `key_slug` the entry's `key_slug`; check that
 the result's key equals the entry's key.
-`start: "attributes"` needs a non-sheet text-to-image workflow in the workspace (an outfit needs an image-to-image one: it is drafted as edits of its character's primary and only starts once that design is finished - always pass the character link); `character_type` is REQUIRED for characters (custom text allowed, e.g. "ghost"). A refusal result starts with `error:`; a success reads `Design created: key <key>, @<name>, task id <id>, status <status>`. Treat any result not starting with `Design created` as not created.
+`start: "attributes"` needs a non-sheet text-to-image workflow in the workspace (an outfit needs an image-to-image one: it is drafted as edits of its character's full-body shot and only starts once that design is finished - always pass the character link); `character_type` is REQUIRED for characters (custom text allowed, e.g. "ghost"). A refusal result starts with `error:`; a success reads `Design created: key <key>, @<name>, task id <id>, status <status>`. Treat any result not starting with `Design created` as not created.
 
 Never pass `policies` to `create_design` (the tool does not accept it; designs go through human review), even if the task prompt names checks. Call sequentially (one at a time) and keep
 each result's key, `@name` and task id.
