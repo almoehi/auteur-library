@@ -62,6 +62,7 @@ description: >
 url: workflow.json
 workflow_type: t2va
 model_family: minimaxh3
+render_timeout_sec: 3600  # ~20 min typical H3 clip renders; the default 1800 s is too tight
 gpu_types: [a100, h100, blackwell] # l40s excluded pending re-verification: original "nodes 636/663 → XID-43"
 # diagnosis predates the fix above (663 removed, 636 confirmed independently safe, sage_attention
 # now dynamically disabled per SAGE_BLACKLIST_GPU_TYPES) — l40s is in that blacklist too, so this

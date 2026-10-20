@@ -33,6 +33,7 @@ url: workflow.json
 workflow_type: i2va
 model_family: minimaxh3
 content: nsfw
+render_timeout_sec: 3600  # ~20 min typical H3 clip renders; the default 1800 s is too tight
 gpu_types: [a100, h100, b200]
 # sage_attention ships "disabled" (node 157): the SageAttention wheel in the compute image carries
 # sm_80 kernels only (l40s / h100 failed with "no kernel image is available"); the harness also
