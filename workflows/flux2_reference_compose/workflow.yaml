@@ -1,7 +1,7 @@
 # ─── Source ───────────────────────────────────────────────────────────────────
 # Derived from: image_flux2_klein_9b_kv_image_edit (see workflows/flux2_image_edit) — the edit
 # graph re-wired as reference-to-image: an EmptyFlux2LatentImage of width x height replaces the
-# edited photo; up to three optional reference chains feed ReferenceLatent (positive + negative).
+# edited photo; up to four optional reference chains feed ReferenceLatent (positive + negative).
 # https://comfy.org/workflows/image_flux2_klein_9b_kv_image_edit-546732126bf6/
 #
 # Catalog LoRAs: a Power Lora Loader (node 150) between the UNet and the KV cache takes the four
@@ -16,7 +16,7 @@
 name: flux2_reference_compose
 description: >
   Generates a NEW image (any camera angle or composition) from a text prompt conditioned on up to
-  three reference images - the place, a character's identity, an outfit or a second character. It
+  four reference images - the place, a character's identity, an outfit or a second character. It
   is not an edit: no input photo is preserved, the image is rendered from an empty latent at the
   requested width x height, and the references only supply identity / outfit / place. Not suitable
   for editing an existing photo in place (use flux2_image_edit) or for video output.
@@ -47,10 +47,17 @@ ports:
       reference_role: reference
       label: "Picture 3"
       required: false
+    - name: reference_image_4
+      kind: image
+      description: "Optional \"Picture 4\": a further reference - a third character, an outfit or a prop. Encoded at half the resolution (0.5 MP) of the others to bound the reference token cost, so keep it a close-up of what matters."
+      binding: image@404
+      reference_role: reference
+      label: "Picture 4"
+      required: false
   params:
     - name: prompt_positive
       kind: string
-      description: "Scene description incl. camera angle and framing. Refer to the supplied references as 'Picture 1'..'Picture 3' in port order, counting only the references actually supplied (supplied ports 1 and 3 are 'Picture 1' and 'Picture 2'). Do not mention a picture that was not supplied."
+      description: "Scene description incl. camera angle and framing. Refer to the supplied references as 'Picture 1'..'Picture 4' in port order, counting only the references actually supplied (supplied ports 1 and 3 are 'Picture 1' and 'Picture 2'). Do not mention a picture that was not supplied."
       binding: text@135
       required: true
     - name: width
@@ -123,10 +130,11 @@ context: >
   supplied reference goes through ReferenceLatent (positive and negative conditioning). Camera,
   framing and composition come from the prompt, not from the references.
   - Picture 1 (reference_image_1, role subject): the anchor - normally the place; people and objects
-    from Picture 2 / 3 are composed into it.
-  - Picture 2 (reference_image_2) / Picture 3 (reference_image_3): a character, a second character
-    or an outfit.
-  - All three are optional and may be given in any combination. An absent reference is pruned from
+    from Picture 2 / 3 / 4 are composed into it.
+  - Picture 2 (reference_image_2) / Picture 3 (reference_image_3) / Picture 4 (reference_image_4): a
+    character, a second or third character, an outfit or a prop. FLUX.2 Klein accepts at most four
+    references; Picture 4 is encoded at 0.5 MP (Pictures 1-3 at 1 MP) to bound the token cost.
+  - All four are optional and may be given in any combination. An absent reference is pruned from
     the graph, and the pictures are numbered by the references actually supplied, in port order:
     with only ports 1 and 3 the prompt names "Picture 1" and "Picture 2". With no reference it is a
     plain text-to-image render.
