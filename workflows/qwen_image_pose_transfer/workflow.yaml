@@ -1,0 +1,154 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Derived from: qwen_image_multi_edit (Qwen Edit 2511 Multi-Edit, 8-step; original workflow
+# https://civitai.com/models/1998998/qwen-image-edit-plus-2511-8steps-multi-edit) with the third
+# reference chain removed, the gray "optional image" fallback (EmptyImage + ImageStitch 900/901) of
+# the pose image removed (pose_image is required, and the stitch put a gray strip beside it) and the
+# AnyPose LoRA pair (base + helper, 0.7 each) added after the Lightning LoRA. Productised from the
+# layered-take spike (qwen_anypose_spike).
+# AnyPose: https://huggingface.co/serotoninboi/AnyPose (Apache-2.0, as is every model below).
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# Comfyui-QwenEditUtils (QwenEditConfigPreparer, QwenEditAdaptiveLongestEdge,
+#   TextEncodeQwenImageEditPlusCustom_lrzjason) — loaded dynamically via the customNodes stanza
+#   below; no nodes.lock entry needed.
+# GGUF UNet loading uses city96/ComfyUI-GGUF's UnetLoaderGGUF, already pinned in nodes.lock
+#   (see ../qwen_image_multi_edit/report.md).
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: qwen_image_pose_transfer
+description: >
+  Pose transfer (Qwen-Image-Edit 2511 + AnyPose LoRAs): the person in subject_image takes the exact
+  pose of the person in pose_image; the subject's identity, clothing, scene and camera are kept.
+  Use it on a crop with ONE person and a scene-free pose reference (a neutral figure on a plain
+  background). Not suitable for a crop with several people, for editing clothing or background
+  (use qwen_image_multi_edit) or for NSFW poses (Qwen-Edit is not NSFW-tuned).
+url: workflow.json
+workflow_type: i2i
+model_family: qwenimage
+capabilities: [pose-transfer]
+styles: [photoreal]
+gpu_types: [rtx3090, rtx4090, l40s]
+ports:
+  inputs:
+    - name: subject_image
+      kind: image
+      description: "\"image 1\": the person to re-pose - a crop with exactly ONE person (AnyPose is confused by several). Its identity, clothing, scene and camera are kept; only the pose changes."
+      binding: image@2
+      reference_role: subject
+      label: "image 1"
+      required: true
+    - name: pose_image
+      kind: image
+      description: "\"image 2\": the pose to copy - ideally SCENE-FREE (a neutral figure on a plain background, in the production's style, from the wanted camera direction). A pose photo with a scene makes the scene bleed into the result."
+      binding: image@1
+      reference_role: reference
+      label: "image 2"
+      required: true
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "The pose instruction. Refer to the inputs as 'image 1' (subject_image) and 'image 2' (pose_image). The default is the trained AnyPose wording; append what to keep (\"Keep her face, hair and the red raincoat from image 1.\") - clothing details are otherwise easily lost."
+      binding: prompt@10
+      required: true
+      default: "Make the person in image 1 do the exact same pose of the person in image 2. Changing the style and background of the image of the person in image 1 is undesirable, so don't do it. The new pose should be pixel accurate to the pose we are trying to copy. The position of the arms and head and legs should be the same as the pose we are trying to copy."
+    - name: prompt_negative
+      kind: string
+      description: "Negative prompt describing visual qualities and artifacts to avoid. The default suits PHOTOREAL subjects (it names cartoon / anime / digital art); override it for illustrated or anime subjects."
+      binding: text@21
+      required: false
+      default: "lowres, worst quality, CGI, anime, cartoon, digital art, distorted anatomy, malformed limbs, unrealistic proportions, extra limbs, missing limbs, bad face, overprocessed skin, pixelated, compression artifact, wax figure appearance, excessive smoothing, oversharpened"
+    - name: steps
+      kind: int
+      description: "Denoising steps. This workflow is tuned for an 8-step distilled sampling schedule — 8 is the recommended value; going far below or above it degrades quality."
+      binding: steps@17
+      constraints: { min: 1, max: 20 }
+      required: true
+      default: 8
+    - name: cfg
+      kind: float
+      description: "Classifier-free guidance scale. This workflow's distilled sampling schedule is tuned for cfg=1 (no extra guidance) — raising this significantly slows convergence and can produce artifacts at only 8 steps."
+      binding: cfg@17
+      constraints: { min: 0.5, max: 3 }
+      required: false
+      default: 1
+    - name: seed
+      kind: int
+      description: "Random seed. Set -1 or omit for a random seed each run."
+      binding: seed@17
+      seed: true
+      required: false
+      default: -1
+  outputs:
+    - name: edited_image
+      kind: image
+      description: "The subject in the copied pose; same framing as subject_image."
+      node_id: "30"
+      role: primary
+customNodes:
+  - name: Comfyui-QwenEditUtils
+    repository: https://github.com/lrzjason/Comfyui-QwenEditUtils.git
+    commitHash: cdd4d028c6491d27a40092d7795158668cec9189
+
+context: >
+  Pose transfer (capability pose-transfer): Qwen-Image-Edit 2511 with the AnyPose LoRA pair (base +
+  helper, 0.7 each) re-poses the person of image 1 to the pose of image 2, with no ControlNet.
+  The output has the framing of subject_image.
+  Preconditions (spike 2026-10-21, layered storyboard takes):
+  - subject_image holds exactly ONE person; crop a multi-person frame to one entity first (a crop
+    with a second person at its edge shifts that person too).
+  - pose_image is SCENE-FREE: a neutral figure (plain background, studio light) in the target pose,
+    rendered in the production's style from the wanted camera direction. A real photo with a scene
+    transfers the pose well but brings its own camera and background; a scene-bearing mannequin
+    keeps the OLD pose. Even then the result may take over a piece of the reference's scene - vary
+    the seed.
+  - The outfit can get lost: spell it out in the prompt ("Keep her face, hair and navy bikini from
+    image 1").
+  - Pasting the result back into the original frame (union of the old and new silhouettes) is the
+    caller's job; this workflow returns the re-posed crop only.
+  Validated on photoreal subjects only (styles: [photoreal]); illustrated / anime are untested and
+  the default negative prompt names "anime, cartoon" - override prompt_negative there.
+  Parameters: steps 8 and cfg 1 are tuned for the Lightning 8-step distilled schedule; vary the seed
+  for alternatives.
+
+models:
+  - name: qwen_image_edit_2511_q4_k_s
+    type: unet
+    files:
+      - url: https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/main/qwen-image-edit-2511-Q4_K_S.gguf
+        filename: qwen-image-edit-2511-Q4_K_S.gguf
+        sha256: df952ef0d2b46463bd95d9afbb78e045ec5412316f453a7ad5a3d7bcbb111b72
+
+  - name: qwen_image_vae
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors
+        filename: qwen_image_vae.safetensors
+        sha256: a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f
+
+  - name: qwen_2.5_vl_7b_fp8_scaled
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors
+        filename: qwen_2.5_vl_7b_fp8_scaled.safetensors
+        sha256: cb5636d852a0ea6a9075ab1bef496c0db7aef13c02350571e388aea959c5c0b4
+
+  - name: qwen_image_edit_2511_lightning_8steps
+    type: lora
+    files:
+      - url: https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/main/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors
+        filename: Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors
+        sha256: a9e81a58a78f260f67b337a6f615e8fa4cd3bc79847c77b7d61a581b789b1ba8
+
+  - name: anypose_base
+    type: lora
+    files:
+      - url: https://huggingface.co/serotoninboi/AnyPose/resolve/main/2511-AnyPose-base-000006250.safetensors
+        filename: 2511-AnyPose-base-000006250.safetensors
+        sha256: 0396314e43b94f7520cf5242e6aa6e8e9095d784f7e87ee45980c2e541ee8c4d
+
+  - name: anypose_helper
+    type: lora
+    files:
+      - url: https://huggingface.co/serotoninboi/AnyPose/resolve/main/2511-AnyPose-helper-00006000.safetensors
+        filename: 2511-AnyPose-helper-00006000.safetensors
+        sha256: 674340c62fff3cf981d0cfc55daf2f0e6f51c56b50159e241d931748200cf1eb
