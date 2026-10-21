@@ -93,8 +93,15 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
 - `Action:` = the ONE instant as a state, with participles: "Sister, standing, presses …";
   "Wife mid-stride toward the table, reaching for her laptop".
   - Two successive verbs ("stands and presses", "enters and crosses", "then") = two shots.
-  - Simultaneous actions joined by "as" / "while" in the same instant are one shot.
-  - Visible only: no motives, dialogue (show the mouth open, calling) or camera motion.
+  - One shot: simultaneous actions joined by "as" / "while"; speech, breath or a sound together
+    with one action; a progressing state ("thrusting faster", "pace building").
+  - Visible only: no motives or camera motion. Speech goes on its own `Dialogue: <who>: "<words>"`
+    line, never in `Action:` (Action shows only the visible part: mouth open, calling).
+  - Bad → good: "Sister exhales and says the fun can start, unties and drops her top" → s3-01
+    `Action: Sister, standing at the pool edge, exhaling` + `Dialogue: Sister: "Now the fun can
+    start"`; s3-02 `Action: Sister, top untied and slipping off her shoulders`.
+    "Sister stands, moves to his chair, hands him the sunscreen" → `Action: Sister, beside his
+    chair, holding out the sunscreen bottle` (or one shot per action).
 - Split a multi-action beat into one shot per action, in order; count actions, not beats.
 - Typically 4–10 shots covering the whole scene in story order, an establishing shot first when
   the place is new. Sections follow story order; a split keeps its id for the first part.
@@ -168,6 +175,7 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
   (before any prompt writer or `wf_*` call) — a plan rejected after the renders wastes every
   keyframe and an attempt; never render from a rejected plan.
 - The plan check returns findings `[severe|major|minor] <shot> (<rule>): "<words>" - <correction>`.
+- A two-moment finding (rule a) is fixed ONLY by splitting the shot into separate shots (new ids, in order) or rewriting it to ONE instant — never by rephrasing the same actions (the same finding comes back).
 - Rejected: rewrite the WHOLE `shotlist.md` applying every finding not marked minor (severe,
   major and unrated findings of any check; minor ones when cheap), keeping ids; call `run_checks`
   again.
