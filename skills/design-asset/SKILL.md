@@ -38,12 +38,12 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
    - `initialDrafts` (the task states it; default 1) and extension (default `png`);
    - workflow, by CAPABILITY (per tool description / `get_workflow_instructions`): the one the prompt names if it is among your `wf_*` tools, else the text-to-image tool whose model family matches the prompt or `design.json`.
    - Outfit (or any design drafted as edits of a linked design's full-body shot): an image-edit (`i2i`) workflow, never text-to-image; the first image input is the `full_body_shot:` ref (`artifact://<id>/full_body_shot.<ext>`) from the prompt's "Referenced designs" block.
-3. Empty attributes, no suitable `wf_*` tool, or (outfit) no image-edit tool / no `full_body_shot:` line -> render nothing, never guess, never fall back to text-to-image for an outfit; `task_complete` saying exactly what is missing (the person continues in the studio).
+3. Empty attributes, no suitable `wf_*` tool, or (outfit) no image-edit tool / no `full_body_shot:` line -> render nothing, never guess, never fall back to text-to-image for an outfit; `task_complete` (not `task_failed`: a HITL design must not fail, the person continues in the studio) saying exactly what is missing.
 
 ## Phase 2 — Write the prompt
 
 1. `get_workflow_instructions(<workflow>)`, read fully. Follow "Prompt route" of `workflow-calling-conventions` for every prompted `wf_*` call: a user-typed chat edit is a pass-through candidate (person's words verbatim); attributes, initial drafts, retries, diversity variations use `draft_prompt` (pass `image_inputs`).
-2. `draft_prompt(<workflow>, <context>)`: ONE prompt serves all `initialDrafts`. Several DIFFERENT prompts at once: ONE `draft_prompts_batch` in one round, at most one `review_prompts_batch`; no per-prompt loops, no repeat batch.
+2. The prompt writer applies `prompt-writer-<family>` itself (without `draft_prompt`, `load_skill` it). `draft_prompt(<workflow>, <context>)`: ONE prompt serves all `initialDrafts`. Several DIFFERENT prompts at once: ONE `draft_prompts_batch` in one round, at most one `review_prompts_batch`; no per-prompt loops, no repeat batch.
 3. `context` is short: all attributes, the design kind and the goal "a clean, well-lit reference image of one subject":
    - character: full body or three-quarter, neutral pose, plain background, face clearly visible;
    - outfit: an edit instruction dressing the person of the linked character's full-body shot in the outfit (face, hair, body unchanged), full body;

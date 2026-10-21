@@ -20,7 +20,7 @@ Task prompt fields:
 - Required: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`), `movement`, `duration_seconds`, `start_frame`, `style`, the canonical output files (`.mp4` and `_prompt.txt`); `continue` also `prior_clip`.
 - Used when present: `action`, `camera`, `references`, `framing_change`, `negative_prompt`, `preferred_workflow`, `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`, `width` / `height`.
 
-`task_failed(reason)` (render nothing) when:
+`task_failed(reason)` (render nothing; deterministic causes only) when:
 - a required field is missing (name it);
 - `continue`: the `prior_clip` artifact has no approved video file (`read_artifact`);
 - the `start_frame` file is missing / unreadable (only `start_frame: none` may be rendered text-to-video);
@@ -45,7 +45,9 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 ### References
 
 - Pass the shot's references whenever the workflow has free image ports; the task's `references` list is the source. If thin, look designs up in `artifact_index` by the shot block's keys (`character_<slug>`, `outfit_<character>_<look>`, `location_<slug>`): `full_body_shot.<ext>` (`primary.<ext>` in older designs), else the sheet.
-- Use only what the shot's own `Characters`, `Outfits` (per shot, never a scene-level look), `Location` and `Visible:` lines name. Only characters with a `Visible:` entry get an image; extent `limbs` / `lower body` (e.g. a POV owner's hands) gets no full-body reference: use their sheet's POV tile or words ("Reference binding by extent" in `storyboard-scene`). A `POV:` line means the camera is that character's eyes.
+- Image per design: the published `sheet.<ext>` FIRST; a design without a sheet gives `full_body_shot.<ext>` (`primary.<ext>` in older designs).
+- `<c>:nude` / `<c>:none` -> the character design (sheet, else full-body shot). Any other look -> its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else `outfit_<c>_<look>`, suffix tolerated). No outfit design -> the character design plus the garments in the prompt.
+- Use only what the shot's own `Characters`, `Outfits` (per shot, never a scene-level look), `Location` and `Visible:` lines name. Only characters with a `Visible:` entry get an image; extent `limbs` / `lower body` (e.g. a POV owner's hands) gets no full-body reference: use their sheet's POV tile or words ("References by extent" in `workflow-calling-conventions`). A `POV:` line means the camera is that character's eyes.
 - Fill labelled image ports in port order, location first, then people ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). Do not type "Picture N is …" lines: pass `image_inputs` (section 3) and the code writes them.
 
 ## 3. Mode `continue` (authority for continuation mechanics)
@@ -83,7 +85,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - ONE `wf_*` call: frames / clip / references, drafted prompt, planned duration, (continue) `prior_clip_start_time`; `draft` quality unless the task says otherwise; the `.mp4` routed to the canonical path (`output_ports`).
 - A `cut` call MUST carry `start_frame` on the start-image port.
 - Do NOT pass `width` / `height` by default (the render profile decides); set them only when the task carries them or the shot needs another format. Size and `is_portrait`: "Render size" of `workflow-calling-conventions`.
-- Error: re-read instructions, fix, retry ONCE with the SAME workflow; failing again -> `task_failed` quoting the error. A failed render never makes another workflow type acceptable (no text-to-video fallback).
+- Error: re-read instructions, fix, retry ONCE with the SAME workflow; failing again -> quote the error in the final reply and end WITHOUT `task_failed` / `task_complete` (render errors may be transient; `task_failed` is for deterministic causes only). A failed render never makes another workflow type acceptable (no text-to-video fallback).
 - Write the canonical `_prompt.txt` from the EXACT prompt passed to the render (continue: plus a line `prior_clip_start_time: <value>`); never reworded.
 
 ## 6. Pre-completion audit
@@ -91,7 +93,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - Call `render_info({ render_id })` with the returned `renderId` and compare with your call:
   - `cut`: `start_frame` on the start-image port and every intended reference listed (no references although free ports existed = wrong);
   - `continue`: the prior clip (and the frame on a framing change);
-  - wrong or empty media inputs -> re-render ONCE with the corrected call; still wrong -> `task_failed`.
+  - wrong or empty media inputs -> re-render ONCE with the corrected call; still wrong -> `task_complete` stating the problem (`task_failed` is refused once the outputs are written).
 - The `.mp4` exists at exactly the canonical path and is a `wf_*` render (a path elsewhere breaks the artifact build: render again to the declared path).
 - `get_video_info`: duration within ±0.6 s of `duration_seconds`; outside -> re-render ONCE (same prompt, new seed), keep the better; still off -> report the measured value.
 - `continue`: first frames fit the predecessor's last frames (same subject, place, lighting); a clear break -> one retry with a corrected prompt ("Check, retry once, suggest" in `workflow-calling-conventions`).

@@ -34,6 +34,14 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - Checks are attached by name: the workspace spec's `autoAttach` rules attach them to the tasks by key; their rules live in the workspace spec.
 - Pass the `policies` column of section 3 in each `create_task` as reinforcement (optional).
 - Never put checks into a task prompt or description.
+- Intent of each check (rules live in the spec):
+  - `screenplay-quality`: screenplay faithfully adapts the plot in proper format.
+  - `cast-quality`: every cast role (animals / creatures with a story role included) has a complete profile.
+  - `scenes-quality`: scene list covers all beats, numbered, INT/EXT, location, one-line action.
+  - `scenes-complete`: location slug, INT/EXT, looks per character, beats with camera move / continuity / `Outfits` (+ sex columns when nudity allowed).
+  - `design-plan-covers-scenes`: plan has every character, location and (character, look) outfit of the scene list.
+  - `designs-cover-plan`: a design was created (or existed) for every planned key; no stray or duplicate designs.
+  - `storyboards-cover-scenes`: a storyboard exists for every scene.
 - A named check missing from `policy_index` -> `create_policy` it first (text modality, `Binary` grading, the model the other quality policies in `policy_index` use); never edit an existing policy here (`modify-policy`). An unknown key in `policies` is refused and nothing is created.
 
 ## 3. Plan (canonical names, set once, never renamed)
@@ -132,7 +140,7 @@ Output
 Scene table columns
 - `Scene #` | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Summary` | `Characters present` | `Outfits`.
 - `Summary`: one sentence naming every entrance, exit and spoken line that matters to the story, not only the main action.
-- `Characters present`: slugs equal the `character_<slug>.md` stems.
+- `Characters present`: slugs equal the `character_<slug>.md` stems; every listed character appears in some beat's `Outfits` of that scene, else drop them from the row.
 - `Outfits`: `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `mira:raincoat; jonas:work_suit`.
   - A character who changes look inside the scene appears once per look: `sister:bikini_cardigan; sister:nude`.
   - The row's `Outfits` is exactly the UNION of its beats' `Outfits`: nothing missing, nothing extra.

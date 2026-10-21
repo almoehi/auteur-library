@@ -66,7 +66,7 @@ Coordinator skill: validates prerequisites, reads the scene's storyboard design,
 
 `read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")` (pass the key, not the UUID). Sections `## <shotId> — <title>` with lines `Action:`, `Camera:`, `Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds), `Transition:` (`continue — <reason>` | `cut — <reason>`; absent in older storyboards); designs are KEYS.
 
-- Keep each shot's complete block (heading + every line to the next heading) VERBATIM for the clip task: includes `Blocking:`, `Pose:`, `Frame:`, `Visible:`, `POV:` and, in a `contentPolicy.nudity: allowed` workspace, `Sex act:` / `Sex position:`.
+- Keep each shot's complete block (heading + every line to the next heading) VERBATIM for the clip task, EXCEPT the keyframe-plan lines `Workflow:`, `Refs:`, `Prompt:` — strip those three (keyframe-only): includes `Blocking:`, `Pose:`, `Frame:`, `Visible:`, `POV:` and, in a `contentPolicy.nudity: allowed` workspace, `Sex act:` / `Sex position:`.
 - Extract per shot: id, title, `Action`, `Camera` (keyframe framing), `Movement` (video camera move), `Duration`, `Transition`, characters / outfits keys.
 - No `Movement:`: take it from the matching beat's `Camera move` in the `scene_list` artifact (`### Scene <n>` Beats table, read once); no beat either: derive it from the action and say so. Never turn a missing movement into "static".
 
@@ -137,7 +137,7 @@ prompt:
   shot_block: |
     <the shot's FULL block from shotlist.md, verbatim, every line: Action, Location, Camera,
      Movement, Transition, Characters, Outfits, Blocking, Pose, Frame, Visible, Duration and the
-     Sex act: / Sex position: lines when present>
+     Sex act: / Sex position: lines when present; NOT the keyframe-only Workflow: / Refs: / Prompt: lines>
   frame_edits: <the frame's published `edits`, verbatim; "none" when it has none>
   action: <the shot's Action>
   camera: <the shot's Camera - keyframe framing>

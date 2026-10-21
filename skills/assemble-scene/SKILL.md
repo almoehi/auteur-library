@@ -19,12 +19,13 @@ Joins the finished clips of ONE scene, in task order, into the canonical `scene<
 
 - The task prompt lists the clips in order (`artifact://<artifactId>/<file>`, planned durations) and the canonical output file.
 - `read_artifact` each clip's artifact: approved and the video file present.
-- Any clip missing or unapproved, or a clip with no video stream / zero duration -> `task_failed(reason)` naming it. Never assemble a subset.
+- Any clip missing or unapproved -> `task_failed(reason)` naming it. Never assemble a subset.
 
 ## 2. Fetch and probe
 
 - `sandbox_fetch(url="artifact://<id>/<file>")` each clip into `/tmp/assemble_scene<N>/` (never a copied presigned URL).
 - `ffprobe` each: codec, size, fps, pixel format, audio presence / sample rate, duration.
+- A clip with no video stream or zero duration -> `task_failed(reason)` naming it (nothing is written yet).
 
 ## 3. Concatenate (task order, not file-name order)
 
@@ -41,6 +42,6 @@ Joins the finished clips of ONE scene, in task order, into the canonical `scene<
 ## 4. Verify and deliver
 
 - Probe the result: video stream present; duration ≈ sum of clip durations (±1 s); intended resolution / fps.
-- Failure -> retry once with the re-encode route; still failing -> `task_failed` with the error.
-- Write to the declared output path, exactly `scene<N>_assembled.mp4`.
+- Failure -> retry once with the re-encode route; still failing -> `task_failed` with the error (nothing written yet).
+- Only after verification passes, write the result to the declared output path, exactly `scene<N>_assembled.mp4` (write nothing earlier or elsewhere).
 - `task_complete`: 1-3 lines — total duration and route (copy / re-encode), not the per-clip list ("Concise replies and task/artifact URIs" in `workflow-calling-conventions`).

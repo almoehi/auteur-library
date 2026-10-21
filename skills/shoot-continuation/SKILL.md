@@ -32,7 +32,7 @@ Required in the task prompt: prior clip `artifact://<artifactId>/<fileName>`, pr
 - Follow `shoot-clip` sections 2-5 in mode `continue`:
   - the video-continuation workflow (video input port for the prior clip); none -> `task_failed` naming that;
   - measured predecessor duration and `prior_clip_start_time`;
-  - references sheets first (`artifact_index`, `character_*` / `location_*` / `outfit_*`; binding as in `shoot-clip` "References"; compose intent);
+  - references: sheets first, then `full_body_shot`; `:nude` / `:none` -> the `character_*` design; other looks -> `outfit_*` (key from `design_plan.json` `outfits[]` when present, else `outfit_<c>_<look>`); full binding in `shoot-clip` "References" (`artifact_index`; compose intent);
   - a required reference that is unavailable and not derivable from the prior clip: ask the person if your task has a chat (`llm+hitl`), else `task_failed` naming the missing references.
 - Prompt inputs: the brief; the prior clip's measured timing and start offset; reference images and their roles; the continuity requirements of section 2. Instructions go in `instruction` (verbatim only when short, explicit, concrete). Pass `image_inputs` and `verbatim_phrases` (a shot's `Sex act:` / `Sex position:`, dialogue).
 - Load the prompt-writer skill for the workflow's model family (`prompt-writer-<family>`; `draft_prompt` applies it when available). Keep the negative prompt consistent with the prior clip's.

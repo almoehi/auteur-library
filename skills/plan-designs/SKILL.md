@@ -35,6 +35,7 @@ Content policy = `{workspace.contentPolicy.nudity}` (absent or empty = `forbidde
 - Scene-list pairs: plan from the scene rows' `Outfits` (union of the beats' looks).
   - `<c>:<look>` -> that look's outfit design (look must be a tracker row, Phase 0.3).
   - `<c>:nude` and `<c>:none` -> the character design only, no outfit entry (the character's full-body shot is the nude base sheet).
+  - An invalid `<c>:nude` (minor, creature, nudity forbidden) -> build an outfit entry from the scene context and flag it under `flagged:` in the summary.
 
 ## Phase 0 — Preflight
 
