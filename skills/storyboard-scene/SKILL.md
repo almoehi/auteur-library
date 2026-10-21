@@ -28,6 +28,8 @@ acts vocabulary): `workflow-calling-conventions` (`load_skill` it).
   - Drafts: `take_<shotId>-draft-<n>.<ext>`; chat takes: `take_<shotId>-<slug>.<ext>` (slug
     `[a-z0-9]+(-[a-z0-9]+)*`, names the content); re-renders: base + `-r2`.
   - Never reuse a name that exists or was used in this conversation (append `-2`, `-3`).
+- Compose the whole `shotlist.md` silently first, then write it in ONE call; never a partial or
+  draft file (the first write counts).
 - `shotlist.md` writes: the first write, then one full rewrite per rejected `run_checks`; the server
   refuses any other rewrite, and any write that names an unlinked key or breaks R1–R7 (a refused
   write writes nothing and does not count: fix what it lists and write again).
@@ -123,10 +125,11 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
 - `Outfits:` comes from the shot's beat (its opening beat), never the scene row; looks change
   within a scene. Valid pairs: `<characterKey>:<linked outfitKey>` (key from `design_plan.json`
   `outfits[]`, else `outfit_<c>_<look>`), `<characterKey>:nude`, `<characterKey>:none` (no
-  outfit design for this look: the character design is the picture). A clothed look without a
-  linked outfit design is `:none`: `Pose:` and `Prompt:` name its garments (from the beat / the
-  wardrobe tracker row), and the take's check request states them; note the missing outfit design
-  in the hand-over summary.
+  outfit design for this look: the character design is the picture; looks: "References by
+  extent" in `workflow-calling-conventions`). A clothed look without a linked outfit design is
+  `:none`: every shot using it states the garments in `Pose:` (from the beat / the wardrobe
+  tracker row; `Pose:` survives into clip tasks, `Prompt:` does not), and the take's check request
+  states them; note the missing outfit design in the hand-over summary.
 - `Blocking:` places only people in frame plus a POV owner: "husband is the camera (POV, seated);
   his forearms and hands enter the lower frame". Never call a POV owner whose limbs are in
   `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
@@ -156,11 +159,14 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
   anatomy LoRAs on every step; the last step's output is the take.
 - `Prompt:` = the core of the frame in one line: who does what where, the camera, each person's
   outfit in words.
+- Self-check before the write: re-read every `Action:` line (one instant), recount each shot's
+  pictures against the workflow's image ports.
 
 ## 3 Plan review loop
 
 - Only if the kickoff lists checks (else go to 4): right after the write call `run_checks`
-  (before any prompt writer or `wf_*` call).
+  (before any prompt writer or `wf_*` call) — a plan rejected after the renders wastes every
+  keyframe and an attempt; never render from a rejected plan.
 - The plan check returns findings `[severe|major|minor] <shot> (<rule>): "<words>" - <correction>`.
 - Rejected: rewrite the WHOLE `shotlist.md` applying every finding not marked minor (severe,
   major and unrated findings of any check; minor ones when cheap), keeping ids; call `run_checks`
@@ -172,7 +178,11 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
 
 - Continue chains render in waves: wave 1 = every shot that is not `continue`; each further wave =
   the `continue` shots whose predecessor has its take. One draft batch, one review batch and one
-  render response per wave and workflow.
+  render response per wave and workflow. Several shots = one batch AND one response of renders;
+  never wait for one shot before issuing the next (within a wave).
+- Never redraft shots already drafted and never loop shot by shot (single prompt tools run one at
+  a time, batches in parallel); a batch refused for size → split into the fewest batches, all in
+  the same response.
 - A continue shot's Picture 1 = the predecessor's first take that passed `check_take` (with
   several drafts: the first matching one), else its better take, else the location plate.
 - Per wave and workflow ONE `draft_prompts_batch` (one item per shot):
@@ -187,13 +197,17 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
     extent".
   - `verbatim_phrases` = the shot's `Sex act:` / `Sex position:` values.
 - ONE `review_prompts_batch` per wave with every shot that has 2+ people, contact or a sex act;
-  `enhance_prompts_batch` only for flagged items.
+  `enhance_prompts_batch` (items: `original_prompt` = the drafted prompt, `additional_context` =
+  the review feedback) only for flagged items.
 - Render the wave in ONE response: per shot `initialDrafts` calls (at most 48 draft renders in
   total: with many shots render fewer drafts per shot, at least 1), each `wf_*(prompt_ids={"<port>": "<prompt_id>"}, <the Refs ports>, is_portrait=<Format:
   portrait = true>, output_ports={"<port>": "/workspace/<artifact id>/take_<shotId>-draft-<n>.png"})`.
   The server refuses retyped prompt text and an `is_portrait` that differs from `Format:`.
-- LoRAs: from `design.json.loras` only those that fit the shot (act LoRA where `Sex act` names
-  it, anatomy where shown, family of the workflow), trigger words in `context`; clothed shots none.
+- LoRAs: from `design.json.loras` only those that fit the shot (family of the workflow): the
+  general NSFW LoRA on every explicit shot, an act LoRA where `Sex act` names it, a pose LoRA
+  where `Sex position` names it, anatomy where shown; trigger words in `context`; clothed shots
+  none. Explicit content without a planned LoRA → `lora_index` once before rendering, and name
+  gaps in the summary.
 - Every take: `check_take` (see "Check, retry once, suggest") with `request` = the shot's lines
   (keys replaced by display names) and `references` = the plan's pictures with labels (design
   display names, "previous shot's take").
@@ -202,7 +216,8 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
 
 ## 5 Audit and hand over
 
-- [ ] every shot of `shotlist.md` has a take (re-read the artifact), rendered per its `Refs:`
+- [ ] every shot of `shotlist.md` has a take (re-read the artifact), rendered per its `Refs:`;
+  render any missing shot first
 - [ ] every take checked; at most one `-r2` per take; `suggest_edit` where the `-r2` missed
 - [ ] the plan passed `run_checks` (when checks are listed); `design.json` untouched
 - After the renders never rewrite `shotlist.md` unless a check finding requires it. The same plan
@@ -219,9 +234,12 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
   missing take was discarded: never re-render it or its name).
 - Shot changes (add, remove, reorder, retitle, lines, Refs): one full rewrite of `shotlist.md`,
   ids kept, `Transition` re-derived for shots whose predecessor changed; render only new shots
-  (Phase 4) or what is asked. A refused write changed nothing.
+  (as in "4 Execute") or what is asked. A refused write changed nothing: fix what the refusal
+  names and write again, or say it failed.
 - Re-render ("another angle for shot 4"): one take `take_<shotId>-<slug>` from the take the person
   names, else the selected, else the newest; a change to it = i2i edit with that take as Picture 1
   (+ the shot's Refs); "start over" = render from the Refs; several shots = one batch.
 - Who is visible follows the shot lines: change `Visible:` / `Characters:` / `Outfits:` first.
-- Check every take; reply in one short line; never pick, discard or finish — point to the studio.
+- Render only what this message asks (one take unless it names a count); check every take.
+- Reply in one short line naming what THIS turn wrote or rendered, then stop; never claim a change
+  you did not make. Never pick, discard or finish — point to the studio.

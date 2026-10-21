@@ -24,7 +24,7 @@ Plain LLM planning worker: read text, write `design_plan.json`, call `create_des
 
 Content policy = `{workspace.contentPolicy.nudity}` (absent or empty = `forbidden`). A minor (child, teen, anyone under 18) is ALWAYS planned as `forbidden`.
 
-- Outfits: exactly ONE outfit design per WARDROBE TRACKER row (look slug = the row's look slug); no exceptions (no "most worn", no "differs visibly" judgement).
+- Outfits: exactly ONE outfit design per WARDROBE TRACKER row (look slug = the row's look slug); no exceptions (no "most worn", no "differs visibly" judgement). A tracker row that is nudity itself (no garments) is not an outfit.
 - Character design `wardrobe`, decided by AGE and POLICY only:
   - nudity `allowed` + human adult (18+ stated or clearly implied): `nude`, for EVERY such adult.
   - minor, nudity `forbidden`, or clothed non-human: plain neutral clothing (e.g. "plain neutral clothing: simple fitted grey t-shirt and trousers").
@@ -34,7 +34,7 @@ Content policy = `{workspace.contentPolicy.nudity}` (absent or empty = `forbidde
 - Every `nude` character gets the general anatomy / realism NSFW LoRAs per image family (step 1.4) and is listed in `nsfw_loras.characters`.
 - Scene-list pairs: plan from the scene rows' `Outfits` (union of the beats' looks).
   - `<c>:<look>` -> that look's outfit design (look must be a tracker row, Phase 0.3).
-  - `<c>:nude` and `<c>:none` -> the character design only, no outfit entry (the character's full-body shot is the nude base sheet).
+  - `<c>:nude` and `<c>:none` -> the character design only, no outfit entry (the character's full-body shot is the picture: the nude base, or the creature as it is).
   - An invalid `<c>:nude` (minor, creature, nudity forbidden) -> build an outfit entry from the scene context and flag it under `flagged:` in the summary.
 
 ## Phase 0 — Preflight
@@ -46,8 +46,8 @@ Content policy = `{workspace.contentPolicy.nudity}` (absent or empty = `forbidde
 3. Read the `character_<slug>.md` files (`artifact_file`): `VISUAL PROFILE`, `WARDROBE TRACKER`.
    - Reconcile before planning: collect scene-list character slugs and look slugs vs the table's file stems and tracker looks (`nude` / `none` are always valid).
    - Any unknown slug or look -> `task_failed` naming BOTH sets. Never map names by guesswork.
-4. Idempotency (always run): `artifact_index` keys starting `character_`, `outfit_`, `location_`, `storyboard_`, plus `task_index` -> `existing`.
-5. Nudity `allowed`: call `lora_index()` ONCE now.
+4. Idempotency (always run; never assume nothing exists): `artifact_index` keys starting `character_`, `outfit_`, `location_`, `storyboard_`, plus `task_index` -> `existing`.
+5. Nudity `allowed`: call `lora_index()` ONCE now (never skip or guess it).
 6. Missing or unparseable input -> `task_failed(reason)` naming it; write nothing.
 
 ## Phase 1 — Plan -> design_plan.json
@@ -61,7 +61,7 @@ Build every entry with its FINAL key; nothing is decided later.
      - Display name: the row's `Location` text for a row slug, else the slug's words in Title Case.
    - `distinct_place: true` on a location whose shorter `key_slug` has at least two `_` words, all contained in another location's slug (`backyard_pool` / `backyard_pool_terrace`; one-word slugs never). No other entry has it.
    - `outfits`: per "Characters and outfits". Every outfit's `character_slug` exists in `characters`.
-   - `storyboards`: one per scene (step 6).
+   - `storyboards`: one per scene (step 5).
 2. Slugs and keys:
    - slug = lowercase ASCII, non-alphanumerics to `_`, repeats collapsed, `_` trimmed; matches `[a-z0-9]+(_[a-z0-9]+)*`.
    - key = `<kind>_<key_slug>`; `key_slug` is the key without the kind prefix (`sister`, `pool_terrace`, `<character_slug>_<look_slug>` for outfits, `scene_<n>` for storyboards).
@@ -93,7 +93,7 @@ Build every entry with its FINAL key; nothing is decided later.
 5. Storyboards: per scene key `storyboard_scene_<n>` with:
    - `notes` = the Summary.
    - `format` `portrait` | `landscape`: from the story / plot (task prompt story line or "Workspace facts"), e.g. a vertical phone film = `portrait`; derive it, never ask; `landscape` if unstated; the SAME value for every scene.
-   - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry.
+   - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished).
 6. `designs`: THE work list — every key in creation order: characters, locations, outfits, storyboards.
 7. Write into `/workspace/<your artifact id>/` with `sandbox_write_file`: `scene_list.md` FIRST (character-for-character copy of the `scene_list` artifact; the `design-plan-covers-scenes` check judges all output files), then `design_plan.json`:
 
@@ -134,7 +134,7 @@ Walk `designs` in order, one `create_design` per key; arguments copied from the 
 - A link key refused as unknown: re-check the registry and `artifact_index`, retry once, then drop only that link and note it.
 
 Refusals:
-- `design name "<n>" is already used by "<key>"`: same kind -> reuse it (skipped, noted); different kind -> retry once with a DIFFERENT `key_slug` (append the kind: `harbor` -> `harbor_location`) and record `renamed: <planned key> -> <created key>`.
+- `design name "<n>" is already used by "<key>"`: same kind -> reuse it (skipped, noted); different kind -> retry once with a DIFFERENT `key_slug` (the name derives from `key_slug`, so a new display name alone never helps; append the kind: `harbor` -> `harbor_location`) and record `renamed: <planned key> -> <created key>`.
 - Outfit refused for a missing character: create the character first, retry.
 - Unknown `loras` name: re-check `lora_index`, retry once with exact names (or without it); never drop the design over a LoRA; note under `missing`.
 - Any other error: retry once; if it fails again record it as failed and continue.

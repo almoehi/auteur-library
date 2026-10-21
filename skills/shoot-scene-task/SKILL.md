@@ -78,7 +78,7 @@ The storyboard design's `design.json` `published.outputs[]` entry of each `frame
 
 - If an approved `character_table` exists, read the `character_<slug>.md` of characters present (better motion prompts); require no other pre-production artifact.
 - `style:` line in EVERY clip task: the workspace medium / style from `{workspace.story.plot}` verbatim ("Medium / style is kept" in `workflow-calling-conventions`).
-- `negative_prompt:` in every clip task: from the scene's art direction / the workflow's recommended negative (`get_workflow_instructions` of the preferred workflow); omit the line when the workflow has no negative port.
+- `negative_prompt:` in every clip task: the workflow's recommended negative (`get_workflow_instructions` of the preferred workflow); omit the line when the workflow has no negative port.
 
 ## Step 3 — Planning
 
@@ -110,7 +110,7 @@ Write out the FULL plan before creating anything (all clip keys + `assemble_scen
 
 ## Step 4 — Create the tasks
 
-ONE `create_task` per task, sequentially, one per round (later `requires_*` use the keys / ids the results report, never assumed). Order: clips 1..N, then assembly. Skip live ones. Each call creates its output artifact inline (`output_artifact_name` + `output_files`); no separate artifact call.
+Issue exactly ONE `create_task` per response and wait for its result before the next; NEVER several `create_task` calls in one response: a later clip / `assemble_scene<N>` names the earlier result's task / artifact in `requires_*`, and a batched round drops or guesses them, so the chain runs out of order. `requires_tasks` / `requires_artifacts` are mandatory in every call that has dependencies (4a / 4b). Order: clips 1..N, then assembly. Skip live ones. Each call creates its output artifact inline (`output_artifact_name` + `output_files`); no separate artifact call.
 
 ### 4a. Clip task
 
@@ -157,8 +157,8 @@ prompt:
     scene<N>_clip<M>_<slug>_prompt.txt
 ```
 
-- The template is VERBATIM: fill `<...>` slots from the named sources, copy every other line and every verbatim slot word for word (`Sex act:` / `Sex position:` included in a nudity-allowed workspace); never paraphrase or drop a policy-conditional line.
-- The prompt MUST open with the exact line `Load and use skill: shoot-clip`.
+- The template is VERBATIM: fill `<...>` slots from the named sources, copy every other line and every verbatim slot word for word (`Sex act:` / `Sex position:` included in a nudity-allowed workspace); never paraphrase or drop a policy-conditional line (a paraphrase would hide rules from the worker).
+- The prompt MUST open with the exact line `Load and use skill: shoot-clip` (it lets the worker `load_skill`).
 - `preferred_workflow` comes from the workspace's `wf_` list for the clip's mode (never from memory): the continuation workflow for `continue`, the i2v / i2va one for `cut` / start.
 
 ### 4b. Assembly task
@@ -188,7 +188,7 @@ Use the identifiers the `create_task` results reported; already-existing clip ta
 
 ### 4c. Reconcile
 
-After the last call, `task_index` vs the Step 3b plan: every planned clip key and `assemble_scene<N>` must exist. Create each missing one (one per round), re-check. Only what still fails goes into the reply, with the error.
+Creating many tasks in one turn can end early (a timed-out or cut-off turn leaves the tail uncreated): after the last call, `task_index` vs the Step 3b plan: every planned clip key and `assemble_scene<N>` must exist. Create each missing one (one per round), re-check. Only what still fails goes into the reply, with the error.
 
 ## Step 5 — Reply
 

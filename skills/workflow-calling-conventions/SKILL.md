@@ -17,6 +17,10 @@ Rules for every task that renders media with `wf_xxx` tools. Worked call shapes 
 - Mention tasks and artifacts as `task://<id>` / `artifact://<id>` (`artifact://<id>/<file>` for
   one file) with the runtime id; never a bare key or file name.
 
+## Reusing earlier values
+
+A ⟦ref:r12.key⟧ in your earlier tool calls stands for a value you sent (call r12, argument key); to reuse it exactly pass the ⟦ref:…⟧ token (alone or inside a longer text) — never retype or copy a shortened value. Refs stay valid for the whole conversation; if one is refused, the error lists the refs that exist.
+
 ## Correct sequence
 
 - `read_artifact` the work spec → `lora_index()` once if the tool has LoRA slots → write the
@@ -31,7 +35,9 @@ Rules for every task that renders media with `wf_xxx` tools. Worked call shapes 
 - Only when the `wf_xxx` tool exposes LoRA slots (`lora_1`, `style_lora`, …); else never call
   `lora_index`.
 - Pick a LoRA only when it fits the prompt and its `modelFamily` matches the workflow's; exact
-  catalog name; strength only when the task or catalog sets one.
+  catalog name; strength only when the task or catalog sets one. Never invent a LoRA name; a
+  family mismatch is rejected at call time.
+- An unset slot is always safe; never add a LoRA just because the catalog has one.
 - Trigger words: drafted prompt → in the writer's `context`; the person's verbatim text → at its
   very start or end.
 - Obey each LoRA's description (usage rules, required phrases, strength).
@@ -56,14 +62,23 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 
 ## Render size and output files
 
-- No `width` / `height` by default (the render profile decides); `is_portrait` (`true` /
-  `false`) turns the size to that orientation.
+- No `width` / `height` by default (the render profile decides); set them only when the story or
+  shot needs a different format (they then override the profile's size).
+- `is_portrait` (`true` / `false`) turns the size to that orientation. Omit it on image-to-video
+  calls unless the shot's format differs from the keyframe: without it the size follows the
+  first-frame image, so a clip never crops or stretches its keyframe.
 - Outputs route to the declared file named like the output port; else pass
   `output_ports={"<port>": "/workspace/<artifact id>/<file>"}`.
 
 ## Artifact-backed inputs
 
-- Pass `artifact://<artifactId>/<file>` directly as an input value; never copy or retype a URL.
+- Pass `artifact://<artifactId>/<file>` directly as an input value. Do NOT call
+  `get_artifact_url` or download into the sandbox for this. Every file-URL tool
+  (`describe_image`, `sandbox_fetch`, `get_video_info`, `wf_xxx` ports) accepts the same
+  `artifact://` ref.
+- Never copy, retype or shorten a URL (a dropped character gives a 403 that looks like expiry);
+  for shell commands paste only the short `url` of `get_artifact_url` (`curl -L`). Plain http(s)
+  is for external sources only.
 
 ## Medium / style is kept
 
@@ -72,9 +87,10 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 
 ## Checks that gate the task
 
-- `run_checks` runs the kickoff's checks on the current files and tool calls (capped per attempt)
-  — call it before an expensive step. Fix every listed item in one rewrite; each rejected
-  `run_checks` grants one rewrite of a written output file.
+- Read the kickoff's checks before you start. `run_checks` runs them on the current files and
+  tool calls — call it before an expensive step. It does NOT complete the task; at most 6 calls
+  per attempt (each rejection allows one rewrite of the files it judged). Fix every listed item in
+  one rewrite.
 
 ## Check, retry once, suggest
 
@@ -98,7 +114,8 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
   - extra or missing people: state the exact head count;
   - several re-renders: ONE `draft_prompts_batch` and ONE render response.
 - The `-r2` also misses: `suggest_edit(file, instruction, reason)` on the better take
-  (instruction ≤ ~1000 chars, reason one line), report both and stop. Never re-render a `-r2`.
+  (instruction ≤ ~1000 chars, reason one line; fire-and-forget), report both and stop. Never
+  re-render a `-r2`.
 - A suggested fix the person sends from the Edit box is their instruction: a pass-through
   candidate ("Prompt route").
 
@@ -106,15 +123,22 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 
 - Before every `wf_*` call with reference images, one entry per bound image:
   `<port> = <design key> (<full_body_shot|sheet>) - <who/what>` (POV owner without a published
-  sheet: `(full_body_shot, no sheet)`), FIRST in the writer's `context`.
+  sheet: `(full_body_shot, no sheet)`), FIRST in the writer's `context` (no writer call: state
+  them in your message before the call).
 - The plan, `image_inputs` and the call's image ports are the same images; the drafted prompt names
   no Picture beyond the bound images.
 - One image per person in frame, from that person's own design; in `context` per person the
   outfit in words and the identity cue of their Picture line ("the wife from Picture 2, short
   wavy blonde hair, navy suit"; no cue → from the design digest). Never tell two similar-looking
-  people apart by name only.
+  people apart by name only. An image whose subject is not in the shot is never bound.
 
 ## References by extent
+
+Looks in `Outfits:` pairs (the single definition): `<c>:<outfit key>` = that outfit design;
+`<c>:nude` = nude, the character design is the picture; `<c>:none` = no outfit design for this
+look, the character design is the picture — a creature / animal wearing nothing (the scene list's
+`none`), or in a shot list a clothed look without an outfit design, whose garments the shot's
+`Pose:` states (keep them in the prompt).
 
 For each character in a shot's `Characters:`, by their `Visible:` extent:
 - `full figure` / `upper body` / `face` / `back`: the outfit design's full-body shot (the character

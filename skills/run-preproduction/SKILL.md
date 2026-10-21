@@ -42,7 +42,8 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
   - `design-plan-covers-scenes`: plan has every character, location and (character, look) outfit of the scene list.
   - `designs-cover-plan`: a design was created (or existed) for every planned key; no stray or duplicate designs.
   - `storyboards-cover-scenes`: a storyboard exists for every scene.
-- A named check missing from `policy_index` -> `create_policy` it first (text modality, `Binary` grading, the model the other quality policies in `policy_index` use); never edit an existing policy here (`modify-policy`). An unknown key in `policies` is refused and nothing is created.
+- A named check missing from `policy_index` -> `create_policy` it first (text modality, `Binary` grading, the model the other quality policies in `policy_index` use). Write each `evalPrompt` with `{input}` (the task's output files) and `{workspace.story.plot}`; `designs-cover-plan` / `storyboards-cover-scenes` also use `{toolCalls}` (covered = a `Design created: key <key>` result). Never edit an existing policy here (`modify-policy`).
+- An unknown key in `policies` is refused with the list of known keys and nothing is created: fix the key from the listed known keys (or create the missing policy) and call again.
 
 ## 3. Plan (canonical names, set once, never renamed)
 
@@ -65,11 +66,12 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - NEVER put several `create_task` calls in one round (one response): a later call's `requires_*` names the task / artifact the earlier call creates, so it must exist first (a `create_scenes` issued before `character_table` exists fails with `requires.tasks references unknown task id`).
 - `requires_tasks` and `requires_artifacts` are MANDATORY in every call, exactly as in the templates (right after `id`): a task created without them starts at once, before its inputs exist, and fails or works from nothing.
 - Each call creates the task, its output artifact (`output_artifact_name`, `output_files`) and its checks; no separate artifact call.
-- NO text between calls (a text-only reply ends the turn and the rest of the chain is never created); do not re-read stored prompts.
+- NO text between calls — no announcements, no "let me verify", no progress notes (a text-only reply ends the turn and the rest of the chain is never created); do not re-read stored prompts. Only after the 4th result (or a stop on failure) may you write your single final report (section 5).
 - Use ids / keys from each result (`key: <key>`) in later `requires_*`; never assume or derive keys. On an `error:` result pick the right key from the listed known ones and correct the call; never retry an identical call.
 - Step fails twice -> stop; report which tasks were created (ids from results) and which failed (error text). Never claim a task `create_task` did not confirm.
 - `can_create_tasks: true` ONLY on `plan_designs`; unset on the others.
 - Task prompts below are VERBATIM: copy each fenced block word for word (it is the worker's whole instruction; the worker cannot load this skill). `{workspace.*}` placeholders stay literal (the server substitutes them).
+- Never paraphrase, shorten, reorder or drop a line: a paraphrase once dropped every nudity-conditional rule. Before each 4b/4c call re-read the prompt: it starts with the block's `Inputs:` line, keeps `Workspace content policy (nudity): {workspace.contentPolicy.nudity}` literal, and (4c) contains the `Contact` and `Sex act` / `Sex position` bullets and the nude-from-that-beat-on rule; anything missing → re-copy the block.
 
 ### 4a. write_screenplay
 
@@ -206,7 +208,7 @@ Along the way, write the plan record as output artifact `design_plan` (canonical
 
 - Call `task_index` once; all four tasks must exist with the expected `requires`. Create any missing one (section 4 rules), then re-check.
 - No check-verification calls: each `create_task` result lists the attached checks ("(auto)" = auto-attached).
-- Reply in at most 4 short lines (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`); list only confirmed tasks and precisely what failed:
+- Reply in at most 4 short lines (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`); list only confirmed tasks and precisely what failed; do not use the success message for a chain that is incomplete:
   > Scheduled pre-production: task://<screenplay> -> task://<cast> -> task://<scene_list> -> task://<plan_designs>.
   > Checks: <task id>: <checks from its create_task result>; ... (one entry per created task).
   > Skipped (already existed): task://<id>, ... (only if any).
