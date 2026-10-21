@@ -42,15 +42,20 @@ acts vocabulary): `workflow-calling-conventions` (`load_skill` it).
   Continuity `continuous` | `parallel` | `new moment`, Blocking / Contact, Sex act / Sex position).
   `screenplay` (if any): the scene's slice.
 - Each linked design: its digest (identity cue, outfit garments and colours, published
-  `full_body_shot` / `sheet` refs). Never restate design documents.
+  `full_body_shot` / `sheet` refs; an older design's `primary.<ext>` stands in for
+  `full_body_shot`). Never restate design documents.
 - The keyframe workflow, by capability (never by name; nudity / sex: "NSFW-marked workflows"):
   reference-to-image first, else the multi-reference edit with the most image slots, else a
   single-image edit of the location plate, else text-to-image with everything in words.
+  - No reference-to-image workflow and the shot's Camera differs from the plate's framing:
+    text-to-image with place, people and outfits described.
+  - A workflow with a required input you cannot supply (mask, pose, prior clip) is out.
   `get_workflow_instructions` → its image ports, `label`s and count (e.g. 4 = Picture 1 + 3).
 - Note: the POV owner, `continuous` chains, beats holding several actions, shots whose people
   exceed the image ports.
 - Preflight — on any gap call `task_failed(reason)` naming it, render nothing: the scene row; ≥1
-  linked location; every linked design readable with a published full-body shot; an image `wf_*`.
+  linked location; every linked design readable with a published full-body shot; a linked outfit
+  design for every clothed look the beats name; an image `wf_*`.
 
 ## 2 Plan — `shotlist.md`
 
@@ -78,7 +83,8 @@ Prompt: the wife types at the kitchen table seen from the husband's seat, his fo
 ```
 
 Every line is ONE line (no wrapping). The server parses only the shot lines; `Workflow:`, `Refs:`
-and `Prompt:` are the render plan for you and the plan check.
+and `Prompt:` are the render plan for you and the plan check. The file-level `Workflow:` is the
+default; a shot rendered with another workflow carries its own `Workflow:` line.
 
 ### Shots
 
@@ -89,8 +95,13 @@ and `Prompt:` are the render plan for you and the plan check.
   - Simultaneous actions joined by "as" / "while" in the same instant are one shot.
   - Visible only: no motives, dialogue (show the mouth open, calling) or camera motion.
 - Split a multi-action beat into one shot per action, in order; count actions, not beats.
-- A `parallel` beat = its own cutaway shot at its place: `Transition: cut — cutaway (parallel
-  action)`; the main action resumes in a later shot (`cut — back to …`).
+- Typically 4–10 shots covering the whole scene in story order, an establishing shot first when
+  the place is new. Sections follow story order; a split keeps its id for the first part.
+- A `parallel` beat = its own cutaway shot at its place, its characters from that beat:
+  `Transition: cut — cutaway (parallel action)`; the main action resumes in a later shot
+  (`cut — back to …`).
+- `Location:` = a linked location key; a place with no linked design → the nearest linked
+  location, and name the gap in the summary.
 - `Movement:` = the beat's camera move verbatim (`hold` only when the beat asks for stillness).
 - `Transition:` from the beat's Continuity: `continue — <reason>` for `continuous` (same place,
   moment, people; the framing may change), `cut — <reason>` otherwise; the first shot is `cut`.
@@ -106,11 +117,14 @@ and `Prompt:` are the render plan for you and the plan check.
 - `Visible:` = `<characterKey> (<extent>[: detail]); …; <exclusion>`; extent one of
   `full figure` | `upper body` | `face` | `back` | `limbs` | `lower body`; detail states counts
   (`limbs: one pair of hands`); the last segment is the exclusion clause (`nobody else`).
-- `Characters:` = exactly the keys in `Visible:`; `Outfits:` = one pair per character
-  (`<characterKey>:<outfitKey>`, or `:nude` / `:none`).
+- `Characters:` = exactly the keys in `Visible:`; `Outfits:` = one valid pair per character
+  (below), `; `-separated. Nobody in
+  frame: `Characters: none`, `Outfits: none`, `Visible: nobody`.
+- People without a design appear in `Action` only.
 - `Outfits:` comes from the shot's beat (its opening beat), never the scene row; looks change
-  within a scene. Outfit key: `design_plan.json` `outfits[]`, else `outfit_<c>_<look>`; no outfit
-  design → the character key, garments described in `Prompt:` (never let a clothed shot go nude).
+  within a scene. Valid pairs: `<characterKey>:<linked outfitKey>` (key from `design_plan.json`
+  `outfits[]`, else `outfit_<c>_<look>`), `<characterKey>:nude`, `<characterKey>:none` (wears
+  nothing). A clothed look without a linked outfit design has no valid pair: a preflight gap.
 - `Blocking:` places only people in frame plus a POV owner: "husband is the camera (POV, seated);
   his forearms and hands enter the lower frame". Never call a POV owner whose limbs are in
   `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
@@ -125,32 +139,40 @@ and `Prompt:` are the render plan for you and the plan check.
 ### Render plan per shot
 
 - `Refs:` = the reference plan of `workflow-calling-conventions` ("Reference plan") on one line,
-  `;`-separated, using the workflow's port names:
-  - Picture 1: the shot's location `full_body_shot`; for a `Transition: continue` shot the
-    previous shot's take instead (`image_1 = take of s3-01 - previous shot`).
+  `;`-separated, the workflow's port names; which image per person: "References by extent".
+  - Picture 1 (compose anchor): the shot's location `full_body_shot`; a `Transition: continue`
+    shot: the previous shot's take (`image_1 = take of s3-01 - previous shot`).
   - Exactly one picture per `Characters:` key: the outfit design of its `Outfits:` pair; the
-    character design only for `:nude` / `:none` / no outfit design.
-  - The POV owner shown as `limbs` / `lower body`: their `(sheet)` (no published sheet:
-    `(full_body_shot, no sheet)`).
-  - Pictures ≤ the workflow's image ports. Short: drop the place plate first (a continue shot
-    keeps the previous take); still short → split the shot by WHO is in frame (each part shows a
-    subset; the rest is off-frame there), never by time alone.
+    character design for `:nude` / `:none`.
+  - Pictures ≤ the workflow's image ports. Too many: pick a workflow with more slots, or split the
+    shot by WHO is in frame (each part shows a subset; the rest is off-frame there), never by time
+    alone. Only a continue shot drops the place plate (the previous take shows it).
+- Two-step explicit act (no [nsfw] reference-to-image workflow; "NSFW-marked workflows"): the
+  shot carries `Workflow: <t2i tool> + <edit tool>` and `Refs: step 1 = <t2i tool>, no image (act
+  LoRA); step 2 = <edit tool>: image_1 = step 1 output, image_2 = <key> (full_body_shot) - <who>;
+  step 3 = <edit tool>: image_1 = step 2 output, image_2 = <key> (full_body_shot) - <other>`;
+  anatomy LoRAs on every step; the last step's output is the take.
 - `Prompt:` = the core of the frame in one line: who does what where, the camera, each person's
   outfit in words.
 
 ## 3 Plan review loop
 
-- Right after the write call `run_checks` (before any prompt writer or `wf_*` call).
+- Only if the kickoff lists checks (else go to 4): right after the write call `run_checks`
+  (before any prompt writer or `wf_*` call).
 - The plan check returns findings `[severe|major|minor] <shot> (<rule>): "<words>" - <correction>`.
-- Rejected: rewrite the WHOLE `shotlist.md` applying every severe and major correction (minor ones
-  when cheap), keeping ids; call `run_checks` again.
+- Rejected: rewrite the WHOLE `shotlist.md` applying every finding not marked minor (severe,
+  major and unrated findings of any check; minor ones when cheap), keeping ids; call `run_checks`
+  again.
 - Accept when it passes (no severe or major finding). At most 5 correction rounds; still rejected
   → `task_failed(reason)` listing the open findings (the design goes to the person, who can retry).
 
 ## 4 Execute strictly per plan, in shot order
 
-- Waves: wave 1 = every shot that is not `continue`; then each `continue` shot once its
-  predecessor's take passed `check_take` (or, after a second miss, its better take).
+- Continue chains render in waves: wave 1 = every shot that is not `continue`; each further wave =
+  the `continue` shots whose predecessor has its take. One draft batch, one review batch and one
+  render response per wave and workflow.
+- A continue shot's Picture 1 = the predecessor's first take that passed `check_take` (with
+  several drafts: the first matching one), else its better take, else the location plate.
 - Per wave and workflow ONE `draft_prompts_batch` (one item per shot):
   - `image_inputs` = the shot's `Refs:` bindings (`artifact://` refs; a continue shot's Picture 1
     = the predecessor's take).
@@ -159,13 +181,13 @@ and `Prompt:` are the render plan for you and the plan check.
     line) and outfit in words; the style line ("Medium / style is kept"); the goal "one
     cinematic keyframe of this shot; no text, captions or panels". Never `Movement`,
     `Transition`, `Duration`.
-  - POV owner in `context`: "the camera is <name>'s eyes; only their <detail> at the frame edge,
-    never their face or torso; use only the sheet's POV <posture> tile".
+  - POV owner in `context`: "the camera is <name>'s eyes"; the extent phrases of "References by
+    extent".
   - `verbatim_phrases` = the shot's `Sex act:` / `Sex position:` values.
 - ONE `review_prompts_batch` per wave with every shot that has 2+ people, contact or a sex act;
   `enhance_prompts_batch` only for flagged items.
 - Render the wave in ONE response: per shot `initialDrafts` calls (at most 48 draft renders in
-  total), each `wf_*(prompt_ids={"<port>": "<prompt_id>"}, <the Refs ports>, is_portrait=<Format:
+  total: with many shots render fewer drafts per shot, at least 1), each `wf_*(prompt_ids={"<port>": "<prompt_id>"}, <the Refs ports>, is_portrait=<Format:
   portrait = true>, output_ports={"<port>": "/workspace/<artifact id>/take_<shotId>-draft-<n>.png"})`.
   The server refuses retyped prompt text and an `is_portrait` that differs from `Format:`.
 - LoRAs: from `design.json.loras` only those that fit the shot (act LoRA where `Sex act` names
@@ -173,13 +195,17 @@ and `Prompt:` are the render plan for you and the plan check.
 - Every take: `check_take` (see "Check, retry once, suggest") with `request` = the shot's lines
   (keys replaced by display names) and `references` = the plan's pictures with labels (design
   display names, "previous shot's take").
-- A failed render: fix the call per the workflow instructions, retry it once under the same name.
+- A failed render: fix the call per the workflow instructions, retry it once under the same name;
+  fails again → `task_failed(reason)` naming the shot (the design goes to the studio, takes kept).
 
 ## 5 Audit and hand over
 
 - [ ] every shot of `shotlist.md` has a take (re-read the artifact), rendered per its `Refs:`
 - [ ] every take checked; at most one `-r2` per take; `suggest_edit` where the `-r2` missed
-- [ ] the plan passed `run_checks`; `design.json` untouched
+- [ ] the plan passed `run_checks` (when checks are listed); `design.json` untouched
+- After the renders never rewrite `shotlist.md` unless a check finding requires it. The same plan
+  check runs again at `task_complete`; if it rejects, apply its must-fix findings in ONE rewrite,
+  re-render only the shots whose plan changed, then `task_complete` again.
 - `task_complete(summary="Storyboard scene <n>: <N> shots drafted; open: …")` (1–3 lines). This
   hands the design to the person; it does not finish it.
 - Retry drafting: continue from the existing `shotlist.md` and takes; redo only what the stop
@@ -192,7 +218,8 @@ and `Prompt:` are the render plan for you and the plan check.
 - Shot changes (add, remove, reorder, retitle, lines, Refs): one full rewrite of `shotlist.md`,
   ids kept, `Transition` re-derived for shots whose predecessor changed; render only new shots
   (Phase 4) or what is asked. A refused write changed nothing.
-- Re-render ("another angle for shot 4"): one take `take_<shotId>-<slug>`; a change to an existing
-  take = i2i edit with that take as Picture 1 (+ the shot's Refs); several shots = one batch.
+- Re-render ("another angle for shot 4"): one take `take_<shotId>-<slug>` from the take the person
+  names, else the selected, else the newest; a change to it = i2i edit with that take as Picture 1
+  (+ the shot's Refs); "start over" = render from the Refs; several shots = one batch.
 - Who is visible follows the shot lines: change `Visible:` / `Characters:` / `Outfits:` first.
 - Check every take; reply in one short line; never pick, discard or finish — point to the studio.

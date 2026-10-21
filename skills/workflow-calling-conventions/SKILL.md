@@ -11,8 +11,11 @@ Rules for every task that renders media with `wf_xxx` tools. Worked call shapes 
 
 ## Concise replies and task/artifact URIs
 
-- Replies and `task_complete` summaries: 1–4 short lines; tasks and artifacts as `task://<id>` /
-  `artifact://<id>[/<file>]` (the system prompt's reply rules apply).
+- Replies and `task_complete` summaries: 1–4 short lines — what was done, what is next or needed.
+- Never restate plans, file lists, workflow or skill names, slot counts, design descriptions or
+  tool results unless asked. Think silently; write only decisions.
+- Mention tasks and artifacts as `task://<id>` / `artifact://<id>` (`artifact://<id>/<file>` for
+  one file) with the runtime id; never a bare key or file name.
 
 ## Correct sequence
 
@@ -76,7 +79,8 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 ## Check, retry once, suggest
 
 - Check every take you render with `check_take(file, request, references?)`, a round's checks
-  in one response.
+  in one response. Never re-check a take you did not render (studio buttons are checked by the
+  server); sandbox-derived files (crop, conversion, sheet) are not checked.
   - `request` (required): what the take had to show — the shot / brief lines or the person's
     instruction; designs by display name, never keys.
   - `references`: `[{ref, label}]` of the reference pictures the render bound (label = the
@@ -86,22 +90,43 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
   it as a match.
 - A miss with a severe or major finding (or an unrated miss): ONE re-render, a new take named
   base + `-r2` from the same source, the missed take kept:
-  - new prompt via the prompt writer (original `context` + `fix`; the person's instruction stays
-    `instruction`), fresh seed;
-  - identity drift: move that person's picture to a higher slot / use their full-body shot;
-  - extra or missing people: state the exact head count.
+  - new prompt via the prompt writer: original `context` + `fix`, medium / style and every lock
+    kept verbatim, only what the finding names changed; the person's instruction stays
+    `instruction`; fresh seed;
+  - identity drift: move that person's picture to an earlier image port after the anchor / use
+    their full-body shot;
+  - extra or missing people: state the exact head count;
+  - several re-renders: ONE `draft_prompts_batch` and ONE render response.
 - The `-r2` also misses: `suggest_edit(file, instruction, reason)` on the better take
   (instruction ≤ ~1000 chars, reason one line), report both and stop. Never re-render a `-r2`.
+- A suggested fix the person sends from the Edit box is their instruction: a pass-through
+  candidate ("Prompt route").
 
 ## Reference plan
 
 - Before every `wf_*` call with reference images, one entry per bound image:
   `<port> = <design key> (<full_body_shot|sheet>) - <who/what>` (POV owner without a published
   sheet: `(full_body_shot, no sheet)`), FIRST in the writer's `context`.
-- The plan, `image_inputs` and the call's image ports are the same images.
+- The plan, `image_inputs` and the call's image ports are the same images; the drafted prompt names
+  no Picture beyond the bound images.
 - One image per person in frame, from that person's own design; in `context` per person the
   outfit in words and the identity cue of their Picture line ("the wife from Picture 2, short
-  wavy blonde hair, navy suit"; no cue → from the design digest).
+  wavy blonde hair, navy suit"; no cue → from the design digest). Never tell two similar-looking
+  people apart by name only.
+
+## References by extent
+
+For each character in a shot's `Characters:`, by their `Visible:` extent:
+- `full figure` / `upper body` / `face` / `back`: the outfit design's full-body shot (the character
+  design's for `:nude` / `:none` / no outfit design).
+- `limbs` / `lower body` of the POV owner (`POV:` line): that design's `sheet` (its POV
+  <seated|lying> tile; "use only its POV <posture> tile: <detail> seen from their own eyes, never
+  their face or torso" in `context`); no published sheet → `(full_body_shot, no sheet)` with the
+  phrase below.
+- `limbs` / `lower body` of anyone else: their full-body shot, plus "only their <detail> are in
+  frame, never their face or the rest of their body" in `context`.
+- Never add a body part `Visible:` does not list. A character not in `Characters:` gets no image
+  and is never mentioned as a figure in the prompt.
 
 ## Anchor (Picture 1) by intent
 
@@ -117,11 +142,20 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 - `forbidden`, or any depicted minor: never an [nsfw] workflow.
 - `allowed` and the frame shows adult nudity or sex: prefer the [nsfw] workflow of the SAME
   capability (capability first).
-- Explicit acts: an [nsfw] reference-to-image workflow. Without one: (1) the act with the [nsfw]
-  text-to-image workflow + act LoRA; (2) the [nsfw] multi-reference edit, one person per call
-  (Picture 1 = the act frame, Picture 2 = their full-body shot; "Replace the woman in image 1
-  with the adult woman from image 2 … keep the poses, camera and room").
-- NSFW LoRAs: `design.json.loras` first, then `lora_index`.
+- Explicit acts: an [nsfw] reference-to-image workflow (place = Picture 1, people after, a general
+  NSFW LoRA). An [nsfw] multi-reference EDIT cannot produce an act (people keep their reference
+  poses). Without a reference-to-image one, two steps:
+  - (1) the act with the [nsfw] text-to-image workflow + the act LoRA, the room of the location
+    described;
+  - (2) the [nsfw] multi-reference edit, ONE person per call (Picture 1 = the act frame / previous
+    output, Picture 2 = that person's full-body shot): "Replace the woman in image 1 with the adult
+    woman from image 2 … Leave the man unchanged. Keep the exact poses, camera angle, framing and
+    room of image 1." Never pass two people as one picture in a swap.
+  - Act LoRA on step 1; anatomy LoRAs on both steps. Frame people large (small figures barely
+    take the identity).
+- NSFW LoRAs: `design.json.loras` first, then `lora_index`. A nudity EDIT (undressing, a swap step
+  showing a nude body) uses the catalog's image-edit nudity LoRA of the edit workflow's family
+  (solo nudity only, never for an act).
 - Call every depicted person an adult in the prompt.
 
 ## Explicit acts and positions
