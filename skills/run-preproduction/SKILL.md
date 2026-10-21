@@ -110,7 +110,12 @@ Files
   - No `[...]` placeholders or blanks: every field gets a concrete value, or `n/a` when it does not apply.
   - Invent a fitting value the screenplay does not contradict rather than leave a field open.
   - Nudity `allowed` (`{workspace.contentPolicy.nudity}`) and an adult character: add the anatomical details needed for a consistent depiction as concrete, non-euphemistic `key: value` lines in the same section. A minor never gets them.
-- `WARDROBE TRACKER`: a table, ONE row per look the character wears in the story: `look slug | description (garments, colors, material, fit, accessories) | scenes where worn`.
+- `WARDROBE TRACKER`: a Markdown table with a header row and a separator row, then ONE row per look the character wears in the story; the look slug is the FIRST column (later steps read the looks from it - a table without the header and separator rows has no looks):
+  ```
+  | look slug | description | garments, colors, material, fit, accessories | scenes where worn |
+  |---|---|---|---|
+  | raincoat | ... | ... | 1, 3 |
+  ```
   - Garment looks only; nudity is not a row (it is the `nude` pair in the scene list).
   - A creature / animal wearing nothing has NO rows.
   - Look slugs: lowercase `[a-z0-9]+(_[a-z0-9]+)*`, e.g. `raincoat`, `evening_dress`.
