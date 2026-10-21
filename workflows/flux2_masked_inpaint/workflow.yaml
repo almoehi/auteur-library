@@ -1,0 +1,186 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Derived from: flux2_reference_compose (same FLUX.2 Klein 9B-KV graph, Power Lora Loader and
+# reference chains) - re-wired as a MASKED INPAINT: the base frame is VAE-encoded as the latent,
+# SetLatentNoiseMask limits the denoise to the mask, DifferentialDiffusion softens it and
+# ImageCompositeMasked pastes the result back so everything outside the mask stays pixel-exact.
+# Productised from the layered-take spike (flux2_inpaint_nsfw_spike). flux2_masked_inpaint_nsfw is
+# GENERATED from this bundle by derive_nsfw.py - re-run it after every change here.
+#
+# Mask saturation: DifferentialDiffusion keeps the ORIGINAL pixels wherever the mask is below the
+# step's threshold, so a soft mask whose core never reaches 100% reproduces the input almost
+# unchanged. MaskComposite (add, mask + mask) clamps to 1.0 = levels 0-50% -> 0-100% (node 524);
+# the saturated mask feeds SetLatentNoiseMask AND ImageCompositeMasked. Callers may therefore pass
+# a soft / feathered mask as long as its core is at least 50% white.
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# Power Lora Loader (rgthree) is in nodes.lock; every other node is a built-in ComfyUI core node.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: flux2_masked_inpaint
+description: >
+  Regenerates ONLY the white area of mask_image inside base_image (FLUX.2 Klein 9B, masked
+  inpainting): the rest of the frame is kept pixel-exact. Conditioned on the prompt and up to four
+  optional reference images (the place, a character or outfit, a context frame) - use it to fix or
+  replace one person / object / region of an existing frame. Not suitable for whole-image edits
+  (use flux2_image_edit) or for composing a new image (use flux2_reference_compose).
+url: workflow.json
+workflow_type: i2i
+model_family: flux2
+capabilities: [masked-inpaint]
+styles: [photoreal, illustrated, anime]
+gpu_types: [l40s, a100, h100, blackwell]
+ports:
+  inputs:
+    - name: base_image
+      kind: image
+      description: "The frame to edit; kept pixel-exact outside the mask. Scaled to width x height - give width / height the same aspect as this image."
+      binding: image@501
+      reference_role: subject
+      label: "Base image"
+      required: true
+    - name: mask_image
+      kind: image
+      description: "White = regenerate, black = keep, same aspect as base_image. A soft / feathered mask is fine: the workflow saturates the mask core (0-50% grey becomes 0-100%), so the core must reach at least 50% white."
+      binding: image@502
+      reference_role: mask
+      required: true
+    - name: context_image
+      kind: image
+      description: "Optional scene context reference (e.g. the frame with the masked area greyed out). It is the LAST picture of the reference numbering. Absent = no scene reference."
+      binding: image@503
+      reference_role: reference
+      required: false
+    - name: reference_image_1
+      kind: image
+      description: "Optional \"Picture 1\": the anchor reference - normally the PLACE (location plate) the masked area is set in. Used as a reference only: its camera and framing are NOT preserved."
+      binding: image@401
+      reference_role: background
+      label: "Picture 1"
+      required: false
+    - name: reference_image_2
+      kind: image
+      description: "Optional \"Picture 2\": a character (or outfit) whose identity and look to keep. Reference only: its pose and framing are NOT preserved."
+      binding: image@402
+      reference_role: reference
+      label: "Picture 2"
+      required: false
+    - name: reference_image_3
+      kind: image
+      description: "Optional \"Picture 3\": a further reference - a second character or an outfit."
+      binding: image@403
+      reference_role: reference
+      label: "Picture 3"
+      required: false
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "What the MASKED area shows, incl. camera angle and framing. Refer to the supplied references as 'Picture 1'..'Picture 3' in port order, counting only the references actually supplied (supplied ports 1 and 3 are 'Picture 1' and 'Picture 2'); the context image, when given, comes after them. Do not mention a picture that was not supplied."
+      binding: text@135
+      required: true
+    - name: width
+      kind: int
+      description: "Working width in pixels (multiple of 16); base_image and mask_image are scaled to width x height. Default 1280 (16:9 landscape)."
+      binding: value@140
+      constraints: { min: 256, max: 2048 }
+      required: true
+      default: 1280
+    - name: height
+      kind: int
+      description: "Working height in pixels (multiple of 16). Default 720 (16:9 landscape)."
+      binding: value@141
+      constraints: { min: 256, max: 2048 }
+      required: true
+      default: 720
+    - name: steps
+      kind: int
+      description: "Denoising steps. This workflow uses a step-distilled FLUX.2 model — 4 steps is the tuned default; raising it adds compute cost with diminishing quality gains."
+      binding: steps@137
+      constraints: { min: 1 }
+      required: true
+      default: 4
+    - name: cfg
+      kind: float
+      description: "Classifier-free guidance scale (prompt adherence). Default 1.0 is tuned for this model; raise toward 2-3 if the prompt isn't followed closely enough, but pushing too high can distort the image."
+      binding: cfg@138
+      required: false
+      default: 1
+    - name: seed
+      kind: int
+      description: "Random noise seed. Set -1 or omit for a new random seed each run; reuse a seed to reproduce a render or to compare prompts on the same noise."
+      binding: noise_seed@125
+      seed: true
+      required: false
+      default: -1
+  loras:
+    - name: lora_1
+      kind: lora
+      description: "Optional LoRA slot 1 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_2
+      kind: lora
+      description: "Optional LoRA slot 2 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_3
+      kind: lora
+      description: "Optional LoRA slot 3 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+    - name: lora_4
+      kind: lora
+      description: "Optional LoRA slot 4 from the workspace catalog (model family flux2, trained for FLUX.2 Klein 9B: style, character, detail). Inactive unless a caller selects a LoRA for this port."
+      binding: "150"
+      strength: 0.8
+      required: false
+  outputs:
+    - name: image
+      kind: image
+      description: "The full frame: base_image with the masked area regenerated."
+      node_id: "94"
+      role: primary
+context: >
+  Masked inpainting (capability masked-inpaint): the base frame is encoded as the starting latent,
+  only the masked area is denoised (SetLatentNoiseMask + DifferentialDiffusion) and the result is
+  composited back over base_image, so everything outside the mask is pixel-exact. The prompt
+  describes what the MASKED area should show, in the context of the whole frame.
+  - Mask: white = regenerate, black = keep, same aspect as base_image. Pass a mask that covers the
+    whole entity or region to change with a margin (grown ~10-20% around a person); a soft edge is
+    fine, but its core must reach at least 50% white - the workflow saturates the core (levels
+    0-50% -> 0-100%) because DifferentialDiffusion otherwise reproduces the original wherever the
+    mask is not fully white. An all-black mask returns base_image unchanged.
+  - width / height: base_image and mask are scaled to width x height (multiples of 16) - give them
+    the aspect of the base image; the output has that size.
+  - References: optional, numbered by the references actually supplied in port order (Picture 1
+    = reference_image_1, ...), the context image last. FLUX.2 Klein takes at most four references
+    in total. Name the subject with its picture: "Brianna from Picture 2 sits on the bed".
+  Prompting: say what the masked area shows (identity, outfit, pose, action), not the whole image;
+  restate the art style when the frame is an illustration.
+  LoRAs: up to four flux2 catalog LoRAs on lora_1..lora_4 (Klein 9B distilled ones work best;
+  0.5-1.0 strength).
+  Parameters: steps 4 and cfg 1 are tuned for this step-distilled model; vary the seed for
+  alternative takes.
+models:
+  - name: flux-2-klein-9b-kv-fp8
+    type: diffusion_models
+    files:
+      - url: https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-kv-fp8/resolve/main/flux-2-klein-9b-kv-fp8.safetensors
+        filename: flux-2-klein-9b-kv-fp8.safetensors
+        sha256: "33f7da5625a00798349a719742999d3c7dd20c1a7eda14663922c363640728f1"
+
+  - name: qwen_3_8b_fp8mixed
+    type: clip
+    files:
+      - url: https://huggingface.co/PatrickZane/qwen_3_8b_fp8mixed.safetensors/resolve/main/qwen_3_8b_fp8mixed.safetensors
+        filename: qwen_3_8b_fp8mixed.safetensors
+        sha256: "abad16806e0cbabc54e0325d6565847443fe396d5f0be38bb3cd3fe75a1201d6"
+
+  - name: flux2-vae
+    type: vae
+    files:
+      - url: https://huggingface.co/z7umer/flux2vae/resolve/main/flux2-vae.safetensors
+        filename: flux2-vae.safetensors
+        sha256: "868fe7b343cc8f3a19dbcfcafbc3d5f888802be3f89bd81b65b3621a066ce8f3"
