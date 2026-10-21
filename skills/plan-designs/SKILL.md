@@ -121,7 +121,7 @@ Build every entry with its FINAL key; nothing is decided later.
 
 ## Phase 2 — Create the designs
 
-Walk `designs` in order, one `create_design` per key; arguments copied from the entry. Never re-judge, skip, merge or add entries (an odd-looking entry is created and noted). Skip only keys in `existing` (record them). Call sequentially.
+Walk `designs` in order, one `create_design` per key; arguments copied from the entry. Never re-judge, skip, merge or add entries (an odd-looking entry is created and noted). Skip only keys in `existing` (record them). ONE `create_design` per response, issued after the previous result; NEVER several in one response: later outfits / storyboards link the ACTUAL keys earlier results report (renames, reuses), and an outfit is refused until its character exists. Keep each result's key, `@name` and task id.
 
 - Common: `start: "attributes"`, `initial_drafts: 1`, `display_name`, `key_slug`, `attributes`; omit `loras` when none.
 - character: `{ kind: "character", character_type, loras }` (`character_type` REQUIRED; custom text allowed).
