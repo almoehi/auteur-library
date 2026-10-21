@@ -28,7 +28,7 @@ const WF_NAME             = "qwen_image_pose_transfer";
 const GPU_TYPE            = "rtx3090";  // same as qwen_image_multi_edit: Q4_K_S GGUF UNet + fp8 text encoder + 2 AnyPose LoRAs fit 24 GB
 const TIMEOUT_SEC          = 5400;
 const PROVISION_TIMEOUT_MS = 2400000;    // ~40 min; ~24 GB model download (GGUF UNet + CLIP + 3 LoRAs + VAE)
-const RENDER_TIMEOUT_MS    = 2700000;        // ~45 min; ~18.8 GB total model download (flux-2-klein-9b-kv-fp8 9.8GB + qwen_3_8b_fp8mixed 8.7GB + flux2-vae 0.3GB)
+const RENDER_TIMEOUT_MS    = 2700000;    // ~45 min; the first render may still be loading the models
 const RENDER_POLL_MS       = 30_000;
 
 const COMPUTE_BACKEND = process.env.COMPUTE_BACKEND ?? 'modal';

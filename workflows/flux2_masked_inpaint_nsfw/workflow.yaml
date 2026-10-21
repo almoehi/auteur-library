@@ -38,12 +38,6 @@ ports:
       binding: image@502
       reference_role: mask
       required: true
-    - name: context_image
-      kind: image
-      description: "Optional scene context reference (e.g. the frame with the masked area greyed out). It is the LAST picture of the reference numbering. Absent = no scene reference."
-      binding: image@503
-      reference_role: reference
-      required: false
     - name: reference_image_1
       kind: image
       description: "Optional \"Picture 1\": the anchor reference - normally the PLACE (location plate) the masked area is set in. Used as a reference only: its camera and framing are NOT preserved."
@@ -64,6 +58,13 @@ ports:
       binding: image@403
       reference_role: reference
       label: "Picture 3"
+      required: false
+    - name: context_image
+      kind: image
+      description: "Optional scene context reference (e.g. the frame with the masked area greyed out). It is the LAST picture of the reference numbering (after the supplied reference_image_* ports). Absent = no scene reference."
+      binding: image@503
+      reference_role: reference
+      label: "Context image"
       required: false
   params:
     - name: prompt_positive

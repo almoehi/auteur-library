@@ -1,8 +1,10 @@
 # ─── Source ───────────────────────────────────────────────────────────────────
 # Derived from: qwen_image_multi_edit (Qwen Edit 2511 Multi-Edit, 8-step; original workflow
 # https://civitai.com/models/1998998/qwen-image-edit-plus-2511-8steps-multi-edit) with the third
-# reference chain removed and the AnyPose LoRA pair (base + helper, 0.7 each) added after the
-# Lightning LoRA. Productised from the layered-take spike (qwen_anypose_spike).
+# reference chain removed, the gray "optional image" fallback (EmptyImage + ImageStitch 900/901) of
+# the pose image removed (pose_image is required, and the stitch put a gray strip beside it) and the
+# AnyPose LoRA pair (base + helper, 0.7 each) added after the Lightning LoRA. Productised from the
+# layered-take spike (qwen_anypose_spike).
 # AnyPose: https://huggingface.co/serotoninboi/AnyPose (Apache-2.0, as is every model below).
 #
 # ─── Custom Nodes ─────────────────────────────────────────────────────────────

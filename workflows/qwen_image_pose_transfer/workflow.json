@@ -16,7 +16,7 @@
     "inputs": {
       "max_size": 1664,
       "image": [
-        "901",
+        "1",
         0
       ]
     },
@@ -111,7 +111,7 @@
       "vl_crop": "center",
       "vl_upscale": "lanczos",
       "image": [
-        "901",
+        "1",
         0
       ],
       "configs": [
@@ -260,38 +260,6 @@
     "class_type": "SaveImage",
     "_meta": {
       "title": "Save Image"
-    }
-  },
-  "900": {
-    "inputs": {
-      "width": 112,
-      "height": 112,
-      "batch_size": 1,
-      "color": 8421504
-    },
-    "class_type": "EmptyImage",
-    "_meta": {
-      "title": "Neutral gray fallback (loader 1 absent)"
-    }
-  },
-  "901": {
-    "inputs": {
-      "direction": "right",
-      "match_image_size": false,
-      "spacing_width": 0,
-      "spacing_color": "black",
-      "image1": [
-        "900",
-        0
-      ],
-      "image2": [
-        "1",
-        0
-      ]
-    },
-    "class_type": "ImageStitch",
-    "_meta": {
-      "title": "Optional image 1: falls back to gray when absent"
     }
   },
   "950": {

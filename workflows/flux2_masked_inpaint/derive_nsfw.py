@@ -50,8 +50,10 @@ y = must_replace(y, "\nurl: workflow.json\n",
                  "\n  NSFW variant: nudity and sex between adults (a general NSFW LoRA is baked in; act / detail LoRAs go\n"
                  "  on the ports) - fixes or replaces one person / region of an explicit frame.\n"
                  "url: workflow.json\n")
-y = y.replace("(model family flux2, trained for FLUX.2 Klein 9B: style, character, detail)",
-              "(model family flux2, trained for FLUX.2 Klein 9B: act, detail, style)")
+LORA_WORDING = "(model family flux2, trained for FLUX.2 Klein 9B: style, character, detail)"
+if y.count(LORA_WORDING) != 4:
+    raise SystemExit(f"expected the LoRA wording on all 4 LoRA ports, found {y.count(LORA_WORDING)}")
+y = y.replace(LORA_WORDING, "(model family flux2, trained for FLUX.2 Klein 9B: act, detail, style)")
 y = must_replace(y, "  LoRAs: up to four flux2 catalog LoRAs on lora_1..lora_4",
                  "  NSFW: the general NSFW LoRA SNOFS (0.7) is always on - do not select it on a port. Call every\n"
                  "  person an adult. Inpaint ONE person per call (mask one entity, give its reference) - swapping\n"

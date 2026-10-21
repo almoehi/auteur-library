@@ -11,7 +11,7 @@
  *     this proves the bundle saturates the mask core (DifferentialDiffusion alone would keep the
  *     original pixels).
  * Plus manifest checks (capability masked-inpaint, mask input, optional references).
- * Fixtures: fixture_base_bedroom.png, fixture_mask_soft.png, fixture_character_brianna.png (this folder).
+ * Fixtures: fixture_base_bedroom.png, fixture_mask_soft.png, fixture_character_brianna.png (in flux2_masked_inpaint/).
  *
  * Cost: REAL GPU + S3. The script tears the endpoint down in `finally`; still verify no
  * orphaned provider resources afterwards (root CLAUDE.md "cloud resources").
@@ -67,7 +67,9 @@ const _path = require('node:path') as typeof import('node:path');
 // /work is the bind-mount of $PWD inside the harness container (run.sh mounts
 // $PWD/workflows as /work/workflows). Override WORK_DIR if your mount differs.
 const WORK_DIR         = process.env.WORK_DIR ?? '/work';
-const FIXTURE_DIR      = _path.join(WORK_DIR, 'workflows', WF_NAME);
+const BUNDLE_DIR       = _path.join(WORK_DIR, 'workflows', WF_NAME);
+// The sfw and nsfw bundles share one set of fixtures, kept in the sfw bundle.
+const FIXTURE_DIR      = _path.join(WORK_DIR, 'workflows', 'flux2_masked_inpaint');
 const S3_FIXTURE_PREFIX = `e2e-fixtures/${WF_NAME}`;
 
 // Models are sourced from workflow.yaml via agent.loadFromContent() — no hardcoded WF_MODELS needed.
@@ -311,8 +313,8 @@ try {
   // 1. Load workflow from bundle ─────────────────────────────────────────────
   console.log('── 1. Load workflow from bundle ─────────────────────────────');
   const _fs: { readFileSync: (p: string, enc: string) => string } = require('node:fs');
-  const workflowJson = _fs.readFileSync(_path.join(FIXTURE_DIR, 'workflow.json'), 'utf8');
-  const workflowYaml = _fs.readFileSync(_path.join(FIXTURE_DIR, 'workflow.yaml'), 'utf8');
+  const workflowJson = _fs.readFileSync(_path.join(BUNDLE_DIR, 'workflow.json'), 'utf8');
+  const workflowYaml = _fs.readFileSync(_path.join(BUNDLE_DIR, 'workflow.yaml'), 'utf8');
   check('workflow.json loaded', workflowJson.length > 0, `${workflowJson.length} bytes`);
   check('workflow.yaml loaded', workflowYaml.length > 0, `${workflowYaml.length} bytes`);
 
