@@ -26,7 +26,7 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
   - slug = a few lowercase hyphenated words naming the content, `[a-z0-9]+(-[a-z0-9]+)*`, no `_`; never generic or numbered.
   - Name taken (in the artifact or earlier in this conversation, discarded takes included): append `-2`, `-3` ….
   - Derived takes (conversion, crop, composite) get a new slug, never the source's base name with another extension.
-- Write takes to `/workspace/<artifact id>/<file name>`: images via `wf_*` tools with `output_ports`; derived files via sandbox CLI (ImageMagick, ffmpeg, PIL). Never claim a file done unless it is there. Refer to sources as `artifact://` refs, never copied URLs.
+- Write takes to `/workspace/<artifact id>/<file name>`: images via `wf_*` tools with `output_ports`; derived files via sandbox CLI (ImageMagick, ffmpeg, PIL). Never claim a file done unless it is there. Sources: `artifact://` refs ("Artifact-backed inputs" in `workflow-calling-conventions`).
 - One render per take; leave `seed` default; no batches.
 - Write each file in one go; never rewrite it within the same attempt (the write-once guard ends the loop).
 
@@ -38,7 +38,7 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
    - `initialDrafts` (the task states it; default 1) and extension (default `png`);
    - workflow, by CAPABILITY (per tool description / `get_workflow_instructions`): the one the prompt names if it is among your `wf_*` tools, else the text-to-image tool whose model family matches the prompt or `design.json`.
    - Outfit (or any design drafted as edits of a linked design's full-body shot): an image-edit (`i2i`) workflow, never text-to-image; the first image input is the `full_body_shot:` ref (`artifact://<id>/full_body_shot.<ext>`) from the prompt's "Referenced designs" block.
-3. Empty attributes, no suitable `wf_*` tool, or (outfit) no image-edit tool / no `full_body_shot:` line -> render nothing, never guess, never fall back to text-to-image for an outfit; `task_complete` (not `task_failed`: a HITL design must not fail, the person continues in the studio) saying exactly what is missing.
+3. Empty attributes, no suitable `wf_*` tool, or (outfit) no image-edit tool / no `full_body_shot:` line -> render nothing, never guess, never fall back to text-to-image for an outfit (it invents a different person); `task_complete` saying exactly what is missing (it hands the design to the person in the studio with what exists).
 
 ## Phase 2 — Write the prompt
 
@@ -73,18 +73,18 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
 
 ## Phase 4 — Hand over
 
-- Kickoff lists checks that gate this design: call `run_checks` before `task_complete` and fix every listed problem ("Checks that gate the task" in `workflow-calling-conventions`).
+- Kickoff lists checks that gate this design: you MUST call `run_checks` before `task_complete` and fix every listed problem (a rejection after completing wastes the attempt; "Checks that gate the task" in `workflow-calling-conventions`).
 - Audit:
   - every `take_draft-<n>-<slug>.<ext>` exists (re-read the artifact), except drafts that failed twice (name them);
   - no other file written; `design.json` untouched;
   - every take checked with `check_take` (file + its request); at most one retry per take; `suggest_edit` exactly for takes whose retry also missed;
   - drafts came from `wf_*` renders (sandbox-derived files only in the chat phase).
-- `task_complete(summary="Rendered N drafts of <displayName>.")` (1-3 lines, no prompt / workflow restated). This hands the design to the person; it does not finish it.
+- `task_complete(summary="Rendered N drafts of <displayName>.")` (1-3 lines, no prompt / workflow restated; call it again after the self-review). This hands the design to the person; it does not finish it.
 
 ## Phase 5 — Chat (per request)
 
 1. `read_artifact` again; a take you rendered earlier that is gone was discarded on purpose: never re-render it.
-2. Source image: the take the person names, else the primary (`primaryTakeId`), else the newest. Pass `artifact://<artifact id>/<file name>` to `describe_image`, `check_take`, `sandbox_fetch`; never retype a URL.
+2. Source image: the take the person names, else the primary (`primaryTakeId`), else the newest. Pass `artifact://<artifact id>/<file name>` to `describe_image`, `check_take`, `sandbox_fetch`.
 3. Change to an existing image ("older", "red jacket") -> an `i2i` `wf_*` tool (prefer fitting `capabilities`, e.g. `multi-reference-edit`); instruction via `draft_prompt` (several edits in one message: ONE `draft_prompts_batch`, then all renders in one response); source first, extra references next, named by each input's `label` / `reference_role` (`subject` = the image being edited); anchoring per "Anchor (Picture 1) by intent". "Start over / completely different" -> text-to-image as in Phase 2.
 4. Render only what THIS message asks: one take unless it gives a count; never redo earlier requests; one take per variant to `take_<slug>.<ext>`; check every take. Reply with one short line (new take name(s), what changed), then stop.
 5. Studio asks to assemble given takes into a sheet ("Assemble exactly these takes … Save it as /workspace/<artifact id>/<file name>"): ONE sandbox command (ImageMagick `montage` / `convert` or PIL), listed takes in listed order, no text / labels / borders beyond a thin uniform gap, same height per row, written to the given name; no `wf_*` render, no other file, no prompt writing; reply with the file name only.

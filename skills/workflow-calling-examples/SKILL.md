@@ -53,7 +53,7 @@ wf_xxx(prompt="a red bicycle leaning on a green wall")     ← exact text, no dr
 
 ```
 read_artifact(artifactId="shotlist_scene_2")  → parsed 3 shots
-draft_prompts_batch(items=[{workflow_name: "<wf>", context: "<shot s2_01 lines>"}, {…s2_02…}, {…s2_03…}])
+draft_prompts_batch(workflow_name="<wf>", items=[{context: "<shot s2_01 lines>"}, {context: "<shot s2_02 lines>"}, {context: "<shot s2_03 lines>"}])
 → { results: [{ prompt_id: "p1" }, { prompt_id: "p2" }, { prompt_id: "p3" }] }
 wf_xxx(prompt_ids={"prompt": "p1"})   → s2_01.png      # all three calls in ONE response
 wf_xxx(prompt_ids={"prompt": "p2"})   → s2_02.png

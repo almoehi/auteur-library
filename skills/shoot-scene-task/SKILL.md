@@ -51,10 +51,10 @@ Coordinator skill: validates prerequisites, reads the scene's storyboard design,
 ### 1b. Reference designs
 
 - Per shot, bind the designs its shotlist block names by KEY (`Location:`, `Characters:`, `Outfits:` = `<characterKey>:<outfitKey>`; the `Outfits:` line is per shot, never apply one scene-level look) via `artifact_index`. Older shotlists with slugs: map via the `scene_list` row (`location_slug`, beat `Location` slugs, per-BEAT `Outfits` `<character>:<look>`; slugs = character-table file stems) to `location_<slug>`, `outfit_<character>_<look>`, `character_<character>` (suffix tolerated).
-- Image per design: the published `sheet.<ext>` first; a design without a sheet gives `full_body_shot.<ext>` (`primary.<ext>` in older designs).
+- Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), else the sheet; the sheet only for a POV owner's limbs / lower body ("References by extent" in `workflow-calling-conventions`).
 - `<c>:nude` / `<c>:none` -> the character design. Any other look -> its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else the pattern above). A look without an outfit design -> the character design plus the garments described in the prompt; note the gap.
 - Reference = `artifact://<artifact id>/<file>` (real file name from the artifact). Missing designs are not fatal: note and continue without.
-- Per clip order: location, that shot's outfits (character design for `:nude` / `:none`), further character sheets ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). The clip's own frame is the `start_frame`, never a reference.
+- Per clip order: location, that shot's outfits (character design for `:nude` / `:none`), further characters ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). The clip's own frame is the `start_frame`, never a reference.
 
 ### 1c. Idempotency
 
@@ -78,7 +78,7 @@ The storyboard design's `design.json` `published.outputs[]` entry of each `frame
 
 - If an approved `character_table` exists, read the `character_<slug>.md` of characters present (better motion prompts); require no other pre-production artifact.
 - `style:` line in EVERY clip task: the workspace medium / style from `{workspace.story.plot}` verbatim ("Medium / style is kept" in `workflow-calling-conventions`).
-- `negative_prompt:` in every clip task: from the scene's art direction / the workflow's recommended negative (`get_workflow_instructions` of the preferred workflow); omit the line when the workflow has no negative port.
+- `negative_prompt:` in every clip task: the workflow's recommended negative (`get_workflow_instructions` of the preferred workflow); omit the line when the workflow has no negative port.
 
 ## Step 3 — Planning
 
@@ -110,7 +110,7 @@ Write out the FULL plan before creating anything (all clip keys + `assemble_scen
 
 ## Step 4 — Create the tasks
 
-ONE `create_task` per task, sequentially, one per round (later `requires_*` use the keys / ids the results report, never assumed). Order: clips 1..N, then assembly. Skip live ones. Each call creates its output artifact inline (`output_artifact_name` + `output_files`); no separate artifact call.
+Issue exactly ONE `create_task` per response and wait for its result before the next; NEVER several `create_task` calls in one response: a later clip / `assemble_scene<N>` names the earlier result's task / artifact in `requires_*`, and a batched round drops or guesses them, so the chain runs out of order. `requires_tasks` / `requires_artifacts` are mandatory in every call that has dependencies (4a / 4b). Order: clips 1..N, then assembly. Skip live ones. Each call creates its output artifact inline (`output_artifact_name` + `output_files`); no separate artifact call.
 
 ### 4a. Clip task
 
@@ -145,9 +145,8 @@ prompt:
   duration_seconds: <planned duration>
   start_frame: artifact://<storyboard id>/frame_<M>.<ext>   (exactly this storyboard artifact and frame file)
   prior_clip: artifact://<scene<N>_clip<M-1> id>/<its video file>     (continue only)
-  references: artifact://<location id>/sheet.<ext>, artifact://<outfit id>/sheet.<ext>,
-              artifact://<character id>/sheet.<ext>, …   (sheet first; `full_body_shot.<ext>` for a design
-              without a sheet; omit the line when none were found)
+  references: artifact://<location id>/full_body_shot.<ext>, artifact://<outfit id>/full_body_shot.<ext>,
+              artifact://<character id>/full_body_shot.<ext>, …   (per Step 1b; omit the line when none were found)
   style: <the workspace medium/style line, verbatim>
   negative_prompt: <text>
   preferred_workflow: "<wf_ tool name for this mode>"   (a preference; the worker may pick another i2v / i2va by capability, never a text-to-video one)
@@ -157,8 +156,8 @@ prompt:
     scene<N>_clip<M>_<slug>_prompt.txt
 ```
 
-- The template is VERBATIM: fill `<...>` slots from the named sources, copy every other line and every verbatim slot word for word (`Sex act:` / `Sex position:` included in a nudity-allowed workspace); never paraphrase or drop a policy-conditional line.
-- The prompt MUST open with the exact line `Load and use skill: shoot-clip`.
+- The template is VERBATIM: fill `<...>` slots from the named sources, copy every other line and every verbatim slot word for word (`Sex act:` / `Sex position:` included in a nudity-allowed workspace); never paraphrase or drop a policy-conditional line (a paraphrase would hide rules from the worker).
+- The prompt MUST open with the exact line `Load and use skill: shoot-clip` (it lets the worker `load_skill`).
 - `preferred_workflow` comes from the workspace's `wf_` list for the clip's mode (never from memory): the continuation workflow for `continue`, the i2v / i2va one for `cut` / start.
 
 ### 4b. Assembly task
@@ -188,7 +187,7 @@ Use the identifiers the `create_task` results reported; already-existing clip ta
 
 ### 4c. Reconcile
 
-After the last call, `task_index` vs the Step 3b plan: every planned clip key and `assemble_scene<N>` must exist. Create each missing one (one per round), re-check. Only what still fails goes into the reply, with the error.
+Creating many tasks in one turn can end early (a timed-out or cut-off turn leaves the tail uncreated): after the last call, `task_index` vs the Step 3b plan: every planned clip key and `assemble_scene<N>` must exist. Create each missing one (one per round), re-check. Only what still fails goes into the reply, with the error.
 
 ## Step 5 — Reply
 
