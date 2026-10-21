@@ -61,7 +61,8 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 
 ## 4. Create the tasks
 
-- ONE `create_task` call per task, in chain order, one per round; all four in the SAME turn.
+- ONE `create_task` call per round, each issued AFTER the previous call's result, in chain order; all four in the SAME turn.
+- NEVER put several `create_task` calls in one round (one response): a later call's `requires_*` names the task / artifact the earlier call creates, so it must exist first (a `create_scenes` issued before `character_table` exists fails with `requires.tasks references unknown task id`).
 - `requires_tasks` and `requires_artifacts` are MANDATORY in every call, exactly as in the templates (right after `id`): a task created without them starts at once, before its inputs exist, and fails or works from nothing.
 - Each call creates the task, its output artifact (`output_artifact_name`, `output_files`) and its checks; no separate artifact call.
 - NO text between calls (a text-only reply ends the turn and the rest of the chain is never created); do not re-read stored prompts.
