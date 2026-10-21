@@ -54,8 +54,7 @@ acts vocabulary): `workflow-calling-conventions` (`load_skill` it).
 - Note: the POV owner, `continuous` chains, beats holding several actions, shots whose people
   exceed the image ports.
 - Preflight — on any gap call `task_failed(reason)` naming it, render nothing: the scene row; ≥1
-  linked location; every linked design readable with a published full-body shot; a linked outfit
-  design for every clothed look the beats name; an image `wf_*`.
+  linked location; every linked design readable with a published full-body shot; an image `wf_*`.
 
 ## 2 Plan — `shotlist.md`
 
@@ -123,8 +122,11 @@ default; a shot rendered with another workflow carries its own `Workflow:` line.
 - People without a design appear in `Action` only.
 - `Outfits:` comes from the shot's beat (its opening beat), never the scene row; looks change
   within a scene. Valid pairs: `<characterKey>:<linked outfitKey>` (key from `design_plan.json`
-  `outfits[]`, else `outfit_<c>_<look>`), `<characterKey>:nude`, `<characterKey>:none` (wears
-  nothing). A clothed look without a linked outfit design has no valid pair: a preflight gap.
+  `outfits[]`, else `outfit_<c>_<look>`), `<characterKey>:nude`, `<characterKey>:none` (no
+  outfit design for this look: the character design is the picture). A clothed look without a
+  linked outfit design is `:none`: `Pose:` and `Prompt:` name its garments (from the beat / the
+  wardrobe tracker row), and the take's check request states them; note the missing outfit design
+  in the hand-over summary.
 - `Blocking:` places only people in frame plus a POV owner: "husband is the camera (POV, seated);
   his forearms and hands enter the lower frame". Never call a POV owner whose limbs are in
   `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
