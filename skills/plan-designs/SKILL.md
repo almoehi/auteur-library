@@ -93,7 +93,7 @@ Build every entry with its FINAL key; nothing is decided later.
 5. Storyboards: per scene key `storyboard_scene_<n>` with:
    - `notes` = the Summary.
    - `format` `portrait` | `landscape`: from the story / plot (task prompt story line or "Workspace facts"), e.g. a vertical phone film = `portrait`; derive it, never ask; `landscape` if unstated; the SAME value for every scene.
-   - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished).
+   - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished). Check before creating it: every `<c>:<look>` pair of the row's AND the beats' `Outfits` (not `nude` / `none`) has its outfit link — links are fixed at creation, and a missing one leaves the storyboard without that outfit's picture.
 6. `designs`: THE work list — every key in creation order: characters, locations, outfits, storyboards.
 7. Write into `/workspace/<your artifact id>/` with `sandbox_write_file`: `scene_list.md` FIRST (character-for-character copy of the `scene_list` artifact; the `design-plan-covers-scenes` check judges all output files), then `design_plan.json`:
 
