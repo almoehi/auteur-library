@@ -12,106 +12,35 @@ agentType: worker
 
 # Shoot Continuation — one new clip that continues a prior clip
 
-The new clip starts from the END of an existing clip: the render workflow receives the prior
-clip as a video input (plus reference images that keep characters and places consistent) and
-generates what happens next. Work with whichever workflow the workspace offers — never assume
-a specific one. The continuation mechanics (real predecessor duration, start offset = real
-duration minus 1-2 s, no cut in the prompt) are the `continue` mode of `shoot-clip`; follow the
-same rules here — this skill only adds the person-driven brief and the continuity check.
+Person-driven variant of `shoot-clip` mode `continue`. `shoot-clip` is the authority for the mechanics: workflow selection, references, measuring the predecessor, start offset, no cut, prompt route, render, `render_info` audit. This skill only adds the brief and the continuity check.
 
-## Phase 1 — Preflight
+## 1. Preflight
 
-Extract from the task description / prompt, and **stop early** when something is missing:
+Required in the task prompt: prior clip `artifact://<artifactId>/<fileName>`, prior task `task://<taskId>`, the output artifact's declared file name (canonical; never renamed; used in every render call). Optional: the person's instructions (quoted block).
 
-- the **prior clip**: `artifact://<artifactId>/<fileName>` — required;
-- the **prior task**: `task://<taskId>` — required;
-- the **output artifact** and its declared **file name** — the canonical name for the new clip,
-  decided by the task, never renamed by you (also embed it in every render call);
-- the person's **instructions** (a quoted block) — optional; when absent derive the story beat
-  yourself (Phase 3).
+- Anything required missing, or the clip unreadable / not a video (`read_artifact`) -> `task_failed(reason)` naming it; render nothing.
+- Note the prior clip's render provenance (prompt, workflow) from its file record when recorded.
 
-If the prior clip, the prior task or the output file name is missing, or the clip cannot be read,
-render nothing and call `task_complete` with a summary starting `BLOCKED:` that states exactly
-what is missing.
+## 2. Brief
 
-## Phase 2 — Read the prior clip and measure it
+- With instructions: they are the brief, in the person's words; add no characters, props or locations.
+- Without: derive the next beat from the prior clip's render prompt (provenance, or the prior task's description via `task_index` / `read_artifact`), the story plot, and the storyboard / scene list artifacts (`artifact_index`). A direct, plausible continuation of the last seconds: same place, time of day, lighting, wardrobe, camera language unless the brief changes them.
+- A brief that asks for a new framing, subject or insert is a CUT: do not render it here (it needs a fresh image-to-video render, `shoot-clip` mode `cut`); say so in the summary.
 
-1. `read_artifact(artifactId="<artifactId>")` — confirm the file exists and is a video; note its
-   file record (render provenance: the prompt and workflow that made it, when recorded).
-2. Measure the REAL clip with `get_video_info` (duration, fps, frame count, resolution, audio) on
-   the artifact reference (`path_or_url="artifact://<artifactId>/<fileKey>"`; never a copied URL). Never assume the duration the clip was requested with —
-   generated clips routinely differ from their target.
-3. Choose the **start offset** (`prior_clip_start_time`) = the MEASURED duration minus 1-2 s,
-   never a planned length: the point inside the **last 1–2 seconds** of the measured clip
-   where the continuation should resume. Read the chosen workflow's instructions (Phase 4) for its
-   constraints and make sure enough reference frames remain after the offset (e.g. a minimum of a
-   few frames); move the offset earlier until they do. Note the offset in the summary.
+## 3. Render
 
-## Phase 3 — Understand what happens next
+- Follow `shoot-clip` sections 2-5 in mode `continue`:
+  - the video-continuation workflow (video input port for the prior clip); none -> `task_failed` naming that;
+  - measured predecessor duration and `prior_clip_start_time`;
+  - references: sheets first, then `full_body_shot`; `:nude` / `:none` -> the `character_*` design; other looks -> `outfit_*` (key from `design_plan.json` `outfits[]` when present, else `outfit_<c>_<look>`); full binding in `shoot-clip` "References" (`artifact_index`; compose intent);
+  - a required reference that is unavailable and not derivable from the prior clip: ask the person if your task has a chat (`llm+hitl`), else `task_failed` naming the missing references.
+- Prompt inputs: the brief; the prior clip's measured timing and start offset; reference images and their roles; the continuity requirements of section 2. Instructions go in `instruction` (verbatim only when short, explicit, concrete). Pass `image_inputs` and `verbatim_phrases` (a shot's `Sex act:` / `Sex position:`, dialogue).
+- Load the prompt-writer skill for the workflow's model family (`prompt-writer-<family>`; `draft_prompt` applies it when available). Keep the negative prompt consistent with the prior clip's.
+- ONE render into this task's artifact, canonical file routed via `output_ports`.
 
-- With instructions: they are the brief; the quote is the person's words — follow it, do not
-  extend it with new characters, props or locations.
-- Without: derive the next beat from the prior clip's render prompt (its recorded provenance, or
-  the prior task's description via `task_index` / `read_artifact`), the story plot and the
-  storyboard / scene list artifacts (`artifact_index`). Keep it a direct, plausible continuation
-  of the action in the last seconds of the clip: same place, time of day, lighting, wardrobe,
-  camera language unless the brief changes them.
+## 4. Verify and hand over
 
-## Phase 4 — Select the workflow and gather references
-
-1. From the available `wf_*` tools and `get_workflow_instructions`, find and use the appropriate
-   **reference-to-video / video-continuation workflow** — one with a **video input port for the
-   prior clip**. If none exists, `task_complete` with a `BLOCKED:` summary naming that.
-2. `get_workflow_instructions(<workflow>)` and read it fully: every input port, prompt structure,
-   duration / frame constraints, how the start offset and the reference video are passed.
-3. Gather every **reference image** the workflow's ports require or allow, **sheets first**: the
-   published `sheet.<ext>` of finished designs (`artifact_index`: artifacts keyed `character_*`,
-   `location_*`, `outfit_*`); a design without a sheet contributes its `full_body_shot.<ext>` (`primary.<ext>` in a design finished before the rename); else
-   approved artifacts that show the subject. A `:nude` or `:none` character binds its `character_*` sheet (else
-   its full_body_shot); any other look binds its `outfit_*` design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else `outfit_<c>_<look>`, suffix tolerated) (missing -> the `character_*` sheet plus the garments in the prompt). Pass
-   them as `artifact://<artifactId>/<file>` (never paste URLs), placed per "Anchor (Picture 1)
-   by intent" of `workflow-calling-conventions` (continuation is COMPOSE intent: the place
-   first, then the characters). If a required reference
-   is unavailable and cannot be derived from the prior clip, do not guess: if your task has a
-   chat with the person (an `llm+hitl` task) ask them which images to use; otherwise
-   `task_complete` with a `BLOCKED:` summary naming the missing references.
-
-## Phase 5 — Write the prompt
-
-**A continuation does not cut.** The prompt continues `<Video 1>` in the same shot: same
-framing, subject and setup, the action carrying on, the camera move continuing or holding (take
-the move from the shot's `Movement:` / beat when the task names one). Never write "the target
-video cuts to ..." or a new composition; if the brief asks for a new framing, subject or insert,
-that is a CUT: it does not belong in this workflow (render it fresh from a storyboard frame with
-an image-to-video workflow, see `shoot-clip`) - say so in the summary instead.
-
-Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it) for every prompted `wf_*` call. Typical here: the brief is agent-derived and drafted with the prompt writer; the person's optional instructions are passed in `instruction`, or verbatim only when short, explicit and concrete. Pass `image_inputs` (every image the call passes) and `verbatim_phrases` (a shot's `Sex act:` and `Sex position:` values, dialogue to keep) to `draft_prompt`.
-
-Load the prompt-writer skill of the chosen workflow's **model family** (`prompt-writer-<family>`
-— the one matching the workflow's base model; `draft_prompt` applies it automatically when
-available, else `load_skill` it and follow it). Give it: the brief, the prior clip's measured
-timing and chosen start offset, the reference images and their roles, and the continuity
-requirements from Phase 3. State timing only from your measurements. Keep the negative prompt
-consistent with the prior clip's.
-
-## Phase 6 — Render
-
-One render call into this task's artifact, with the canonical file name from Phase 1 routed via
-`output_ports`, the prior clip on the video input port (with the chosen start offset where the
-workflow takes one), the references and the prompt. Wait for the result. On an error re-read the
-workflow instructions, fix the call and retry ONCE; if it fails again report it.
-
-## Phase 7 — Verify and hand over
-
-Measure the new clip with `get_video_info` and check:
-
-- [ ] it is a video, from a `wf_*` render (not made in the sandbox) at exactly the canonical path
-- [ ] its duration is plausible for the workflow and not an empty / frozen result
-- [ ] **continuity** — compare its first frames with the prior clip's last frames
-      (same subject, place, lighting); if it clearly breaks, redo the prompt once (at most one retry,
-      keep the first clip — see "Check, retry once, suggest" of `workflow-calling-conventions`)
-- [ ] no other file was written; the prior clip and its artifact are untouched
-
-Then call `task_complete(summary=...)`: 1-3 lines - the clip file made and anything the next step must
-know (e.g. measured duration, start offset); the prompt and references are in the render record.
-Call it again after the self-review. Keep replies concise: see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
+- It is a video from a `wf_*` render (not the sandbox) at exactly the canonical path; duration plausible, not empty / frozen (`get_video_info`).
+- Continuity: first frames vs the prior clip's last frames (same subject, place, lighting); a clear break -> redo the prompt once, keep the first clip ("Check, retry once, suggest" in `workflow-calling-conventions`).
+- No other file written; the prior clip and its artifact untouched.
+- `task_complete`: 1-3 lines — the clip file made and what the next step must know (measured duration, start offset).

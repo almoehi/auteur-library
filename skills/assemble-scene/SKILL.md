@@ -13,54 +13,35 @@ agentType: worker
 
 # Assemble Scene
 
-Joins the finished clips of ONE scene, in clip order, into the canonical file named in the task
-(`scene<N>_assembled.mp4`). No transitions, no trimming, no new rendering.
+Joins the finished clips of ONE scene, in task order, into the canonical `scene<N>_assembled.mp4`. No transitions, no trimming, no rendering.
 
 ## 1. Preflight
 
-The task prompt lists the clips in order (`artifact://<artifactId>/<file>`, with their planned
-durations) and the canonical output file. For every clip: `read_artifact` its artifact, confirm it
-is approved and the video file is present. Any clip missing or not approved -> assemble nothing
-and `task_complete` with a summary starting `BLOCKED:` naming it. Never assemble a subset.
+- The task prompt lists the clips in order (`artifact://<artifactId>/<file>`, planned durations) and the canonical output file.
+- `read_artifact` each clip's artifact: approved and the video file present.
+- Any clip missing or unapproved -> `task_failed(reason)` naming it. Never assemble a subset.
 
 ## 2. Fetch and probe
 
-`sandbox_fetch(url="artifact://<id>/<file>", ...)` each clip into `/tmp/assemble_scene<N>/`
-(never copy or retype a presigned URL). Probe each with `ffprobe` (codec, width, height, fps,
-pixel format, audio stream presence / sample rate, duration). A clip with no video stream or
-zero duration -> `BLOCKED:`.
+- `sandbox_fetch(url="artifact://<id>/<file>")` each clip into `/tmp/assemble_scene<N>/` (never a copied presigned URL).
+- `ffprobe` each: codec, size, fps, pixel format, audio presence / sample rate, duration.
+- A clip with no video stream or zero duration -> `task_failed(reason)` naming it (nothing is written yet).
 
-## 3. Concatenate
+## 3. Concatenate (task order, not file-name order)
 
-Order is the clip order of the task, not file-name order.
-
-- **All clips share codec, resolution, fps, pixel format and audio layout** (or none has
-  audio): concat demuxer with stream copy, no re-encode.
-
+- All clips share codec, resolution, fps, pixel format and audio layout (or none has audio): concat demuxer, stream copy.
   ```bash
   printf "file '%s'\n" /tmp/assemble_scene<N>/clip1.mp4 … > list.txt
   ffmpeg -f concat -safe 0 -i list.txt -c copy scene<N>_assembled.mp4
   ```
-
-- **They differ** (resolution, fps, codec, pixel format, some clips with audio and some without):
-  normalize and re-encode only then. Target the first clip's resolution and fps (scale with
-  letterbox / pad, no stretching), `-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p`; audio
-  `aac` at a common sample rate, silent audio (`anullsrc`) for clips without it when any clip has
-  audio. Use the concat filter (`-filter_complex concat=n=<K>:v=1:a=<0|1>`) or normalized
-  intermediates + the demuxer.
-
-Say in the summary which route was used and why.
+- They differ: normalize and re-encode only then.
+  - First clip's resolution and fps (scale with letterbox / pad, no stretching); `-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p`.
+  - Audio `aac` at a common sample rate; `anullsrc` silence for clips without audio when any clip has audio.
+  - Concat filter (`-filter_complex concat=n=<K>:v=1:a=<0|1>`) or normalized intermediates + demuxer.
 
 ## 4. Verify and deliver
 
-Probe the result: video stream exists, duration ≈ the sum of the clip durations (±1 s), the
-resolution / fps as intended. A failure -> retry once with the re-encode route; still failing ->
-`task_complete` with a failure summary.
-
-Write the file to the task's declared output path (the artifact's file `scene<N>_assembled.mp4`,
-exactly this canonical name).
-
-## 5. Complete
-
-`task_complete` with a short summary (1-3 lines, see "Concise replies and task/artifact URIs" in
-`workflow-calling-conventions`): the total duration and the route (copy / re-encode); not the per-clip list.
+- Probe the result: video stream present; duration ≈ sum of clip durations (±1 s); intended resolution / fps.
+- Failure -> retry once with the re-encode route; still failing -> `task_failed` with the error (nothing written yet).
+- Only after verification passes, write the result to the declared output path, exactly `scene<N>_assembled.mp4` (write nothing earlier or elsewhere).
+- `task_complete`: 1-3 lines — total duration and route (copy / re-encode), not the per-clip list ("Concise replies and task/artifact URIs" in `workflow-calling-conventions`).
