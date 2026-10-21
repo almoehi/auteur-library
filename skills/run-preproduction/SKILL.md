@@ -62,6 +62,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 ## 4. Create the tasks
 
 - ONE `create_task` call per task, in chain order, one per round; all four in the SAME turn.
+- `requires_tasks` and `requires_artifacts` are MANDATORY in every call, exactly as in the templates (right after `id`): a task created without them starts at once, before its inputs exist, and fails or works from nothing.
 - Each call creates the task, its output artifact (`output_artifact_name`, `output_files`) and its checks; no separate artifact call.
 - NO text between calls (a text-only reply ends the turn and the rest of the chain is never created); do not re-read stored prompts.
 - Use ids / keys from each result (`key: <key>`) in later `requires_*`; never assume or derive keys. On an `error:` result pick the right key from the listed known ones and correct the call; never retry an identical call.
@@ -72,9 +73,8 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 ### 4a. write_screenplay
 
 ```
-create_task({ id: "write_screenplay", title: "Write screenplay", description: "Adapt the story plot into a screenplay",
+create_task({ id: "write_screenplay", requires_tasks: [], requires_artifacts: [], title: "Write screenplay", description: "Adapt the story plot into a screenplay",
   agent: <writer>, policies: ["screenplay-quality"], prompt: <below>,
-  requires_tasks: [], requires_artifacts: [],
   output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"] })
 ```
 prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX.
@@ -82,9 +82,8 @@ prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. heading
 ### 4b. character_table
 
 ```
-create_task({ id: "character_table", title: "Character table", description: "One profile file per cast role",
+create_task({ id: "character_table", requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"], title: "Character table", description: "One profile file per cast role",
   agent: <cast writer>, policies: ["cast-quality"], prompt: <below>,
-  requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"],
   output_artifact_name: "character_table", output_artifact_description: "Character Breakdown Table", output_files: [] })
 ```
 prompt:
@@ -119,9 +118,8 @@ Pre-completion audit: before `task_complete`, re-open every file; confirm all fi
 ### 4c. create_scenes
 
 ```
-create_task({ id: "create_scenes", title: "Scene list", description: "Scene table with outfits and beats",
+create_task({ id: "create_scenes", requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"], title: "Scene list", description: "Scene table with outfits and beats",
   agent: <director>, policies: ["scenes-quality","scenes-complete"], prompt: <below>,
-  requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"],
   output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"] })
 ```
 prompt:
@@ -187,10 +185,9 @@ Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm e
 ### 4d. plan_designs
 
 ```
-create_task({ id: "plan_designs", title: "Plan and create designs", description: "Create the designs of the pre-production",
+create_task({ id: "plan_designs", requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list"], title: "Plan and create designs", description: "Create the designs of the pre-production",
   agent: <design planner>, policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
   difficulty: "hard", can_create_tasks: true, prompt: <below>,
-  requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list"],
   output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
   output_files: ["scene_list.md","design_plan.json"] })
 ```
