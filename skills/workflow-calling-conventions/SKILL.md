@@ -94,13 +94,15 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 
 ## Check, retry once, suggest
 
-- Check every take you render with `check_take(file, request, references?)`, a round's checks
-  in one response. Never re-check a take you did not render (studio buttons are checked by the
-  server); sandbox-derived files (crop, conversion, sheet) are not checked.
-  - `request` (required): what the take had to show — the shot / brief lines or the person's
+- Check every design-asset take you render with `check_take(file, request, references?)`, a
+  round's checks in one response. Never re-check a take you did not render (studio buttons and
+  the storyboard drafts are rendered and checked by the server); sandbox-derived files (crop,
+  conversion, sheet) are not checked. Storyboard shot takes are never rendered or checked by an
+  agent (`storyboard-scene`: `draft_storyboard`).
+  - `request` (required): what the take had to show — the brief lines or the person's
     instruction; designs by display name, never keys.
   - `references`: `[{ref, label}]` of the reference pictures the render bound (label = the
-    design's display name, or e.g. "previous shot's take").
+    design's display name).
 - Read the result: `verdict` `match` | `miss` | `unchecked`; the findings (rated severe / major /
   minor when rated); `fix` = the correction. `unchecked` = the judge failed: say so, never count
   it as a match.
@@ -133,6 +135,9 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
   people apart by name only. An image whose subject is not in the shot is never bound.
 
 ## References by extent
+
+Also the background for the entity lines of a storyboard plan (`storyboard-scene`: the server
+applies these rules when it binds the pictures of a shot; you only write the shot lines).
 
 Looks in `Outfits:` pairs (the single definition): `<c>:<outfit key>` = that outfit design;
 `<c>:nude` = nude, the character design is the picture; `<c>:none` = no outfit design for this
