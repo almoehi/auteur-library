@@ -29,7 +29,8 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
 - Compose the whole `shotlist.md` silently first, then write it in ONE call; never a partial or
   draft file. A write that names an unlinked key or breaks R1–R7 is refused and writes nothing:
-  fix what it lists and write again.
+  fix what it lists and write again. A further rewrite while drafting is allowed only after a
+  `draft_storyboard` refusal that names `shotlist.md`.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
   text-only.
 
@@ -116,7 +117,8 @@ only adds placement and the compose prompt.
 - `Characters:` = exactly the keys in `Visible:`; `Outfits:` = one valid pair per character
   (below), `; `-separated. Nobody in
   frame: `Characters: none`, `Outfits: none`, `Visible: nobody`.
-- People without a design appear in `Action` only.
+- People without a design (extras, a crowd) get no key: they appear in `Action:` / `Frame:` and in
+  the exclusion clause (`character_wife (upper body); three diners in the background, nobody else`).
 - `Outfits:` comes from the shot's beat (its opening beat), never the scene row; looks change
   within a scene. Valid pairs: `<characterKey>:<linked outfitKey>` (key from `design_plan.json`
   `outfits[]`, else `outfit_<c>_<look>`), `<characterKey>:nude`, `<characterKey>:none` (no
@@ -138,35 +140,46 @@ only adds placement and the compose prompt.
 
 ## 3 Hand over — `draft_storyboard`
 
-Call `draft_storyboard(shots)` ONCE, right after the shotlist write was accepted. The first call
-lists EVERY shot of `shotlist.md`. Per shot:
+Call `draft_storyboard(shots)` right after the shotlist write was accepted. The first call lists
+EVERY shot of `shotlist.md`. Per shot (the example shot s3-01 above):
 
 ```
 { "shot": "s3-01",
   "entities": [
-    { "key": "character_wife", "kind": "person", "region": { "third": "centre", "depth": "background" }, "facing": "camera" },
-    { "key": "character_husband", "kind": "person", "region": { "third": "centre", "depth": "frame-edge" }, "facing": "away", "limbs": "forearms and hands" },
-    { "kind": "person", "count": 3, "region": { "third": "right", "depth": "background" }, "facing": "left" } ],
-  "prompt": "..." }
+    { "key": "character_wife", "kind": "person", "region": { "third": "centre", "depth": "background" },
+      "facing": "camera", "support": "chair", "contact_with": ["laptop"] },
+    { "key": "character_husband", "kind": "person", "region": { "third": "centre", "depth": "frame-edge" },
+      "facing": "away", "limbs": "forearms and hands" },
+    { "kind": "object", "count": 1, "region": { "third": "centre", "depth": "midground" }, "facing": "camera" } ],
+  "prompt": "Medium shot, eye level, seen from [[character_husband]]'s seat: exactly one person in the
+    frame - [[character_wife]], ... seated across the kitchen table, head down, hands on the keyboard of
+    an open laptop; at the lower edge his own forearms and hands resting on the table. <place in words>.
+    <production style line>. No text or lettering." }
 ```
+
+Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "extras": 20, … }`
+(3 placed figures plus a loosely counted crowd); a shot with nobody in frame (`Visible: nobody`) =
+`"entities": []` or only its animals / props, the prompt describing the place.
 
 ### Entities — fill them from `Blocking:`, `Pose:`, `Frame:`, `Visible:`
 
-- Exactly one entity per key of the shot's `Characters:`, with that `key`. People without a design
-  (extras, a crowd) are entries without `key` and with `count` (and optionally `extras` for further
-  background people); animals, creatures and props that matter to the frame are entries with their
-  `kind` (`person` | `animal` | `creature` | `object`) and `count`.
+- Exactly one entity per key of the shot's `Characters:`, with that `key` (`kind` = what the
+  design depicts: a person, an animal or a creature). Everything else that matters to the frame and
+  has no design — extras, animals, props — is an entry without `key`, with its `kind` (`person` |
+  `animal` | `creature` | `object`) and the exact `count` the frame shows; `extras` adds loosely
+  counted background figures (a crowd). Entries without `key` never take a picture.
 - `region.third` (`left` | `centre` | `right`) and `region.depth` (`foreground` | `midground` |
   `background` | `frame-edge`) come from `Frame:` and `Blocking:`; `facing` (`camera` | `left` |
   `right` | `away` | `down` | `up`) from `Blocking:` / `Pose:`.
 - `support` = what they sit, stand or lie on, when it matters. `contact_with` = who or what they
   touch (from `Blocking:`), only when there is contact.
-- The POV owner (`POV:`) is the camera: an entity with `region.depth: "frame-edge"` and `limbs` (their
-  own limbs in frame, matching their `Visible:` entry) — never a full person.
+- The POV owner (`POV:`) is the camera. When their limbs are in frame (they are in `Characters:`):
+  an entity with `region.depth: "frame-edge"` and `limbs` (matching their `Visible:` detail) — never
+  a full person. With nothing of them in frame they are not in `Characters:` and get no entity.
 - Slots: the place, the parent frame of a `continue` shot and every keyed entity each take one
-  picture; the server refuses a shot that needs more than the render workflow takes. Split such a
-  shot by WHO is in frame (each part shows a subset; the rest is off-frame there), never by time
-  alone — and rewrite `shotlist.md` first. Extras never take a picture.
+  picture; the server refuses a shot that needs more than the render workflow takes. Rewrite
+  `shotlist.md` first: split such a shot by WHO is in frame (each part shows a subset; the rest is
+  off-frame there), never by time alone — or make a `continue` shot a `cut`.
 
 ### Prompt — the visible end state of the frame
 
@@ -184,8 +197,8 @@ lists EVERY shot of `shotlist.md`. Per shot:
   `workflow-calling-conventions`, "Explicit acts and positions"), only under the nudity policy.
 
 The call returns `accepted: …` or an `error:` listing every problem; nothing was started in the
-error case. Fix the plan (or `shotlist.md` when a problem names a shotlist rule or key) and call
-again.
+error case. Fix the plan — or, when a problem says to fix it in `shotlist.md`, rewrite the file
+first (one full rewrite) — and call again with the whole plan of the first call.
 
 ## 4 Audit and hand over
 
