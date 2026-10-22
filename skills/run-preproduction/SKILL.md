@@ -162,18 +162,22 @@ Looks
 Beats section (same file, below the table)
 - Per scene: a `### Scene <n>` heading and a table with one row per beat. Every scene has at least one beat (typically 2-6).
 - Columns, ALL filled in EVERY beat (an empty cell fails the `scenes-complete` check):
-  - `Beat #`
+  - `Beat #`: `<scene>.<n>` (`1.1`, `1.2`, …), unique and never renumbered on a rewrite — the
+    storyboard's shots name their beat by it (`Beat: 1.2`).
   - `Action`: what visibly happens.
   - `Location`: a `location_slug`. For every non-`parallel` beat EXACTLY the scene row's own slug; only a `parallel` beat names another place.
   - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `jonas:work_suit; mira:raincoat`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty.
-  - `Framing`: shot size and angle.
+  - `Framing`: ONE opening shot size and angle (never "close-up then wide": a change of framing is a
+    `Camera move` or a new beat).
   - `Camera move`: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift, orbit, or `hold` ONLY when the beat asks for stillness.
   - `Continuity` (relation to the PREVIOUS beat):
     - `continuous` = the action carries straight on: same place, same moment, same people, even when the framing changes.
     - `parallel` = happens at the same time somewhere ELSE; MUST give its place in `Location` (reuse a table slug or define a new stable slug of lowercase a-z0-9 words joined by `_`, e.g. `driveway`; inventing a place slug is allowed).
     - `new moment` = a jump in time, place or subject, or an insert. The first beat of a scene is `new moment`.
   - `Blocking`: who is where, facing which way.
-  - `Contact`: who touches whom or what, and where on the body or object; `none` when nothing does.
+  - `Contact`: who touches whom or what, and where on the body or object, in plain body-part words
+    (hands, mouth, shoulders, waist, lap, groin, …): the storyboard turns it into the shot's
+    structured `Contact:` line; `none` when nothing does.
   - `Sex act` and `Sex position` (nudity `allowed` ONLY, after `Contact`; under `forbidden` or absent leave both columns out):
     - Names exactly as listed in "Explicit acts and positions" of `workflow-calling-conventions`, or `other (<plain words>)`.
     - Value: `none`, or `<name>[ + <name>]*[: <detail>]`. `Sex act` may combine acts with ` + `; `Sex position` names exactly ONE position (a position change is a new beat).
@@ -181,13 +185,14 @@ Beats section (same file, below the table)
     - `Sex act` is `none` exactly when `Sex position` is `none`.
     - Nudity alone, undressing, posing nude, kissing, hugging, caressing and touching are NOT a sex act (both `none`; nudity is the `Outfits` look, touch is `Contact`).
     - Never an act for a depicted minor.
-- A beat is ONE moment: one beat per distinct action or happening; each entrance, exit and picture-changing dialogue line is its own beat. Two successive verbs ("sits down and opens the laptop"), "then" or "cut to" = two beats; only simultaneous actions ("as" / "while") share one. One beat = one place and one opening framing; split a beat that packs two places or two framings.
+- A beat is ONE moment: one beat per distinct action or happening; each entrance, exit and picture-changing dialogue line is its own beat. Two successive verbs ("sits down and opens the laptop") = two beats; only simultaneous actions ("as" / "while") share one. The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows never appear in a beat's `Action` or `Framing` — the storyboard refuses them in its shots, so a beat holding one is split here, in order. One beat = one place and one opening framing; split a beat that packs two places or two framings.
+- A beat with a `Sex act` holds only that act (its lead-up — undressing, climbing on, straddling — is an earlier beat, `none`), so the shot that shows the act carries it whole.
 - POV beats: name the POV character in `Blocking` ("POV: <character_slug>"); that character is the camera and shows only their own limbs (hands, forearms, knees, feet), only when in frame, never a full-body figure.
 - Undressing (nudity `allowed`, adult only): the beat where a character undresses already carries `<character_slug>:nude`, and so does EVERY later beat of that character in the scene (until a later beat dresses them); the row's `Outfits` lists the `nude` pair too. Otherwise keep a tracker look.
 - Garment state: when a beat's action needs a body part the current look covers, the beat's `Action` / `Blocking` names the garment state ("cardigan slipped off her shoulders"); when it lasts into later beats it is its own WARDROBE TRACKER look in this and every later beat's `Outfits`.
 - Downstream use: the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the clip prompts are taken from the beats (`continuous` -> `continue` transition; `parallel` -> cutaway shot at its named place with that place's location design; extra location designs come from the beat `Location` slugs, outfit designs from the rows' `Outfits` union).
 
-Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` is ONE moment (no two successive verbs, "then" or "cut to": split it), every row's `Outfits` equals the union of its beats' looks, and a character stays `nude` after an undressing beat.
+Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, and a character stays `nude` after an undressing beat.
 ````
 
 ### 4d. plan_designs

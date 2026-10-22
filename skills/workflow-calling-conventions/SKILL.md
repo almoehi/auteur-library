@@ -127,8 +127,9 @@ Every take check (`check_take`, the studio's and the storyboard drafts' server c
 what is visible, against what the take was asked to show — so plan and prompt for these:
 - ONE moment of the action, never a sequence; one continuous image (no panels or collage).
 - Exactly the people the request lists: nobody extra, nobody missing; each one recognisably the
-  named person. A POV owner appears only as their own limbs (hands, forearms, knees, feet), never
-  their face or torso.
+  named person. A POV owner appears only as their own body seen from their eyes (hands, forearms,
+  lap, thighs, knees, feet; lying also the chest from above), never their face, in the sex, skin
+  tone and garments the request states for the viewer.
 - The named setting and props exactly (a lounger is not a chair, the named place is no other).
 - Every listed outfit visible as described; no garment missing or replaced.
 - A sex act / position line: its participants, positions and contact points as stated.
@@ -160,8 +161,8 @@ look, the character design is the picture — a creature / animal wearing nothin
 For each character in a shot's `Characters:`, by their `Visible:` extent:
 - `full figure` / `upper body` / `face` / `back`: the outfit design's full-body shot (the character
   design's for `:nude` / `:none` / no outfit design).
-- `limbs` / `lower body` (the POV owner, or anyone seen only by their limbs): WORDS only — no
-  picture, no `[[key]]`, no name; the POV owner is "the viewer" ("the viewer's own forearms and
+- `limbs` / `lower body` (anyone seen only by their limbs) and the POV owner at any extent (lying:
+  `upper body` = the chest from above): WORDS only — no picture, no `[[key]]`, no name; the POV owner is "the viewer" ("the viewer's own forearms and
   hands at the lower edge"), in the prompt and in the shot's `Action:` / `Blocking:` / `Pose:` /
   `Frame:` lines (the server copies those verbatim into the prompt; a name there summons the whole
   person).
