@@ -88,7 +88,8 @@ plan of step 3 only adds placement, facing and the compose prompt.
   "Wife mid-stride toward the table, reaching for her laptop".
   - The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows (`→`, `->`)
     are REFUSED in `Action:` and `Camera:` (rule R9, any case, whole words) and in a plan prompt.
-    Never rephrase around them: a sequence is fixed only by splitting it into shots.
+    Never rephrase a sequence around them: it is fixed only by splitting it into shots. A word
+    used for PLACE, not time, is reworded instead: "kneels before him" -> "kneels in front of him".
   - Two successive verbs ("stands and presses", "enters and crosses") = separate shots too, one per
     action, in order (not checked by the server - your job).
   - One shot: simultaneous actions joined by "as" / "while" (both happen in the same instant);
@@ -205,7 +206,7 @@ plan of step 3 only adds placement, facing and the compose prompt.
 
 Re-read every shot silently before writing `shotlist.md` (and again before `draft_storyboard`):
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
-  a POV owner in frame is `limbs` / `lower body`;
+  a POV owner in frame is `limbs` / `lower body` (lying: also `upper body`);
 - every `Action:` and `Camera:` is ONE moment: no two successive verbs, no `then` / `after` /
   `before` / `followed by` / `cut to` / arrows; a sequence is split into more shots (never
   rephrased); every action of every beat has a shot;
