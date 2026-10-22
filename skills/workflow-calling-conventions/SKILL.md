@@ -121,12 +121,24 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 - A suggested fix the person sends from the Edit box is their instruction: a pass-through
   candidate ("Prompt route").
 
+## What a take is judged against
+
+Every take check (`check_take`, the studio's and the storyboard drafts' server checks) judges only
+what is visible, against what the take was asked to show — so plan and prompt for these:
+- ONE moment of the action, never a sequence; one continuous image (no panels or collage).
+- Exactly the people the request lists: nobody extra, nobody missing; each one recognisably the
+  named person. A POV owner appears only as their own limbs (hands, forearms, knees, feet), never
+  their face or torso.
+- The named setting and props exactly (a lounger is not a chair, the named place is no other).
+- Every listed outfit visible as described; no garment missing or replaced.
+- A sex act / position line: its participants, positions and contact points as stated.
+- The requested medium and style; nothing added that the request does not ask for.
+
 ## Reference plan
 
 - Before every `wf_*` call with reference images, one entry per bound image:
-  `<port> = <design key> (<full_body_shot|sheet>) - <who/what>` (POV owner without a published
-  sheet: `(full_body_shot, no sheet)`), FIRST in the writer's `context` (no writer call: state
-  them in your message before the call).
+  `<port> = <design key> (full_body_shot) - <who/what>`, FIRST in the writer's `context` (no
+  writer call: state them in your message before the call).
 - The plan, `image_inputs` and the call's image ports are the same images; the drafted prompt names
   no Picture beyond the bound images.
 - One image per person in frame, from that person's own design; in `context` per person the
@@ -148,12 +160,11 @@ look, the character design is the picture — a creature / animal wearing nothin
 For each character in a shot's `Characters:`, by their `Visible:` extent:
 - `full figure` / `upper body` / `face` / `back`: the outfit design's full-body shot (the character
   design's for `:nude` / `:none` / no outfit design).
-- `limbs` / `lower body` of the POV owner (`POV:` line): that design's `sheet` (its POV
-  <seated|lying> tile; "use only its POV <posture> tile: <detail> seen from their own eyes, never
-  their face or torso" in `context`); no published sheet → `(full_body_shot, no sheet)` with the
-  phrase below.
-- `limbs` / `lower body` of anyone else: their full-body shot, plus "only their <detail> are in
-  frame, never their face or the rest of their body" in `context`.
+- `limbs` / `lower body` (the POV owner, or anyone seen only by their limbs): WORDS only — no
+  picture, no `[[key]]`, no name; the POV owner is "the viewer" ("the viewer's own forearms and
+  hands at the lower edge"), in the prompt and in the shot's `Action:` / `Blocking:` / `Pose:` /
+  `Frame:` lines (the server copies those verbatim into the prompt; a name there summons the whole
+  person).
 - Never add a body part `Visible:` does not list. A character not in `Characters:` gets no image
   and is never mentioned as a figure in the prompt.
 
