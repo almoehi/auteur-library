@@ -28,8 +28,8 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   shot takes is `draft_storyboard`.
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
 - Compose the whole `shotlist.md` silently first, then write it in ONE call; never a partial or
-  draft file. A write that names an unlinked key or breaks R1–R8 is refused and writes nothing:
-  fix what it lists and write again. A further rewrite while drafting is allowed only after a
+  draft file. A write that names an unlinked key, breaks R1–R11 or leaves a beat of the scene
+  uncovered is refused and writes nothing: fix what it lists and write again. A further rewrite while drafting is allowed only after a
   `draft_storyboard` refusal that names `shotlist.md`.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
   text-only.
@@ -62,30 +62,43 @@ Action: Wife, seated across the table, typing on her laptop, head down; the view
 Location: location_kitchen
 Camera: medium, eye level
 Movement: slow push-in
-Blocking: the camera is the viewer's eyes (seated); the viewer's forearms and hands enter the lower frame; wife across the table, facing the viewer, her hands on the laptop; no touch
+Blocking: the camera is the viewer's eyes (seated); the viewer's forearms and hands enter the lower frame; wife across the table, facing the viewer, her hands on the laptop
 Pose: wife: hands on the keyboard, head down; the viewer's hands flat on the table
 Frame: wife centre background; the viewer's hands bottom foreground
 Visible: character_wife (upper body); character_husband (limbs: forearms and hands); nobody else
 POV: character_husband (seated)
+Beat: 3.1
+Contact: character_wife (hands) on laptop keyboard; character_husband (hands) on table
 Characters: character_wife, character_husband
 Outfits: character_wife:outfit_wife_office; character_husband:outfit_husband_suit
 Duration: 4
 Transition: cut — first shot of the scene
 ```
 
-Every line is ONE line (no wrapping). The shot lines are the single authority for who is in frame
-and how shots relate (the shot graph is read from `Transition:`); the structured plan of step 3
-only adds placement and the compose prompt.
+Every line is ONE line (no wrapping). The shot lines are the single authority for who is in frame,
+who touches what and how shots relate (the shot graph is read from `Transition:`); the structured
+plan of step 3 only adds placement, facing and the compose prompt.
 
 ### Shots
 
 - One shot = ONE moment (a keyframe is a single still), one place (`Location:`), one framing
   (`Camera:` = the opening frame only; a pan from A to B is `Camera:` A, the pan goes in
   `Movement:`).
+- `Camera:` OPENS with one standard framing size, then the angle: `extreme close-up` (one detail
+  fills the frame) | `close-up` (head and top of the shoulders) | `medium close-up` (head to
+  mid-chest) | `medium` (head to waist) | `medium full` / `cowboy` (head to mid-thigh) |
+  `full shot` (head to feet) | `wide` (people small in the setting) — e.g. `Camera: close-up on
+  the wife's face, eye level`. The server states that size in every render prompt, measures it on
+  every take and reframes a subject that came out too small; a `Camera:` line opening with
+  anything else ("lounger POV …") gets no framing check.
 - `Action:` = the ONE instant as a state, with participles: "Wife, standing, presses …";
   "Wife mid-stride toward the table, reaching for her laptop".
-  - Two successive verbs ("stands and presses", "enters and crosses"), "then", "before",
-    "after", "cut to" = separate shots, one per action, in order.
+  - The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows (`→`, `->`)
+    are REFUSED in `Action:` and `Camera:` (rule R9, any case, whole words) and in a plan prompt.
+    Never rephrase a sequence around them: it is fixed only by splitting it into shots. A word
+    used for PLACE, not time, is reworded instead: "kneels before him" -> "kneels in front of him".
+  - Two successive verbs ("stands and presses", "enters and crosses") = separate shots too, one per
+    action, in order (not checked by the server - your job).
   - One shot: simultaneous actions joined by "as" / "while" (both happen in the same instant);
     speech, breath or a sound together with one action; a progressing state ("thrusting faster",
     "pace building").
@@ -99,6 +112,9 @@ only adds placement and the compose prompt.
     out the letter`.
 - Split every multi-action beat into one shot per action, in order — never one shot that lists
   them. Count actions, not beats: 4 beats can need 7 shots.
+- `Beat:` = the `Beat #` of the scene-list beat the shot shows, copied exactly (`Beat: 1.9`); every
+  shot has one, every shot of a split beat carries the same beat, and every beat of the scene has
+  at least one shot (all checked at the write: `beat 1.3: no shot shows it`).
 - A sequence is fixed ONLY by splitting it into shots, never by rephrasing it into one sentence
   (participles or "as" around successive actions are still a sequence).
 - Typically 4–10 shots covering the whole scene in story order, an establishing shot first when
@@ -110,7 +126,9 @@ only adds placement and the compose prompt.
   location, and name the gap in the summary.
 - `Movement:` = the beat's camera move verbatim (`hold` only when the beat asks for stillness).
 - `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
-  `continuous` → `continue — <reason>` (same place, moment, people; the framing may change), e.g.
+  `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
+  SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
+  `continue` at another place renders without the previous frame: make it a `cut`), e.g.
   `Transition: continue — same moment, closer on the sister`; `parallel` / `new moment` →
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
@@ -151,9 +169,14 @@ only adds placement and the compose prompt.
   limbs are in `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
 - `POV: <characterKey> (seated|standing|kneeling|lying)` only for a first-person camera (no other
   posture: the write is refused); the posture is said in words only ("first-person view,
-  standing"). A first-person view shows only the viewer's own limbs or lap: in frame the owner's
-  extent is `limbs` or `lower body` — never `upper body`, `face` or `full figure`; with none of
-  their body in frame, leave them out of `Characters:` / `Visible:`. Their key appears ONLY in
+  standing"). A first-person view shows only the viewer's own body seen from their eyes; the
+  posture decides the extent in frame (rule R4): seated / kneeling / standing `limbs` or `lower body`
+  (lap, thighs — and the hands resting there); lying also `upper body` (the chest seen from above) —
+  never `face` or `full figure`. Pick the extent that shows every part of theirs a `Contact:` or the
+  act touches: a touch on the viewer's lap or groin is `lower body` (or `upper body` lying), never
+  `limbs`. With none of their body in frame, leave them out of `Characters:` / `Visible:`. The server
+  states the viewer's sex, skin tone and garments itself (from their design and `Outfits:` look) —
+  never describe their face. Their key appears ONLY in
   `POV:`, `Visible:`, `Characters:` and `Outfits:`. In `Action:`, `Blocking:`, `Pose:` and `Frame:`
   they are only "the viewer" ("the viewer's forearms and hands enter the lower frame") — never
   their name, key or a figure ("as the husband watches", "husband seated centre frame as POV"):
@@ -164,22 +187,43 @@ only adds placement and the compose prompt.
   remain"): write "the viewer's hand", "the sister remains in front of the viewer". Anyone else
   seen only by `limbs` / `lower body` is likewise named by role in words ("a man's hands"), never
   as a figure.
-- `Pose:` per person in frame; when the action needs a body part the look covers, state the
-  garment state ("coat unbuttoned and open"); a lasting change is its own look.
+- `Pose:` per person in frame (body position); for a `:none` look also its garments.
+- `Wardrobe:` = partial undress of an OUTFIT look, `<characterKey> (wearing: <garment>, …; removed:
+  <garment>, …)`, `;` between characters: the `Outfits:` pair keeps the outfit key (its picture
+  stays bound) while ANY of its garments is still on, e.g. `Outfits: character_sister:outfit_sister_bikini`
+  + `Wardrobe: character_sister (wearing: bikini bottom; removed: bikini top)`. `<key>:nude` only when
+  nothing is worn (a Wardrobe entry on a `:nude` or `:none` look, or with an empty list, is refused).
+  A change that lasts into the next beats is a new look in the scene list instead.
+- `Contact:` = every touch the frame shows, `<characterKey> (<body part>) on <characterKey> (<body part>)`
+  or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). Body parts
+  (exactly these; singular or `lips` accepted): head, face, mouth, neck, shoulders, chest, breasts,
+  back, waist, belly, hips, buttocks, groin, lap, thighs, legs, knees, feet, arms, forearms, hands,
+  fingers. Copy the beat's `Contact` onto the shot that shows the touch: a beat with a `Contact` needs
+  at least one shot with a `Contact:` line. Every named part must be in frame by that person's
+  `Visible:` extent (rule R10): `face` shows head, face, mouth, neck; `upper body` head to hands;
+  `lower body` waist, hips, buttocks, groin, lap, legs, feet; `limbs` arms and legs; `back` the figure
+  from behind; `full figure` everything — widen the extent (or reframe) when a touched part is
+  hidden. A shot with a `Sex act:` always has a `Contact:` line naming the contact points.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
   depicted are adults: copy the beat's columns (names: "Explicit acts and positions"); both
   `none` or both set. Otherwise omit both. A split beat's act goes on every shot whose frame shows
   the act being performed; its lead-up or aftermath shots carry `none` — never drop the act: at
-  least one shot of the beat carries it.
+  least one shot of the beat carries every act name of the beat (checked at the write: `beat 1.9:
+  Sex act \`blowjob\` is on no shot of the beat`), with its `Contact:` points.
 
 ### Self-check before the write
 
 Re-read every shot silently before writing `shotlist.md` (and again before `draft_storyboard`):
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
-  a POV owner in frame is `limbs` / `lower body`;
-- every `Action:` is ONE moment: no two successive verbs, "then", "before", "after" or "cut to";
-  a sequence is split into more shots (never rephrased); every action of every beat has a shot;
-- `Camera:` is the opening framing only; the shot holds one place;
+  a POV owner in frame is `limbs` / `lower body` (lying: also `upper body`);
+- every `Action:` and `Camera:` is ONE moment: no two successive verbs, no `then` / `after` /
+  `before` / `followed by` / `cut to` / arrows; a sequence is split into more shots (never
+  rephrased); every action of every beat has a shot;
+- every shot has `Beat:`; every beat has a shot; every beat's `Contact` is on a shot's `Contact:`
+  whose touched parts the `Visible:` extents show (the viewer's lap / groin = `lower body`);
+- partial undress of an outfit = the outfit key + `Wardrobe:`; `:nude` only when nothing is worn;
+- `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
+  one place; a `continue` shot keeps the previous shot's `Location:`;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
   key, name word or as a figure, not even as an owner ("husband's glass"); limbs-only people
   likewise only as their limbs in words;
@@ -217,7 +261,10 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   counted background figures (a crowd). Entries without `key` never take a picture.
 - `region.third` (`left` | `centre` | `right`) and `region.depth` (`foreground` | `midground` |
   `background` | `frame-edge`) come from `Frame:` and `Blocking:`; `facing` (`camera` | `left` |
-  `right` | `away` | `down` | `up`) from `Blocking:` / `Pose:`.
+  `right` | `away` | `down` | `up`) from `Blocking:` / `Pose:` — the server states it for every
+  figure as a frame requirement ("Wife faces away from the camera"), so set it deliberately.
+- `motion` = where a moving figure is heading in this instant ("walking toward the doors"); omit
+  for a still figure. The server adds it to the figure's facing line.
 - `support` = what they sit, stand or lie on, when it matters. `contact_with` = who or what they
   touch (from `Blocking:`), only when there is contact.
 - The POV owner (`POV:`) is the camera. When their limbs are in frame (they are in `Characters:`):
@@ -231,16 +278,18 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
 
 ### Prompt — the visible end state of the frame
 
-The server appends the shot's own `Visible:` (as the exact people count), `Blocking:`, `Pose:`
-and `Frame:` lines verbatim, plus a `Contact:` line from the entities, to every prompt, under
+The server appends the shot's own `Visible:` (as the exact people count), the viewer's body
+(sex, skin tone, garments), `Blocking:`, `Pose:`, each figure's facing / motion, the `Wardrobe:`
+state, the `Contact:` points and `Frame:` lines to every prompt, under
 `Frame requirements (authoritative - they override anything above):`. So the prompt is the scene
 in your words: never repeat those lines and never contradict them. State NO people count in the
 prompt ("exactly two people", "three of them", "alone") — the server states the one count; a count
 of your own can only disagree with it.
 
 - Describe what the opening frame SHOWS, never a process or a change ("wife seated, hands on the
-  keyboard", not "the wife sits down and starts typing"; no "then", "while she moves"). Never put
-  `Movement:`, `Transition:` or `Duration:` in it (a keyframe is a still).
+  keyboard", not "the wife sits down and starts typing"). A prompt with `then` / `after` / `before`
+  / `followed by` / `cut to` / an arrow is refused ("Close-up on her face then cut to hands" is two
+  shots). Never put `Movement:`, `Transition:` or `Duration:` in it (a keyframe is a still).
 - Write each shot's prompt from ITS OWN lines: never copy another shot's people, placeholders or
   who-is-where wording.
 - Name every figure as `[[<design key>]]` (the entity keys, except words-only people), with their look and outfit
@@ -264,8 +313,10 @@ calling until it is accepted: `task_complete` is refused while no plan was accep
 ## 4 Audit and hand over
 
 - [ ] every shot of `shotlist.md` is in the accepted plan (re-read the file and the plan)
-- [ ] ONE moment and ONE framing per shot (no "then" / two successive verbs / "cut to"; every
-      multi-action beat split into one shot per action, never rephrased)
+- [ ] ONE moment and ONE framing per shot (no `then` / `after` / `before` / `followed by` /
+      `cut to` / arrows, no two successive verbs; every multi-action beat split into one shot per
+      action, never rephrased)
+- [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
 - [ ] the POV owner is only "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` and the
       prompt (no name, key, placeholder or figure); no prompt copies another shot's people
 - [ ] no plan prompt states a people count (the server's frame requirements state it)
