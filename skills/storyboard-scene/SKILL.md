@@ -28,7 +28,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   shot takes is `draft_storyboard`.
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
 - Compose the whole `shotlist.md` silently first, then write it in ONE call; never a partial or
-  draft file. A write that names an unlinked key or breaks R1–R7 is refused and writes nothing:
+  draft file. A write that names an unlinked key or breaks R1–R8 is refused and writes nothing:
   fix what it lists and write again. A further rewrite while drafting is allowed only after a
   `draft_storyboard` refusal that names `shotlist.md`.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
@@ -158,8 +158,12 @@ only adds placement and the compose prompt.
   they are only "the viewer" ("the viewer's forearms and hands enter the lower frame") — never
   their name, key or a figure ("as the husband watches", "husband seated centre frame as POV"):
   the server copies these lines verbatim into the prompt, and a name there summons the whole
-  person. Anyone else seen only by `limbs` / `lower body` is likewise named by role in words
-  ("a man's hands"), never as a figure.
+  person. The write is refused (rule R8: "Blocking names the POV owner (`Husband`) …") when one of
+  these lines holds the owner's key, the key's name words (`character_husband` → "husband") or
+  their display name — also as an owner of something ("her husband's hand", "sister and husband
+  remain"): write "the viewer's hand", "the sister remains in front of the viewer". Anyone else
+  seen only by `limbs` / `lower body` is likewise named by role in words ("a man's hands"), never
+  as a figure.
 - `Pose:` per person in frame; when the action needs a body part the look covers, state the
   garment state ("coat unbuttoned and open"); a lasting change is its own look.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
@@ -177,7 +181,8 @@ Re-read every shot silently before writing `shotlist.md` (and again before `draf
   a sequence is split into more shots (never rephrased); every action of every beat has a shot;
 - `Camera:` is the opening framing only; the shot holds one place;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
-  key or as a figure; limbs-only people likewise only as their limbs in words;
+  key, name word or as a figure, not even as an owner ("husband's glass"); limbs-only people
+  likewise only as their limbs in words;
 - every beat's `Sex act` / `Sex position` is on the shot(s) that show it (nudity `allowed` only).
 
 ## 3 Hand over — `draft_storyboard`
@@ -193,8 +198,8 @@ EVERY shot of `shotlist.md`. Per shot (the example shot s3-01 above):
     { "key": "character_husband", "kind": "person", "region": { "third": "centre", "depth": "frame-edge" },
       "facing": "away", "limbs": "forearms and hands" },
     { "kind": "object", "count": 1, "region": { "third": "centre", "depth": "midground" }, "facing": "camera" } ],
-  "prompt": "Medium shot, eye level, first-person view from a seat at the kitchen table: exactly one
-    person in the frame - [[character_wife]], ... seated across the table, head down, hands on the
+  "prompt": "Medium shot, eye level, first-person view from a seat at the kitchen table:
+    [[character_wife]], ... seated across the table, head down, hands on the
     keyboard of an open laptop; at the lower edge the viewer's own forearms and hands resting on the
     table. <place in words>. <production style line>. No text or lettering." }
 ```
@@ -226,9 +231,12 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
 
 ### Prompt — the visible end state of the frame
 
-The server appends the shot's own `Visible:` (with the exact people count), `Blocking:`, `Pose:`
-and `Frame:` lines verbatim, plus a `Contact:` line from the entities, to every prompt. So the
-prompt is the scene in your words: never repeat those lines and never contradict them.
+The server appends the shot's own `Visible:` (as the exact people count), `Blocking:`, `Pose:`
+and `Frame:` lines verbatim, plus a `Contact:` line from the entities, to every prompt, under
+`Frame requirements (authoritative - they override anything above):`. So the prompt is the scene
+in your words: never repeat those lines and never contradict them. State NO people count in the
+prompt ("exactly two people", "three of them", "alone") — the server states the one count; a count
+of your own can only disagree with it.
 
 - Describe what the opening frame SHOWS, never a process or a change ("wife seated, hands on the
   keyboard", not "the wife sits down and starts typing"; no "then", "while she moves"). Never put
@@ -236,9 +244,9 @@ prompt is the scene in your words: never repeat those lines and never contradict
 - Write each shot's prompt from ITS OWN lines: never copy another shot's people, placeholders or
   who-is-where wording.
 - Name every figure as `[[<design key>]]` (the entity keys, except words-only people), with their look and outfit
-  in words, their place in the frame and the exact count of people ("exactly two people: …").
-  Exclude by count, never by naming people ("no husband" summons him). Never write "Picture N" or
-  number images; the server does.
+  in words and their place in the frame — no count. Never exclude anybody by name ("no husband"
+  summons him; the server's count excludes everyone else). Never write "Picture N" or number
+  images; the server does.
 - Add the shot's camera and framing, the place in words and the style line of the production
   (the medium / style of the story is kept verbatim).
 - No speech bubbles, captions, signs or lettering unless the shot asks for them.
@@ -260,6 +268,7 @@ calling until it is accepted: `task_complete` is refused while no plan was accep
       multi-action beat split into one shot per action, never rephrased)
 - [ ] the POV owner is only "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` and the
       prompt (no name, key, placeholder or figure); no prompt copies another shot's people
+- [ ] no plan prompt states a people count (the server's frame requirements state it)
 - [ ] every beat's `Sex act` / `Sex position` is carried by the shot(s) that show it (nudity
       `allowed` only)
 - [ ] `draft_storyboard` was accepted; `design.json` untouched
