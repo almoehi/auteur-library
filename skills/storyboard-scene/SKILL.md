@@ -180,10 +180,12 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
 - The POV owner (`POV:`) is the camera. When their limbs are in frame (they are in `Characters:`):
   an entity with `region.depth: "frame-edge"` and `limbs` (matching their `Visible:` detail) — never
   a full person. With nothing of them in frame they are not in `Characters:` and get no entity.
-- Slots: the place, the parent frame of a `continue` shot and every keyed entity each take one
-  picture; the server refuses a shot that needs more than the render workflow takes. Rewrite
-  `shotlist.md` first: split such a shot by WHO is in frame (each part shows a subset; the rest is
-  off-frame there), never by time alone — or make a `continue` shot a `cut`.
+- Slots: ONE environment picture — the place for a `cut`, the previous shot's frame for a
+  `continue` shot (it already shows the place, so it replaces the place picture; describe the place
+  in words in the prompt) — plus one picture per keyed entity; the server refuses a shot that needs
+  more than the render workflow takes. Rewrite `shotlist.md` first: split such a shot by WHO is in
+  frame (each part shows a subset; the rest is off-frame there), never by time alone. Making a
+  `continue` shot a `cut` saves no picture.
 
 ### Prompt — the visible end state of the frame
 
