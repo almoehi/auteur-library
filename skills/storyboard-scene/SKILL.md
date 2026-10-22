@@ -61,7 +61,7 @@ Action: Wife, seated at the table, types on her laptop as the husband watches
 Location: location_kitchen
 Camera: medium, eye level
 Movement: slow push-in
-Blocking: husband is the camera (POV, seated); his forearms and hands enter the lower frame; wife across the table, facing him; no contact
+Blocking: husband is the camera (POV, seated); his forearms and hands enter the lower frame; wife across the table, facing him, her hands on the laptop; the two do not touch
 Pose: wife: hands on the keyboard, head down
 Frame: wife centre background; his hands bottom foreground
 Visible: character_wife (upper body); character_husband (limbs: forearms and hands); nobody else
@@ -79,18 +79,18 @@ only adds placement and the compose prompt.
 ### Shots
 
 - One shot = one moment, one place (`Location:`), one framing (`Camera:` = the opening frame).
-- `Action:` = the ONE instant as a state, with participles: "Sister, standing, presses …";
+- `Action:` = the ONE instant as a state, with participles: "Wife, standing, presses …";
   "Wife mid-stride toward the table, reaching for her laptop".
   - Two successive verbs ("stands and presses", "enters and crosses", "then") = two shots.
   - One shot: simultaneous actions joined by "as" / "while"; speech, breath or a sound together
     with one action; a progressing state ("thrusting faster", "pace building").
   - Visible only: no motives or camera motion. Speech goes on its own `Dialogue: <who>: "<words>"`
     line, never in `Action:` (Action shows only the visible part: mouth open, calling).
-  - Bad → good: "Sister exhales and says the fun can start, unties and drops her top" → s3-01
-    `Action: Sister, standing at the pool edge, exhaling` + `Dialogue: Sister: "Now the fun can
-    start"`; s3-02 `Action: Sister, top untied and slipping off her shoulders`.
-    "Sister stands, moves to his chair, hands him the sunscreen" → `Action: Sister, beside his
-    chair, holding out the sunscreen bottle` (or one shot per action).
+  - Bad → good: "Wife sighs and says it is late, closes the laptop and gets up" → s3-01
+    `Action: Wife, seated at the table, sighing` + `Dialogue: Wife: "It's late"`; s3-02
+    `Action: Wife, laptop closed, rising from her chair`.
+    "Wife stands, moves to his chair, hands him the letter" → `Action: Wife, beside his
+    chair, holding out the letter` (or one shot per action).
 - Split a multi-action beat into one shot per action, in order; count actions, not beats.
 - Typically 4–10 shots covering the whole scene in story order, an establishing shot first when
   the place is new. Sections follow story order; a split keeps its id for the first part.
@@ -133,7 +133,7 @@ only adds placement and the compose prompt.
 - `POV: <characterKey> (seated|lying)` only for a first-person camera; in frame the owner's
   extent is `limbs` / `lower body`.
 - `Pose:` per person in frame; when the action needs a body part the look covers, state the
-  garment state ("cardigan slipped off both shoulders"); a lasting change is its own look.
+  garment state ("coat unbuttoned and open"); a lasting change is its own look.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
   depicted are adults: copy the beat's columns (names: "Explicit acts and positions"); both
   `none` or both set. Otherwise omit both.
@@ -207,7 +207,8 @@ first (one full rewrite) — and call again with the whole plan of the first cal
 - `task_complete(summary="Storyboard scene <n>: <N> shots handed to the server; open: …")` (1–3
   lines). The takes land afterwards; this hands the design to the person, it does not finish it.
 - Retry drafting: keep the existing `shotlist.md`; call `draft_storyboard` for the shots the stop
-  reason names (or all), then `task_complete`.
+  reason names - every shot when no plan was accepted before (the first accepted plan must cover
+  them all) - then `task_complete`.
 
 ## Chat (after hand-over)
 

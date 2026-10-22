@@ -148,7 +148,7 @@ Scene table columns
 - `Summary`: one sentence naming every entrance, exit and spoken line that matters to the story, not only the main action.
 - `Characters present`: slugs equal the `character_<slug>.md` stems; every listed character appears in some beat's `Outfits` of that scene, else drop them from the row.
 - `Outfits`: `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `mira:raincoat; jonas:work_suit`.
-  - A character who changes look inside the scene appears once per look: `sister:bikini_cardigan; sister:nude`.
+  - A character who changes look inside the scene appears once per look: `mira:raincoat; mira:nightgown`.
   - The row's `Outfits` is exactly the UNION of its beats' `Outfits`: nothing missing, nothing extra.
 - A scene row = ONE place and ONE continuous time. A change of place starts a new scene; never merge places into one row ("Backyard terrace / Hallway" is two scenes). The ~4-scene short-film default never overrides this: add scenes rather than merge places.
 
@@ -165,7 +165,7 @@ Beats section (same file, below the table)
   - `Beat #`
   - `Action`: what visibly happens.
   - `Location`: a `location_slug`. For every non-`parallel` beat EXACTLY the scene row's own slug; only a `parallel` beat names another place.
-  - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `husband:linen_shorts; sister:nude`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty.
+  - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `jonas:work_suit; mira:raincoat`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty.
   - `Framing`: shot size and angle.
   - `Camera move`: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift, orbit, or `hold` ONLY when the beat asks for stillness.
   - `Continuity` (relation to the PREVIOUS beat):
