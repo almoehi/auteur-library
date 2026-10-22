@@ -192,13 +192,16 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   (the medium / style of the story is kept verbatim).
 - No speech bubbles, captions, signs or lettering unless the shot asks for them.
 - The POV owner is not a figure: describe only their own limbs at the frame edge as seen from
-  their eyes ("his forearms and hands at the lower edge").
+  their eyes, still named by their placeholder — "[[character_husband]]'s forearms and hands at
+  the lower edge" (the server binds the placeholder to their sheet; a POV owner in `Characters:`
+  without their `[[key]]` in the prompt is refused).
 - Explicit acts and positions: copy the shot's `Sex act:` / `Sex position:` words (names in
   `workflow-calling-conventions`, "Explicit acts and positions"), only under the nudity policy.
 
 The call returns `accepted: …` or an `error:` listing every problem; nothing was started in the
 error case. Fix the plan — or, when a problem says to fix it in `shotlist.md`, rewrite the file
-first (one full rewrite) — and call again with the whole plan of the first call.
+first (one full rewrite) — and call again with the whole plan of the first call. Keep fixing and
+calling until it is accepted: `task_complete` is refused while no plan was accepted.
 
 ## 4 Audit and hand over
 
