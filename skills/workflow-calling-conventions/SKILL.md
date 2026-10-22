@@ -19,7 +19,7 @@ Rules for every task that renders media with `wf_xxx` tools. Worked call shapes 
 
 ## Reusing earlier values
 
-A ⟦ref:r12.key⟧ in your earlier tool calls stands for a value you sent (call r12, argument key); to reuse it exactly pass the ⟦ref:…⟧ token (alone or inside a longer text) — never retype or copy a shortened value. Refs stay valid for the whole conversation; if one is refused, the error lists the refs that exist.
+A ⟦ref:r12.key⟧ in your earlier tool calls stands for a value you sent (call r12, argument key); to reuse it exactly pass the ⟦ref:…⟧ token (alone or inside a longer text) — never retype or copy a shortened value. A ref names an EARLIER call (never the call you are making) and reuses its value unchanged: to send a new or corrected value — e.g. a plan fixed after a refusal — write it out in full. Refs stay valid for the whole conversation; if one is refused, the error says why and lists the refs that exist.
 
 ## Correct sequence
 
