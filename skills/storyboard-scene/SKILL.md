@@ -100,8 +100,12 @@ only adds placement and the compose prompt.
 - `Location:` = a linked location key; a place with no linked design → the nearest linked
   location, and name the gap in the summary.
 - `Movement:` = the beat's camera move verbatim (`hold` only when the beat asks for stillness).
-- `Transition:` from the beat's Continuity: `continue — <reason>` for `continuous` (same place,
-  moment, people; the framing may change), `cut — <reason>` otherwise; the first shot is `cut`.
+- `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
+  `continuous` → `continue — <reason>` (same place, moment, people; the framing may change), e.g.
+  `Transition: continue — same moment, closer on the sister`; `parallel` / `new moment` →
+  `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
+  words — never the Continuity word itself (`cut — continuous` is a contradiction: write
+  `continue — …`). The first shot is `cut — first shot of the scene`.
 - `Duration:` 3–10 s. Ids consecutive from `01` on the first write; a rewrite never renumbers
   (new / split shots get ids after the highest).
 - `Format:` on the line after the title, always: the `format` attribute, else the story's
