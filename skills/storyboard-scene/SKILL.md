@@ -84,6 +84,13 @@ plan of step 3 only adds placement, facing and the compose prompt.
 - One shot = ONE moment (a keyframe is a single still), one place (`Location:`), one framing
   (`Camera:` = the opening frame only; a pan from A to B is `Camera:` A, the pan goes in
   `Movement:`).
+- `Camera:` OPENS with one standard framing size, then the angle: `extreme close-up` (one detail
+  fills the frame) | `close-up` (head and top of the shoulders) | `medium close-up` (head to
+  mid-chest) | `medium` (head to waist) | `medium full` / `cowboy` (head to mid-thigh) |
+  `full shot` (head to feet) | `wide` (people small in the setting) — e.g. `Camera: close-up on
+  the wife's face, eye level`. The server states that size in every render prompt, measures it on
+  every take and reframes a subject that came out too small; a `Camera:` line opening with
+  anything else ("lounger POV …") gets no framing check.
 - `Action:` = the ONE instant as a state, with participles: "Wife, standing, presses …";
   "Wife mid-stride toward the table, reaching for her laptop".
   - The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows (`→`, `->`)
@@ -119,7 +126,9 @@ plan of step 3 only adds placement, facing and the compose prompt.
   location, and name the gap in the summary.
 - `Movement:` = the beat's camera move verbatim (`hold` only when the beat asks for stillness).
 - `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
-  `continuous` → `continue — <reason>` (same place, moment, people; the framing may change), e.g.
+  `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
+  SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
+  `continue` at another place renders without the previous frame: make it a `cut`), e.g.
   `Transition: continue — same moment, closer on the sister`; `parallel` / `new moment` →
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
@@ -213,7 +222,8 @@ Re-read every shot silently before writing `shotlist.md` (and again before `draf
 - every shot has `Beat:`; every beat has a shot; every beat's `Contact` is on a shot's `Contact:`
   whose touched parts the `Visible:` extents show (the viewer's lap / groin = `lower body`);
 - partial undress of an outfit = the outfit key + `Wardrobe:`; `:nude` only when nothing is worn;
-- `Camera:` is the opening framing only; the shot holds one place;
+- `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
+  one place; a `continue` shot keeps the previous shot's `Location:`;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
   key, name word or as a figure, not even as an owner ("husband's glass"); limbs-only people
   likewise only as their limbs in words;
