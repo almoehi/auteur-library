@@ -1,0 +1,669 @@
+{
+  "122": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "126": {
+    "inputs": {
+      "unet_name": "flux-2-klein-9b-kv-fp8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "133": {
+    "inputs": {
+      "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "138": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "541",
+        0
+      ],
+      "positive": [
+        "551",
+        0
+      ],
+      "negative": [
+        "552",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFG Guider"
+    }
+  },
+  "127": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "135": {
+    "inputs": {
+      "text": "Brianna from Picture 1 sits on the bed in the bedroom from Picture 2.",
+      "clip": [
+        "133",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "139": {
+    "inputs": {
+      "model": [
+        "150",
+        0
+      ]
+    },
+    "class_type": "FluxKVCache",
+    "_meta": {
+      "title": "Flux KV Cache"
+    }
+  },
+  "123": {
+    "inputs": {
+      "noise": [
+        "125",
+        0
+      ],
+      "guider": [
+        "138",
+        0
+      ],
+      "sampler": [
+        "122",
+        0
+      ],
+      "sigmas": [
+        "137",
+        0
+      ],
+      "latent_image": [
+        "531",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "125": {
+    "inputs": {
+      "noise_seed": 720512742793301
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "124": {
+    "inputs": {
+      "samples": [
+        "123",
+        0
+      ],
+      "vae": [
+        "127",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "94": {
+    "inputs": {
+      "filename_prefix": "Flux2_Klein_9b_kv",
+      "images": [
+        "561",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "685": {
+    "inputs": {
+      "conditioning": [
+        "135",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "137": {
+    "inputs": {
+      "steps": 4,
+      "width": [
+        "140",
+        0
+      ],
+      "height": [
+        "141",
+        0
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "140": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 1280
+    },
+    "_meta": {
+      "title": "width"
+    }
+  },
+  "141": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 720
+    },
+    "_meta": {
+      "title": "height"
+    }
+  },
+  "401": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "reference_1.png"
+    },
+    "_meta": {
+      "title": "Picture 1"
+    }
+  },
+  "411": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "401",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ImageScaleToTotalPixels"
+    }
+  },
+  "421": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "411",
+        0
+      ],
+      "vae": [
+        "127",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAEEncode"
+    }
+  },
+  "431": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "135",
+        0
+      ],
+      "latent": [
+        "421",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "441": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "685",
+        0
+      ],
+      "latent": [
+        "421",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "402": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "reference_2.png"
+    },
+    "_meta": {
+      "title": "Picture 2"
+    }
+  },
+  "412": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "402",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ImageScaleToTotalPixels"
+    }
+  },
+  "422": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "412",
+        0
+      ],
+      "vae": [
+        "127",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAEEncode"
+    }
+  },
+  "432": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "431",
+        0
+      ],
+      "latent": [
+        "422",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "442": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "441",
+        0
+      ],
+      "latent": [
+        "422",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "403": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "reference_3.png"
+    },
+    "_meta": {
+      "title": "Picture 3"
+    }
+  },
+  "413": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "403",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ImageScaleToTotalPixels"
+    }
+  },
+  "423": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "413",
+        0
+      ],
+      "vae": [
+        "127",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAEEncode"
+    }
+  },
+  "433": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "432",
+        0
+      ],
+      "latent": [
+        "423",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "443": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "442",
+        0
+      ],
+      "latent": [
+        "423",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "150": {
+    "inputs": {
+      "model": [
+        "126",
+        0
+      ],
+      "clip": [
+        "133",
+        0
+      ],
+      "PowerLoraLoaderHeaderWidget": {
+        "type": "PowerLoraLoaderHeaderWidget"
+      },
+      "➕ Add Lora": ""
+    },
+    "class_type": "Power Lora Loader (rgthree)",
+    "_meta": {
+      "title": "Power Lora Loader (rgthree)"
+    }
+  },
+  "501": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "base.png"
+    },
+    "_meta": {
+      "title": "LoadImage"
+    }
+  },
+  "511": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": [
+        "140",
+        0
+      ],
+      "height": [
+        "141",
+        0
+      ],
+      "crop": "disabled",
+      "image": [
+        "501",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ImageScale"
+    }
+  },
+  "521": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "511",
+        0
+      ],
+      "vae": [
+        "127",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAEEncode"
+    }
+  },
+  "502": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "mask.png"
+    },
+    "_meta": {
+      "title": "LoadImage"
+    }
+  },
+  "512": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "upscale_method": "bilinear",
+      "width": [
+        "140",
+        0
+      ],
+      "height": [
+        "141",
+        0
+      ],
+      "crop": "disabled",
+      "image": [
+        "502",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ImageScale"
+    }
+  },
+  "522": {
+    "class_type": "ImageToMask",
+    "inputs": {
+      "channel": "red",
+      "image": [
+        "512",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ImageToMask"
+    }
+  },
+  "531": {
+    "class_type": "SetLatentNoiseMask",
+    "inputs": {
+      "samples": [
+        "521",
+        0
+      ],
+      "mask": [
+        "524",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "SetLatentNoiseMask"
+    }
+  },
+  "541": {
+    "class_type": "DifferentialDiffusion",
+    "inputs": {
+      "model": [
+        "139",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "DifferentialDiffusion"
+    }
+  },
+  "551": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "433",
+        0
+      ],
+      "latent": [
+        "523",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "552": {
+    "class_type": "ReferenceLatent",
+    "inputs": {
+      "conditioning": [
+        "443",
+        0
+      ],
+      "latent": [
+        "523",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "561": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "511",
+        0
+      ],
+      "source": [
+        "124",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "524",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ImageCompositeMasked"
+    }
+  },
+  "503": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "context.png"
+    },
+    "_meta": {
+      "title": "LoadImage"
+    }
+  },
+  "513": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "503",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "ImageScaleToTotalPixels"
+    }
+  },
+  "523": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "513",
+        0
+      ],
+      "vae": [
+        "127",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAEEncode"
+    }
+  },
+  "524": {
+    "inputs": {
+      "destination": [
+        "522",
+        0
+      ],
+      "source": [
+        "522",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "operation": "add"
+    },
+    "class_type": "MaskComposite",
+    "_meta": {
+      "title": "Saturate mask core (levels 0-50% to 0-100%)"
+    }
+  }
+}

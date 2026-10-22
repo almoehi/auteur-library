@@ -59,13 +59,13 @@ Build every entry with its FINAL key; nothing is decided later.
    - `locations`: ONE per distinct `location_slug` over scene rows AND all Beats `Location` cells (including slugs seen once); never two for one slug.
      - Per scene, places ordered: row slug first, then beat-`Location` slugs in beat order, no duplicates. A location's `scenes` includes every scene whose beats use it.
      - Display name: the row's `Location` text for a row slug, else the slug's words in Title Case.
-   - `distinct_place: true` on a location whose shorter `key_slug` has at least two `_` words, all contained in another location's slug (`backyard_pool` / `backyard_pool_terrace`; one-word slugs never). No other entry has it.
+   - `distinct_place: true` on a location whose shorter `key_slug` has at least two `_` words, all contained in another location's slug (`harbor_pier` / `harbor_pier_cafe`; one-word slugs never). No other entry has it.
    - `outfits`: per "Characters and outfits". Every outfit's `character_slug` exists in `characters`.
    - `storyboards`: one per scene (step 5).
 2. Slugs and keys:
    - slug = lowercase ASCII, non-alphanumerics to `_`, repeats collapsed, `_` trimmed; matches `[a-z0-9]+(_[a-z0-9]+)*`.
-   - key = `<kind>_<key_slug>`; `key_slug` is the key without the kind prefix (`sister`, `pool_terrace`, `<character_slug>_<look_slug>` for outfits, `scene_<n>` for storyboards).
-   - `display_name`: human name in Title Case ("Pool Terrace", "Sister - Bikini Cardigan"), independent of the key; never the story's full name.
+   - key = `<kind>_<key_slug>`; `key_slug` is the key without the kind prefix (`mira`, `pier_cafe`, `<character_slug>_<look_slug>` for outfits, `scene_<n>` for storyboards).
+   - `display_name`: human name in Title Case ("Pier Cafe", "Mira - Raincoat"), independent of the key; never the story's full name.
    - Keys <= 64 chars: shorten the look part, note in `flagged:`.
    - Design names are unique across ALL kinds: a location slug must not equal a character slug (suffix `_place`, display "Harbor Place").
    - Merge duplicate characters ("Mira", "MIRA", "young Mira" = `mira`; another costume is a tracker row).
