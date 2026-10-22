@@ -124,8 +124,12 @@ only adds placement and the compose prompt.
 
 - Keys only, copied from `design.json.links` (never names or slugs) in `Location:`,
   `Characters:`, `Outfits:`, `Visible:`, `POV:`.
-- `Visible:` = `<characterKey> (<extent>[: detail]); …; <exclusion>`; extent one of
-  `full figure` | `upper body` | `face` | `back` | `limbs` | `lower body`; detail states counts
+- `Visible:` = `<characterKey> (<extent>[: detail]); …; <exclusion>`; extent EXACTLY one of
+  `full figure` | `upper body` | `face` | `back` | `limbs` | `lower body` — one per person, never a
+  combination (the write is refused): pick the WIDEST part of them in frame (`face and upper body`
+  → `upper body`); nudity is not an extent, it goes in `Outfits:` (`<characterKey>:nude`), so
+  `full figure, nude` → `(full figure)` + `<characterKey>:nude`; a change during the shot
+  (`back then upper body`) is two moments → split it into two shots. Detail states counts
   (`limbs: one pair of hands`); the last segment is the exclusion clause (`nobody else`).
 - `Characters:` = exactly the keys in `Visible:`; `Outfits:` = one valid pair per character
   (below), `; `-separated. Nobody in
@@ -145,8 +149,11 @@ only adds placement and the compose prompt.
 - `Blocking:` places only people in frame plus a POV owner: "the camera is the viewer's eyes
   (seated); the viewer's forearms and hands enter the lower frame". Never call a POV owner whose
   limbs are in `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
-- `POV: <characterKey> (seated|lying)` only for a first-person camera (no other posture: the write
-  is refused); in frame the owner's extent is `limbs` / `lower body`. Their key appears ONLY in
+- `POV: <characterKey> (seated|standing|kneeling|lying)` only for a first-person camera (no other
+  posture: the write is refused); the posture is said in words only ("first-person view,
+  standing"). A first-person view shows only the viewer's own limbs or lap: in frame the owner's
+  extent is `limbs` or `lower body` — never `upper body`, `face` or `full figure`; with none of
+  their body in frame, leave them out of `Characters:` / `Visible:`. Their key appears ONLY in
   `POV:`, `Visible:`, `Characters:` and `Outfits:`. In `Action:`, `Blocking:`, `Pose:` and `Frame:`
   they are only "the viewer" ("the viewer's forearms and hands enter the lower frame") — never
   their name, key or a figure ("as the husband watches", "husband seated centre frame as POV"):
@@ -164,6 +171,8 @@ only adds placement and the compose prompt.
 ### Self-check before the write
 
 Re-read every shot silently before writing `shotlist.md` (and again before `draft_storyboard`):
+- every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
+  a POV owner in frame is `limbs` / `lower body`;
 - every `Action:` is ONE moment: no two successive verbs, "then", "before", "after" or "cut to";
   a sequence is split into more shots (never rephrased); every action of every beat has a shot;
 - `Camera:` is the opening framing only; the shot holds one place;
