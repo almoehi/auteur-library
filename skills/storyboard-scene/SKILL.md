@@ -57,7 +57,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 Format: portrait
 
 ## s3-01 — Short title
-Action: Wife, seated at the table, types on her laptop as the husband watches
+Action: Wife, seated across the table, typing on her laptop, head down; his hands resting on the table edge
 Location: location_kitchen
 Camera: medium, eye level
 Movement: slow push-in
@@ -78,20 +78,28 @@ only adds placement and the compose prompt.
 
 ### Shots
 
-- One shot = one moment, one place (`Location:`), one framing (`Camera:` = the opening frame).
+- One shot = ONE moment (a keyframe is a single still), one place (`Location:`), one framing
+  (`Camera:` = the opening frame only; a pan from A to B is `Camera:` A, the pan goes in
+  `Movement:`).
 - `Action:` = the ONE instant as a state, with participles: "Wife, standing, presses …";
   "Wife mid-stride toward the table, reaching for her laptop".
-  - Two successive verbs ("stands and presses", "enters and crosses", "then") = two shots.
-  - One shot: simultaneous actions joined by "as" / "while"; speech, breath or a sound together
-    with one action; a progressing state ("thrusting faster", "pace building").
+  - Two successive verbs ("stands and presses", "enters and crosses"), "then", "before",
+    "after", "cut to" = separate shots, one per action, in order.
+  - One shot: simultaneous actions joined by "as" / "while" (both happen in the same instant);
+    speech, breath or a sound together with one action; a progressing state ("thrusting faster",
+    "pace building").
   - Visible only: no motives or camera motion. Speech goes on its own `Dialogue: <who>: "<words>"`
     line, never in `Action:` (Action shows only the visible part: mouth open, calling).
   - Bad → good: "Wife sighs and says it is late, closes the laptop and gets up" → s3-01
     `Action: Wife, seated at the table, sighing` + `Dialogue: Wife: "It's late"`; s3-02
     `Action: Wife, laptop closed, rising from her chair`.
-    "Wife stands, moves to his chair, hands him the letter" → `Action: Wife, beside his
-    chair, holding out the letter` (or one shot per action).
-- Split a multi-action beat into one shot per action, in order; count actions, not beats.
+    "Wife stands, moves to his chair, hands him the letter" → three shots: `Wife, rising from her
+    chair` / `Wife, mid-stride toward his chair, letter in hand` / `Wife, beside his chair, holding
+    out the letter`.
+- Split every multi-action beat into one shot per action, in order — never one shot that lists
+  them. Count actions, not beats: 4 beats can need 7 shots.
+- A sequence is fixed ONLY by splitting it into shots, never by rephrasing it into one sentence
+  (participles or "as" around successive actions are still a sequence).
 - Typically 4–10 shots covering the whole scene in story order, an establishing shot first when
   the place is new. Sections follow story order; a split keeps its id for the first part.
 - A `parallel` beat = its own cutaway shot at its place, its characters from that beat:
@@ -121,6 +129,8 @@ only adds placement and the compose prompt.
 - `Characters:` = exactly the keys in `Visible:`; `Outfits:` = one valid pair per character
   (below), `; `-separated. Nobody in
   frame: `Characters: none`, `Outfits: none`, `Visible: nobody`.
+- The exclusion clause states a count (`nobody else`, `no other hands`), never names people to
+  exclude: negated names are weak in image models and tend to summon the people they name.
 - People without a design (extras, a crowd) get no key: they appear in `Action:` / `Frame:` and in
   the exclusion clause (`character_wife (upper body); three diners in the background, nobody else`).
 - `Outfits:` comes from the shot's beat (its opening beat), never the scene row; looks change
@@ -134,13 +144,26 @@ only adds placement and the compose prompt.
 - `Blocking:` places only people in frame plus a POV owner: "husband is the camera (POV, seated);
   his forearms and hands enter the lower frame". Never call a POV owner whose limbs are in
   `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
-- `POV: <characterKey> (seated|lying)` only for a first-person camera; in frame the owner's
-  extent is `limbs` / `lower body`.
+- `POV: <characterKey> (seated|lying)` only for a first-person camera (no other posture: the write
+  is refused); in frame the owner's extent is `limbs` / `lower body`. The POV owner is never a
+  figure — not in `Action:` either ("as the husband watches" makes him a figure): `Action:` names
+  only what is in frame, their own limbs included ("his hands resting on the table edge").
 - `Pose:` per person in frame; when the action needs a body part the look covers, state the
   garment state ("coat unbuttoned and open"); a lasting change is its own look.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
   depicted are adults: copy the beat's columns (names: "Explicit acts and positions"); both
-  `none` or both set. Otherwise omit both.
+  `none` or both set. Otherwise omit both. A split beat's act goes on every shot whose frame shows
+  the act being performed; its lead-up or aftermath shots carry `none` — never drop the act: at
+  least one shot of the beat carries it.
+
+### Self-check before the write
+
+Re-read every shot silently before writing `shotlist.md` (and again before `draft_storyboard`):
+- every `Action:` is ONE moment: no two successive verbs, "then", "before", "after" or "cut to";
+  a sequence is split into more shots (never rephrased); every action of every beat has a shot;
+- `Camera:` is the opening framing only; the shot holds one place;
+- the POV owner appears only as their own limbs, never as a figure (`Action:` included);
+- every beat's `Sex act` / `Sex position` is on the shot(s) that show it (nudity `allowed` only).
 
 ## 3 Hand over — `draft_storyboard`
 
@@ -189,17 +212,25 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
 
 ### Prompt — the visible end state of the frame
 
-- Describe what the finished frame SHOWS, never a process or a change ("wife seated, hands on the
-  keyboard", not "the wife sits down and starts typing"; no "then", "while she moves").
+The server appends the shot's own `Visible:` (as a count), `Pose:`, `Blocking:` and `Frame:` lines
+to your prompt, and turns the POV owner's placeholder into words for their own limbs. So the prompt
+is the scene in your words: never repeat those lines verbatim and never contradict them.
+
+- Describe what the opening frame SHOWS, never a process or a change ("wife seated, hands on the
+  keyboard", not "the wife sits down and starts typing"; no "then", "while she moves"). Never put
+  `Movement:`, `Transition:` or `Duration:` in it (a keyframe is a still).
+- Write each shot's prompt from ITS OWN lines: never copy another shot's people, placeholders or
+  who-is-where wording.
 - Name every principal as `[[<design key>]]` (exactly the entity keys), with their look and outfit
   in words, their place in the frame and the exact count of people ("exactly two people: …").
-  Never write "Picture N" or number images; the server does.
+  Exclude by count, never by naming people ("no husband" summons him). Never write "Picture N" or
+  number images; the server does.
 - Add the shot's camera and framing, the place in words and the style line of the production
   (the medium / style of the story is kept verbatim).
 - No speech bubbles, captions, signs or lettering unless the shot asks for them.
 - The POV owner is not a figure: describe only their own limbs at the frame edge as seen from
   their eyes, still named by their placeholder — "[[character_husband]]'s forearms and hands at
-  the lower edge" (the server binds the placeholder to their sheet; a POV owner in `Characters:`
+  the lower edge" (the server renders the placeholder as their limbs; a POV owner in `Characters:`
   without their `[[key]]` in the prompt is refused).
 - Explicit acts and positions: copy the shot's `Sex act:` / `Sex position:` words (names in
   `workflow-calling-conventions`, "Explicit acts and positions"), only under the nudity policy.
@@ -212,6 +243,12 @@ calling until it is accepted: `task_complete` is refused while no plan was accep
 ## 4 Audit and hand over
 
 - [ ] every shot of `shotlist.md` is in the accepted plan (re-read the file and the plan)
+- [ ] ONE moment and ONE framing per shot (no "then" / two successive verbs / "cut to"; every
+      multi-action beat split into one shot per action, never rephrased)
+- [ ] no POV owner as a figure (`Action:`, `Blocking:`, prompt); no prompt copies another shot's
+      people
+- [ ] every beat's `Sex act` / `Sex position` is carried by the shot(s) that show it (nudity
+      `allowed` only)
 - [ ] `draft_storyboard` was accepted; `design.json` untouched
 - `task_complete(summary="Storyboard scene <n>: <N> shots handed to the server; open: …")` (1–3
   lines). The takes land afterwards; this hands the design to the person, it does not finish it.

@@ -121,6 +121,19 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 - A suggested fix the person sends from the Edit box is their instruction: a pass-through
   candidate ("Prompt route").
 
+## What a take is judged against
+
+Every take check (`check_take`, the studio's and the storyboard drafts' server checks) judges only
+what is visible, against what the take was asked to show — so plan and prompt for these:
+- ONE moment of the action, never a sequence; one continuous image (no panels or collage).
+- Exactly the people the request lists: nobody extra, nobody missing; each one recognisably the
+  named person. A POV owner appears only as their own limbs (hands, forearms, knees, feet), never
+  their face or torso.
+- The named setting and props exactly (a lounger is not a chair, the named place is no other).
+- Every listed outfit visible as described; no garment missing or replaced.
+- A sex act / position line: its participants, positions and contact points as stated.
+- The requested medium and style; nothing added that the request does not ask for.
+
 ## Reference plan
 
 - Before every `wf_*` call with reference images, one entry per bound image:
