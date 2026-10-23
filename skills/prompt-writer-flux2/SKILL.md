@@ -36,8 +36,11 @@ For a FLUX.2 **text-to-image** workflow (no image inputs) see "t2i mode" at the 
    background unchanged", "sharp focus" — never "don't change the background", "no blur".
 5. **One coherent change per instruction.** Stacking unrelated edits (garment + background +
    accessory) is unreliable; if unavoidable, list them as short clauses in priority order.
-6. **Preserve identity explicitly.** For a character design, always add a keep-clause for face,
-   hair, body shape and pose.
+6. **Preserve identity explicitly.** For a character design, add a keep-clause for face,
+   hair and body shape (and pose when the request leaves it alone). Keep-clauses name only what must
+   stay. When the request changes the camera, angle, viewpoint, framing or composition, never write
+   "keep everything else the same" / "keep the composition or background": keep appearance only
+   (identity, materials, colours) and describe the new view.
 7. **No invented elements.**
 
 ---
@@ -88,7 +91,7 @@ Useful clauses:
 - [ ] `Figure 1` / `Figure 2` used consistently (or content-descriptions consistently)
 - [ ] Source element named precisely (type + color/material when known)
 - [ ] Only positive phrasing — no "don't"/"no"
-- [ ] Keep-clause for identity and pose
+- [ ] Keep-clause for identity (and pose only if unchanged); no layout lock when the camera / angle / composition changes
 - [ ] Caller's named specifics preserved; nothing invented
 
 ---
@@ -124,7 +127,7 @@ precedence over any formatting here). Alternative takes of the same edit come fr
 
 ## Short prompts per workflow kind
 
-- **EDIT workflows** (i2i): the change first, at most 2 short keep locks, no restated character or location descriptions (the reference images carry them), and one image-naming sentence ("Picture 1 is ...").
+- **EDIT workflows** (i2i): the change first, at most 2 short keep locks (naming only what must stay - never "everything else" or the composition when the camera / angle / framing changes; that is a new composition for a ref2i / t2i workflow), no restated character or location descriptions (the reference images carry them), and one image-naming sentence ("Picture 1 is ...").
 - **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 - **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
 

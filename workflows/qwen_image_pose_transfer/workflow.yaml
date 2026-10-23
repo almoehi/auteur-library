@@ -20,8 +20,10 @@ description: >
   Pose transfer (Qwen-Image-Edit 2511 + AnyPose LoRAs): the person in subject_image takes the exact
   pose of the person in pose_image; the subject's identity, clothing, scene and camera are kept.
   Use it on a crop with ONE person and a scene-free pose reference (a neutral figure on a plain
-  background). Not suitable for a crop with several people, for editing clothing or background
-  (use qwen_image_multi_edit) or for NSFW poses (Qwen-Edit is not NSFW-tuned).
+  background).
+  Use for: re-posing one person in place; the frame, scene and camera of subject_image are kept.
+  Not for: crops with several people, clothing / background edits (use qwen_image_multi_edit), a new angle or
+  composition (use flux2_reference_compose), NSFW poses (Qwen-Edit is not NSFW-tuned).
 url: workflow.json
 workflow_type: i2i
 model_family: qwenimage
@@ -90,6 +92,10 @@ customNodes:
     commitHash: cdd4d028c6491d27a40092d7795158668cec9189
 
 context: >
+  Use for: re-posing one person in place; the frame, scene and camera of subject_image are kept.
+  Not for: crops with several people, clothing / background edits (use qwen_image_multi_edit), a new angle or
+  composition (use flux2_reference_compose), NSFW poses (Qwen-Edit is not NSFW-tuned).
+
   Pose transfer (capability pose-transfer): Qwen-Image-Edit 2511 with the AnyPose LoRA pair (base +
   helper, 0.7 each) re-poses the person of image 1 to the pose of image 2, with no ControlNet.
   The output has the framing of subject_image.

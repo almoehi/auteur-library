@@ -13,8 +13,11 @@ description: >
   Edits an existing photo by text instruction while preserving the subject's pose and
   identity — a single-image edit by default (change clothing, background, objects, style).
   Optionally takes a second reference image supplying a specific element — a garment,
-  texture, or object — to apply to the subject in the first, e.g. outfit transfer. Not suitable
-  for generating an image from scratch (no photo to edit) or for video/animation output.
+  texture, or object — to apply to the subject in the first, e.g. outfit transfer.
+  Use for: in-place edits inside the existing frame (clothing, object, colour, material, background, style,
+  expression, small pose); it preserves Figure 1's camera and composition.
+  Not for: a new camera angle, viewpoint, re-framing or composition (use flux2_reference_compose_nsfw), one masked
+  region (use flux2_masked_inpaint_nsfw), text-to-image or video.
   NSFW variant: edits that undress or restage people - nudity and sex between adults allowed (a general
   NSFW LoRA is baked in; catalog edit LoRAs such as the 0x7 'no face change' nudity LoRA go on the ports).
 url: workflow.json
@@ -96,6 +99,11 @@ ports:
       node_id: "94"
       role: primary
 context: >
+  Use for: in-place edits inside the existing frame (clothing, object, colour, material, background, style,
+  expression, small pose); it preserves Figure 1's camera and composition.
+  Not for: a new camera angle, viewpoint, re-framing or composition (use flux2_reference_compose_nsfw), one masked
+  region (use flux2_masked_inpaint_nsfw), text-to-image or video.
+
   Edits the subject image (subject_image, "Figure 1") by text instruction, keeping everything
   the instruction does not mention intact. Two modes:
   - Single-image edit (garment_reference_image omitted): change clothing, background, objects,

@@ -175,6 +175,10 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
 - COMPOSE (new scene): the environment is Picture 1, then people / objects by priority; never an
   outfit or character image. A reference-to-image prompt describes the scene and names the
   pictures by label.
+- Workflow choice follows the intent: an in-place editor (`i2i`, e.g. `qwen_image_multi_edit`) changes
+  things INSIDE Picture 1's frame (colour, material, object, garment, expression, lighting, small pose)
+  and keeps its geometry. A new angle, viewpoint, re-framing or "show another part of the place" is a
+  new composition: use a reference-compose (`ref2i`) or text-to-image workflow, never an editor.
 
 ## NSFW-marked workflows
 

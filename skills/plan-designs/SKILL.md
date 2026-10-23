@@ -78,6 +78,7 @@ Build every entry with its FINAL key; nothing is decided later.
 | outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` (from the tracker row) |
 | location | `place`, `era`, `time_of_day`, `weather`, `lighting`, `mood` |
 
+   - Character `hair`, `build` and `features` copy the profile's face, hair, skin tone and distinguishing marks verbatim; never summarize them away.
    - One moment per design: ONE `time_of_day`, `lighting`, `weather`, season — the first scene's (else the most common); never several in one attribute.
    - Location attributes describe ONLY the place; `mood` only when the source gives the place's own atmosphere, else omit.
    - Under `forbidden` (and always for a minor) people are fully clothed.
