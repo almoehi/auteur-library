@@ -51,9 +51,12 @@ DESC_NEW = """description: >
   Edits an image by a plain-English instruction with Krea 2 Identity Edit on the Krea 2 NSFW realism
   stack, optionally bringing in a person from a second image: put a character into a location plate,
   swap one person of a frame for a character (identity from Picture 2, pose and framing from
-  Picture 1), restage, recolour, undress. Nudity allowed. Keeps the camera of Picture 1. Not for
-  generating a sex act from scratch (render it text-to-image first, then swap the people in one per
-  call), not text-to-image, not video.
+  Picture 1), restage, recolour, undress. Nudity allowed. Keeps the camera of Picture 1.
+  Use for: in-place edits and putting / swapping a person into an existing frame; Picture 1's camera, room and
+  composition are preserved.
+  Not for: a new camera angle, viewpoint or composition (use flux2_reference_compose_nsfw or
+  krea2_base_realism_nsfw), a sex act from scratch (render it text-to-image first, then swap the people in
+  one per call), text-to-image or video.
 """
 CONTEXT_NEW = """context: >
   Krea 2 Identity Edit, nudity allowed. Word the instruction with "image 1" / "image 2" and say what

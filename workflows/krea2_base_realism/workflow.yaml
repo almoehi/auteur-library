@@ -14,7 +14,11 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 name: krea2_base_realism
-description: Simple workflow to create images from a prompt using the krea2 model. This got updated.
+description: >
+  Simple workflow to create images from a prompt using the krea2 model. This got updated.
+  Use for: NEW images from a text prompt (any camera angle or composition) in the krea2 realism look.
+  Not for: editing an existing image in place (use krea2_image_edit or flux2_image_edit) or conditioning on
+  reference images (use flux2_reference_compose).
 url: workflow.json
 model_family: krea2
 workflow_type: t2i

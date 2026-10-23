@@ -8,6 +8,7 @@ bundle (the e2e-test.ts of the NSFW bundle is hand-written and not touched):
 """
 import json
 import pathlib
+import re
 import sys
 
 LIB = pathlib.Path(sys.argv[1])
@@ -45,6 +46,9 @@ y = (y[:head_start] + "# ─── Source ────────────�
      f"# re-run it, never edit this bundle by hand. Sources and node notes: see {BASE}.\n"
      "#\n" + y[head_end:])
 y = must_replace(y, f"name: {BASE}\n", f"name: {BASE}_nsfw\n")
+# The "Use for / Not for" alternatives in the description name SFW bundles; point them at their NSFW variants.
+_d0, _d1 = y.index("\ndescription:"), y.index("\nurl: workflow.json\n")
+y = y[:_d0] + re.sub(r"\b(flux2_image_edit|flux2_reference_compose|flux2_masked_inpaint|krea2_image_edit)\b(?!_nsfw)", r"\1_nsfw", y[_d0:_d1]) + y[_d1:]
 y = must_replace(y, "\nmodel_family: flux2\n", "\nmodel_family: flux2\ncontent: nsfw\n")
 y = must_replace(y, "\nurl: workflow.json\n",
                  "\n  NSFW variant: nudity and sex between adults (a general NSFW LoRA is baked in; act / detail LoRAs go\n"

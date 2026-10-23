@@ -18,8 +18,10 @@ description: >
   Generates a NEW image (any camera angle or composition) from a text prompt conditioned on up to
   four reference images - the place, a character's identity, an outfit or a second character. It
   is not an edit: no input photo is preserved, the image is rendered from an empty latent at the
-  requested width x height, and the references only supply identity / outfit / place. Not suitable
-  for editing an existing photo in place (use flux2_image_edit) or for video output.
+  requested width x height, and the references only supply identity / outfit / place.
+  Use for: NEW compositions - a new angle, viewpoint or framing of a referenced place or person, people placed
+  in a place, an outfit on a person.
+  Not for: changing an existing photo in place (use flux2_image_edit) or video.
 url: workflow.json
 workflow_type: ref2i
 model_family: flux2

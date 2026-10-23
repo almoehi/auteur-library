@@ -20,7 +20,11 @@ description: >
   "Picture 2", "Picture 3"). Works as a plain single-image instruction edit (only Picture 1), and
   for compositing or transferring an attribute from one photo onto another — moving an outfit,
   a background, an object, or a style from a reference image onto the subject of the main
-  image — without manual masking. Not suitable for pure text-to-image generation or video output.
+  image — without manual masking.
+  Use for: in-place instruction edits and compositing within Picture 1's frame (outfit, object, background,
+  colour, material, expression, lighting, small pose); it preserves Picture 1's geometry.
+  Not for: camera, angle, viewpoint or composition changes (use a reference-compose / text-to-image workflow,
+  e.g. flux2_reference_compose), text-to-image or video.
 url: workflow.json
 workflow_type: i2i
 model_family: qwenimage

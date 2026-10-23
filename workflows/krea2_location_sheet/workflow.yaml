@@ -38,8 +38,9 @@ description: >
   assembled into a 2×3 grid — from EITHER an optional reference image of the place (it becomes
   the anchor image; the prompt is not used to generate it) OR, when no reference image is given,
   from a plain-English place description (a KREA-2 anchor image is generated first). Best for
-  location reference sheets that need multiple consistent viewpoints of the same space. Not
-  suitable for character or person generation or continuous camera motion.
+  location reference sheets that need multiple consistent viewpoints of the same space.
+  Use for: a six-view reference sheet of one place (a place only, no people).
+  Not for: a single new angle of a place inside a design (use flux2_reference_compose), people, or continuous camera motion.
 url: workflow.json
 workflow_type: t2i
 model_family: krea2

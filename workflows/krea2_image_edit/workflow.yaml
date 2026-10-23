@@ -27,7 +27,11 @@ description: >
   optionally bringing in a person from a second image: put a character into a location plate, swap
   one person of a frame for a character (identity from Picture 2, pose and framing from Picture 1),
   restage, recolour. People stay clothed unless the prompt says otherwise. Keeps the camera of
-  Picture 1. Not text-to-image, not video.
+  Picture 1.
+  Use for: in-place edits and putting / swapping a person into an existing frame; Picture 1's camera, room and
+  composition are preserved.
+  Not for: a new camera angle, viewpoint or composition (use flux2_reference_compose or krea2_base_realism),
+  text-to-image or video.
 url: workflow.json
 workflow_type: i2i
 model_family: krea2

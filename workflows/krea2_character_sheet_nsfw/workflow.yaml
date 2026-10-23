@@ -25,7 +25,9 @@ description: >
   POV tiles (own lower body and legs seen while lying, own thighs, knees, feet and hands seen while seated). Choose the gender
   of the pose set; optionally a pure white panel background instead of grey. Identity (face, hair,
   skin, build) comes from the image. Best input: the character full-body, nude, on a plain backdrop.
-  Not for clothed sheets, custom poses, text-to-image or video.
+  Use for: a nude character reference sheet from one character image.
+  Not for: clothed sheets (use krea2_character_sheet), custom poses, new scenes or angles of a place
+  (use flux2_reference_compose_nsfw), text-to-image or video.
 url: workflow.json
 workflow_type: i2i
 model_family: krea2

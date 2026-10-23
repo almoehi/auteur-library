@@ -35,7 +35,11 @@ change in existing images, not a description of a new picture.
 4. **One coherent change per instruction.** If several changes are required, list them as short
    clauses in priority order (most important first).
 5. **Preserve identity explicitly.** When the subject must stay recognisable (a character
-   design), end with a keep-clause: "Keep her face, hairstyle and pose from Picture 1 unchanged."
+   design), end with a keep-clause naming only what must stay: "Keep her face and hairstyle from Picture 1 unchanged."
+   Name the pose, background or composition only when the request leaves them alone. A request that changes
+   the camera, angle, viewpoint, framing or composition is a NEW composition, not an edit of Picture 1: its
+   keep-clause keeps appearance only (identity, materials, colours), never the layout, and never "keep everything
+   else unchanged".
 6. **No invented elements.** Do not add props, people or styles the caller did not ask for.
 
 ---
@@ -63,7 +67,8 @@ Order: **change → source → placement/fit → locks**.
 
 ```
 <Verb> the <attribute> of <subject> in Picture 1 [with/using the <attribute> from Picture N],
-<placement or fit detail>. Keep <locked attributes> from Picture 1 unchanged.
+<placement or fit detail>. Keep <locked attributes> from Picture 1 unchanged. (Locks name only what must stay; for a camera / angle /
+viewpoint / composition change lock appearance only - see Iron Law 5.)
 ```
 
 Verbs that work well: `Replace`, `Change`, `Put … on`, `Remove`, `Add`, `Recolor`, `Make … look`,
@@ -115,7 +120,7 @@ jacket collar"). Never put the edit itself into the negative prompt.
   Picture 2, and replace the background with the street in Picture 3. Keep her face and pose
   from Picture 1."
 - Attribute edit (no source): "Change the jacket of the man in Picture 1 to deep red leather.
-  Keep everything else unchanged."
+  Keep the rest of the jacket and the man's face unchanged."
 
 ---
 
@@ -127,7 +132,7 @@ alternative takes of the same edit, re-render with a different `seed`, not a rew
 
 ## Short prompts per workflow kind
 
-- **EDIT workflows** (i2i): the change first, at most 2 short keep locks, no restated character or location descriptions (the reference images carry them), and one image-naming sentence ("Picture 1 is ...").
+- **EDIT workflows** (i2i): the change first, at most 2 short keep locks (naming only what must stay - never "everything else" or the composition when the camera / angle / framing changes), no restated character or location descriptions (the reference images carry them), and one image-naming sentence ("Picture 1 is ...").
 - **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 - This family has no video workflow; for text-to-image keep the prompt as short as the six-element stack allows.
 

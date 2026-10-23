@@ -14,7 +14,12 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 name: krea2_base_realism_nsfw
-description: Simple workflow to create images from a prompt using the krea2 model. This got updated. NSFW variant, the KNPV4.1_pre NSFW LoRA (0.9) is baked in. The Krea2-realism-V1 realism LoRA (1.0) is baked in too.
+description: >
+  Simple workflow to create images from a prompt using the krea2 model. This got updated. NSFW variant, the
+  KNPV4.1_pre NSFW LoRA (0.9) is baked in. The Krea2-realism-V1 realism LoRA (1.0) is baked in too.
+  Use for: NEW images from a text prompt (any camera angle or composition), including explicit acts.
+  Not for: editing an existing image in place (use krea2_image_edit_nsfw or flux2_image_edit_nsfw) or
+  conditioning on reference images (use flux2_reference_compose_nsfw).
 url: workflow.json
 model_family: krea2
 content: nsfw
