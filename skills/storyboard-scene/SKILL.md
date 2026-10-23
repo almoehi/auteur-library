@@ -199,6 +199,10 @@ plan of step 3 only adds placement, facing and the compose prompt.
   seen only by `limbs` / `lower body` is likewise named by role in words ("a man's hands"), never
   as a figure.
 - `Pose:` per person in frame (body position); for a `:none` look also its garments.
+- **Identity comes from the design picture, never from words.** Shot lines (`Action:`, `Blocking:`, `Pose:`,
+  `Frame:`) and plan prompts describe only pose, expression, wardrobe state and position — never a pictured
+  person's face, skin tone, hair, age or build: the approved design picture is the authority, and a
+  second description in the prompt fights it and drifts the likeness.
 - **Geometry — one physical setup per shot** (the keyframe model draws exactly what the lines say; it cannot
   repair a contradiction, it follows the loudest line):
   - `Blocking:` places EVERY person in frame (not the viewer, who is "the viewer") by name: a spot or
@@ -253,6 +257,10 @@ plan of step 3 only adds placement, facing and the compose prompt.
   the act being performed; its lead-up or aftermath shots carry `none` — never drop the act: at
   least one shot of the beat carries every act name of the beat (checked at the write: `beat 1.9:
   Sex act \`blowjob\` is on no shot of the beat`), with its `Contact:` points.
+- Act / position LoRAs for storyboard takes are chosen AUTOMATICALLY by the server from the LoRA catalog's
+  `sexActs` / `sexPositions` metadata: name the act and position exactly from the vocabulary in
+  `workflow-calling-conventions` ("Explicit acts and positions") so they match, and never select an act
+  LoRA by hand or one that is baked into the workflow (`bakedInto`).
 
 ### Self-check before each shot
 
