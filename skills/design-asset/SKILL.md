@@ -42,7 +42,7 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
 
 ## Phase 1b — Curate LoRAs (first step of the take planner)
 
-Before any `wf_*` render: run "Curated LoRAs" of `workflow-calling-conventions` for this design. Call `lora_index()`, pick the up to 8 LoRAs most relevant to the design (kind, attributes, wardrobe / nudity state, style from `{workspace.story.plot}`, plus every `design.json.loras` entry), rank them most relevant first and keep the list for the whole task. Never one baked into the workflow. This curated list goes on EVERY `wf_*` render of the design (drafts, retries, edits, variations).
+Before any `wf_*` render: run "Curated LoRAs" of `workflow-calling-conventions` for this design. Call `lora_index()`, pick the up to 8 LoRAs most relevant to the design, inferred from each LoRA's name and description: a character design (a character LoRA for the person, body / skin detail), an outfit design (clothing, fabric and garment LoRAs), a location design (environment, architecture, lighting LoRAs), and for every kind the style / look LoRAs (`{workspace.story.plot}`), camera / lens and nudity-state LoRAs as the design needs. Every `design.json.loras` entry is a pick the person made explicitly in the studio: it ranks FIRST, your additions follow, most relevant first. Keep the list for the whole task; a LoRA the workflow already loads itself is skipped automatically by the render. This curated list goes on EVERY `wf_*` render of the design (drafts, retries, edits, variations).
 
 ## Phase 2 — Write the prompt
 
