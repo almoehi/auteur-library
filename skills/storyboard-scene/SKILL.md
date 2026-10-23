@@ -27,11 +27,12 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Never call a `wf_*` tool for a shot take (`take_<shotId>-…`) — it is refused. The only way to get
   shot takes is `draft_storyboard`.
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
-- Compose the whole `shotlist.md` silently first, then write it in ONE call; never a partial or
-  draft file. A write that names an unlinked key, breaks R1–R11 or leaves a beat of the scene
-  uncovered is refused and writes nothing, but your text is kept as a draft: fix ONLY the listed
-  problems with `sandbox_edit_file` (exact `old_string` -> `new_string`, several edits in one call;
-  `sandbox_read_file` shows the draft), never rewrite the whole file. A further rewrite while
+- Compose the whole `shotlist.md` silently first, then write it complete with `sandbox_write_file`
+  (never a partial file). A write that names an unlinked key, breaks R1–R11 or leaves a beat of the
+  scene uncovered is refused and writes nothing, but your text is kept as a draft. A refusal is the
+  normal next step, never a reason to give up: fix ONLY the listed problems with `sandbox_edit_file`
+  (exact `old_string` -> `new_string`, many edits in one call; `sandbox_read_file` shows the draft)
+  until it is accepted - never rewrite the whole file, never declare the task failed over a refusal. A further rewrite while
   drafting is allowed only after a `draft_storyboard` refusal that names `shotlist.md`.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
   text-only.
