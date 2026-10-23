@@ -31,7 +31,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   beat, the order, who is in frame); (2) `sandbox_write_file` the HEADER only — the title line and
   the `Format:` line, no shots; (3) `write_shot` ONCE PER SHOT, in order — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
-  `write_shot` checks only that shot (unlinked keys, R1–R14, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R15, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
@@ -78,6 +78,7 @@ Pose: wife: hands on the keyboard, head down; the viewer's hands flat on the tab
 Frame: wife centre background; the viewer's hands bottom foreground
 Visible: character_wife (upper body); character_husband (limbs: forearms and hands); nobody else
 POV: character_husband (seated)
+LoRAs: skin_realism_flux, laptop_scene_detail
 Beat: 3.1
 Contact: character_wife (hands) on laptop keyboard; character_husband (hands) on table
 Characters: character_wife, character_husband
@@ -89,6 +90,10 @@ Transition: cut — first shot of the scene
 Every line is ONE line (no wrapping). The shot lines are the single authority for who is in frame,
 who touches what and how shots relate (the shot graph is read from `Transition:`); the structured
 plan of step 3 only adds placement, facing and the compose prompt.
+
+### Curate the shot's LoRAs (first step of every shot)
+
+BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first - the act and position (`sexActs` / `sexPositions` matching the shot's `Sex act:` / `Sex position:`) first, then what the frame shows (anatomy and body detail, realism, lighting, undress state, pose, camera), then the style. Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Mix model families freely (the server keeps those of the render workflow's family); never one whose `bakedInto` lists the compose workflow. The server loads this list on EVERY take render and repair of the shot; the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15).
 
 ### Shots
 
@@ -257,10 +262,10 @@ plan of step 3 only adds placement, facing and the compose prompt.
   the act being performed; its lead-up or aftermath shots carry `none` — never drop the act: at
   least one shot of the beat carries every act name of the beat (checked at the write: `beat 1.9:
   Sex act \`blowjob\` is on no shot of the beat`), with its `Contact:` points.
-- Act / position LoRAs for storyboard takes are chosen AUTOMATICALLY by the server from the LoRA catalog's
-  `sexActs` / `sexPositions` metadata: name the act and position exactly from the vocabulary in
-  `workflow-calling-conventions` ("Explicit acts and positions") so they match, and never select an act
-  LoRA by hand or one that is baked into the workflow (`bakedInto`).
+- Act / position LoRAs: curate them on the `LoRAs:` line like any other (act-matching ones first) and name
+  the act and position exactly from the vocabulary in `workflow-calling-conventions` ("Explicit acts and
+  positions") so their `sexActs` / `sexPositions` match. The server still adds the act LoRA itself when
+  none of your listed ones covers the shot's act or position; never list one baked into the workflow (`bakedInto`).
 
 ### Self-check before each shot
 
