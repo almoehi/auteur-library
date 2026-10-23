@@ -99,9 +99,16 @@ customNodes:
     commitHash: cdd4d028c6491d27a40092d7795158668cec9189
 
 context: >
-  Best for instruction edits of one image and for compositing edits across up to three photos in
-  one pass: transplanting an outfit, prop, background, or style from a reference image onto the
-  subject of the main image, without manual masking or multi-step inpainting.
+  Use for: in-place instruction edits and compositing within Picture 1's frame (outfit, object, background,
+  colour, material, expression, lighting, small pose); it preserves Picture 1's geometry.
+  Not for: camera, angle, viewpoint or composition changes (use a reference-compose / text-to-image workflow,
+  e.g. flux2_reference_compose), text-to-image or video.
+
+  Best for in-place instruction edits of one image and for compositing edits across up to three
+  photos in one pass, inside Picture 1's frame: transplanting an outfit, prop, background, or style
+  from a reference image onto the subject of the main image, without manual masking or multi-step
+  inpainting. It keeps Picture 1's camera, framing and composition; it does not re-shoot the scene
+  from another angle.
 
   Modes: only reference_image_1 is required. Supply reference_image_2 and/or reference_image_3 only
   when the edit draws on them. An omitted reference is replaced internally by a neutral gray

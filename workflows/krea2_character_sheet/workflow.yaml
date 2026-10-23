@@ -115,6 +115,10 @@ customNodes:
     commitHash: 86f886dac23013d88996e3a2e99093ba44d322fb
 
 context: >
+  Use for: a clothed character reference sheet from one character image.
+  Not for: nude sheets (use krea2_character_sheet_nsfw), custom poses, new scenes or angles of a place
+  (use flux2_reference_compose), text-to-image or video.
+
   Renders the character clothed in fixed poses; give it one clear image of the character. The 15
   panels are sampled sequentially in one job (several minutes). Composition comes from the pose
   templates and cannot be changed by text; the identity_prompt only sharpens identity.

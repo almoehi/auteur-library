@@ -126,6 +126,10 @@ ports:
       node_id: "94"
       role: primary
 context: >
+  Use for: NEW compositions - a new angle, viewpoint or framing of a referenced place or person, people placed
+  in a place, an outfit on a person.
+  Not for: changing an existing photo in place (use flux2_image_edit_nsfw) or video.
+
   Reference-to-image (ref2i): the output starts from an empty latent of width x height and every
   supplied reference goes through ReferenceLatent (positive and negative conditioning). Camera,
   framing and composition come from the prompt, not from the references.

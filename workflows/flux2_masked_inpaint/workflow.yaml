@@ -145,6 +145,9 @@ ports:
       node_id: "94"
       role: primary
 context: >
+  Use for: fixing or replacing one masked region; everything outside the mask stays pixel-exact.
+  Not for: whole-image edits (use flux2_image_edit), a new angle or composition (use flux2_reference_compose).
+
   Masked inpainting (capability masked-inpaint): the base frame is encoded as the starting latent,
   only the masked area is denoised (SetLatentNoiseMask + DifferentialDiffusion) and the result is
   composited back over base_image, so everything outside the mask is pixel-exact. The prompt

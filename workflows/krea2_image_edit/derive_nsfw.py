@@ -59,6 +59,12 @@ DESC_NEW = """description: >
   one per call), text-to-image or video.
 """
 CONTEXT_NEW = """context: >
+  Use for: in-place edits and putting / swapping a person into an existing frame; Picture 1's camera, room and
+  composition are preserved.
+  Not for: a new camera angle, viewpoint or composition (use flux2_reference_compose_nsfw or
+  krea2_base_realism_nsfw), a sex act from scratch (render it text-to-image first, then swap the people in
+  one per call), text-to-image or video.
+
   Krea 2 Identity Edit, nudity allowed. Word the instruction with "image 1" / "image 2" and say what
   to keep from each; call every person an adult. Recipes: (1) character into a place: Picture 1 =
   location plate, Picture 2 = the character design. (2) Explicit act with known characters: render

@@ -120,6 +120,10 @@ ports:
       node_id: "213"
       role: primary
 context: >
+  Use for: NEW images from a text prompt (any camera angle or composition), including explicit acts.
+  Not for: editing an existing image in place (use krea2_image_edit_nsfw or flux2_image_edit_nsfw) or
+  conditioning on reference images (use flux2_reference_compose_nsfw).
+
   GPU: minimum 24 GB VRAM (RTX 3090 / L40S recommended). Krea 2 BF16 is a large diffusion model;
   FP8 variant can fit in ~16 GB but is not used by this workflow.
 

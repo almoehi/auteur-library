@@ -92,6 +92,10 @@ customNodes:
     commitHash: cdd4d028c6491d27a40092d7795158668cec9189
 
 context: >
+  Use for: re-posing one person in place; the frame, scene and camera of subject_image are kept.
+  Not for: crops with several people, clothing / background edits (use qwen_image_multi_edit), a new angle or
+  composition (use flux2_reference_compose), NSFW poses (Qwen-Edit is not NSFW-tuned).
+
   Pose transfer (capability pose-transfer): Qwen-Image-Edit 2511 with the AnyPose LoRA pair (base +
   helper, 0.7 each) re-poses the person of image 1 to the pose of image 2, with no ControlNet.
   The output has the framing of subject_image.

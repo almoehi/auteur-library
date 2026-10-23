@@ -48,7 +48,10 @@ y = (y[:head_start] + "# ─── Source ────────────�
 y = must_replace(y, f"name: {BASE}\n", f"name: {BASE}_nsfw\n")
 # The "Use for / Not for" alternatives in the description name SFW bundles; point them at their NSFW variants.
 _d0, _d1 = y.index("\ndescription:"), y.index("\nurl: workflow.json\n")
-y = y[:_d0] + re.sub(r"\b(flux2_image_edit|flux2_reference_compose|flux2_masked_inpaint|krea2_image_edit)\b(?!_nsfw)", r"\1_nsfw", y[_d0:_d1]) + y[_d1:]
+_c0 = y.index("\ncontext:")
+_c1 = y.index("\n\n", _c0)  # the Use for / Not for block opens the context
+_alt = lambda s: re.sub(r"\b(flux2_image_edit|flux2_reference_compose|flux2_masked_inpaint|krea2_image_edit)\b(?!_nsfw)", r"\1_nsfw", s)
+y = y[:_d0] + _alt(y[_d0:_d1]) + y[_d1:_c0] + _alt(y[_c0:_c1]) + y[_c1:]
 y = must_replace(y, "\nmodel_family: flux2\n", "\nmodel_family: flux2\ncontent: nsfw\n")
 y = must_replace(y, "\nurl: workflow.json\n",
                  "\n  NSFW variant: nudity and sex between adults, including explicit acts composed directly from the\n"
