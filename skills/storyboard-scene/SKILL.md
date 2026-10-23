@@ -32,7 +32,9 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   scene uncovered is refused and writes nothing, but your text is kept as a draft. A refusal is the
   normal next step, never a reason to give up: fix ONLY the listed problems with `sandbox_edit_file`
   (exact `old_string` -> `new_string`, many edits in one call; `sandbox_read_file` shows the draft)
-  until it is accepted - never rewrite the whole file, never declare the task failed over a refusal. A further rewrite while
+  until it is accepted - never rewrite the whole file, never declare the task failed over a refusal.
+  An edit that comes back refused IS applied to the draft (only other problems remain): never repeat
+  it; read the draft again before editing text you have not seen since your last edit. A further rewrite while
   drafting is allowed only after a `draft_storyboard` refusal that names `shotlist.md`.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
   text-only.
