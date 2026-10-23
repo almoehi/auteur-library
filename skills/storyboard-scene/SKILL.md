@@ -34,7 +34,9 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   `write_shot` checks only that shot (unlinked keys, R1–R11, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
-  over a refusal. Sending a shot id again replaces its section. Beat coverage and the other
+  over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
+  shot-number order, whatever order they are accepted in, so never reorder it yourself. Send at
+  most 3 shots per reply (long replies time out). Beat coverage and the other
   whole-scene checks run when you call `draft_storyboard`; its refusal names the shots to add or
   fix — send those with `write_shot` and call it again.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
