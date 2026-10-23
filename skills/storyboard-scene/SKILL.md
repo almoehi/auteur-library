@@ -29,8 +29,10 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
 - Compose the whole `shotlist.md` silently first, then write it in ONE call; never a partial or
   draft file. A write that names an unlinked key, breaks R1–R11 or leaves a beat of the scene
-  uncovered is refused and writes nothing: fix what it lists and write again. A further rewrite while drafting is allowed only after a
-  `draft_storyboard` refusal that names `shotlist.md`.
+  uncovered is refused and writes nothing, but your text is kept as a draft: fix ONLY the listed
+  problems with `sandbox_edit_file` (exact `old_string` -> `new_string`, several edits in one call;
+  `sandbox_read_file` shows the draft), never rewrite the whole file. A further rewrite while
+  drafting is allowed only after a `draft_storyboard` refusal that names `shotlist.md`.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
   text-only.
 
@@ -336,7 +338,8 @@ calling until it is accepted: `task_complete` is refused while no plan was accep
 - Shot changes (add, remove, reorder, retitle, lines): one full rewrite of `shotlist.md`, ids
   kept (new / split shots get ids after the highest), `Transition` re-derived for shots whose
   predecessor changed; then `draft_storyboard` with ONLY the changed or new shots. A refused write
-  changed nothing: fix what the refusal names and write again, or say it failed.
+  changed nothing but keeps your text as a draft: fix what the refusal names with
+  `sandbox_edit_file`, or say it failed.
 - "Another angle for shot 4" / a different pose: change the shot's lines, rewrite, call
   `draft_storyboard` for that shot. Never `wf_*` for a shot take.
 - Who is visible follows the shot lines: change `Visible:` / `Characters:` / `Outfits:` first.
