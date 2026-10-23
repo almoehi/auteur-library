@@ -40,6 +40,10 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
    - Outfit (or any design drafted as edits of a linked design's full-body shot): an image-edit (`i2i`) workflow, never text-to-image; the first image input is the `full_body_shot:` ref (`artifact://<id>/full_body_shot.<ext>`) from the prompt's "Referenced designs" block.
 3. Empty attributes, no suitable `wf_*` tool, or (outfit) no image-edit tool / no `full_body_shot:` line -> render nothing, never guess, never fall back to text-to-image for an outfit (it invents a different person); `task_complete` saying exactly what is missing (it hands the design to the person in the studio with what exists).
 
+## Phase 1b — Curate LoRAs (first step of the take planner)
+
+Before any `wf_*` render: run "Curated LoRAs" of `workflow-calling-conventions` for this design. Call `lora_index()`, pick the up to 8 LoRAs most relevant to the design (kind, attributes, wardrobe / nudity state, style from `{workspace.story.plot}`, plus every `design.json.loras` entry), rank them most relevant first and keep the list for the whole task. Never one baked into the workflow. This curated list goes on EVERY `wf_*` render of the design (drafts, retries, edits, variations).
+
 ## Phase 2 — Write the prompt
 
 1. `get_workflow_instructions(<workflow>)`, read fully. Follow "Prompt route" of `workflow-calling-conventions` for every prompted `wf_*` call: a user-typed chat edit is a pass-through candidate (person's words verbatim); attributes, initial drafts, retries, diversity variations use `draft_prompt` (pass `image_inputs`).
@@ -57,7 +61,7 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
      - Character design: per its `wardrobe` (decided in `plan-designs`, "Characters and outfits"): `nude` = fully nude, full body, neutral standing pose facing the camera, plain backdrop, face visible, no garments, no covering hands or props, complete natural anatomy, rendered with the [nsfw] text-to-image workflow ("NSFW-marked workflows" in `workflow-calling-conventions`); `none` = no garments or accessories, natural appearance, never render the word; anything else = the plain neutral clothing named.
      - Outfit: edit of the linked character's full-body shot with exactly the outfit's garments, face / hair / body / skin unchanged; [nsfw] image-edit workflow only when the outfit itself leaves nudity visible (lingerie, open robe).
 5. Kinds without people (locations, props, any kind depicting no people): describe the subject positively as empty ("an empty, uninhabited <place>"); no negated people in the positive prompt (negated terms are weak in these models: naming people, even to exclude them, tends to summon them; the same holds for "nobody else" in a shot — state counts, never names to exclude); put `people, person, human figure, crowd` in the negative prompt (default text first), in every render including edits and variations.
-6. LoRAs: pass EVERY `design.json.loras` entry whose `modelFamily` matches the workflow on its lora ports with its `strength`, and its trigger words in `context`; other families are skipped (say so in the summary). Also pass a `lora_index` LoRA (same family) whose trigger word the attributes contain.
+6. LoRAs: pass the curated list of Phase 1b (it includes every `design.json.loras` entry) on the lora ports of EVERY `wf_*` render: the entries whose `modelFamily` matches the workflow, in rank order, up to the workflow's lora ports, each with its `strength` and its trigger words in `context`; other families are skipped (say so in the summary).
 
 ## Phase 3 — Render the drafts
 

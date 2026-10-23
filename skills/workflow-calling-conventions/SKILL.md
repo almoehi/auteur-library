@@ -23,24 +23,23 @@ A ⟦ref:r12.key⟧ in your earlier tool calls stands for a value you sent (call
 
 ## Correct sequence
 
-- `read_artifact` the work spec → `lora_index()` once if the tool has LoRA slots → write the
+- `read_artifact` the work spec → curate LoRAs ("Curated LoRAs") → write the
   prompts ("Prompts") → `wf_xxx` → check every take → `task_complete` only after every required
   call is done (never after only reading).
 - One render per call. Leave `seed`, `cfg` / guidance and steps at the workflow defaults unless
   the task says otherwise; a re-render gets a fresh seed by leaving `seed` unset.
 - A failed call: re-read `get_workflow_instructions`, fix the call, retry once.
 
-## LoRA lookup and loading
+## Curated LoRAs
 
-- Only when the `wf_xxx` tool exposes LoRA slots (`lora_1`, `style_lora`, …); else never call
-  `lora_index`.
-- Pick a LoRA only when it fits the prompt and its `modelFamily` matches the workflow's; exact
-  catalog name; strength only when the task or catalog sets one. Never invent a LoRA name; a
-  family mismatch is rejected at call time.
-- An unset slot is always safe; never add a LoRA just because the catalog has one.
-- Trigger words: drafted prompt → in the writer's `context`; the person's verbatim text → at its
-  very start or end.
-- Obey each LoRA's description (usage rules, required phrases, strength).
+THE definition of LoRA selection; `storyboard-scene` (per shot) and `design-asset` (per design) run it as their FIRST step and refer here.
+
+- **When**: before the first `wf_xxx` render of a shot or design, call `lora_index()` once (reuse the result for the whole scene / design). It lists each LoRA's name, description, `modelFamily`, strength, triggers, the `sexActs` / `sexPositions` it covers and the workflows it is `bakedInto`. Skip only when the catalog is empty.
+- **How many**: pick the up to 8 LoRAs most relevant to THIS shot / design, ranked most relevant first (fewer is fine; never pad). Rank by: (1) the explicit act and position (`sexActs` / `sexPositions` matching the shot's `Sex act:` / `Sex position:`, or a general `any` act LoRA); (2) what the frame shows (anatomy and body detail, skin and realism, lighting, clothing or undress state, camera or pose, the people involved); (3) the workspace style (`{workspace.story.plot}`) and the design's own `design.json.loras`; (4) trigger words that appear in the prompt. Obey each LoRA's description (usage rules, required phrases, strength).
+- **Which**: exact catalog names only, never invented. Mix families freely: the render keeps those of the workflow's `modelFamily` (storyboards: the server; design renders: you). Never a LoRA whose `bakedInto` lists the workflow in use. Never add a LoRA just because the catalog has one.
+- **Pass it on every render**: the curated list goes on EVERY `wf_xxx` render of the shot / design (first renders, retries, edits, variations), not only the first. For a `wf_xxx` call: the curated LoRAs of the tool's family in rank order, one per LoRA slot (`lora_1`, `style_lora`, …), up to the number of slots; strength only when the task or catalog sets one; the `design.json.loras` that match the family are part of the list (they rank by relevance like any other). A family mismatch is rejected at call time. An unset slot is always safe.
+- **Trigger words**: drafted prompt -> in the writer's `context`; the person's verbatim text -> at its very start or end.
+- **Storyboard shots**: write the list on the shot's `LoRAs:` line (rule R15: at most 8, none twice, catalog names); the server loads it on every take render and repair of the shot, and still adds the act LoRA itself when none of the listed ones covers the shot's act or position.
 
 ## Prompts
 
@@ -198,7 +197,7 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
     room of image 1." Never pass two people as one picture in a swap.
   - Act LoRA on step 1; anatomy LoRAs on both steps. Frame people large (small figures barely
     take the identity).
-- NSFW LoRAs: `design.json.loras` first, then `lora_index`. A nudity EDIT (undressing, a swap step
+- NSFW LoRAs: curated as in "Curated LoRAs" (`design.json.loras` count, the act LoRA ranks first). A nudity EDIT (undressing, a swap step
   showing a nude body) uses the catalog's image-edit nudity LoRA of the edit workflow's family
   (solo nudity only, never for an act).
 - Call every depicted person an adult in the prompt.
@@ -213,4 +212,5 @@ The single source of the names used by every skill, scene list, shot list and ch
 - **Not a sex act**: nudity alone, undressing, posing nude, kissing, hugging, caressing, touching. Nudity is the look (`<character>:nude` in Outfits), touch is `Contact` / `Blocking`; such beats and shots have `none`.
 - **Sex acts**: vaginal penetration, anal penetration, double penetration, blowjob, deepthroat, cunnilingus, 69, rimming, handjob, fingering, titjob, footjob, masturbation, cumshot.
 - **Sex positions**: missionary, doggy style, cowgirl, reverse cowgirl, spooning, prone bone, lotus, lap sitting, standing face to face, standing from behind, kneeling, squatting, face sitting, lying on back, lying on side, 69.
+- **Act / position LoRAs**: curate them like any LoRA ("Curated LoRAs": rank the ones whose `sexActs` / `sexPositions` match first) and name the act and position EXACTLY from the lists above (an `other (...)` value matches no LoRA metadata). For storyboard takes the server additionally guarantees an act / position LoRA from the catalog when your `LoRAs:` line has none that covers the shot. Never select a LoRA that is baked into the workflow (`bakedInto` in the catalog).
 - An older shot list may carry `Act: <free text>`: read it as the sex act, with no position; never write it.

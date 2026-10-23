@@ -31,7 +31,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   beat, the order, who is in frame); (2) `sandbox_write_file` the HEADER only — the title line and
   the `Format:` line, no shots; (3) `write_shot` ONCE PER SHOT, in order — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
-  `write_shot` checks only that shot (unlinked keys, R1–R11, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R15, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
@@ -78,6 +78,7 @@ Pose: wife: hands on the keyboard, head down; the viewer's hands flat on the tab
 Frame: wife centre background; the viewer's hands bottom foreground
 Visible: character_wife (upper body); character_husband (limbs: forearms and hands); nobody else
 POV: character_husband (seated)
+LoRAs: skin_realism_flux, laptop_scene_detail
 Beat: 3.1
 Contact: character_wife (hands) on laptop keyboard; character_husband (hands) on table
 Characters: character_wife, character_husband
@@ -89,6 +90,10 @@ Transition: cut — first shot of the scene
 Every line is ONE line (no wrapping). The shot lines are the single authority for who is in frame,
 who touches what and how shots relate (the shot graph is read from `Transition:`); the structured
 plan of step 3 only adds placement, facing and the compose prompt.
+
+### Curate the shot's LoRAs (first step of every shot)
+
+BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first - the act and position (`sexActs` / `sexPositions` matching the shot's `Sex act:` / `Sex position:`) first, then what the frame shows (anatomy and body detail, realism, lighting, undress state, pose, camera), then the style. Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Mix model families freely (the server keeps those of the render workflow's family); never one whose `bakedInto` lists the compose workflow. The server loads this list on EVERY take render and repair of the shot; the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15).
 
 ### Shots
 
@@ -199,6 +204,42 @@ plan of step 3 only adds placement, facing and the compose prompt.
   seen only by `limbs` / `lower body` is likewise named by role in words ("a man's hands"), never
   as a figure.
 - `Pose:` per person in frame (body position); for a `:none` look also its garments.
+- **Identity comes from the design picture, never from words.** Shot lines (`Action:`, `Blocking:`, `Pose:`,
+  `Frame:`) and plan prompts describe only pose, expression, wardrobe state and position — never a pictured
+  person's face, skin tone, hair, age or build: the approved design picture is the authority, and a
+  second description in the prompt fights it and drifts the likeness.
+- **Geometry — one physical setup per shot** (the keyframe model draws exactly what the lines say; it cannot
+  repair a contradiction, it follows the loudest line):
+  - `Blocking:` places EVERY person in frame (not the viewer, who is "the viewer") by name: a spot or
+    piece of furniture in the place (`on the left lounger`, `at the pool edge`) AND their position relative
+    to the other people and the viewer (`facing the viewer, an arm's length in front of him`, `on the
+    lounger next to the viewer's`). Where the viewer is and their posture are stated too ("the viewer
+    sits on the right lounger"). Two people never share a seat or a spot unless the shot says so
+    (`on the viewer's lap`); a person without a stated seat gets put wherever the model likes. The write
+    is refused when a person of `Characters:` is not named in `Blocking:` (rule R13; the viewer and
+    anyone shown only by `limbs` / `lower body` are exempt).
+  - The camera sits where the viewer is: its height and direction follow the POV owner's posture and
+    spot — a seated or lying viewer has an eye-level of a seated / lying person, never "water level" or
+    "from the floor" unless they are there. State `Camera:` and `Blocking:` from the same position;
+    a low angle is the viewer lying, a high angle the viewer standing.
+  - What the shot shows must be visible from that camera position in the place: before combining two
+    things in one view (a hedge and a pool, a door and a window) check the place design — if they lie on
+    opposite sides of the viewer, they are two shots, not one frame.
+  - Contact must be physically possible from the stated positions: whoever touches whom is within
+    reach from their seats / postures (`kneeling between his thighs` needs him seated with open knees,
+    not lying flat on a lounger). If the Blocking cannot reach the Contact, change the Blocking.
+  - A `continue` shot keeps everyone's spot and posture, the viewer's included, from the previous shot
+    — copy the previous `Blocking:` positions and change only what the new `Action:` moves, and say
+    so in `Action:` ("the sister has risen"). A person who moved in the story but not in the lines
+    teleports in the render.
+  - `Visible:` extents must fit `Camera:`'s framing size: `full figure` needs `full` / `wide`,
+    `upper body` needs `medium close-up` or wider; a `close-up` is `face` (or hands / feet as `limbs`).
+    Writing "medium, head to waist" with `full figure` draws full figures (rule R12 refuses it). Pick
+    the extent the size really shows, or the size the extent needs — never both wide and tight.
+  - Describe only what the extent shows. A person shown by `limbs` (the viewer's hands) has no
+    `Wardrobe:` entry (rule R14) and no garment, torso or lap wording anywhere in `Pose:` / `Frame:`:
+    "grey shorts lowered" next to `limbs: hands` makes every take show the abdomen and lap. If the
+    garment state matters, widen the extent (`lower body`) so the frame shows it.
 - `Wardrobe:` = partial undress of an OUTFIT look, `<characterKey> (wearing: <garment>, …; removed:
   <garment>, …)`, `;` between characters: the `Outfits:` pair keeps the outfit key (its picture
   stays bound) while ANY of its garments is still on, e.g. `Outfits: character_sister:outfit_sister_bikini`
@@ -221,11 +262,19 @@ plan of step 3 only adds placement, facing and the compose prompt.
   the act being performed; its lead-up or aftermath shots carry `none` — never drop the act: at
   least one shot of the beat carries every act name of the beat (checked at the write: `beat 1.9:
   Sex act \`blowjob\` is on no shot of the beat`), with its `Contact:` points.
+- Act / position LoRAs: curate them on the `LoRAs:` line like any other (act-matching ones first) and name
+  the act and position exactly from the vocabulary in `workflow-calling-conventions` ("Explicit acts and
+  positions") so their `sexActs` / `sexPositions` match. The server still adds the act LoRA itself when
+  none of your listed ones covers the shot's act or position; never list one baked into the workflow (`bakedInto`).
 
 ### Self-check before each shot
 
 Re-read the shot silently before every `write_shot` (and every shot again before `draft_storyboard`):
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
+- geometry: everyone in frame is placed in `Blocking:` (spot + relative to the others and the viewer),
+  the camera height fits the viewer's posture, everything in one view is visible from the camera's
+  spot, the `Contact:` is within reach, a `continue` shot keeps the previous positions, every
+  `Visible:` extent fits the `Camera:` size, and a limbs-only person has no `Wardrobe:` / torso wording;
   a POV owner in frame is `limbs` / `lower body` (lying: also `upper body`);
 - every `Action:` and `Camera:` is ONE moment: no two successive verbs, no `then` / `after` /
   `before` / `followed by` / `cut to` / arrows; a sequence is split into more shots (never
