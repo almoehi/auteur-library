@@ -14,7 +14,7 @@ agentType: worker
 
 Plain LLM planning worker: read text, write `design_plan.json`, call `create_design`.
 
-- Tools: `artifact_index`, `task_index`, `read_artifact`, `lora_index`, `sandbox_write_file`, `create_design`, `task_complete`, `task_failed`.
+- Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file`, `create_design`, `task_complete`, `task_failed`.
 - `create_design` needs `can_create_tasks: true` on your task; use it only for the plan's designs. Never pass `policies` to it.
 - Output files (plain text only, never PDF / DOCX): `scene_list.md` and `design_plan.json`.
 - Never render, draft or write any design file (`design.json` included); design workers (`design-asset`, `storyboard-scene`) continue each design.
@@ -31,7 +31,7 @@ Content policy = `{workspace.contentPolicy.nudity}` (absent or empty = `forbidde
   - creature / animal wearing nothing: `none`; no tracker rows; scene pair `<c>:none`.
   - Never decided by nudity on screen or by character-table notes ("face never shown", "always clothed on screen"): the character design is the identity / anatomy reference.
   - An outfit's garments never go into the character's `wardrobe`.
-- Every `nude` character gets the general anatomy / realism NSFW LoRAs per image family (step 1.4) and is listed in `nsfw_loras.characters`.
+- LoRAs are NOT planned here: each design's and storyboard shot's agent curates its own ("Curated LoRAs" in `workflow-calling-conventions`, the single definition).
 - Scene-list pairs: plan from the scene rows' `Outfits` (union of the beats' looks).
   - `<c>:<look>` -> that look's outfit design (look must be a tracker row, Phase 0.3).
   - `<c>:nude` and `<c>:none` -> the character design only, no outfit entry (the character's full-body shot is the picture: the nude base, or the creature as it is).
@@ -47,7 +47,6 @@ Content policy = `{workspace.contentPolicy.nudity}` (absent or empty = `forbidde
    - Reconcile before planning: collect scene-list character slugs and look slugs vs the table's file stems and tracker looks (`nude` / `none` are always valid).
    - Any unknown slug or look -> `task_failed` naming BOTH sets. Never map names by guesswork.
 4. Idempotency (always run; never assume nothing exists): `artifact_index` keys starting `character_`, `outfit_`, `location_`, `storyboard_`, plus `task_index` -> `existing`.
-5. Nudity `allowed`: call `lora_index()` ONCE now (never skip or guess it).
 6. Missing or unparseable input -> `task_failed(reason)` naming it; write nothing.
 
 ## Phase 1 — Plan -> design_plan.json
@@ -82,15 +81,7 @@ Build every entry with its FINAL key; nothing is decided later.
    - One moment per design: ONE `time_of_day`, `lighting`, `weather`, season — the first scene's (else the most common); never several in one attribute.
    - Location attributes describe ONLY the place; `mood` only when the source gives the place's own atmosphere, else omit.
    - Under `forbidden` (and always for a minor) people are fully clothed.
-4. NSFW LoRA plan (nudity `allowed` only; never for a scene with a minor):
-   1. Per scene, list tags from its row and Beats: **acts** (`Sex act` names), **poses** (`Sex position` names, plus pose words like POV, spread legs), in the canonical names of "Explicit acts and positions" in `workflow-calling-conventions` (`none` = no tag; `other (...)` = its plain words); **anatomy / detail** (breasts, nipples, genitals, pubic hair, erection ...). Every `nude` character has tag `nude body`.
-   2. From the Phase 0 `lora_index`, pick for each tag the catalog LoRAs whose trigger words or description match, in EVERY image family of the catalog (workers keep only their family). Skip video LoRAs and image-EDIT LoRAs. Never invent a name or pick a LoRA matching no tag.
-      - General: a general NSFW / anatomy / realism LoRA goes with every explicit tag.
-      - Acts: the act's own LoRA; else an all-in-one sex LoRA.
-      - Anatomy / detail: a "when X is the subject of the frame" LoRA only for a scene where X is the focus.
-   3. Attach as `loras: [{ "name": "<exact catalog name>" }]` (strength omitted): a storyboard with tags gets per family general, act, anatomy, pose LoRAs; a `nude` character gets per family the general anatomy / realism LoRAs only; outfits and locations none. At most 4 per model family per entry, priority general > act > anatomy > pose.
-   4. Tags without a catalog LoRA in a family -> `nsfw_loras.missing` (scene or character, with family) and the summary; never block.
-   - `nsfw_loras` (nudity `allowed` only) holds tags and `missing`; LoRA names live on the entries.
+4. LoRAs: assign none. Never write `loras` or tag-based LoRA lists into the plan or `create_design` calls; the design's agent and the storyboard's shot curation pick LoRAs from the catalog's names and descriptions ("Curated LoRAs" in `workflow-calling-conventions`).
 5. Storyboards: per scene key `storyboard_scene_<n>` with:
    - `notes` = the Summary.
    - `format` `portrait` | `landscape`: from the story / plot (task prompt story line or "Workspace facts"), e.g. a vertical phone film = `portrait`; derive it, never ask; `landscape` if unstated; the SAME value for every scene.
@@ -102,21 +93,18 @@ Build every entry with its FINAL key; nothing is decided later.
 {
   "characters": [ { "display_name": "Mira", "key_slug": "mira", "key": "character_mira", "character_type": "woman",
       "attributes": [ { "key": "age", "value": "late 20s" }, { "key": "wardrobe", "value": "nude" } ],
-      "loras": [ { "name": "<catalog name>" } ], "scenes": [1, 3] } ],
+      "scenes": [1, 3] } ],
   "locations": [ { "display_name": "Harbor", "key_slug": "harbor", "key": "location_harbor",
       "attributes": [ { "key": "place", "value": "foggy fishing harbor" } ], "scenes": [1, 3] } ],
   "outfits": [ { "character_slug": "mira", "look_slug": "raincoat", "key_slug": "mira_raincoat", "key": "outfit_mira_raincoat",
       "display_name": "Mira - Raincoat", "attributes": [ { "key": "garments", "value": "yellow raincoat" } ], "scenes": [1, 3] } ],
   "storyboards": [ { "scene": 1, "key_slug": "scene_1", "key": "storyboard_scene_1", "notes": "Mira reaches the harbor.", "format": "landscape",
       "links": [ { "role": "location", "key": "location_harbor" }, { "role": "character", "key": "character_mira" },
-                 { "role": "outfit", "key": "outfit_mira_raincoat" } ], "loras": [] } ],
-  "designs": [ "character_mira", "location_harbor", "outfit_mira_raincoat", "storyboard_scene_1" ],
-  "nsfw_loras": { "scenes": [ { "scene": 3, "acts": ["blowjob"], "anatomy": ["breasts"], "poses": ["kneeling"] } ],
-      "characters": [ { "slug": "mira", "tags": ["nude body"] } ], "missing": [ { "scene": 3, "family": "krea2", "tags": ["cowgirl"] } ] }
+                 { "role": "outfit", "key": "outfit_mira_raincoat" } ] } ],
+  "designs": [ "character_mira", "location_harbor", "outfit_mira_raincoat", "storyboard_scene_1" ]
 }
 ```
 
-- Example is a nudity-`allowed` workspace; `nsfw_loras` only then; `loras` omitted or `[]` when none.
 - The file names are canonical: write exactly these two into the `design_plan` artifact; if the declared files differ, still write them and add `file mismatch: <declared> vs scene_list.md, design_plan.json` to the summary.
 - Writing files is NOT completion: Phase 2 must follow. If `task_complete` is refused because nothing was created, go to Phase 2; never loop on `task_complete`.
 
@@ -124,11 +112,11 @@ Build every entry with its FINAL key; nothing is decided later.
 
 Walk `designs` in order, one `create_design` per key; arguments copied from the entry. Never re-judge, skip, merge or add entries (an odd-looking entry is created and noted). Skip only keys in `existing` (record them). ONE `create_design` per response, issued after the previous result; NEVER several in one response: later outfits / storyboards link the ACTUAL keys earlier results report (renames, reuses), and an outfit is refused until its character exists. Keep each result's key, `@name` and task id.
 
-- Common: `start: "attributes"`, `initial_drafts: 1`, `display_name`, `key_slug`, `attributes`; omit `loras` when none.
-- character: `{ kind: "character", character_type, loras }` (`character_type` REQUIRED; custom text allowed).
+- Common: `start: "attributes"`, `initial_drafts: 1`, `display_name`, `key_slug`, `attributes`.
+- character: `{ kind: "character", character_type }` (`character_type` REQUIRED; custom text allowed).
 - location: `{ kind: "location" }` + `distinct_place: true` when the entry has it.
 - outfit: `{ kind: "outfit", links: [{ "role": "character", "key": "character_<character_slug>" }] }` (always pass the link; the outfit is drafted as edits of that character's full-body shot).
-- storyboard: `{ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", links, loras }` with attributes `scene` = `<n>`, `notes`, `format`.
+- storyboard: `{ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", links }` with attributes `scene` = `<n>`, `notes`, `format`.
 - `start: "attributes"` needs a non-sheet text-to-image workflow in the workspace (outfits: an image-to-image one).
 - Success reads `Design created: key <key>, @<name>, task id <id>, status <status>`; anything else (`error:` ...) is NOT created. Check the created key equals the entry's key.
 - Keep a registry `planned key -> actual key` (from results, reused existing keys, renamed keys). Later links use actual keys; never re-derive a key from a slug.
@@ -137,7 +125,6 @@ Walk `designs` in order, one `create_design` per key; arguments copied from the 
 Refusals:
 - `design name "<n>" is already used by "<key>"`: same kind -> reuse it (skipped, noted); different kind -> retry once with a DIFFERENT `key_slug` (the name derives from `key_slug`, so a new display name alone never helps; append the kind: `harbor` -> `harbor_location`) and record `renamed: <planned key> -> <created key>`.
 - Outfit refused for a missing character: create the character first, retry.
-- Unknown `loras` name: re-check `lora_index`, retry once with exact names (or without it); never drop the design over a LoRA; note under `missing`.
 - Any other error: retry once; if it fails again record it as failed and continue.
 
 ## Phase 3 — Audit and complete
@@ -155,7 +142,6 @@ skipped (existing): <full keys> or none
 renamed: <old key> -> <new key> (only if any)
 designs: <created>/<planned> - characters a/b, locations a/b, outfits a/b, storyboards a/b
 failed: <key: error> or none
-loras: <n> sent in create_design calls; missing: <scene: tags> or none
 ```
 
-- `loras` line only when nudity is `allowed`. Add `file mismatch:` and `flagged:` lines only when they occurred.
+- Add `file mismatch:` and `flagged:` lines only when they occurred.

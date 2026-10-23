@@ -78,7 +78,7 @@ Pose: wife: hands on the keyboard, head down; the viewer's hands flat on the tab
 Frame: wife centre background; the viewer's hands bottom foreground
 Visible: character_wife (upper body); character_husband (limbs: forearms and hands); nobody else
 POV: character_husband (seated)
-LoRAs: skin_realism_flux, laptop_scene_detail
+LoRAs: noir_office_style, skin_realism_flux, anamorphic_lens_look, laptop_scene_detail
 Beat: 3.1
 Contact: character_wife (hands) on laptop keyboard; character_husband (hands) on table
 Characters: character_wife, character_husband
@@ -93,7 +93,7 @@ plan of step 3 only adds placement, facing and the compose prompt.
 
 ### Curate the shot's LoRAs (first step of every shot)
 
-BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first - the act and position (`sexActs` / `sexPositions` matching the shot's `Sex act:` / `Sex position:`) first, then what the frame shows (anatomy and body detail, realism, lighting, undress state, pose, camera), then the style. Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Mix model families freely (the server keeps those of the render workflow's family); never one whose `bakedInto` lists the compose workflow. The server loads this list on EVERY take render and repair of the shot; the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15).
+BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first, inferred from each LoRA's name and description: everything the shot shows - the production's style and look, the pictured characters (character LoRAs), outfits and clothing, props, the place, camera / lens / lighting, pose and action, anatomy and detail - and the act and position only when the shot has a `Sex act:` / `Sex position:` (rank the LoRA serving it high). Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Mix model families freely (the server keeps those of the render workflow's family); no need to avoid a LoRA the workflow already loads (the render skips it). The server loads this list on EVERY take render and repair of the shot, after the design's explicit studio picks (which rank first; the port cap cuts your tail); the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15).
 
 ### Shots
 
@@ -262,10 +262,10 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   the act being performed; its lead-up or aftermath shots carry `none` — never drop the act: at
   least one shot of the beat carries every act name of the beat (checked at the write: `beat 1.9:
   Sex act \`blowjob\` is on no shot of the beat`), with its `Contact:` points.
-- Act / position LoRAs: curate them on the `LoRAs:` line like any other (act-matching ones first) and name
-  the act and position exactly from the vocabulary in `workflow-calling-conventions` ("Explicit acts and
-  positions") so their `sexActs` / `sexPositions` match. The server still adds the act LoRA itself when
-  none of your listed ones covers the shot's act or position; never list one baked into the workflow (`bakedInto`).
+- Act / position LoRAs: curate them on the `LoRAs:` line like any other (infer from name and description which
+  serve the act; rank them high) and name the act and position exactly from the vocabulary in
+  `workflow-calling-conventions` ("Explicit acts and positions"). If the catalog tags LoRAs with `sexActs` /
+  `sexPositions`, the server adds a matching tagged LoRA when none of your listed ones covers the shot's act.
 
 ### Self-check before each shot
 
