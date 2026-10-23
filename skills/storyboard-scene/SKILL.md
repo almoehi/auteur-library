@@ -34,7 +34,8 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   (exact `old_string` -> `new_string`, many edits in one call; `sandbox_read_file` shows the draft)
   until it is accepted - never rewrite the whole file, never declare the task failed over a refusal.
   An edit that comes back refused IS applied to the draft (only other problems remain): never repeat
-  it; read the draft again before editing text you have not seen since your last edit. A further rewrite while
+  it; read the draft again before editing text you have not seen since your last edit. Edit only
+  lines that must change - never resend a fixed line or an edit whose old_string equals new_string. A further rewrite while
   drafting is allowed only after a `draft_storyboard` refusal that names `shotlist.md`.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
   text-only.
