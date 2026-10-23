@@ -5,7 +5,7 @@ description: >
   "storyboard_scene_3") — or the task prompt says "storyboard scene 3", "draft the keyframes
   for scene 2", "write the shot list for a scene", or the person asks in the storyboard chat for
   a change ("add a close-up", "swap shots 2 and 3", "another angle for shot 4"). Produces
-  `shotlist.md` (one section per shot) and hands a structured plan to `draft_storyboard`; the
+  `shotlist.md` (one section per shot, written shot by shot with `write_shot`) and hands a structured plan to `draft_storyboard`; the
   server then renders, checks and repairs the keyframe takes. Do NOT invoke for rendering
   keyframes or video clips yourself, character / outfit / location designs (that is
   design-asset), writing `design.json`, or publishing or finishing a design.
@@ -14,7 +14,7 @@ agentType: worker
 
 # Storyboard Scene — plan, hand over
 
-Analyze once, write `shotlist.md`, hand the plan to `draft_storyboard`, complete. The server
+Analyze once, write `shotlist.md` shot by shot with `write_shot`, hand the plan to `draft_storyboard`, complete. The server
 renders several candidates per shot, checks them, repairs what it can and records the best takes;
 you render nothing. Prompt and reference conventions for the entity lines: `workflow-calling-conventions`
 ("References by extent", `load_skill` it).
@@ -27,16 +27,16 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Never call a `wf_*` tool for a shot take (`take_<shotId>-…`) — it is refused. The only way to get
   shot takes is `draft_storyboard`.
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
-- Compose the whole `shotlist.md` silently first, then write it complete with `sandbox_write_file`
-  (never a partial file). A write that names an unlinked key, breaks R1–R11 or leaves a beat of the
-  scene uncovered is refused and writes nothing, but your text is kept as a draft. A refusal is the
-  normal next step, never a reason to give up: fix ONLY the listed problems with `sandbox_edit_file`
-  (exact `old_string` -> `new_string`, many edits in one call; `sandbox_read_file` shows the draft)
-  until it is accepted - never rewrite the whole file, never declare the task failed over a refusal.
-  An edit that comes back refused IS applied to the draft (only other problems remain): never repeat
-  it; read the draft again before editing text you have not seen since your last edit. Edit only
-  lines that must change - never resend a fixed line or an edit whose old_string equals new_string. A further rewrite while
-  drafting is allowed only after a `draft_storyboard` refusal that names `shotlist.md`.
+- Write `shotlist.md` in this order, nothing else: (1) plan ALL shots silently first (an id per
+  beat, the order, who is in frame); (2) `sandbox_write_file` the HEADER only — the title line and
+  the `Format:` line, no shots; (3) `write_shot` ONCE PER SHOT, in order — `text` is that shot's
+  complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
+  `write_shot` checks only that shot (unlinked keys, R1–R11, unreadable lines). A refused shot is
+  not saved and the refusal lists only its problems: fix THAT shot and send it again with
+  `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
+  over a refusal. Sending a shot id again replaces its section. Beat coverage and the other
+  whole-scene checks run when you call `draft_storyboard`; its refusal names the shots to add or
+  fix — send those with `write_shot` and call it again.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
   text-only.
 
@@ -58,6 +58,9 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   linked location; every linked design readable with a published full-body shot.
 
 ## 2 Plan — `shotlist.md`
+
+The file is the header below plus one section per shot. Write the header (title + `Format:`) with
+`sandbox_write_file`, then each shot section with `write_shot`, in order.
 
 ```
 # Scene <n> shot list
@@ -139,7 +142,7 @@ plan of step 3 only adds placement, facing and the compose prompt.
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
-- `Duration:` 3–10 s. Ids consecutive from `01` on the first write; a rewrite never renumbers
+- `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
   (new / split shots get ids after the highest).
 - `Format:` on the line after the title, always: the `format` attribute, else the story's
   orientation, else `landscape`.
@@ -217,9 +220,9 @@ plan of step 3 only adds placement, facing and the compose prompt.
   least one shot of the beat carries every act name of the beat (checked at the write: `beat 1.9:
   Sex act \`blowjob\` is on no shot of the beat`), with its `Contact:` points.
 
-### Self-check before the write
+### Self-check before each shot
 
-Re-read every shot silently before writing `shotlist.md` (and again before `draft_storyboard`):
+Re-read the shot silently before every `write_shot` (and every shot again before `draft_storyboard`):
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
   a POV owner in frame is `limbs` / `lower body` (lying: also `upper body`);
 - every `Action:` and `Camera:` is ONE moment: no two successive verbs, no `then` / `after` /
@@ -237,7 +240,7 @@ Re-read every shot silently before writing `shotlist.md` (and again before `draf
 
 ## 3 Hand over — `draft_storyboard`
 
-Call `draft_storyboard(shots)` right after the shotlist write was accepted. The first call lists
+Call `draft_storyboard(shots)` right after the last `write_shot` was accepted. The first call lists
 EVERY shot of `shotlist.md`. Per shot (the example shot s3-01 above):
 
 ```
@@ -312,8 +315,8 @@ of your own can only disagree with it.
   `workflow-calling-conventions`, "Explicit acts and positions"), only under the nudity policy.
 
 The call returns `accepted: …` or an `error:` listing every problem; nothing was started in the
-error case. Fix the plan — or, when a problem says to fix it in `shotlist.md`, rewrite the file
-first (one full rewrite) — and call again with the whole plan of the first call. Keep fixing and
+error case. Fix the plan — or, when a problem names a shot to add or fix, send that shot with
+`write_shot` first — and call again with the whole plan of the first call. Keep fixing and
 calling until it is accepted: `task_complete` is refused while no plan was accepted.
 
 ## 4 Audit and hand over
@@ -339,13 +342,15 @@ calling until it is accepted: `task_complete` is refused while no plan was accep
 
 - Each message: `read_artifact` again; the current `shotlist.md` and file list are the truth (a
   missing take was discarded by the person).
-- Shot changes (add, remove, reorder, retitle, lines): one full rewrite of `shotlist.md`, ids
-  kept (new / split shots get ids after the highest), `Transition` re-derived for shots whose
-  predecessor changed; then `draft_storyboard` with ONLY the changed or new shots. A refused write
-  changed nothing but keeps your text as a draft: fix what the refusal names with
-  `sandbox_edit_file`, or say it failed.
-- "Another angle for shot 4" / a different pose: change the shot's lines, rewrite, call
-  `draft_storyboard` for that shot. Never `wf_*` for a shot take.
+- Shot changes (add, retitle, change lines): `write_shot` for each changed or new shot — the
+  same id replaces its section, a new shot gets an id after the highest and lands at the end;
+  `Transition` re-derived for shots whose predecessor changed; then `draft_storyboard` with ONLY
+  the changed or new shots. A refused shot is not saved: fix what the refusal names and send it
+  again, or say it failed. Removing or reordering shots is the one case for a complete
+  `sandbox_write_file` of the whole file (all checks apply; a refusal keeps your text as a draft
+  that `sandbox_edit_file` fixes).
+- "Another angle for shot 4" / a different pose: change the shot's lines, send it with
+  `write_shot`, call `draft_storyboard` for that shot. Never `wf_*` for a shot take.
 - Who is visible follows the shot lines: change `Visible:` / `Characters:` / `Outfits:` first.
 - Reply in one short line naming what THIS turn wrote or handed over, then stop; never claim a
   change you did not make. Never pick, discard or finish — point to the studio.
