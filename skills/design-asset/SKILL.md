@@ -48,6 +48,7 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
    - character: full body or three-quarter, neutral pose, plain background, face clearly visible;
    - outfit: an edit instruction dressing the person of the linked character's full-body shot in the outfit (face, hair, body unchanged), full body;
    - location: an establishing wide shot.
+   - A person's prompt (character, and outfit where a person is shown) puts the identity traits that tell them apart from the other characters FIRST (face, hair, skin, build), before framing, pose and style text; a retry or edit keeps them first and never drops them.
    - Never restate design descriptions or what reference images show; keep named attributes verbatim; add no characters, props or text not asked for.
    - Carry the workspace medium / style (`{workspace.story.plot}`; "Medium / style is kept" in `workflow-calling-conventions`) verbatim. "Clean reference image" is composition, never a photographic medium.
 4. Nudity follows `{workspace.contentPolicy.nudity}` (absent or empty = forbidden); a minor is ALWAYS `forbidden`:

@@ -36,7 +36,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - Never put checks into a task prompt or description.
 - Intent of each check (rules live in the spec):
   - `screenplay-quality`: screenplay faithfully adapts the plot in proper format.
-  - `cast-quality`: every cast role (animals / creatures with a story role included) has a complete profile.
+  - `cast-quality`: every cast role (animals / creatures with a story role included) has a complete profile; no two characters look alike (twins excepted).
   - `scenes-quality`: scene list covers all beats, numbered, INT/EXT, location, one-line action.
   - `scenes-complete`: location slug, INT/EXT, looks per character, beats with camera move / continuity / `Outfits` (+ sex columns when nudity allowed).
   - `design-plan-covers-scenes`: plan has every character, location and (character, look) outfit of the scene list.
@@ -106,9 +106,10 @@ Identity (decided here, once)
 Files
 - Write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`.
 - Each file has exactly these five `##` headings, in this order: `NAME`, `ROLE`, `PERSONALITY`, `VISUAL PROFILE`, `WARDROBE TRACKER`. A file missing any is incomplete and must not be submitted.
-- `VISUAL PROFILE`: one `key: value` line each for character type, age, ethnicity, height, hair, eyes, build, build detail, proportions, posture, distinguishing features.
+- `VISUAL PROFILE`: one `key: value` line each for character type, age, ethnicity, height, face (shape, notable features), hair (colour, length, style), skin tone, eyes, build, build detail, proportions, posture, distinguishing features.
   - No `[...]` placeholders or blanks: every field gets a concrete value, or `n/a` when it does not apply.
   - Invent a fitting value the screenplay does not contradict rather than leave a field open.
+  - Keep the cast visually distinct: every character differs from every other in face, hair, skin tone, build or distinguishing marks; characters of the same sex need at least TWO clear visible differences, family members included. Only characters the story or cast calls twins share their look, differing only in what the story names (e.g. hair, clothing).
   - Nudity `allowed` (`{workspace.contentPolicy.nudity}`) and an adult character: add the anatomical details needed for a consistent depiction as concrete, non-euphemistic `key: value` lines in the same section. A minor never gets them.
 - `WARDROBE TRACKER`: a Markdown table with a header row and a separator row, then ONE row per look the character wears in the story; the look slug is the FIRST column (later steps read the looks from it - a table without the header and separator rows has no looks):
   ```
