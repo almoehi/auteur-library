@@ -331,6 +331,9 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   `background` | `frame-edge`) come from `Frame:` and `Blocking:`; `facing` (`camera` | `left` |
   `right` | `away` | `down` | `up`) from `Blocking:` / `Pose:` — the server states it for every
   figure as a frame requirement ("Wife faces away from the camera"), so set it deliberately.
+  `facing` is where the TORSO and hips point, never the head: a figure with its back to the lens
+  who looks back over the shoulder is `away` (the head turn goes in `Pose:` and the prompt); only a
+  figure whose chest is turned to the lens is `camera`.
 - `motion` = where a moving figure is heading in this instant ("walking toward the doors"); omit
   for a still figure. The server adds it to the figure's facing line.
 - `support` = what they sit, stand or lie on, when it matters. `contact_with` = who or what they
