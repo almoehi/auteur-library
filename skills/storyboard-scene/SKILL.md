@@ -246,6 +246,11 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   + `Wardrobe: character_sister (wearing: bikini bottom; removed: bikini top)`. `<key>:nude` only when
   nothing is worn (a Wardrobe entry on a `:nude` or `:none` look, or with an empty list, is refused).
   A change that lasts into the next beats is a new look in the scene list instead.
+  A keyframe is a still, so an undress is written as its END STATE, never as the motion: "bikini
+  top held in her hands at her chest, back bare", not "untying the strings, top slipping down"
+  (the model paints the tied top). In `Action:` / `Pose:` / `Frame:` and the prompt, a removed
+  garment is either not mentioned at all or placed where it now lies ("the cardigan on the
+  paving") — "cardigan slipped off her shoulders" summons the cardigan back on.
 - `Contact:` = every touch the frame shows, `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). Body parts
   (exactly these; singular or `lips` accepted): head, face, mouth, neck, shoulders, chest, breasts,
@@ -373,6 +378,12 @@ of your own can only disagree with it.
 - Words-only people — the POV owner and anyone seen only by `limbs` / `lower body` — are never a
   placeholder or a name: "the viewer's own forearms and hands at the lower edge" (a `[[key]]` of
   theirs is refused).
+- Describe the viewer only within their `Visible:` extent: for `limbs: hands` write the hands
+  and nothing else; never name the viewer's garments above what the extent shows ("beige shirt
+  open at the waist" in a `lower body` shot draws the shirt and chest). A garment of the viewer
+  is always "the viewer's own"; never place it near another person's body.
+- Wear state in the prompt is positive: what each person wears now ("wears only the navy bikini
+  bottom"), never "without the cardigan" or "the cardigan is off".
 - Explicit acts and positions: copy the shot's `Sex act:` / `Sex position:` words (names in
   `workflow-calling-conventions`, "Explicit acts and positions"), only under the nudity policy.
 
