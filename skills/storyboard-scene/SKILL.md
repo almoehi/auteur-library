@@ -31,7 +31,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   beat, the order, who is in frame); (2) `sandbox_write_file` the HEADER only — the title line and
   the `Format:` line, no shots; (3) `write_shot` ONCE PER SHOT, in order — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
-  `write_shot` checks only that shot (unlinked keys, R1–R15, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R16, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
@@ -141,6 +141,12 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - `Location:` = a linked location key; a place with no linked design → the nearest linked
   location, and name the gap in the summary.
 - `Movement:` = the beat's camera move verbatim (`hold` only when the beat asks for stillness).
+- Coverage of one moment: consecutive `continue` shots change the framing size or the angle
+  (wide from behind → medium close-up of her face over her shoulder → close-up of his hands on her
+  hips). A continue shot with the SAME framing size, angle and `Location:` as the previous one is
+  refused (rule R16): the renderer copies the previous frame, so it would be the same picture.
+  Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
+  state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
 - `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
   SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
@@ -283,6 +289,15 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 ### Self-check before each shot
 
 Re-read the shot silently before every `write_shot` (and every shot again before `draft_storyboard`):
+- camera's eye — what the lens sees from the viewer's spot and facing in `Blocking:`:
+  - everything `Frame:` puts in the background lies IN FRONT of the camera; a thing the viewer sits
+    beside or has their back to (the doors behind their chair) cannot be in the background;
+  - a garment still worn hides what it covers from this side: "bare back" seen from behind with an
+    open cardigan on is impossible — take the cardigan off (`Wardrobe:`) or show the bare part from
+    a side it is visible from;
+  - the viewer's own seat, chair or lounger is never an object in the frame (the camera sits in it):
+    only their limbs per `Visible:`; never "the wicker chair in front of the camera";
+  - a garment `removed:` in `Wardrobe:` is described as worn nowhere in the shot;
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
 - geometry: everyone in frame is placed in `Blocking:` (spot + relative to the others and the viewer),
   the camera height fits the viewer's posture, everything in one view is visible from the camera's
@@ -296,7 +311,8 @@ Re-read the shot silently before every `write_shot` (and every shot again before
   whose touched parts the `Visible:` extents show (the viewer's lap / groin = `lower body`);
 - partial undress of an outfit = the outfit key + `Wardrobe:`; `:nude` only when nothing is worn;
 - `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
-  one place; a `continue` shot keeps the previous shot's `Location:`;
+  one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
+  or angle (R16);
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
   key, name word or as a figure, not even as an owner ("husband's glass"); limbs-only people
   likewise only as their limbs in words;
@@ -304,7 +320,10 @@ Re-read the shot silently before every `write_shot` (and every shot again before
 
 ## 3 Hand over — `draft_storyboard`
 
-Call `draft_storyboard(shots)` right after the last `write_shot` was accepted. The first call lists
+When your tools include `run_checks`, call it once after the last `write_shot` was accepted and
+fix every shot a rejected check names (`write_shot`, then `run_checks` again) BEFORE
+`draft_storyboard`: the server renders as soon as the plan is accepted, so a contradiction found
+later costs a full re-render. Then call `draft_storyboard(shots)`. The first call lists
 EVERY shot of `shotlist.md`. Per shot (the example shot s3-01 above):
 
 ```
