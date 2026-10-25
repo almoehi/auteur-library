@@ -320,7 +320,10 @@ Re-read the shot silently before every `write_shot` (and every shot again before
 
 ## 3 Hand over — `draft_storyboard`
 
-Call `draft_storyboard(shots)` right after the last `write_shot` was accepted. The first call lists
+When your tools include `run_checks`, call it once after the last `write_shot` was accepted and
+fix every shot a rejected check names (`write_shot`, then `run_checks` again) BEFORE
+`draft_storyboard`: the server renders as soon as the plan is accepted, so a contradiction found
+later costs a full re-render. Then call `draft_storyboard(shots)`. The first call lists
 EVERY shot of `shotlist.md`. Per shot (the example shot s3-01 above):
 
 ```
