@@ -262,8 +262,16 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   the act being performed; its lead-up or aftermath shots carry `none` — never drop the act: at
   least one shot of the beat carries every act name of the beat (checked at the write: `beat 1.9:
   Sex act \`blowjob\` is on no shot of the beat`), with its `Contact:` points.
+- **An act lasts until the people separate.** While the bodies are still joined - the act paused,
+  interrupted, frozen mid-act ("frozen mid-thrust", "both freeze as a car arrives"), or a reaction
+  shot during it - the shot keeps the act's `Sex act:` / `Sex position:` and its `Contact:` points
+  (the groin contact included), even when its beat's act is over or its `Action:` is about
+  something else. Set `none` and drop the contact only in the shot where they visibly separate (or
+  a cutaway that shows neither of them). A `continue` shot during an act copies the previous shot's
+  act lines unless its `Action:` separates them - words like "mid-thrust" next to `Sex act: none`
+  are a contradiction the renderer resolves by showing NO act.
 - Act / position LoRAs: curate them on the `LoRAs:` line like any other (infer from name and description which
-  serve the act; rank them high) and name the act and position exactly from the vocabulary in
+  serve the act; rank them high; see "Act shots" in "Curated LoRAs" for the order) and name the act and position exactly from the vocabulary in
   `workflow-calling-conventions` ("Explicit acts and positions"). If the catalog tags LoRAs with `sexActs` /
   `sexPositions`, the server adds a matching tagged LoRA when none of your listed ones covers the shot's act.
 
