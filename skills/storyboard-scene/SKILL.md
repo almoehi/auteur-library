@@ -31,7 +31,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   beat, the order, who is in frame); (2) `sandbox_write_file` the HEADER only — the title line and
   the `Format:` line, no shots; (3) `write_shot` ONCE PER SHOT, in order — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
-  `write_shot` checks only that shot (unlinked keys, R1–R15, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R16, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
