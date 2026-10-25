@@ -55,7 +55,7 @@ Coordinator skill: validates prerequisites, reads the scene's storyboard design,
 - `<c>:nude` / `<c>:none` -> the character design. Any other look -> its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else the pattern above). A look without an outfit design -> the character design plus the garments described in the prompt; note the gap.
 - Reference = `artifact://<artifact id>/<file>` (real file name from the artifact). Missing designs are not fatal: note and continue without.
 - Per clip order: location, that shot's outfits (character design for `:nude` / `:none`), further character sheets ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). The clip's own frame is the `start_frame`, never a reference.
-- Words-only people get NO reference, nor does their outfit: the shot's `POV:` owner (the camera is their eyes) and anyone whose `Visible:` extent is `limbs` / `lower body` ("References by extent" in `workflow-calling-conventions`) - a picture of them summons the whole figure.
+- Words-only people get NO reference, nor does their outfit: the shot's `POV:` owner (the camera is their eyes) and anyone whose `Visible:` extent is `limbs` ("References by extent" in `workflow-calling-conventions`) - a picture of them summons the whole figure.
 
 ### 1c. Idempotency
 

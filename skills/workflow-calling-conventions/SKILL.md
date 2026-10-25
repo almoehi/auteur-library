@@ -161,7 +161,7 @@ look, the character design is the picture — a creature / animal wearing nothin
 For each character in a shot's `Characters:`, by their `Visible:` extent:
 - `full figure` / `upper body` / `face` / `back`: the outfit design's full-body shot (the character
   design's for `:nude` / `:none` / no outfit design).
-- `limbs` / `lower body` (anyone seen only by their limbs) and the POV owner at any extent (lying:
+- `limbs` (anyone seen only by their limbs; another person's `lower body` is a figure, pictured like `upper body`) and the POV owner at any extent (lying:
   `upper body` = the chest from above): WORDS only — no picture, no `[[key]]`, no name; the POV owner is "the viewer" ("the viewer's own forearms and
   hands at the lower edge"), in the prompt and in the shot's `Action:` / `Blocking:` / `Pose:` /
   `Frame:` lines (the server copies those verbatim into the prompt; a name there summons the whole

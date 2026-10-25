@@ -45,9 +45,9 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 ### References
 
 - Pass the shot's references whenever the workflow has free image ports; the task's `references` list is the source. If thin, look designs up in `artifact_index` by the shot block's keys (`character_<slug>`, `outfit_<character>_<look>`, `location_<slug>`). The task's own `references` list order wins.
-- Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), else the sheet; a POV owner or anyone seen only by limbs / lower body gets no image (see "References by extent").
+- Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), else the sheet; a POV owner or anyone seen only by limbs gets no image (see "References by extent").
 - `<c>:nude` / `<c>:none` -> the character design; `<c>:none` with garments in `Pose:` = clothed without an outfit design: keep those garments in the prompt. Any other look -> its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else `outfit_<c>_<look>`, suffix tolerated). No outfit design -> the character design plus the garments in the prompt.
-- Use only what the shot's own `Characters`, `Outfits` (per shot, never a scene-level look), `Location` and `Visible:` lines name. Only characters with a `Visible:` entry get an image; extent `limbs` / `lower body` (e.g. a POV owner's hands) gets no image: words only, never their name ("References by extent" in `workflow-calling-conventions`). A `POV:` line means the camera is that character's eyes: they are "the viewer".
+- Use only what the shot's own `Characters`, `Outfits` (per shot, never a scene-level look), `Location` and `Visible:` lines name. Only characters with a `Visible:` entry get an image; extent `limbs` (e.g. a POV owner's hands) gets no image: words only, never their name ("References by extent" in `workflow-calling-conventions`). A `POV:` line means the camera is that character's eyes: they are "the viewer".
 - Fill labelled image ports in port order, location first, then people ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). Do not type "Picture N is …" lines: pass `image_inputs` (section 3) and the code writes them.
 
 ## 3. Mode `continue` (authority for continuation mechanics)

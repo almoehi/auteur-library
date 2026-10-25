@@ -207,8 +207,9 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   these lines holds the owner's key, the key's name words (`character_husband` → "husband") or
   their display name — also as an owner of something ("her husband's hand", "sister and husband
   remain"): write "the viewer's hand", "the sister remains in front of the viewer". Anyone else
-  seen only by `limbs` / `lower body` is likewise named by role in words ("a man's hands"), never
-  as a figure.
+  seen only by `limbs` (hands / feet at the edge) is likewise named by role in words ("a man's hands"),
+  never as a figure. Another person shown by `lower body` IS a figure: they are counted, pictured
+  (design picture and outfit) and placed in `Blocking:`.
 - `Pose:` per person in frame (body position); for a `:none` look also its garments.
 - **Identity comes from the design picture, never from words.** Shot lines (`Action:`, `Blocking:`, `Pose:`,
   `Frame:`) and plan prompts describe only pose, expression, wardrobe state and position — never a pictured
@@ -223,7 +224,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     sits on the right lounger"). Two people never share a seat or a spot unless the shot says so
     (`on the viewer's lap`); a person without a stated seat gets put wherever the model likes. The write
     is refused when a person of `Characters:` is not named in `Blocking:` (rule R13; the viewer and
-    anyone shown only by `limbs` / `lower body` are exempt).
+    anyone shown only by `limbs` are exempt; a non-viewer `lower body` person must be named).
   - The camera sits where the viewer is: its height and direction follow the POV owner's posture and
     spot — a seated or lying viewer has an eye-level of a seated / lying person, never "water level" or
     "from the floor" unless they are there. State `Camera:` and `Blocking:` from the same position;
@@ -247,8 +248,9 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     "grey shorts lowered" next to `limbs: hands` makes every take show the abdomen and lap. If the
     garment state matters, widen the extent (`lower body`) so the frame shows it.
 - `Wardrobe:` = partial undress of an OUTFIT look, `<characterKey> (wearing: <garment>, …; removed:
-  <garment>, …)`, `;` between characters: the `Outfits:` pair keeps the outfit key (its picture
-  stays bound) while ANY of its garments is still on, e.g. `Outfits: character_sister:outfit_sister_bikini`
+  <garment>, …)`, `;` between characters: the `Outfits:` pair keeps the outfit key while ANY of its garments is still on
+  (a `removed:` entry makes the server picture that person by their character design instead of the outfit
+  picture, which would show the removed garment, and state the worn garments in words), e.g. `Outfits: character_sister:outfit_sister_bikini`
   + `Wardrobe: character_sister (wearing: bikini bottom; removed: bikini top)`. `<key>:nude` only when
   nothing is worn (a Wardrobe entry on a `:nude` or `:none` look, or with an empty list, is refused).
   A change that lasts into the next beats is a new look in the scene list instead.
@@ -281,6 +283,9 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   a cutaway that shows neither of them). A `continue` shot during an act copies the previous shot's
   act lines unless its `Action:` separates them - words like "mid-thrust" next to `Sex act: none`
   are a contradiction the renderer resolves by showing NO act.
+  The server shows the act ("must show") only when a `Contact:` entry touches an intimate part
+  (groin, buttocks, breasts); a close-up whose contacts are hands on shoulders keeps the lines,
+  but the act is then stated as ongoing out of frame and is not required in the picture.
 - Act / position LoRAs: curate them on the `LoRAs:` line like any other (infer from name and description which
   serve the act; rank them high; see "Act shots" in "Curated LoRAs" for the order) and name the act and position exactly from the vocabulary in
   `workflow-calling-conventions` ("Explicit acts and positions"). If the catalog tags LoRAs with `sexActs` /
@@ -394,7 +399,7 @@ of your own can only disagree with it.
 - Add the shot's camera and framing, the place in words and the style line of the production
   (the medium / style of the story is kept verbatim).
 - No speech bubbles, captions, signs or lettering unless the shot asks for them.
-- Words-only people — the POV owner and anyone seen only by `limbs` / `lower body` — are never a
+- Words-only people — the POV owner and anyone seen only by `limbs` — are never a
   placeholder or a name: "the viewer's own forearms and hands at the lower edge" (a `[[key]]` of
   theirs is refused).
 - Describe the viewer only within their `Visible:` extent: for `limbs: hands` write the hands
