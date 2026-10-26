@@ -249,8 +249,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     garment state matters, widen the extent (`lower body`) so the frame shows it.
 - `Wardrobe:` = partial undress of an OUTFIT look, `<characterKey> (wearing: <garment>, …; removed:
   <garment>, …)`, `;` between characters: the `Outfits:` pair keeps the outfit key while ANY of its garments is still on
-  (a `removed:` entry makes the server picture that person by their character design instead of the outfit
-  picture, which would show the removed garment, and state the worn garments in words), e.g. `Outfits: character_sister:outfit_sister_bikini`
+  (the server keeps the outfit picture and states what is worn in words, "wears only ..."), e.g. `Outfits: character_sister:outfit_sister_bikini`
   + `Wardrobe: character_sister (wearing: bikini bottom; removed: bikini top)`. `<key>:nude` only when
   nothing is worn (a Wardrobe entry on a `:nude` or `:none` look, or with an empty list, is refused).
   A change that lasts into the next beats is a new look in the scene list instead.
