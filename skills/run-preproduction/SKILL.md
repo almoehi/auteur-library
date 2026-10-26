@@ -38,8 +38,8 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
   - `screenplay-quality`: screenplay faithfully adapts the plot in proper format.
   - `cast-quality`: every cast role (animals / creatures with a story role included) has a complete profile; no two characters look alike (twins excepted).
   - `scenes-quality`: scene list covers all beats, numbered, INT/EXT, location, one-line action.
-  - `scenes-complete`: location slug, INT/EXT, looks per character, beats with camera move / continuity / `Outfits` (+ sex columns when nudity allowed).
-  - `design-plan-covers-scenes`: plan has every character, location and (character, look) outfit of the scene list.
+  - `scenes-complete`: location slug, INT/EXT, looks per character, beats with camera move / continuity / `Outfits` (+ sex columns when nudity allowed), a `## Places` row per location slug (set, space, connections), no location that is a surface.
+  - `design-plan-covers-scenes`: plan has every character, location and (character, look) outfit of the scene list; locations of one property are sets (`set_anchor` links, one `set_style` per set).
   - `designs-cover-plan`: a design was created (or existed) for every planned key; no stray or duplicate designs.
   - `storyboards-cover-scenes`: a storyboard exists for every scene.
   - `shotlist-consistent` (attached to every storyboard by the spec): no shot of a `shotlist.md` contradicts itself (camera geometry, garments hiding what is said to be bare, the viewer's own seat drawn in frame, removed garments worn, identical continue framings).
@@ -53,7 +53,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 | `write_screenplay` | writer | `screenplay` | `["screenplay.md"]` | none | `screenplay-quality` |
 | `character_table` | cast writer | `character_table` | `[]` (open: `character_<slug>.md` per character) | tasks `write_screenplay`; artifacts `screenplay` | `cast-quality` |
 | `create_scenes` | director | `scene_list` | `["scene_list.md"]` | tasks `write_screenplay`, `character_table`; artifacts `screenplay`, `character_table` | `scenes-quality`, `scenes-complete` |
-| `plan_designs` | design planner | `design_plan` | `["scene_list.md","design_plan.json"]` (both, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
+| `plan_designs` | design planner | `design_plan` | `["scene_list.md","design_plan.json"]` (both, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list`, `screenplay` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
 
 - Output files are Markdown or JSON only; never PDF, DOCX or other binary formats.
 - Embed the exact output file names in each task prompt.
@@ -143,10 +143,11 @@ First step, before writing
 - From then on copy those slugs EXACTLY. Never invent a name, a character or a look slug (a character the story names only by role keeps the role slug, e.g. `sister`).
 
 Output
-- Write `scene_list.md` as plain Markdown (never PDF or DOCX): ONE scene table, then a Beats section.
+- Write `scene_list.md` as plain Markdown (never PDF or DOCX): ONE scene table, a Places table, then a Beats section.
 
 Scene table columns
 - `Scene #` | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Summary` | `Characters present` | `Outfits`.
+- `location_slug` names a SPACE a camera can stand in ("hallway", "backyard_pool_terrace"), never a surface or feature of one (a wall, door, window, table): those belong to the space's `connections` and to shot framing. Never a slug like `grey_house_wall`.
 - `Summary`: one sentence naming every entrance, exit and spoken line that matters to the story, not only the main action.
 - `Characters present`: slugs equal the `character_<slug>.md` stems; every listed character appears in some beat's `Outfits` of that scene, else drop them from the row.
 - `Outfits`: `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `mira:raincoat; jonas:work_suit`.
@@ -161,7 +162,13 @@ Looks
 - A character with ANY body part in frame in a beat (a POV character's hands or knees included) is visible: list them in that beat's `Outfits`. An off-frame character is not listed.
 - A character appearing only in a `parallel` cutaway at another place need not be in the row's `Characters present`, but is listed in that beat's `Outfits` and in the row's `Outfits` union.
 
-Beats section (same file, below the table)
+Places table (same file, between the scene table and the Beats section, heading `## Places`)
+- ONE row per distinct `location_slug` of the scene table and of the beats (`parallel` places included), columns `location_slug` | `set` | `space` | `connections`.
+- `set`: the display name of the property the space belongs to ("Grey House"); spaces of the same house, garden or compound share it exactly; a standalone place is its own set.
+- `space`: exactly `interior` or `exterior`.
+- `connections`: what each door, window or opening of the space opens onto and where the neighbouring features lie, as the screenplay states or implies it, naming other rows by `location_slug` ("glass doors in the back wall open onto `backyard_pool_terrace`, pool beyond them; the front door opens onto `driveway`"). `none` only for a space with no neighbour in the story. Invent a plausible layout the screenplay does not contradict rather than leave it open; keep it consistent between rows (A opens onto B means B shows A).
+
+Beats section (same file, below the Places table)
 - Per scene: a `### Scene <n>` heading and a table with one row per beat. Every scene has at least one beat (typically 2-6).
 - Columns, ALL filled in EVERY beat (an empty cell fails the `scenes-complete` check):
   - `Beat #`: `<scene>.<n>` (`1.1`, `1.2`, …), unique and never renumbered on a rewrite — the
@@ -194,13 +201,13 @@ Beats section (same file, below the table)
 - Garment state: when a beat's action needs a body part the current look covers, the beat's `Action` / `Blocking` names the garment state ("cardigan slipped off her shoulders"); when it lasts into later beats it is its own WARDROBE TRACKER look in this and every later beat's `Outfits`.
 - Downstream use: the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the clip prompts are taken from the beats (`continuous` -> `continue` transition; `parallel` -> cutaway shot at its named place with that place's location design; extra location designs come from the beat `Location` slugs, outfit designs from the rows' `Outfits` union).
 
-Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, and a character stays `nude` after an undressing beat.
+Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm every `location_slug` has exactly one Places row with `set`, `space` and `connections` filled, no slug names a surface, every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, and a character stays `nude` after an undressing beat.
 ````
 
 ### 4d. plan_designs
 
 ```
-create_task({ id: "plan_designs", requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list"], title: "Plan and create designs", description: "Create the designs of the pre-production",
+create_task({ id: "plan_designs", requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list","screenplay"], title: "Plan and create designs", description: "Create the designs of the pre-production",
   agent: <design planner>, policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
   difficulty: "hard", can_create_tasks: true, prompt: <below>,
   output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
@@ -210,8 +217,8 @@ Both output files are declared (`scene_list.md` is a verbatim copy so the checks
 ```
 Load and use skill: plan-designs
 
-Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md).
-Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` derived from the story below, default `landscape`; see the skill). Story (medium / format): {workspace.story.plot}
+Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md, with its Places table), artifact `screenplay` (screenplay.md).
+Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, set anchors, other locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` derived from the story below, default `landscape`; see the skill). Story (medium / format): {workspace.story.plot}
 Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design was created with `create_design` and the `artifact_index` audit passed; if `task_complete` is refused because no tasks were created, continue creating designs, and report only counts the tool results show.
 Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`.
 ```
