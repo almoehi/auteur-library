@@ -52,6 +52,15 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Each linked design: its digest (identity cue, outfit garments and colours, published
   `full_body_shot` / `sheet` refs; an older design's `primary.<ext>` stands in for
   `full_body_shot`). Never restate design documents.
+- Each linked location's `layout:` line (in the Referenced designs block) states its main
+  picture in camera terms (where the camera stands and faces; what is ahead / left / right /
+  in the foreground; where water, doors, furniture and paths are). The renderer binds that
+  picture as the place, so every shot at the location must agree with it: place subjects and
+  the viewer in the layout's terms (the pool is on the right, the doors are ahead), never
+  mirror or reverse it, and keep `Blocking` / `Pose` / `Frame` / `Action` free of geometry the
+  layout contradicts. A shot that needs a viewpoint the layout does not give (behind the camera)
+  is not renderable at this location - reframe it, or name the gap in the summary. A location
+  without a `layout:` line (published earlier): plan from its description and say so in the summary.
 - Note: the POV owner, `continuous` chains, beats holding several actions, shots with many people
   (the server binds the place, for a continued shot also the parent frame, and one picture per
   figure; when the workflow has too few image slots it leaves out the lowest-priority person and
@@ -140,6 +149,16 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   (`cut — back to …`).
 - `Location:` = a linked location key; a place with no linked design → the nearest linked
   location, and name the gap in the summary.
+- `Location: <key> (view <n>)` picks a published VIEW of that location as the shot's environment
+  picture (Picture 1) instead of its main picture. The task prompt's "Location views" block lists
+  the views each linked location offers (indexes only: other viewpoints of the SAME place - look at
+  `view_<n>.png` of the location artifact when you need to know what one shows). Choose a view only
+  when the shot's camera direction needs it: the view whose layout matches the shot's
+  `Blocking:` / `Frame:` (e.g. the view facing the pool when the shot looks at the pool); otherwise
+  write the plain key and the main picture is used. The shot's `Blocking:` / `Frame:` must then
+  match the CHOSEN picture's layout, not the main one's. Only listed indexes are valid (the write
+  is refused for another); a `continue` shot keeps the previous shot's location KEY (the view may
+  change with the framing).
 - `Movement:` = the beat's camera move verbatim (`hold` only when the beat asks for stillness).
 - Coverage of one moment: consecutive `continue` shots change the framing size or the angle
   (wide from behind → medium close-up of her face over her shoulder → close-up of his hands on her
@@ -318,6 +337,8 @@ Re-read the shot silently before every `write_shot` (and every shot again before
 - `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
   one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
   or angle (R16);
+- `Location: <key> (view <n>)` only with a view the task prompt lists; the shot's `Blocking:` /
+  `Frame:` match the chosen picture's layout;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
   key, name word or as a figure, not even as an owner ("husband's glass"); limbs-only people
   likewise only as their limbs in words;
