@@ -183,7 +183,7 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
   never a plain image edit (edits keep the camera):
   - A known turn of at most 90° ("turn left 90°", "facing the pool" when the pool lies a quarter
     turn to one side): a workflow with capability `camera-turn`, when the workspace has one, called
-    with the angle in the workflow's own words; the picture's place stays the same.
+    with the angle in the workflow's own words (its `prompt_positive` states the grammar: `<sks> <azimuth> <elevation> <distance>`; 90° right = `<sks> right side view eye-level shot wide shot`, 45° right = `<sks> front-right quarter view eye-level shot wide shot`, left mirrors). Its angles are coarse and a left turn can orbit: read it as "face what lies to the left / right", and check the result; the picture's place stays the same.
   - Any other direction, or no `camera-turn` workflow: reference-compose with the place as Picture 1
     (plus the set anchor's picture for a set member, "Sets" in `plan-designs`), the prompt naming
     the new direction and what lies there per the design's `connections`.
