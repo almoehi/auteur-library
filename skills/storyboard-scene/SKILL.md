@@ -52,6 +52,15 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Each linked design: its digest (identity cue, outfit garments and colours, published
   `full_body_shot` / `sheet` refs; an older design's `primary.<ext>` stands in for
   `full_body_shot`). Never restate design documents.
+- Each linked location's `layout:` line (in the Referenced designs block) states its main
+  picture in camera terms (where the camera stands and faces; what is ahead / left / right /
+  in the foreground; where water, doors, furniture and paths are). The renderer binds that
+  picture as the place, so every shot at the location must agree with it: place subjects and
+  the viewer in the layout's terms (the pool is on the right, the doors are ahead), never
+  mirror or reverse it, and keep `Blocking` / `Pose` / `Frame` / `Action` free of geometry the
+  layout contradicts. A shot that needs a viewpoint the layout does not give (behind the camera)
+  is not renderable at this location - reframe it, or name the gap in the summary. A location
+  without a `layout:` line (published earlier): plan from its description and say so in the summary.
 - Note: the POV owner, `continuous` chains, beats holding several actions, shots with many people
   (the server binds the place, for a continued shot also the parent frame, and one picture per
   figure; when the workflow has too few image slots it leaves out the lowest-priority person and
