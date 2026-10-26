@@ -75,12 +75,15 @@ Build every entry with its FINAL key; nothing is decided later.
 |---|---|
 | character | `character_type` (own `create_design` argument, not an attribute: woman, man, non-binary person, child, elderly person, animal, creature, robot, fantasy being, or free text); attributes `age`, `ethnicity`, `hair`, `eyes`, `build`, `wardrobe`, `features` |
 | outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` (from the tracker row) |
-| location | `place`, `era`, `time_of_day`, `weather`, `lighting`, `mood` |
+| location | `place`, `era`, `time_of_day`, `weather`, `lighting`, `mood`, `views` |
 
    - Character `hair`, `build` and `features` copy the profile's face, hair, skin tone and distinguishing marks verbatim; never summarize them away.
    - One moment per design: ONE `time_of_day`, `lighting`, `weather`, season — the first scene's (else the most common); never several in one attribute.
    - Location attributes describe ONLY the place; `mood` only when the source gives the place's own atmosphere, else omit.
    - Under `forbidden` (and always for a minor) people are fully clothed.
+   - `views` (optional, every kind but storyboard; comma-joined, 2-4 entries, at most 6): the NAMED VIEWS the scene-list beats need beyond the design's main picture. `design-asset` makes one extra picture per entry; a shot picks it with `(view <id>)` (`storyboard-scene`). Only what a beat actually needs; omit the key when none.
+     - location: camera DIRECTIONS the beats look toward that a typical establishing view of the place does not show ("facing the pool", "looking back at the villa"); a direction is a short phrase naming what the camera faces.
+     - character, outfit: POSES and EXPRESSIONS the beats need ("kneeling", "lying on the lounger", "laughing", "eyes closed"); one pose or expression per entry. A pose belongs to the character; put it on the outfit only when it shows the garment in a way the beats need (e.g. "sitting, coat open").
 4. LoRAs: assign none. Never write `loras` or tag-based LoRA lists into the plan or `create_design` calls; the design's agent and the storyboard's shot curation pick LoRAs from the catalog's names and descriptions ("Curated LoRAs" in `workflow-calling-conventions`).
 5. Storyboards: per scene key `storyboard_scene_<n>` with:
    - `notes` = the Summary.

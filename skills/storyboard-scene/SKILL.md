@@ -149,16 +149,10 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   (`cut — back to …`).
 - `Location:` = a linked location key; a place with no linked design → the nearest linked
   location, and name the gap in the summary.
-- `Location: <key> (view <n>)` picks a published VIEW of that location as the shot's environment
-  picture (Picture 1) instead of its main picture. The task prompt's "Location views" block lists
-  the views each linked location offers (indexes only: other viewpoints of the SAME place - look at
-  `view_<n>.png` of the location artifact when you need to know what one shows). Choose a view only
-  when the shot's camera direction needs it: the view whose layout matches the shot's
-  `Blocking:` / `Frame:` (e.g. the view facing the pool when the shot looks at the pool); otherwise
-  write the plain key and the main picture is used. The shot's `Blocking:` / `Frame:` must then
-  match the CHOSEN picture's layout, not the main one's. Only listed indexes are valid (the write
-  is refused for another); a `continue` shot keeps the previous shot's location KEY (the view may
-  change with the framing).
+- Named views: `Location: <key> (view <id>)`, an `Outfits:` pair `<characterKey>:<outfitKey> (view <id>)` and a `Characters:` entry `<characterKey> (view <id>)` pick a VIEW of that design (a location's camera direction, a person's pose or expression) as its picture instead of the main one. An `Outfits:` view selects the OUTFIT's view; a `Characters:` view is the character's own, used when no outfit stands in for them. The "Referenced designs" block of the task prompt lists each linked design's views: id, kind, label, the exact line to write and its description (a location's description is its camera layout).
+  - Choose a view only when it fits the shot: a location view whose layout matches the shot's `Blocking:` / `Frame:` (e.g. facing the pool when the shot looks at the pool); a person view whose pose / expression is the one the shot's `Action:` / `Pose:` needs. Otherwise write the plain key and the main picture is used, and the shot stays consistent with the main layout.
+  - `Blocking:` / `Frame:` follow the CHOSEN picture's layout, not the main one's.
+  - Never invent a view id: only listed ones are valid (the write is refused for another). A `continue` shot keeps the previous shot's location KEY; its view may change with the framing.
 - `Movement:` = the beat's camera move verbatim (`hold` only when the beat asks for stillness).
 - Coverage of one moment: consecutive `continue` shots change the framing size or the angle
   (wide from behind → medium close-up of her face over her shoulder → close-up of his hands on her
@@ -336,7 +330,7 @@ Re-read the shot silently before every `write_shot` (and every shot again before
 - `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
   one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
   or angle (R16);
-- `Location: <key> (view <n>)` only with a view the task prompt lists; the shot's `Blocking:` /
+- `(view <id>)` on `Location:` / `Outfits:` / `Characters:` only with a listed view id; the shot's `Blocking:` /
   `Frame:` match the chosen picture's layout;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
   key, name word or as a figure, not even as an owner ("husband's glass"); limbs-only people
