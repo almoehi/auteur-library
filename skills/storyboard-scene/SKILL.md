@@ -61,6 +61,10 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   layout contradicts. A shot that needs a viewpoint the layout does not give (behind the camera)
   is not renderable at this location - reframe it, or name the gap in the summary. A location
   without a `layout:` line (published earlier): plan from its description and say so in the summary.
+- Set map: a location of a set (`set:` / `connections:` lines in its digest) comes with a "Set map" listing every workspace location of the same set (key, space, `connections`, one-line layout, linked or not). Use it as the geometry of the property:
+  - A shot through an opening (door, glass doors, window, gate) shows the CONNECTED space as the map states it (the pool beyond the glass doors), and its `Location:` is the space the camera stands in.
+  - Pick the location (and the view `(view <id>)`) whose picture holds what the shot shows; a shot that looks at a neighbouring space which is a linked location uses that location's own picture for it.
+  - A direction that is no listed view and no linked location (typically the reverse, 180° from the main picture) is a different set location or a gap: reframe the shot, or name the gap in the summary. Never invent the missing side or its connections.
 - Note: the POV owner, `continuous` chains, beats holding several actions, shots with many people
   (the server binds the place, for a continued shot also the parent frame, and one picture per
   figure; when the workflow has too few image slots it leaves out the lowest-priority person and

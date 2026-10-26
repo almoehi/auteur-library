@@ -35,7 +35,8 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
 
 1. `read_artifact(artifactId="<task id>")` -> artifact id, existing files, `design.json` (attributes, `displayName`, `links`, `loras`, `initialDrafts`).
 2. Extract:
-   - attributes (character: hair, age, build, wardrobe, mood; location: place, era, time of day, weather);
+   - attributes (character: hair, age, build, wardrobe, mood; location: place, space, era, time of day, weather, and for a set `set`, `set_style`, `connections`);
+   - a location with a `set_anchor` link is a SET MEMBER ("Sets" in `plan-designs`): the prompt's "Referenced designs" block carries the anchor's `full_body_shot:` ref (`artifact://<id>/full_body_shot.<ext>`); without that ref (anchor not finished) or without a reference-compose tool, draft with text-to-image from `set_style` + `connections` and say so in the hand-over;
    - `initialDrafts` (the task states it; default 1) and extension (default `png`);
    - workflow, by CAPABILITY (per tool description / `get_workflow_instructions`): the one the prompt names if it is among your `wf_*` tools, else the text-to-image tool whose model family matches the prompt or `design.json`.
    - Outfit (or any design drafted as edits of a linked design's full-body shot): an image-edit (`i2i`) workflow, never text-to-image; the first image input is the `full_body_shot:` ref (`artifact://<id>/full_body_shot.<ext>`) from the prompt's "Referenced designs" block.
@@ -52,7 +53,9 @@ Before any `wf_*` render: run "Curated LoRAs" of `workflow-calling-conventions` 
 3. `context` is short: all attributes, the design kind and the goal "a clean, well-lit reference image of one subject":
    - character: full body or three-quarter, neutral pose, plain background, face clearly visible;
    - outfit: an edit instruction dressing the person of the linked character's full-body shot in the outfit (face, hair, body unchanged), full body;
-   - location: an establishing wide shot.
+   - location: a WIDE establishing view of ONE space, not a close plate of a surface (no bare wall, door or floor filling the frame):
+     - show at least one stated `connections` opening (a doorway, glass doors, a gate, a window onto the neighbouring space) and the set's signature materials (`set_style`); an interior is shot from a corner so the doorway is in frame, an exterior wide enough to show the building or boundary it belongs to;
+     - set member: ONE reference-compose (`ref2i`) draft with the anchor's `full_body_shot` as Picture 1 ("Anchor (Picture 1) by intent", "turning the camera" in `workflow-calling-conventions`): "Picture 1 is <anchor name>, another space of the SAME property: same materials, frames, palette and era. Render <this place>, a different space; show the openings listed in connections." The finished anchor's picture / description is authoritative over the `set_style` text where they differ.
    - A person's prompt (character, and outfit where a person is shown) puts the identity traits that tell them apart from the other characters FIRST (face, hair, skin, build), before framing, pose and style text; a retry or edit keeps them first and never drops them.
    - Never restate design descriptions or what reference images show; keep named attributes verbatim; add no characters, props or text not asked for.
    - Carry the workspace medium / style (`{workspace.story.plot}`; "Medium / style is kept" in `workflow-calling-conventions`) verbatim. "Clean reference image" is composition, never a photographic medium.
@@ -76,22 +79,24 @@ Before any `wf_*` render: run "Curated LoRAs" of `workflow-calling-conventions` 
 
 Runs after the drafts rendered (and checked), before `run_checks` / hand-over. `views` = comma-joined entries, at most 6: for a location camera directions ("facing the pool"), for a character / outfit poses and expressions ("kneeling", "laughing"). Make ONE view take per entry, all renders in one response, each from the BEST draft (the one the checks matched; else the first): it is Picture 1 / the source.
 
-- File: `take_view-<id>.png`; `<id>` = the entry as a slug (lowercase, spaces and punctuation to `-`, starts with a letter, at most 40 chars, never all digits; "facing the pool" -> `facing-the-pool`). Retry: `take_view-<id>-r2.png`. The studio reads view and kind from the name; write nothing else for it. (Contract: `release/DESIGN_GUIDE.md` "Named views".)
-- Location (a direction): a NEW composition with a reference-compose (`ref2i`, capability `reference-compose`) workflow, Picture 1 = the draft ("Anchor (Picture 1) by intent", "turning the camera" in `workflow-calling-conventions`). Prompt: the same place and attributes seen from the new direction, the camera turned to face it; say what is behind the camera when the attributes or beats tell; empty place, no people (Phase 2 step 5).
+- File: `take_view-<id>.png`; `<id>` = the entry as a slug (lowercase, spaces and punctuation to `-`, starts with a letter, at most 40 chars, never all digits; "facing the pool" -> `facing-the-pool`; "facing the pool (right 90°)" -> `facing-the-pool-right-90`). Retry: `take_view-<id>-r2.png`. The studio reads view and kind from the name; write nothing else for it. (Contract: `release/DESIGN_GUIDE.md` "Named views".)
+- Location (a direction): the TURN is the one the entry states in parentheses ("facing the pool (right 90°)" -> right, 90°; 45° is a quarter turn); an entry without a stated turn is composed from its words alone. A NEW composition from the draft as Picture 1, by "turning the camera" in `workflow-calling-conventions` (a known turn of at most 90° uses the camera-turn tool when the workspace has one, else reference-compose). Prompt: the same place and attributes seen from the new direction, the camera turned to face it; keep `connections` true (an opening on that side shows its neighbour) and, for a set member, add the anchor's picture as a further reference; say what is behind the camera when the attributes or beats tell; empty place, no people (Phase 2 step 5).
+- A view that is a REVERSE (about 180°, "the other side of the property") is a gap, not a view: do not invent it; skip that entry and report it in the hand-over (`plan-designs` plans it as a sibling set location).
 - Character / outfit (a pose or expression): an image EDIT (`i2i`) of the draft: change only the pose / facial expression; keep the face, hair, skin, body and (outfit) every garment exactly. Outfit: also dressed as in the draft.
-- Check each (below) with `request` = "<design name> seen <entry>" / "<design name> <entry>", `references` = `[{ref: the draft, label: <design name>}]`: a location must be the very same place as the draft seen from that direction (same materials, shared features, light, time of day; the same view as the draft is a miss), a person the same person (face, hair, build, skin, age; for an outfit the same garments) in the asked pose / expression. Retry once, then `suggest_edit`.
+- Check each (below) with `request` = "<design name> seen <entry>" / "<design name> <entry>", `references` = `[{ref: the draft, label: <design name>}]` (a set member or anchor: plus `{ref: the anchor's full_body_shot, label: <anchor name>}`): a location must be the very same place as the draft seen from that direction (same materials, shared features, light, time of day; the same view as the draft is a miss), a person the same person (face, hair, build, skin, age; for an outfit the same garments) in the asked pose / expression. Retry once, then `suggest_edit`.
 - Tell the person in the hand-over: the views follow that draft; if they pick another primary, the studio's "Re-make from primary" renders them again.
 
 ## Check, retry once, suggest
 
 - Every rendered take follows "Check, retry once, suggest" of `workflow-calling-conventions`.
+- Set member (location with `set_anchor`): `check_take` `references` always include `{ref: the anchor's full_body_shot, label: <anchor name>}` and the `request` adds: "another space of the same property as <anchor name>: same architecture, materials, palette, era, a different space (not the same view), and the openings listed in connections hold". A miss is retried once, then `suggest_edit`.
 - Retry naming: base + `-r2` (`take_profile-closeup.png` -> `take_profile-closeup-r2.png`); for a draft `take_draft-<k>-<slug>.<ext>` -> `take_<slug>-draft-<k>-r2.<ext>` (must NOT start with `take_draft-`).
 
 ## Phase 4 — Hand over
 
 - Kickoff lists checks that gate this design: you MUST call `run_checks` before `task_complete` and fix every listed problem (a rejection after completing wastes the attempt; "Checks that gate the task" in `workflow-calling-conventions`).
 - Audit:
-  - every `take_draft-<n>-<slug>.<ext>` exists (re-read the artifact), except drafts that failed twice (name them); every `views` entry has its `take_view-<id>.<ext>` (Phase 3b);
+  - every `take_draft-<n>-<slug>.<ext>` exists (re-read the artifact), except drafts that failed twice (name them); every `views` entry has its `take_view-<id>.<ext>` (Phase 3b), reverse entries named as a gap;
   - no other file written; `design.json` untouched;
   - every take checked with `check_take` (file + its request); at most one retry per take; `suggest_edit` exactly for takes whose retry also missed;
   - drafts came from `wf_*` renders (sandbox-derived files only in the chat phase).
