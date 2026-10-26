@@ -6,9 +6,12 @@
  *                        (a draft-like profile with video width/height/fps overrides is applied
  *                        and must NOT change the sheet: anchor_width/anchor_height are named so
  *                        profiles cannot reach them and fps is not a port at all).
- *   B. reference mode  — reference_image supplied, no prompt: the image IS the anchor (it wins over
- *                        the KREA-2 stage, which still runs but is discarded); anchor_preview must have the fixture's pixel size.
- * Plus manifest checks (reference_image optional; no fps / width / height params).
+ *   B. reference mode  — reference_image supplied (+ a short prompt_location as the view selector's subject
+ *                        hint, space=exterior): the image IS the anchor (it wins over the KREA-2 stage, which
+ *                        still runs but is discarded); anchor_preview must have the fixture's pixel size.
+ *   C. portrait reference — a 9:16 reference_image, space=exterior: the orbit runs in the anchor's own
+ *                        orientation (no center crop), so the extracted views and the contact sheet are portrait.
+ * Plus manifest checks (reference_image optional; `space` enum interior|exterior; no fps / width / height params).
  *
  * Cost: REAL GPU + S3 (the reference fixture is staged in S3). The script tears the endpoint down
  * in `finally`; still verify no orphaned provider resources afterwards (root CLAUDE.md
@@ -66,6 +69,11 @@ const S3_FIXTURE_PREFIX = `e2e-fixtures/${WF_NAME}`;
 // prompt mode renders the anchor at a DIFFERENT size (PROMPT_ANCHOR_*), so the two are tellable apart.
 const REFERENCE_WIDTH  = 1280;
 const REFERENCE_HEIGHT = 720;
+// Pixel size of reference_image_portrait.png (9:16): the orbit must run PORTRAIT, uncropped.
+const PORTRAIT_WIDTH   = 720;
+const PORTRAIT_HEIGHT  = 1280;
+// What the sheet's `prompt_location` carries in reference mode: a short literal description of the place.
+const REFERENCE_PLACE  = 'A moonlit stone courtyard ringed by cypress trees with a dry central fountain';
 const PROMPT_ANCHOR_WIDTH  = 1344;
 const PROMPT_ANCHOR_HEIGHT = 768;
 
@@ -94,7 +102,7 @@ const DRAFT_LIKE_PROFILE = {
 // Adding a node to workflow.json fails this check until its class_type is verified and listed.
 const CORE_CLASS_TYPES = new Set([
   'BasicGuider', 'BasicScheduler', 'CLIPLoader', 'CLIPTextEncode', 'ConditioningZeroOut', 'CreateVideo',
-  'ImageFromBatch', 'ImageScale', 'KSampler', 'KSamplerSelect', 'LoadImage', 'LoraLoaderModelOnly',
+  'GetImageSize', 'ImageFromBatch', 'ImageScaleToTotalPixels', 'KSampler', 'KSamplerSelect', 'LoadImage', 'LoraLoaderModelOnly',
   'MiniMaxH3ImageToVideo', 'MiniMaxH3SigmaShift', 'PreviewAny', 'PrimitiveStringMultiline', 'RandomNoise',
   'SamplerCustomAdvanced', 'SaveAudioMP3', 'SaveImage', 'SaveVideo', 'StringConcatenate', 'UNETLoader',
   'VAEDecode', 'VAEDecodeAudio', 'VAELoader', 'EmptyLatentImage',
@@ -311,6 +319,9 @@ try {
   // must NOT be ports here (fps is hard-wired to the model-native 24, the orbit size is fixed).
   check('no width / height / fps params (profile-proof)', !['width', 'height', 'fps'].some(n => paramNames.includes(n)), JSON.stringify(paramNames));
   const seedParam = manifest.params?.find((p: any) => p.name === 'seed');
+  const spaceParam = manifest.params?.find((p: any) => p.name === 'space');
+  check('space param is an optional interior|exterior enum', spaceParam?.kind === 'enum' && spaceParam?.required === false
+    && JSON.stringify([...(spaceParam?.constraints?.enum ?? [])].sort()) === JSON.stringify(['exterior', 'interior']), JSON.stringify(spaceParam));
   check('has numeric seed param', seedParam?.seed === true && seedParam?.kind === 'int', JSON.stringify(seedParam));
 
   // 1b. Pre-flight: verify model URLs from YAML before spending GPU budget ────
@@ -360,6 +371,9 @@ try {
   const referenceImageUrl = await ensureFixture(`${S3_FIXTURE_PREFIX}/reference_image.png`, _path.join(FIXTURE_DIR, 'reference_image.png'));
   const fixtureSize = _pngSize(new Uint8Array(_nodeFs.readFileSync(_path.join(FIXTURE_DIR, 'reference_image.png')) as Buffer));
   check('fixture reference_image.png has the expected size', fixtureSize.width === REFERENCE_WIDTH && fixtureSize.height === REFERENCE_HEIGHT, `${fixtureSize.width}x${fixtureSize.height}`);
+  const portraitImageUrl = await ensureFixture(`${S3_FIXTURE_PREFIX}/reference_image_portrait.png`, _path.join(FIXTURE_DIR, 'reference_image_portrait.png'));
+  const portraitFixtureSize = _pngSize(new Uint8Array(_nodeFs.readFileSync(_path.join(FIXTURE_DIR, 'reference_image_portrait.png')) as Buffer));
+  check('fixture reference_image_portrait.png has the expected size', portraitFixtureSize.width === PORTRAIT_WIDTH && portraitFixtureSize.height === PORTRAIT_HEIGHT, `${portraitFixtureSize.width}x${portraitFixtureSize.height}`);
 
   // 4. Scenario A — prompt mode (no reference_image) ─────────────────────────
   // KREA-2 generates the anchor at PROMPT_ANCHOR_*; the draft-like profile's video width / height /
@@ -370,6 +384,7 @@ try {
     JSON.stringify({}),
     JSON.stringify({
       prompt_location: promptText,
+      space: 'exterior',
       anchor_width: PROMPT_ANCHOR_WIDTH,
       anchor_height: PROMPT_ANCHOR_HEIGHT,
       seed: 42,
@@ -392,14 +407,14 @@ try {
       s.width === PROMPT_ANCHOR_WIDTH && s.height === PROMPT_ANCHOR_HEIGHT, `${s.width}x${s.height}`);
   }
 
-  // 5. Scenario B — reference mode (reference_image, no prompt) ──────────────
+  // 5. Scenario B — reference mode (reference_image + short place description) ─
   // The image is the anchor: the loader is bound, the Any Switch (rgthree) picks it over the KREA-2
   // decode (which still runs, discarded), and anchor_preview echoes it.
   console.log('\n── 5. Scenario B: reference mode (reference_image, no prompt) ────');
   const referenceRenderId = await agent.run(
     JSON.stringify(RENDER_PROFILE),
     JSON.stringify({ reference_image: referenceImageUrl }),
-    JSON.stringify({ seed: 42, frames: 124 }),
+    JSON.stringify({ prompt_location: REFERENCE_PLACE, space: 'exterior', seed: 42, frames: 124 }),
     undefined,  // promiseId
     undefined,  // promiseTimeoutMs
     undefined,  // loraJson
@@ -415,6 +430,40 @@ try {
     const s = _pngSize(referenceBytes['anchor_preview']);
     check('reference mode: anchor_preview is the supplied image (fixture pixel size, not a generated anchor)',
       s.width === REFERENCE_WIDTH && s.height === REFERENCE_HEIGHT, `${s.width}x${s.height}`);
+  }
+  if (referenceBytes['view_1'] && _isPng(referenceBytes['view_1'])) {
+    const s = _pngSize(referenceBytes['view_1']);
+    check('reference mode (16:9): view_1 is landscape (orbit canvas follows the anchor, 1216x672)', s.width === 1216 && s.height === 672, `${s.width}x${s.height}`);
+  }
+
+  // 6. Scenario C — portrait reference ─────────────────────────────────────────
+  // No center crop: a 9:16 anchor orbits as portrait (672x1216), so views and sheet are portrait.
+  console.log('\n── 6. Scenario C: portrait reference (no destructive crop) ───────');
+  const portraitRenderId = await agent.run(
+    JSON.stringify(RENDER_PROFILE),
+    JSON.stringify({ reference_image: portraitImageUrl }),
+    JSON.stringify({ prompt_location: REFERENCE_PLACE, space: 'exterior', seed: 42, frames: 124 }),
+    undefined,  // promiseId
+    undefined,  // promiseTimeoutMs
+    undefined,  // loraJson
+    undefined,  // notifyJson
+  );
+  console.log(`  renderId=${portraitRenderId}`);
+  check('portrait-mode renderId non-empty', portraitRenderId.length > 0, portraitRenderId);
+  const portraitResult = await pollUntilDone(agent, portraitRenderId);
+  check('portrait-mode render succeeded', portraitResult.phase === 'succeeded', `phase=${portraitResult.phase}`);
+  const portraitBytes = await verifyOutputs('portrait mode', portraitResult, manifest);
+  if (portraitBytes['anchor_preview'] && _isPng(portraitBytes['anchor_preview'])) {
+    const s = _pngSize(portraitBytes['anchor_preview']);
+    check('portrait mode: anchor_preview is the supplied portrait image', s.width === PORTRAIT_WIDTH && s.height === PORTRAIT_HEIGHT, `${s.width}x${s.height}`);
+  }
+  if (portraitBytes['view_1'] && _isPng(portraitBytes['view_1'])) {
+    const s = _pngSize(portraitBytes['view_1']);
+    check('portrait mode: view_1 is portrait 672x1216 (orbit in the anchor orientation)', s.width === 672 && s.height === 1216, `${s.width}x${s.height}`);
+  }
+  if (portraitBytes['location_sheet'] && _isPng(portraitBytes['location_sheet'])) {
+    const s = _pngSize(portraitBytes['location_sheet']);
+    check('portrait mode: location_sheet is taller than wide (2 portrait columns)', s.height > s.width, `${s.width}x${s.height}`);
   }
 
   console.log(`\n=== ${failures.length === 0 ? 'ALL CHECKS PASSED ✓' : failures.length + ' CHECK(S) FAILED ✗'} ===`);
