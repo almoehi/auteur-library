@@ -5,7 +5,7 @@ description: >
   `<kind>_<name>` (e.g. "character_mira", "outfit_mira_raincoat", "location_harbor") — or the
   task prompt says "draft the design", "render the initial drafts", or the person asks in the
   design chat for a change ("make her older", "try a red jacket", "another angle"). Produces
-  draft and take images inside the design artifact (`take_draft-<n>-<slug>.<ext>`, `take_<slug>.<ext>`)
+  draft and take images inside the design artifact (`take_draft-<n>-<slug>.<ext>`, `take_<slug>.<ext>`, `take_view-<id>.<ext>`)
   for the person to pick from in the studio. Do NOT invoke for shooting scenes, storyboard designs
   (`storyboard_scene_<n>` — that is `storyboard-scene`), character/location sheets requested
   as their own task, writing `design.json`, or publishing or finishing a design.
@@ -19,10 +19,11 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
 ## Hard rules
 
 - Never write, overwrite, rename or delete `design.json`; read it only (`read_artifact(artifactId="<task id>")`, ONCE per turn; never copy or restate it).
-- Never write published names (`full_body_shot.*`, `sheet.*`, `view_*`).
+- Never write published names (`full_body_shot.*`, `sheet.*`, `view_*`; `take_view-<id>.*` takes are fine).
 - File names are flat (no `/`) and unique; every render is a NEW take (never reuse a name or overwrite):
   - Drafts: `take_draft-<n>-<slug>.<ext>`, n = 1 … `initialDrafts`.
   - Chat-phase takes: `take_<slug>.<ext>`.
+  - View takes: `take_view-<id>.<ext>` (Phase 3b); no other slug starts with `view-`.
   - slug = a few lowercase hyphenated words naming the content, `[a-z0-9]+(-[a-z0-9]+)*`, no `_`; never generic or numbered.
   - Name taken (in the artifact or earlier in this conversation, discarded takes included): append `-2`, `-3` ….
   - Derived takes (conversion, crop, composite) get a new slug, never the source's base name with another extension.
@@ -71,6 +72,16 @@ Before any `wf_*` render: run "Curated LoRAs" of `workflow-calling-conventions` 
 - Outfit: each call passes the prompt's `full_body_shot:` ref as the image input and the edit instruction as the prompt.
 - A failed draft fails only itself: re-read instructions, fix, retry that draft once (same name); still failing -> leave it (the studio shows a failed take with Retry) and report it.
 
+## Phase 3b — Named views (only when `design.json.attributes` has `views`)
+
+Runs after the drafts rendered (and checked), before `run_checks` / hand-over. `views` = comma-joined entries, at most 6: for a location camera directions ("facing the pool"), for a character / outfit poses and expressions ("kneeling", "laughing"). Make ONE view take per entry, all renders in one response, each from the BEST draft (the one the checks matched; else the first): it is Picture 1 / the source.
+
+- File: `take_view-<id>.png`; `<id>` = the entry as a slug (lowercase, spaces and punctuation to `-`, starts with a letter, at most 40 chars, never all digits; "facing the pool" -> `facing-the-pool`). Retry: `take_view-<id>-r2.png`. The studio reads view and kind from the name; write nothing else for it. (Contract: `release/DESIGN_GUIDE.md` "Named views".)
+- Location (a direction): a NEW composition with a reference-compose (`ref2i`, capability `reference-compose`) workflow, Picture 1 = the draft ("Anchor (Picture 1) by intent", "turning the camera" in `workflow-calling-conventions`). Prompt: the same place and attributes seen from the new direction, the camera turned to face it; say what is behind the camera when the attributes or beats tell; empty place, no people (Phase 2 step 5).
+- Character / outfit (a pose or expression): an image EDIT (`i2i`) of the draft: change only the pose / facial expression; keep the face, hair, skin, body and (outfit) every garment exactly. Outfit: also dressed as in the draft.
+- Check each (below) with `request` = "<design name> seen <entry>" / "<design name> <entry>", `references` = `[{ref: the draft, label: <design name>}]`: a location must be the very same place as the draft seen from that direction (same materials, shared features, light, time of day; the same view as the draft is a miss), a person the same person (face, hair, build, skin, age; for an outfit the same garments) in the asked pose / expression. Retry once, then `suggest_edit`.
+- Tell the person in the hand-over: the views follow that draft; if they pick another primary, the studio's "Re-make from primary" renders them again.
+
 ## Check, retry once, suggest
 
 - Every rendered take follows "Check, retry once, suggest" of `workflow-calling-conventions`.
@@ -80,7 +91,7 @@ Before any `wf_*` render: run "Curated LoRAs" of `workflow-calling-conventions` 
 
 - Kickoff lists checks that gate this design: you MUST call `run_checks` before `task_complete` and fix every listed problem (a rejection after completing wastes the attempt; "Checks that gate the task" in `workflow-calling-conventions`).
 - Audit:
-  - every `take_draft-<n>-<slug>.<ext>` exists (re-read the artifact), except drafts that failed twice (name them);
+  - every `take_draft-<n>-<slug>.<ext>` exists (re-read the artifact), except drafts that failed twice (name them); every `views` entry has its `take_view-<id>.<ext>` (Phase 3b);
   - no other file written; `design.json` untouched;
   - every take checked with `check_take` (file + its request); at most one retry per take; `suggest_edit` exactly for takes whose retry also missed;
   - drafts came from `wf_*` renders (sandbox-derived files only in the chat phase).

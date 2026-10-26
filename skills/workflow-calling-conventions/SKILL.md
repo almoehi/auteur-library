@@ -179,6 +179,9 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
   things INSIDE Picture 1's frame (colour, material, object, garment, expression, lighting, small pose)
   and keeps its geometry. A new angle, viewpoint, re-framing or "show another part of the place" is a
   new composition: use a reference-compose (`ref2i`) or text-to-image workflow, never an editor.
+- Turning the camera around a place (a new direction, "facing the pool") = reference-compose with
+  the place as Picture 1, never an image edit (edits keep the camera). Changing a person's pose
+  or expression = image edit of their picture (face, body, garments kept).
 
 ## NSFW-marked workflows
 
