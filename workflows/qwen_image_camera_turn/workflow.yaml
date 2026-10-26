@@ -1,0 +1,150 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# Derived from: qwen_image_pose_transfer (itself derived from qwen_image_multi_edit, the Qwen Edit
+# 2511 Multi-Edit 8-step graph) with the pose-image chain removed and the AnyPose LoRA pair replaced
+# by fal's Multiple-Angles camera LoRA (0.9, the recommended 0.8-1.0 band). fal's own ComfyUI graph
+# (comfyui-workflow-multiple-angles.json in the LoRA repo) is the same model stack with the stock
+# TextEncodeQwenImageEditPlus and the 4-step Lightning LoRA; this bundle keeps the library's 8-step
+# Lightning + Q4_K_S GGUF stack so it shares every model file with the other Qwen-Edit bundles.
+# Multiple-Angles LoRA: https://huggingface.co/fal/Qwen-Image-Edit-2511-Multiple-Angles-LoRA
+# (Apache-2.0, base Qwen/Qwen-Image-Edit-2511, trained on 3000+ Gaussian-splat renders, 96 poses).
+#
+# ─── Custom Nodes ─────────────────────────────────────────────────────────────
+# Comfyui-QwenEditUtils (QwenEditConfigPreparer, QwenEditAdaptiveLongestEdge,
+#   TextEncodeQwenImageEditPlusCustom_lrzjason) — loaded dynamically via the customNodes stanza
+#   below; no nodes.lock entry needed.
+# GGUF UNet loading uses city96/ComfyUI-GGUF's UnetLoaderGGUF, already pinned in nodes.lock.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: qwen_image_camera_turn
+description: >
+  Camera turn (Qwen-Image-Edit 2511 + fal Multiple-Angles LoRA): re-renders source_image from a
+  new camera position on a fixed grid - 8 azimuths in 45° steps, 4 elevations, 3 distances - keeping
+  the place's materials, palette and light. The output keeps the source's aspect ratio.
+  Use for: a known camera move of a place or object of at most 90° (a quarter view, a side view,
+  higher / lower / closer / wider) from one picture.
+  Not for: reverse views or the other side of a property (180° - invent too much; use a sibling
+  location), free-text angles (use flux2_reference_compose), people-centred edits, NSFW content.
+url: workflow.json
+workflow_type: i2i
+model_family: qwenimage
+capabilities: [camera-turn]
+styles: [photoreal]
+gpu_types: [rtx3090, rtx4090, l40s]
+ports:
+  inputs:
+    - name: source_image
+      kind: image
+      description: "The picture to look at from a new camera position (a place or an object). Its aspect ratio is kept; materials, palette and lighting carry over."
+      binding: image@2
+      reference_role: subject
+      label: "image 1"
+      required: true
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "The camera instruction in the LoRA's trained grammar, EXACTLY '<sks> <azimuth> <elevation> <distance>'. azimuth: front view (0°) | front-right quarter view (45°) | right side view (90°) | back-right quarter view (135°) | back view (180°) | back-left quarter view (225°) | left side view (270°) | front-left quarter view (315°). elevation: low-angle shot (-30°) | eye-level shot (0°) | elevated shot (30°) | high-angle shot (60°). distance: close-up | medium shot | wide shot. The angles orbit the camera around the picture's subject; 'front view eye-level shot medium shot' is the source pose."
+      binding: prompt@10
+      required: true
+      default: "<sks> right side view eye-level shot wide shot"
+    - name: prompt_negative
+      kind: string
+      description: "Negative prompt (artifacts to avoid). The default targets architecture / place renders."
+      binding: text@21
+      required: false
+      default: "lowres, worst quality, blurry, distorted perspective, warped architecture, bent straight lines, duplicated objects, floating objects, pixelated, compression artifact, oversharpened"
+    - name: longest_edge
+      kind: int
+      description: "Output size cap: the longest edge in pixels is at most this (a smaller source keeps its size - a 720x1280 source renders at 720x1280); the other edge follows the source's aspect ratio, so a portrait source gives a portrait result. 1344 matches the storyboard keyframe size."
+      binding: max_size@8
+      constraints: { min: 512, max: 1664 }
+      required: false
+      default: 1344
+    - name: steps
+      kind: int
+      description: "Denoising steps. Tuned for the 8-step Lightning distilled schedule — 8 is the recommended value."
+      binding: steps@17
+      constraints: { min: 1, max: 20 }
+      required: true
+      default: 8
+    - name: cfg
+      kind: float
+      description: "Classifier-free guidance scale. The distilled schedule is tuned for cfg=1; raising it slows convergence and causes artifacts at 8 steps."
+      binding: cfg@17
+      constraints: { min: 0.5, max: 3 }
+      required: false
+      default: 1
+    - name: seed
+      kind: int
+      description: "Random seed. Set -1 or omit for a random seed each run."
+      binding: seed@17
+      seed: true
+      required: false
+      default: -1
+  outputs:
+    - name: turned_image
+      kind: image
+      description: "source_image seen from the requested camera position; same aspect ratio as the source."
+      node_id: "30"
+      role: primary
+customNodes:
+  - name: Comfyui-QwenEditUtils
+    repository: https://github.com/lrzjason/Comfyui-QwenEditUtils.git
+    commitHash: cdd4d028c6491d27a40092d7795158668cec9189
+
+context: >
+  Use for: a known camera move of a place or object of at most 90° (a quarter view, a side view,
+  higher / lower / closer / wider) from one picture.
+  Not for: reverse views or the other side of a property (180° - invent too much; use a sibling
+  location), free-text angles (use flux2_reference_compose), people-centred edits, NSFW content.
+
+  Camera turn (capability camera-turn): Qwen-Image-Edit 2511 + fal's Multiple-Angles LoRA (0.9)
+  re-renders the source from one of 96 trained camera poses. The prompt MUST use the trained
+  grammar '<sks> <azimuth> <elevation> <distance>' (see prompt_positive); free text is not
+  understood as a camera move. The LoRA was trained on Gaussian-splat ORBITS around a subject, so
+  on a place the result is a judgement call, not a calibrated angle. A/B 2026-10-26 (portrait
+  backyard terrace, pool along the right edge, 4 seeds each): 'right side view' put the pool
+  straight ahead 4/4 (paving, coping and water kept; the house left the frame as it should, the
+  boundary across the pool - hedge, neighbouring houses - is invented); 'front-right quarter view'
+  (45°) gave nearly the same frame, and chaining it twice changed little - angles are NOT precise;
+  'left side view' ORBITED instead (the pool seen from an invented lawn beyond the hedge). Use it
+  for "turn to face what lies to the right"; a turn the picture gives no hint of is invented.
+  'wide shot' still frames close (the water fills the lower half).
+  The output keeps the source's aspect ratio (longest_edge sets the size). Validated on
+  photoreal places only (styles: [photoreal]). Steps 8 / cfg 1 are tuned for the Lightning 8-step
+  schedule; vary the seed for alternatives.
+
+models:
+  - name: qwen_image_edit_2511_q4_k_s
+    type: unet
+    files:
+      - url: https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/main/qwen-image-edit-2511-Q4_K_S.gguf
+        filename: qwen-image-edit-2511-Q4_K_S.gguf
+        sha256: df952ef0d2b46463bd95d9afbb78e045ec5412316f453a7ad5a3d7bcbb111b72
+
+  - name: qwen_image_vae
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors
+        filename: qwen_image_vae.safetensors
+        sha256: a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f
+
+  - name: qwen_2.5_vl_7b_fp8_scaled
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors
+        filename: qwen_2.5_vl_7b_fp8_scaled.safetensors
+        sha256: cb5636d852a0ea6a9075ab1bef496c0db7aef13c02350571e388aea959c5c0b4
+
+  - name: qwen_image_edit_2511_lightning_8steps
+    type: lora
+    files:
+      - url: https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/main/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors
+        filename: Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors
+        sha256: a9e81a58a78f260f67b337a6f615e8fa4cd3bc79847c77b7d61a581b789b1ba8
+
+  - name: qwen_image_edit_2511_multiple_angles
+    type: lora
+    files:
+      - url: https://huggingface.co/fal/Qwen-Image-Edit-2511-Multiple-Angles-LoRA/resolve/main/qwen-image-edit-2511-multiple-angles-lora.safetensors
+        filename: qwen-image-edit-2511-multiple-angles-lora.safetensors
+        sha256: 42426ded4e25fd22879d9e198b857556445ef4ca56e8da3246d0345155bb6765
