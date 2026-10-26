@@ -160,6 +160,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   refused (rule R16): the renderer copies the previous frame, so it would be the same picture.
   Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
   state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
+- A `continue` shot that keeps an outfit whose garments the previous shot removed (`Wardrobe: … removed:`) restates a `Wardrobe:` entry for that character (the same removal, or what is worn again) — otherwise refused (rule R17): the renderer would re-dress the person.
 - `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
   SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
