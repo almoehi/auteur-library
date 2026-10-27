@@ -13,7 +13,7 @@
  * WorkflowAgent's RPC surface does not expose the bound ComfyUI prompt, so the appended slot
  * shape itself is covered by the harness unit tests (bindWorkflow()/appendLoraSlot()).
  *
- * Cost: REAL GPU (Modal/Beam/RunPod per COMPUTE_BACKEND, a100, two short renders + ~38 GB first-run model download) and S3.
+ * Cost: REAL GPU (Modal/Beam/RunPod per COMPUTE_BACKEND, b200, two short renders + ~38 GB first-run model download) and S3.
  * The script tears the endpoint down in `finally`; still verify no orphaned provider resources
  * afterwards (root CLAUDE.md "cloud resources").
  *
@@ -32,7 +32,7 @@
 // follows from it). `golem repl --script-file` runs one self-contained file and the fat image
 // mounts only workflows/, so they cannot share a module - keep both copies in sync.
 const WF_NAME = "h3_clip_continuation";
-const GPU_TYPE = "a100"; // 40 GB VRAM minimum; a100 is the smallest card in gpu_types
+const GPU_TYPE = "b200"; // the bundle is pinned to B200 (gpu_types: [b200])
 const TIMEOUT_SEC = 7200;
 const PROVISION_TIMEOUT_MS = 60 * 60 * 1000; // ~38 GB models on first run
 const RENDER_TIMEOUT_MS = 45 * 60 * 1000;
