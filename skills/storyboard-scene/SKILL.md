@@ -165,7 +165,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   refused (rule R16): the renderer copies the previous frame, so it would be the same picture.
   Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
   state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
-- A `continue` shot that keeps an outfit whose garments the previous shot removed (`Wardrobe: … removed:`) restates a `Wardrobe:` entry for that character (the same removal, or what is worn again) — otherwise refused (rule R17): the renderer would re-dress the person.
+- A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. This includes the viewer's own `partly:` state (the waistband of their own shorts still lowered) whenever their extent shows their trunk (`lower body` / `upper body`); a `limbs` viewer has no Wardrobe at all.
 - A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the pool).
 - `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
@@ -267,20 +267,43 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     `Wardrobe:` entry (rule R14) and no garment, torso or lap wording anywhere in `Pose:` / `Frame:`:
     "grey shorts lowered" next to `limbs: hands` makes every take show the abdomen and lap. If the
     garment state matters, widen the extent (`lower body`) so the frame shows it.
-- `Wardrobe:` = partial undress of an OUTFIT look, `<characterKey> (wearing: <garment>, …; removed:
-  <garment>, …)`, `;` between characters: the `Outfits:` pair keeps the outfit key while ANY of its garments is still on
-  (the server keeps the outfit picture and states what is worn in words, "wears only ..."), e.g. `Outfits: character_sister:outfit_sister_bikini`
-  + `Wardrobe: character_sister (wearing: bikini bottom; removed: bikini top)`. `<key>:nude` only when
-  nothing is worn (a Wardrobe entry on a `:nude` or `:none` look, or with an empty list, is refused).
-  Each `wearing:` / `removed:` item is a plain garment NOUN, items separated by commas (`removed:
-  bikini top, cardigan`) — never a description: a comma splits the list, so "grey shorts, lowered to
-  mid-thigh" is two garments. Write `removed: grey shorts` and put where it is now in `Pose:` / `Frame:`.
-  A change that lasts into the next beats is a new look in the scene list instead.
+- `Wardrobe:` = partial undress of an OUTFIT look, `<characterKey> (wearing: <garment>, …; partly:
+  <garment> (<end state>), …; removed: <garment>, …)`, `;` between characters: the `Outfits:` pair keeps
+  the outfit key while ANY of its garments is still on (the server keeps the outfit picture and states
+  what is worn in words, "wears only ..."). `<key>:nude` only when nothing is worn (a Wardrobe entry on a
+  `:nude` or `:none` look is refused). Every garment of the look that changed goes in exactly ONE list:
+  - `removed:` — fully OFF the body. It may lie or be held elsewhere in the frame ("the cardigan on the
+    paving" in `Pose:` / `Frame:`), but it is never described as worn anywhere in the shot.
+  - `partly:` — still ON the body but displaced or open: lowered, pulled up, pushed up, unbuttoned,
+    unzipped, a strap off one shoulder. Write the plain garment noun, then its END state in parentheses:
+    `partly: grey shorts (lowered to mid-thigh)`. The state is where the garment is NOW (a still), never
+    the motion ("being pulled down", "then kicked off"), at most 60 characters; do not repeat it in
+    `Pose:`. A partly garment counts as worn: the server says "wears only … grey shorts (lowered to
+    mid-thigh)" and the judge checks that exact state.
+  - a NEW OUTFIT LOOK in the scene list instead, when the state is the designed look for several beats
+    or scenes (an open shirt worn all evening) or a garment is added or swapped.
+  `wearing:` lists what is worn as designed. Items are separated by commas outside the parentheses (a
+  comma inside a state is fine); each item is a garment, never a state: `removed: grey shorts, lowered
+  to mid-thigh` is refused — that is `partly: grey shorts (lowered to mid-thigh)`. `State:` is the BODY
+  (wet hair, sweaty), never garments.
+  Extent: the person's `Visible:` extent must show where a `partly:` garment is worn (rule R19): partly
+  shorts need `lower body` or wider, a partly top `upper body`. For the POV viewer, `lower body` shows
+  their own shorts and waistband (not their shirt); a `limbs` viewer has no `Wardrobe:` at all (R14).
+  Examples:
+  - POV, the viewer's own shorts lowered: `POV: character_husband (seated)`, `Visible: …;
+    character_husband (lower body); nobody else`, `Wardrobe: character_husband (wearing: white linen
+    shirt; partly: grey shorts (lowered to mid-thigh))`.
+  - Top off, cardigan slipped down: `Outfits: character_sister:outfit_sister_bikini` + `Wardrobe:
+    character_sister (wearing: bikini bottom; partly: cardigan (off both shoulders, at the elbows);
+    removed: bikini top)`.
+  - Jacket open: `Wardrobe: character_officer (wearing: uniform trousers, boots; partly: uniform jacket
+    (unbuttoned, open))`.
   A keyframe is a still, so an undress is written as its END STATE, never as the motion: "bikini
   top held in her hands at her chest, back bare", not "untying the strings, top slipping down"
-  (the model paints the tied top). In `Action:` / `Pose:` / `Frame:` and the prompt, a removed
+  (the model paints the tied top). In `Action:` / `Pose:` / `Frame:` and the prompt, a REMOVED
   garment is either not mentioned at all or placed where it now lies ("the cardigan on the
-  paving") — "cardigan slipped off her shoulders" summons the cardigan back on.
+  paving") — "cardigan slipped off her shoulders" in `Pose:` summons the cardigan back on; a garment
+  that is still on her arms is `partly: cardigan (off both shoulders, at the elbows)` instead.
 - `State:` = transient, VISIBLE appearance of a person shown as a figure, `<characterKey> (<state>, <state>, …)`,
   `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
   `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
@@ -338,6 +361,8 @@ Re-read the shot silently before every `write_shot` (and every shot again before
     only their limbs per `Visible:`; never "the wicker chair in front of the camera";
   - a garment `removed:` in `Wardrobe:` is described as worn nowhere in the shot;
 - `Wardrobe:` `wearing:` / `removed:` items are plain garment nouns, comma-separated, no descriptions;
+  a garment still on but displaced is `partly: <garment> (<end state>)`, in one list only, its extent
+  shows where it is worn (R19), and a `continue` shot restates it (R17, the viewer's own too);
 - `State:`: every person whose visible state the action changed (wet, sweaty, messy) has it here and
   in every later shot that shows them while it lasts; a `continue` shot restates the previous shot's
   `State:` of everyone it shows (R18), or says what changed (an explicit `dry hair` rather than `(none)`);
@@ -352,7 +377,8 @@ Re-read the shot silently before every `write_shot` (and every shot again before
   rephrased); every action of every beat has a shot;
 - every shot has `Beat:`; every beat has a shot; every beat's `Contact` is on a shot's `Contact:`
   whose touched parts the `Visible:` extents show (the viewer's lap / groin = `lower body`);
-- partial undress of an outfit = the outfit key + `Wardrobe:`; `:nude` only when nothing is worn;
+- partial undress of an outfit = the outfit key + `Wardrobe:` (`removed:` fully off, `partly:` still on
+  but displaced); `:nude` only when nothing is worn;
 - `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
   one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
   or angle (R16);
