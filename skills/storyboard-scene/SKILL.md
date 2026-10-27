@@ -165,7 +165,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
   state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
 - A `continue` shot that keeps an outfit whose garments the previous shot removed (`Wardrobe: … removed:`) restates a `Wardrobe:` entry for that character (the same removal, or what is worn again) — otherwise refused (rule R17): the renderer would re-dress the person.
-- A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, what changed — `dry hair` after toweling — or `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the pool).
+- A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the pool).
 - `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
   SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
@@ -286,9 +286,11 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   the POV owner or a `limbs` person — they are words only). Write it in the shot where the action
   changes such a state (she climbs out of the pool → `State: character_sister (wet hair, wet skin)`) and
   in EVERY later shot of the scene that shows the person while it lasts — a `continue` shot must restate
-  it (rule R18), a `cut` shot later in the same moment repeats it too. When it ends, say so: the new state
-  (`dry hair`) or `(none)` (back to the design's look). The server states it as "must show" and the judge
-  checks it; nothing carries over unless the line says it. A lasting change (a new outfit, a haircut) is
+  it (rule R18); a `cut` shot later in the same moment should repeat it too (not checked — your job).
+  When it ends, say so, preferably as the explicit new state (`dry hair`, `dry skin`): the judge checks
+  a named state best. `(none)` means back to the design's own look (the server then states "no longer:
+  <the previous shot's states>"); write it alone, never mixed with states. The server states each state
+  as "must show" and the judge checks it; nothing carries over unless the line says it. A lasting change (a new outfit, a haircut) is
   a new look in the scene list instead.
 - `Contact:` = every touch the frame shows, `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). Body parts
@@ -337,7 +339,7 @@ Re-read the shot silently before every `write_shot` (and every shot again before
 - `Wardrobe:` `wearing:` / `removed:` items are plain garment nouns, comma-separated, no descriptions;
 - `State:`: every person whose visible state the action changed (wet, sweaty, messy) has it here and
   in every later shot that shows them while it lasts; a `continue` shot restates the previous shot's
-  `State:` of everyone it shows (R18), or says what changed;
+  `State:` of everyone it shows (R18), or says what changed (an explicit `dry hair` rather than `(none)`);
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
 - geometry: everyone in frame is placed in `Blocking:` (spot + relative to the others and the viewer),
   the camera height fits the viewer's posture, everything in one view is visible from the camera's
