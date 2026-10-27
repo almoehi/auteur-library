@@ -33,7 +33,7 @@ url: workflow.json
 workflow_type: ref2va
 model_family: minimaxh3
 render_timeout_sec: 3600  # ~20 min typical H3 clip renders; the default 1800 s is too tight
-gpu_types: [a100, h100, b200]
+gpu_types: [b200] # pinned to B200 (2026-10-26)
 # sage_attention ships "disabled" (node our_sage_kj). The upstream graph's SageAttention patch failed on
 # l40s (sm_89) and h100 (sm_90) with "CUDA error: no kernel image is available" because the
 # SageAttention wheel in the compute image carries sm_80 kernels only. The harness also forces
