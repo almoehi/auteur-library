@@ -165,7 +165,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   refused (rule R16): the renderer copies the previous frame, so it would be the same picture.
   Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
   state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
-- A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. This includes the viewer's own `partly:` state (the waistband of their own shorts still lowered) whenever their extent shows their trunk (`lower body` / `upper body`); a `limbs` viewer has no Wardrobe at all.
+- A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. A `partly:` garment must be restated wherever this shot's extent shows it — the viewer's own too (the waistband of their own shorts still lowered in a `lower body` shot); where the extent does not show it (a close-up above the waist, a `limbs` viewer) leave it out — it is not in frame, and R19 refuses it there.
 - A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the pool).
 - `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
@@ -362,7 +362,7 @@ Re-read the shot silently before every `write_shot` (and every shot again before
   - a garment `removed:` in `Wardrobe:` is described as worn nowhere in the shot;
 - `Wardrobe:` `wearing:` / `removed:` items are plain garment nouns, comma-separated, no descriptions;
   a garment still on but displaced is `partly: <garment> (<end state>)`, in one list only, its extent
-  shows where it is worn (R19), and a `continue` shot restates it (R17, the viewer's own too);
+  shows where it is worn (R19), and a `continue` shot restates it where its extent shows it (R17, the viewer's own too);
 - `State:`: every person whose visible state the action changed (wet, sweaty, messy) has it here and
   in every later shot that shows them while it lasts; a `continue` shot restates the previous shot's
   `State:` of everyone it shows (R18), or says what changed (an explicit `dry hair` rather than `(none)`);
