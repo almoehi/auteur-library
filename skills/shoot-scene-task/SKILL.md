@@ -51,7 +51,7 @@ Coordinator skill: validates prerequisites, reads the scene's storyboard design,
 ### 1b. Reference designs
 
 - Per shot, bind the designs its shotlist block names by KEY (`Location:`, `Characters:`, `Outfits:` = `<characterKey>:<outfitKey>`; the `Outfits:` line is per shot, never apply one scene-level look) via `artifact_index`. Older shotlists with slugs: map via the `scene_list` row (`location_slug`, beat `Location` slugs, per-BEAT `Outfits` `<character>:<look>`; slugs = character-table file stems) to `location_<slug>`, `outfit_<character>_<look>`, `character_<character>` (suffix tolerated).
-- Image per design: the published `sheet.<ext>` first; a design without a sheet gives `full_body_shot.<ext>` (`primary.<ext>` in older designs).
+- Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), else the `sheet.<ext>` - a sheet is a grid of several angles / poses and makes a poor clip reference (same rule as `shoot-clip`). A shot that picks a view (`(view <id>)` on its `Location:` / `Outfits:` / `Characters:` entry) uses that published `view_<id>.<ext>` for that design instead.
 - `<c>:nude` / `<c>:none` -> the character design. Any other look -> its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else the pattern above). A look without an outfit design -> the character design plus the garments described in the prompt; note the gap.
 - Reference = `artifact://<artifact id>/<file>` (real file name from the artifact). Missing designs are not fatal: note and continue without.
 - Per clip order: location, that shot's outfits (character design for `:nude` / `:none`), further character sheets ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). The clip's own frame is the `start_frame`, never a reference.
@@ -146,9 +146,11 @@ prompt:
   duration_seconds: <planned duration>
   start_frame: artifact://<storyboard id>/frame_<M>.<ext>   (exactly this storyboard artifact and frame file)
   prior_clip: artifact://<scene<N>_clip<M-1> id>/<its video file>     (continue only)
-  references: artifact://<location id>/sheet.<ext>, artifact://<outfit id>/sheet.<ext>,
-              artifact://<character id>/sheet.<ext>, …   (sheet first; `full_body_shot.<ext>` for a design
-              without a sheet; omit the line when none were found)
+  references: artifact://<location id>/full_body_shot.<ext>, artifact://<outfit id>/full_body_shot.<ext>, …
+              (Step 1b: ONE image per pictured person - the outfit stands in for the character, the
+              character design only for `:nude` / `:none` or no outfit design; NEVER the `POV:` owner or a
+              `limbs` person, nor their outfit; full-body shot, a chosen `view_<id>`, else the sheet;
+              omit the line when none were found)
   style: <the workspace medium/style line, verbatim>
   negative_prompt: <text>
   loras: <the shot's `LoRAs:` line verbatim, in rank order; "none" when the shot has none - the clip worker keeps the video family and ranks for motion ("Curated LoRAs", Video clips)>
