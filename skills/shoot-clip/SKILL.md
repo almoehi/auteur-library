@@ -12,13 +12,13 @@ agentType: worker
 
 # Shoot Clip — render exactly one clip
 
-One task = one clip = one render. Never render another clip, another take of this clip (except the single retries of section 6), or other shots. Never `create_task`. This skill is the authority for the `continue` mechanics (section 3), which `shoot-continuation` reuses.
+One task = one clip = one render. Never render another clip, another take of this clip (except the single retries of section 7), or other shots. Never `create_task`. This skill is the authority for the `continue` mechanics (section 3), which `shoot-continuation` reuses.
 
 ## 1. Preflight
 
 Task prompt fields:
 - Required: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`), `movement`, `duration_seconds`, `start_frame`, `style`, the canonical output files (`.mp4` and `_prompt.txt`); `continue` also `prior_clip`.
-- Used when present: `action`, `camera`, `references`, `framing_change`, `negative_prompt`, `preferred_workflow`, `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`, `width` / `height`.
+- Used when present: `action`, `camera`, `references`, `framing_change`, `negative_prompt`, `preferred_workflow`, `loras` (the shot's curated LoRAs), `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`, `width` / `height`.
 
 `task_failed(reason)` (render nothing; deterministic causes only) when:
 - a required field is missing (name it);
@@ -48,7 +48,7 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 - Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), else the sheet; a POV owner or anyone seen only by limbs gets no image (see "References by extent").
 - `<c>:nude` / `<c>:none` -> the character design; `<c>:none` with garments in `Pose:` = clothed without an outfit design: keep those garments in the prompt. Any other look -> its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else `outfit_<c>_<look>`, suffix tolerated). No outfit design -> the character design plus the garments in the prompt.
 - Use only what the shot's own `Characters`, `Outfits` (per shot, never a scene-level look), `Location` and `Visible:` lines name. Only characters with a `Visible:` entry get an image; extent `limbs` (e.g. a POV owner's hands) gets no image: words only, never their name ("References by extent" in `workflow-calling-conventions`). A `POV:` line means the camera is that character's eyes: they are "the viewer".
-- Fill labelled image ports in port order, location first, then people ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). Do not type "Picture N is …" lines: pass `image_inputs` (section 3) and the code writes them.
+- Fill labelled image ports in port order, location first, then people ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). Do not type "Picture N is …" lines: pass `image_inputs` (section 5) and the code writes them.
 
 ## 3. Mode `continue` (authority for continuation mechanics)
 
@@ -58,7 +58,11 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 - `framing_change: yes`: add this shot's storyboard frame as an extra reference image (named as the port descriptions do, e.g. "Picture 1 is the target framing") and describe the new framing as a camera move / reframe within the same continuous shot ("the camera pushes in to a close-up of her face as she turns"); subjects, place, lighting, wardrobe stay those of `<Video 1>`.
 - A new framing, subject or insert that is not a reframe is a CUT: it does not belong in `continue`.
 
-## 4. Prepare the prompt
+## 4. LoRAs (motion first)
+
+Pick the clip's LoRAs once, before the prompt (its trigger words go into the writer's `context`), by "Curated LoRAs" -> Video clips in `workflow-calling-conventions`: call `lora_index()` once, start from the task's `loras` (else the `shot_block`'s `LoRAs:` line), keep the chosen workflow's family only, then rank: the shot's act LoRA first (only when `shot_block` has a `Sex act:`), then motion LoRAs for the action and `Movement:`, then the rest of the shot's video-family list. No realism / skin / anatomy / detail / style LoRAs (the keyframe and the workflow's baked-in LoRAs carry looks). Pass the list on EVERY render of this clip (retries included), one per LoRA port in rank order, and name it in the summary.
+
+## 5. Prepare the prompt
 
 Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 
@@ -79,7 +83,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
   - `frame_edits` restated as a constraint: never re-add an element an edit removed ("remove the car" = no car in the clip prompt).
 - Use `negative_prompt` when the workflow has a negative-prompt port.
 
-## 5. Render
+## 6. Render
 
 - Kickoff lists checks gating this clip: call `run_checks` BEFORE the render and fix every listed problem (a rejection after rendering wastes the render; "Checks that gate the task" in `workflow-calling-conventions`).
 - ONE `wf_*` call: frames / clip / references, drafted prompt, planned duration, (continue) `prior_clip_start_time`; `draft` quality unless the task says otherwise; the `.mp4` routed to the canonical path (`output_ports`).
@@ -88,7 +92,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - Error: re-read instructions, fix, retry ONCE with the SAME workflow; failing again -> quote the error in the final reply and end WITHOUT `task_failed` / `task_complete` (render errors may be transient; `task_failed` is for deterministic causes only). A failed render never makes another workflow type acceptable (no text-to-video fallback).
 - Write the canonical `_prompt.txt` from the EXACT prompt passed to the render (continue: plus a line `prior_clip_start_time: <value>`); never reworded.
 
-## 6. Pre-completion audit
+## 7. Pre-completion audit
 
 - Call `render_info({ render_id })` with the returned `renderId` and compare with your call:
   - `cut`: `start_frame` on the start-image port and every intended reference listed (no references although free ports existed = wrong);

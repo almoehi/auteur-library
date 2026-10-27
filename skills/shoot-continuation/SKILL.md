@@ -29,10 +29,11 @@ Required in the task prompt: prior clip `artifact://<artifactId>/<fileName>`, pr
 
 ## 3. Render
 
-First `load_skill('shoot-clip')` and follow its sections 2-5 (mode `continue`) exactly. The prompt continues `<Video 1>` in the same shot; never write "the target video cuts to …" or a new composition.
+First `load_skill('shoot-clip')` and follow its sections 2-6 (mode `continue`) exactly. The prompt continues `<Video 1>` in the same shot; never write "the target video cuts to …" or a new composition.
 
-- Duration: the task's, if given, else the workflow's default (it is the `duration_seconds` of `shoot-clip` sections 4-5).
-- In `shoot-clip` sections 2-5:
+- Duration: the task's, if given, else the workflow's default (it is the `duration_seconds` of `shoot-clip` sections 5-6).
+- In `shoot-clip` sections 2-6:
+  - LoRAs (section 4): start from the prior clip's render LoRAs (its render provenance), else the storyboard shot's `LoRAs:` line, and rank for motion as there;
   - the video-continuation workflow (video input port for the prior clip); none -> `task_failed` naming that;
   - measured predecessor duration and `prior_clip_start_time`;
   - references: as in `shoot-clip` "References" (`artifact_index`; compose intent);

@@ -68,7 +68,7 @@ Coordinator skill: validates prerequisites, reads the scene's storyboard design,
 `read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")` (pass the key, not the UUID). Sections `## <shotId> — <title>` with lines `Action:`, `Camera:`, `Movement:`, `Characters:`, `Outfits:`, `Duration:` (seconds), `Transition:` (`continue — <reason>` | `cut — <reason>`; absent in older storyboards); designs are KEYS.
 
 - Keep each shot's complete block (heading + every line to the next heading) VERBATIM for the clip task, EXCEPT the keyframe-plan lines `Workflow:`, `Refs:`, `Prompt:` that older storyboards may carry — strip those three (keyframe-only): includes `Blocking:`, `Pose:`, `Frame:`, `Visible:`, `POV:` and, in a `contentPolicy.nudity: allowed` workspace, `Sex act:` / `Sex position:`.
-- Extract per shot: id, title, `Action`, `Camera` (keyframe framing), `Movement` (video camera move), `Duration`, `Transition`, characters / outfits keys.
+- Extract per shot: id, title, `Action`, `Camera` (keyframe framing), `Movement` (video camera move), `Duration`, `Transition`, characters / outfits keys, `LoRAs` (the shot's curated list, verbatim in rank order; absent = none).
 - No `Movement:`: take it from the matching beat's `Camera move` in the `scene_list` artifact (`### Scene <n>` Beats table, read once); no beat either: derive it from the action and say so. Never turn a missing movement into "static".
 
 ### 2a-2. Frame edits
@@ -151,6 +151,7 @@ prompt:
               without a sheet; omit the line when none were found)
   style: <the workspace medium/style line, verbatim>
   negative_prompt: <text>
+  loras: <the shot's `LoRAs:` line verbatim, in rank order; "none" when the shot has none - the clip worker keeps the video family and ranks for motion ("Curated LoRAs", Video clips)>
   preferred_workflow: "<wf_ tool name for this mode>"   (a preference; the worker may pick another i2v / i2va by capability, never a text-to-video one)
 
   Output files (canonical — do not rename):
