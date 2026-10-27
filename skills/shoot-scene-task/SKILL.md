@@ -48,14 +48,18 @@ Coordinator skill: validates prerequisites, reads the scene's storyboard design,
 - None exists: "Cannot shoot <scene>: it has no storyboard design yet. Create and finish it in the design studio (Pre-production -> Storyboards) and ask me again."
 - Not approved: "Cannot shoot <scene>: the storyboard design `<key>` is not finished yet. Finish it in the design studio (Pre-production -> Storyboards) and ask me again."
 
-### 1b. Reference designs
+### 1b. Reference designs (only what the start frame cannot hold)
 
-- Per shot, bind the designs its shotlist block names by KEY (`Location:`, `Characters:`, `Outfits:` = `<characterKey>:<outfitKey>`; the `Outfits:` line is per shot, never apply one scene-level look) via `artifact_index`. Older shotlists with slugs: map via the `scene_list` row (`location_slug`, beat `Location` slugs, per-BEAT `Outfits` `<character>:<look>`; slugs = character-table file stems) to `location_<slug>`, `outfit_<character>_<look>`, `character_<character>` (suffix tolerated).
-- Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), else the `sheet.<ext>` - a sheet is a grid of several angles / poses and makes a poor clip reference (same rule as `shoot-clip`). A shot that picks a view (`(view <id>)` on its `Location:` / `Outfits:` / `Characters:` entry) uses that published `view_<id>.<ext>` for that design instead.
-- `<c>:nude` / `<c>:none` -> the character design. Any other look -> its outfit design (key from `design_plan.json` `outfits[]` by character_slug + look_slug when present, else the pattern above). A look without an outfit design -> the character design plus the garments described in the prompt; note the gap.
-- Reference = `artifact://<artifact id>/<file>` (real file name from the artifact). Missing designs are not fatal: note and continue without.
-- Per clip order: location, that shot's outfits (character design for `:nude` / `:none`), further character sheets ("Anchor (Picture 1) by intent", compose intent, in `workflow-calling-conventions`). The clip's own frame is the `start_frame`, never a reference.
-- Words-only people get NO reference, nor does their outfit: the shot's `POV:` owner (the camera is their eyes) and anyone whose `Visible:` extent is `limbs` ("References by extent" in `workflow-calling-conventions`) - a picture of them summons the whole figure.
+The clip starts from its storyboard frame, which already fixes identity, outfit, place, light and composition. A reference is added ONLY for what the frame cannot keep over the clip; by default a clip has NO references (an extra picture fights the frame: an outfit re-dresses a nude person, a sheet adds grid artifacts, a wrong place replaces the scene).
+
+Per shot, from its shotlist block (designs by KEY via `artifact_index`; `Outfits:` per shot, never a scene-level look):
+- A PERSON pictured in the frame gets ONE image only when the motion changes what the frame shows of them: their face turns toward or away from the camera, comes much closer, or they enter / re-enter the frame (Action, Pose, Movement). The image: the outfit design that matches what they wear IN THIS SHOT; for `<c>:nude` / `<c>:none`, or a partly undressed outfit look (`Wardrobe: … removed:`), the CHARACTER design. One image per person, never both.
+- The LOCATION gets an image only when the camera move reveals space the frame does not show (`Movement:` a pan, turn, orbit or travel - not `hold`, not a handheld drift): the published view whose description faces that direction, else none. Never the location of another shot.
+- NEVER a picture of the `POV:` owner or a `limbs` person (words only), nor their outfit ("References by extent" in `workflow-calling-conventions`).
+- `continue` clips: no references (the prior clip and, on a framing change, this shot's frame carry everything) - except a person who enters the frame during the clip.
+- Older shotlists with slugs instead of keys: map via the `scene_list` row (`location_slug`, beat `Location` slugs, per-BEAT `Outfits` `<character>:<look>`) to `location_<slug>`, `outfit_<character>_<look>`, `character_<character>` (suffix tolerated).
+- Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), a chosen `view_<id>.<ext>`, never a `sheet.<ext>` (a grid of angles / poses). Missing designs are not fatal: note and continue without.
+- Reference = `artifact://<artifact id>/<file>` (real file name). Order: location (if any), then people. The clip's own frame is the `start_frame`, never a reference.
 
 ### 1c. Idempotency
 
@@ -146,11 +150,10 @@ prompt:
   duration_seconds: <planned duration>
   start_frame: artifact://<storyboard id>/frame_<M>.<ext>   (exactly this storyboard artifact and frame file)
   prior_clip: artifact://<scene<N>_clip<M-1> id>/<its video file>     (continue only)
-  references: artifact://<location id>/full_body_shot.<ext>, artifact://<outfit id>/full_body_shot.<ext>, …
-              (Step 1b: ONE image per pictured person - the outfit stands in for the character, the
-              character design only for `:nude` / `:none` or no outfit design; NEVER the `POV:` owner or a
-              `limbs` person, nor their outfit; full-body shot, a chosen `view_<id>`, else the sheet;
-              omit the line when none were found)
+  references: <ONLY what Step 1b allows - usually none: then omit this line. Each entry
+              artifact://<design id>/full_body_shot.<ext> (or a chosen view_<id>.<ext>), one per person
+              whose face turns / comes closer / who enters, the location view only for a revealing camera
+              move; never the POV owner, a limbs person, a sheet, or an outfit the shot does not wear>
   style: <the workspace medium/style line, verbatim>
   negative_prompt: <text>
   loras: <the shot's `LoRAs:` line verbatim, in rank order; "none" when the shot has none - the clip worker keeps the video family and ranks for motion ("Curated LoRAs", Video clips)>

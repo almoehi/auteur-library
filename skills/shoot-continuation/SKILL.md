@@ -36,7 +36,7 @@ First `load_skill('shoot-clip')` and follow its sections 2-6 (mode `continue`) e
   - LoRAs (section 4): start from the prior clip's render LoRAs (its render provenance), else the storyboard shot's `LoRAs:` line, and rank for motion as there;
   - the video-continuation workflow (video input port for the prior clip); none -> `task_failed` naming that;
   - measured predecessor duration and `prior_clip_start_time`;
-  - references: as in `shoot-clip` "References" (`artifact_index`; compose intent);
+  - references: none by default (the prior clip carries identity, outfit and place); add a design's `full_body_shot` (never a sheet, never the POV owner) only for what the prior clip does not show and the brief brings in - a person who enters, a place the camera turns to (its view whose description faces that way);
   - a required reference that is unavailable and not derivable from the prior clip: ask the person if your task has a chat (`llm+hitl`), else `task_failed` naming the missing references.
 - Prompt inputs: the brief; the prior clip's measured timing and start offset; reference images and their roles; the continuity requirements of section 2. Instructions go in `instruction` (verbatim only when short, explicit, concrete). Pass `image_inputs` and `verbatim_phrases` (a shot's `Sex act:` / `Sex position:`, dialogue).
 - Load the prompt-writer skill for the workflow's model family (`prompt-writer-<family>`; `draft_prompt` applies it when available). Keep the negative prompt consistent with the prior clip's.
