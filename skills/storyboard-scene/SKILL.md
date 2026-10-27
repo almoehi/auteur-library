@@ -31,7 +31,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   beat, the order, who is in frame); (2) `sandbox_write_file` the HEADER only — the title line and
   the `Format:` line, no shots; (3) `write_shot` ONCE PER SHOT, in order — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
-  `write_shot` checks only that shot (unlinked keys, R1–R16, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R18, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
@@ -165,6 +165,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
   state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
 - A `continue` shot that keeps an outfit whose garments the previous shot removed (`Wardrobe: … removed:`) restates a `Wardrobe:` entry for that character (the same removal, or what is worn again) — otherwise refused (rule R17): the renderer would re-dress the person.
+- A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, what changed — `dry hair` after toweling — or `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the pool).
 - `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
   SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
@@ -270,12 +271,25 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   (the server keeps the outfit picture and states what is worn in words, "wears only ..."), e.g. `Outfits: character_sister:outfit_sister_bikini`
   + `Wardrobe: character_sister (wearing: bikini bottom; removed: bikini top)`. `<key>:nude` only when
   nothing is worn (a Wardrobe entry on a `:nude` or `:none` look, or with an empty list, is refused).
+  Each `wearing:` / `removed:` item is a plain garment NOUN, items separated by commas (`removed:
+  bikini top, cardigan`) — never a description: a comma splits the list, so "grey shorts, lowered to
+  mid-thigh" is two garments. Write `removed: grey shorts` and put where it is now in `Pose:` / `Frame:`.
   A change that lasts into the next beats is a new look in the scene list instead.
   A keyframe is a still, so an undress is written as its END STATE, never as the motion: "bikini
   top held in her hands at her chest, back bare", not "untying the strings, top slipping down"
   (the model paints the tied top). In `Action:` / `Pose:` / `Frame:` and the prompt, a removed
   garment is either not mentioned at all or placed where it now lies ("the cardigan on the
   paving") — "cardigan slipped off her shoulders" summons the cardigan back on.
+- `State:` = transient, VISIBLE appearance of a person shown as a figure, `<characterKey> (<state>, <state>, …)`,
+  `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
+  `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
+  the POV owner or a `limbs` person — they are words only). Write it in the shot where the action
+  changes such a state (she climbs out of the pool → `State: character_sister (wet hair, wet skin)`) and
+  in EVERY later shot of the scene that shows the person while it lasts — a `continue` shot must restate
+  it (rule R18), a `cut` shot later in the same moment repeats it too. When it ends, say so: the new state
+  (`dry hair`) or `(none)` (back to the design's look). The server states it as "must show" and the judge
+  checks it; nothing carries over unless the line says it. A lasting change (a new outfit, a haircut) is
+  a new look in the scene list instead.
 - `Contact:` = every touch the frame shows, `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). Body parts
   (exactly these; singular or `lips` accepted): head, face, mouth, neck, shoulders, chest, breasts,
@@ -320,6 +334,10 @@ Re-read the shot silently before every `write_shot` (and every shot again before
   - the viewer's own seat, chair or lounger is never an object in the frame (the camera sits in it):
     only their limbs per `Visible:`; never "the wicker chair in front of the camera";
   - a garment `removed:` in `Wardrobe:` is described as worn nowhere in the shot;
+- `Wardrobe:` `wearing:` / `removed:` items are plain garment nouns, comma-separated, no descriptions;
+- `State:`: every person whose visible state the action changed (wet, sweaty, messy) has it here and
+  in every later shot that shows them while it lasts; a `continue` shot restates the previous shot's
+  `State:` of everyone it shows (R18), or says what changed;
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
 - geometry: everyone in frame is placed in `Blocking:` (spot + relative to the others and the viewer),
   the camera height fits the viewer's posture, everything in one view is visible from the camera's
@@ -399,7 +417,7 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
 
 The server appends the shot's own `Visible:` (as the exact people count), the viewer's body
 (sex, skin tone, garments), `Blocking:`, `Pose:`, each figure's facing / motion, the `Wardrobe:`
-state, the `Contact:` points and `Frame:` lines to every prompt, under
+state, the `State:` states, the `Contact:` points and `Frame:` lines to every prompt, under
 `Frame requirements (authoritative - they override anything above):`. So the prompt is the scene
 in your words: never repeat those lines and never contradict them. State NO people count in the
 prompt ("exactly two people", "three of them", "alone") — the server states the one count; a count
