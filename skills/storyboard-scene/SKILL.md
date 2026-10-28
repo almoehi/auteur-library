@@ -27,16 +27,19 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Never call a `wf_*` tool for a shot take (`take_<shotId>-…`) — it is refused. The only way to get
   shot takes is `draft_storyboard`.
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
-- Write `shotlist.md` in this order, nothing else: (1) plan ALL shots silently first (an id per
-  beat, the order, who is in frame); (2) `sandbox_write_file` the HEADER only — the title line and
-  the `Format:` line, no shots; (3) `write_shot` ONCE PER SHOT, in order — `text` is that shot's
+- Write `shotlist.md` in this order, nothing else: (1) a short beat → shot-id map only (one line
+  per shot: id, beat, place, who is in frame) — never validate every shot in your reasoning first;
+  (2) `sandbox_write_file` the HEADER only — the title line and the `Format:` line, no shots;
+  (3) `write_shot` ONCE PER SHOT, in order, about 3 shots per reply — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
   `write_shot` checks only that shot (unlinked keys, R1–R20, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
-  shot-number order, whatever order they are accepted in, so never reorder it yourself. Send at
-  most 3 shots per reply (long replies time out). Beat coverage and the other
+  shot-number order, whatever order they are accepted in, so never reorder it yourself. Let
+  `write_shot` do the validating: it checks the shot and refuses with the exact fix, so fix a
+  refusal from its message instead of pre-checking every rule in your reasoning (long replies
+  time out). Send at most 3 shots per reply. Beat coverage and the other
   whole-scene checks run when you call `draft_storyboard`; its refusal names the shots to add or
   fix — send those with `write_shot` and call it again.
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
@@ -377,9 +380,12 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `workflow-calling-conventions` ("Explicit acts and positions"). If the catalog tags LoRAs with `sexActs` /
   `sexPositions`, the server adds a matching tagged LoRA when none of your listed ones covers the shot's act.
 
-### Self-check before each shot
+### Writing rules per shot
 
-Re-read the shot silently before every `write_shot` (and every shot again before `draft_storyboard`):
+Write each shot to these rules as you write it — do not re-check every shot against them in your
+reasoning: `write_shot` validates the shot (R1–R20, keys, unreadable lines) and refuses with the
+exact fix, `run_checks` and `draft_storyboard` judge the whole scene. Fix what a refusal names and
+send that shot again:
 - camera's eye — what the lens sees from the viewer's spot and facing in `Blocking:`:
   - everything `Frame:` puts in the background lies IN FRONT of the camera; a thing the viewer sits
     beside or has their back to (the doors behind their chair) cannot be in the background;
