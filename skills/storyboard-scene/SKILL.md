@@ -124,8 +124,8 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `from her left side` / `from his right side` | `three-quarter` (e.g. `three-quarter angle from
   her left side`) | `over the shoulder` | `low angle` (also `slightly low`) | `high angle` (also
   `slightly high`) | `top-down` | `dutch angle` | `eye level` | `POV`. They become checked items of
-  every take: the direction words a decisive camera-direction item, the height words a
-  camera-height item — a take shot from another side fails.
+  every take: the direction words a camera-direction item, the height words a camera-height item —
+  a take shot from another side fails it.
 - `Action:` = the ONE instant as a state, with participles: "Wife, standing, presses …";
   "Wife mid-stride toward the table, reaching for her laptop".
   - The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows (`→`, `->`)
@@ -434,7 +434,7 @@ EVERY shot of `shotlist.md`. Per shot (the example shot s3-01 above):
 { "shot": "s3-01",
   "entities": [
     { "key": "character_wife", "kind": "person", "region": { "third": "centre", "depth": "background" },
-      "facing": "camera", "support": "chair", "contact_with": ["laptop"] },
+      "facing": "camera", "posture": "seated", "support": "chair", "contact_with": ["laptop"] },
     { "key": "character_husband", "kind": "person", "region": { "third": "centre", "depth": "frame-edge" },
       "facing": "away", "limbs": "forearms and hands" },
     { "kind": "object", "count": 1, "region": { "third": "centre", "depth": "midground" }, "facing": "camera" } ],
@@ -464,8 +464,11 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   figure whose chest is turned to the lens is `camera`.
 - `motion` = where a moving figure is heading in this instant ("walking toward the doors"); omit
   for a still figure. The server adds it to the figure's facing line.
+- `posture` = a person's body posture from `Pose:`: `standing` | `seated` | `kneeling` | `lying`.
+  Set it for every person shown as a figure: the framing check judges a frame too wide by the cut-off
+  body (ankles in a medium full shot) only for standing people.
 - `support` = what they sit, stand or lie on, or are in, when it matters — name the container:
-  "in the pool basin", "on the white sun lounger" (it is a checked item of every take).
+  "in the pool basin", "on the white sun lounger" (the take check holds every figure to it).
   `contact_with` = who or what they touch (from `Blocking:`), only when there is contact.
 - The POV owner (`POV:`) is the camera. When their limbs are in frame (they are in `Characters:`):
   an entity with `region.depth: "frame-edge"` and `limbs` (matching their `Visible:` detail) — never
