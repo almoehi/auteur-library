@@ -205,7 +205,9 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - The exclusion clause states a count (`nobody else`, `no other hands`), never names people to
   exclude: negated names are weak in image models and tend to summon the people they name.
 - Things of the place the frame must NOT show (the pool behind the viewer, the doors) go only on
-  `Out of frame: <thing>, <thing>` — never a person (refused: people are `Visible:` and its count).
+  `Out of frame: <thing>, <thing>` (at most 6 things, each a few words) — never a person: a linked
+  character's key or display name there is refused (people are `Visible:` and its count), and any
+  other person belongs in the exclusion clause, not here.
   Nowhere else: no "no pool visible", "the doors behind the camera" or "out of frame" in `Action:`,
   `Blocking:`, `Pose:`, `Frame:` or the plan prompt — a named thing is painted in. Those lines name
   only what IS in frame (pick a location view whose picture lacks the thing, and say what fills
