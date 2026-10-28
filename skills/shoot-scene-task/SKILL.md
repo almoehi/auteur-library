@@ -195,7 +195,7 @@ Use the identifiers the `create_task` results reported; already-existing clip ta
 
 ### 4c. Reconcile
 
-Creating many tasks in one turn can end early (a timed-out or cut-off turn leaves the tail uncreated): after the last call, `task_index` vs the Step 3b plan: every planned clip key and `assemble_scene<N>` must exist. Create each missing one (one per round), re-check. Only what still fails goes into the reply, with the error.
+Schedule EVERY clip of EVERY requested scene plus each scene's `assemble_scene<N>` in this one run, however many calls that takes (one per round): there is no later turn, and a reply without tool calls ends the run — never end with "continuing to schedule the remaining clips…" or any promise of more work; keep calling `create_task` until the plan is complete, then write Step 5. Creating many tasks in one turn can end early (a timed-out or cut-off turn leaves the tail uncreated): after the last call, `task_index` vs the Step 3b plan: every planned clip key and `assemble_scene<N>` must exist. Create each missing one (one per round), re-check. Only what still fails goes into the reply, with the error.
 
 ## Step 5 — Reply
 

@@ -30,8 +30,11 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
 - Write `shotlist.md` in this order, nothing else: (1) a short beat → shot-id map only (one line
   per shot: id, beat, place, who is in frame) — never validate every shot in your reasoning first;
-  (2) `sandbox_write_file` the HEADER only — the title line and the `Format:` line, no shots;
-  (3) `write_shot` ONCE PER SHOT, in order, about 3 shots per reply — `text` is that shot's
+  (2) `sandbox_write_file` the HEADER only — the title line and the `Format:` line, no shots —
+  ONLY while `shotlist.md` has no shots yet (a retry or a later message never rewrites the file:
+  `read_file` it and continue with the first missing shot; a whole-file write that drops accepted
+  shots is refused);
+  (3) `write_shot` ONCE PER SHOT, in order, about 3 shots per MESSAGE of tool calls — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading — and `plan_shot` for the same shot
   right after its `write_shot` was accepted (one plan per call, see section 3); (4) `draft_storyboard()`
   with NO arguments.
@@ -42,7 +45,10 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   shot-number order, whatever order they are accepted in, so never reorder it yourself. Let
   `write_shot` do the validating: it checks the shot and refuses with the exact fix, so fix a
   refusal from its message instead of pre-checking every rule in your reasoning (long replies
-  time out). Send at most 3 shots per reply. Beat coverage and the other
+  time out). Send at most 3 shots per message. There is NO next turn: a message without tool
+  calls ends the run and the draft fails, so never announce "I will continue with the remaining
+  shots" — keep sending `write_shot` / `plan_shot` messages until `draft_storyboard()` is accepted.
+  Beat coverage and the other
   whole-scene checks run when you call `draft_storyboard`; its refusal names the shots to add,
   fix or plan — send those with `write_shot` / `plan_shot` and call it again (no arguments).
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
@@ -81,7 +87,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 ## 2 Plan — `shotlist.md`
 
 The file is the header below plus one section per shot. Write the header (title + `Format:`) with
-`sandbox_write_file`, then each shot section with `write_shot`, in order (each followed by its `plan_shot`).
+`sandbox_write_file` (only while the file has no shots yet), then each shot section with `write_shot`, in order (each followed by its `plan_shot`).
 
 ```
 # Scene <n> shot list
