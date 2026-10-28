@@ -44,7 +44,7 @@ A SET = the locations of ONE property (a house with its terrace, garden and driv
 - Group locations by the scene list's `## Places` table: same `set` value = one set. A standalone place is a set of one: no `set_anchor` link, no `connections` needed.
 - Anchor (one per set, STAR topology: members link the anchor, the anchor links nothing, never a chain): the exterior space showing the facade; else the space with the most connections; else the one used in the most scenes.
 - A location is a SPACE a camera stands in, never a surface or feature ("Grey House Wall", "Front Door"): fold such an entry into the space it belongs to (its `connections` and shot framing) and note it under `flagged:`.
-- Per set write ONCE `set_style` (set bible: architecture, materials, palette, era, signature elements; from the screenplay and the anchor's `place`) and copy it VERBATIM onto every member. `set` = the property's display name, identical on every member.
+- Per set write ONCE `set_style` (set bible: architecture, materials, palette, era, signature elements; from the screenplay and the anchor's `place`) on the anchor; `write_design` copies it (and `set`) verbatim onto every member that omits them, and refuses a member whose text differs. `set` = the property's display name, identical on every member.
 - Per location `connections`: the Places row's facts with design KEYS ("glass doors in the back wall open onto location_backyard_pool_terrace; pool beyond them"). Both sides state the link.
 
 ## Phase 0 — Preflight
@@ -72,7 +72,7 @@ Build every entry with its FINAL key; nothing is decided later.
    - `locations`: ONE per distinct `location_slug` over scene rows AND all Beats `Location` cells (including slugs seen once); never two for one slug.
      - Per scene, places ordered: row slug first, then beat-`Location` slugs in beat order, no duplicates. A location's `scenes` includes every scene whose beats use it.
      - Display name: the row's `Location` text for a row slug, else the slug's words in Title Case.
-     - Group into sets ("Sets"): every location of a set carries the `set` attribute; a member links its anchor (`set_anchor`), the anchor links nothing.
+     - Group into sets ("Sets"): the anchor carries `set` and `set_style` (required on a location of a set) and links nothing; a member links its anchor (`set_anchor`) and may omit `set` / `set_style` in its `write_design` call - they are copied from the anchor, so every member ends up with the same text.
    - `distinct_place: true` on a location whose shorter `key_slug` has at least two `_` words, all contained in another location's slug (`harbor_pier` / `harbor_pier_cafe`; one-word slugs never). No other entry has it.
    - `outfits`: per "Characters and outfits". Every outfit carries `character_slug` and `look_slug` (the tracker row) and the link `{ "role": "character", "key": "character_<character_slug>" }`.
    - `storyboards`: one per scene (step 5).
