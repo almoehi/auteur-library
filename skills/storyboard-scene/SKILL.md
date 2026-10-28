@@ -31,7 +31,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   beat, the order, who is in frame); (2) `sandbox_write_file` the HEADER only — the title line and
   the `Format:` line, no shots; (3) `write_shot` ONCE PER SHOT, in order — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
-  `write_shot` checks only that shot (unlinked keys, R1–R18, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R20, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
@@ -120,6 +120,12 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   the wife's face, eye level`. The server states that size in every render prompt, measures it on
   every take and reframes a subject that came out too small; a `Camera:` line opening with
   anything else ("lounger POV …") gets no framing check.
+- After the framing size, the angle, in these words only: `from behind` | `from the front` |
+  `from her left side` / `from his right side` | `three-quarter` (e.g. `three-quarter angle from
+  her left side`) | `over the shoulder` | `low angle` (also `slightly low`) | `high angle` (also
+  `slightly high`) | `top-down` | `dutch angle` | `eye level` | `POV`. They become checked items of
+  every take: the direction words a decisive camera-direction item, the height words a
+  camera-height item — a take shot from another side fails.
 - `Action:` = the ONE instant as a state, with participles: "Wife, standing, presses …";
   "Wife mid-stride toward the table, reaching for her laptop".
   - The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows (`→`, `->`)
@@ -171,7 +177,9 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
   SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
   `continue` at another place renders without the previous frame: make it a `cut`), e.g.
-  `Transition: continue — same moment, closer on the sister`; `parallel` / `new moment` →
+  `Transition: continue — same moment, closer on the sister` (`closer` needs a TIGHTER framing
+  size in `Camera:` than the previous shot — the same size with "closer" is not closer);
+  `parallel` / `new moment` →
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
@@ -456,8 +464,9 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   figure whose chest is turned to the lens is `camera`.
 - `motion` = where a moving figure is heading in this instant ("walking toward the doors"); omit
   for a still figure. The server adds it to the figure's facing line.
-- `support` = what they sit, stand or lie on, when it matters. `contact_with` = who or what they
-  touch (from `Blocking:`), only when there is contact.
+- `support` = what they sit, stand or lie on, or are in, when it matters — name the container:
+  "in the pool basin", "on the white sun lounger" (it is a checked item of every take).
+  `contact_with` = who or what they touch (from `Blocking:`), only when there is contact.
 - The POV owner (`POV:`) is the camera. When their limbs are in frame (they are in `Characters:`):
   an entity with `region.depth: "frame-edge"` and `limbs` (matching their `Visible:` detail) — never
   a full person. With nothing of them in frame they are not in `Characters:` and get no entity.
@@ -540,6 +549,10 @@ calling until it is accepted: `task_complete` is refused while no plan was accep
   again, or say it failed. Removing or reordering shots is the one case for a complete
   `sandbox_write_file` of the whole file (all checks apply; a refusal keeps your text as a draft
   that `sandbox_edit_file` fixes).
+- When you change a shot's lines with `write_shot` after its takes were rendered, add that shot to
+  your next `draft_storyboard` plan. Its picked take was rendered from the older lines: the studio
+  marks it "Older shot lines", Finish warns about it, and `draft_storyboard` refuses a plan that
+  leaves it out.
 - "Another angle for shot 4" / a different pose: change the shot's lines, send it with
   `write_shot`, call `draft_storyboard` for that shot. Never `wf_*` for a shot take.
 - Who is visible follows the shot lines: change `Visible:` / `Characters:` / `Outfits:` first.
