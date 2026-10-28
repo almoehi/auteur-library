@@ -5,8 +5,8 @@ description: >
   "storyboard_scene_3") — or the task prompt says "storyboard scene 3", "draft the keyframes
   for scene 2", "write the shot list for a scene", or the person asks in the storyboard chat for
   a change ("add a close-up", "swap shots 2 and 3", "another angle for shot 4"). Produces
-  `shotlist.md` (one section per shot, written shot by shot with `write_shot`) and hands a structured plan to `draft_storyboard`; the
-  server then renders, checks and repairs the keyframe takes. Do NOT invoke for rendering
+  `shotlist.md` (one section per shot, written shot by shot with `write_shot`), plans each shot with `plan_shot` and hands the
+  plans over with `draft_storyboard`; the server then renders, checks and repairs the keyframe takes. Do NOT invoke for rendering
   keyframes or video clips yourself, character / outfit / location designs (that is
   design-asset), writing `design.json`, or publishing or finishing a design.
 agentType: worker
@@ -14,7 +14,8 @@ agentType: worker
 
 # Storyboard Scene — plan, hand over
 
-Analyze once, write `shotlist.md` shot by shot with `write_shot`, hand the plan to `draft_storyboard`, complete. The server
+Analyze once, write `shotlist.md` shot by shot with `write_shot`, plan each shot with `plan_shot`, hand the plans over with
+`draft_storyboard()`, complete. The server
 renders several candidates per shot, checks them, repairs what it can and records the best takes;
 you render nothing. Prompt and reference conventions for the entity lines: `workflow-calling-conventions`
 ("References by extent", `load_skill` it).
@@ -31,7 +32,9 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   per shot: id, beat, place, who is in frame) — never validate every shot in your reasoning first;
   (2) `sandbox_write_file` the HEADER only — the title line and the `Format:` line, no shots;
   (3) `write_shot` ONCE PER SHOT, in order, about 3 shots per reply — `text` is that shot's
-  complete section, starting with its `## <shotId> — <title>` heading; (4) `draft_storyboard`.
+  complete section, starting with its `## <shotId> — <title>` heading — and `plan_shot` for the same shot
+  right after its `write_shot` was accepted (one plan per call, see section 3); (4) `draft_storyboard()`
+  with NO arguments.
   `write_shot` checks only that shot (unlinked keys, R1–R20, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
@@ -40,8 +43,8 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   `write_shot` do the validating: it checks the shot and refuses with the exact fix, so fix a
   refusal from its message instead of pre-checking every rule in your reasoning (long replies
   time out). Send at most 3 shots per reply. Beat coverage and the other
-  whole-scene checks run when you call `draft_storyboard`; its refusal names the shots to add or
-  fix — send those with `write_shot` and call it again.
+  whole-scene checks run when you call `draft_storyboard`; its refusal names the shots to add,
+  fix or plan — send those with `write_shot` / `plan_shot` and call it again (no arguments).
 - `task_complete` is refused until `draft_storyboard` was accepted; never end a drafting turn
   text-only.
 
@@ -78,7 +81,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 ## 2 Plan — `shotlist.md`
 
 The file is the header below plus one section per shot. Write the header (title + `Format:`) with
-`sandbox_write_file`, then each shot section with `write_shot`, in order.
+`sandbox_write_file`, then each shot section with `write_shot`, in order (each followed by its `plan_shot`).
 
 ```
 # Scene <n> shot list
@@ -430,13 +433,22 @@ send that shot again:
   likewise only as their limbs in words;
 - every beat's `Sex act` / `Sex position` is on the shot(s) that show it (nudity `allowed` only).
 
-## 3 Hand over — `draft_storyboard`
+## 3 Plan each shot, then hand over — `plan_shot`, `draft_storyboard()`
+
+One `plan_shot` call per shot, right after that shot's `write_shot` was accepted (the plan is built
+from the shot's lines): `plan_shot` takes ONE plan - the fields below at the top level - checks it
+alone and stores it; a repeat for the same shot id replaces the stored plan. A refusal lists only that
+shot's problems (an enum field names its allowed values): fix THAT plan and send it again, never
+touch other shots. Never put all shots into one call - a plan for every shot in one reply is too
+long and one mistake forces a rewrite of all of them.
 
 When your tools include `run_checks`, call it once after the last `write_shot` was accepted and
-fix every shot a rejected check names (`write_shot`, then `run_checks` again) BEFORE
-`draft_storyboard`: the server renders as soon as the plan is accepted, so a contradiction found
-later costs a full re-render. Then call `draft_storyboard(shots)`. The first call lists
-EVERY shot of `shotlist.md`. Per shot (the example shot s3-01 above):
+fix every shot a rejected check names (`write_shot`, then `plan_shot` again for it, then
+`run_checks` again) BEFORE `draft_storyboard`: the server renders as soon as the plans are handed
+over, so a contradiction found later costs a full re-render. Then call `draft_storyboard()` with NO
+arguments: it hands over the stored plans. The first call must have a plan for EVERY shot of
+`shotlist.md` (a shot without one is refused by id - plan it and call again). Per shot, the arguments
+of `plan_shot` (the example shot s3-01 above):
 
 ```
 { "shot": "s3-01",
@@ -525,14 +537,16 @@ of your own can only disagree with it.
 - Explicit acts and positions: copy the shot's `Sex act:` / `Sex position:` words (names in
   `workflow-calling-conventions`, "Explicit acts and positions"), only under the nudity policy.
 
-The call returns `accepted: …` or an `error:` listing every problem; nothing was started in the
-error case. Fix the plan — or, when a problem names a shot to add or fix, send that shot with
-`write_shot` first — and call again with the whole plan of the first call. Keep fixing and
-calling until it is accepted: `task_complete` is refused while no plan was accepted.
+`plan_shot` returns `shot <id> planned` or an `error:` for that shot. `draft_storyboard()` returns
+`accepted: …` or an `error:` listing every problem; nothing was started in the error case. Fix the
+plan of each shot it names with `plan_shot` — or, when a problem names a shot to add or fix, send that
+shot with `write_shot` first, then plan it again — and call `draft_storyboard()` again (no arguments;
+the stored plans of the other shots stay). Keep fixing and calling until it is accepted:
+`task_complete` is refused while no plan was accepted.
 
 ## 4 Audit and hand over
 
-- [ ] every shot of `shotlist.md` is in the accepted plan (re-read the file and the plan)
+- [ ] every shot of `shotlist.md` has a `plan_shot` plan and the hand-over was accepted (re-read the file)
 - [ ] ONE moment and ONE framing per shot (no `then` / `after` / `before` / `followed by` /
       `cut to` / arrows, no two successive verbs; every multi-action beat split into one shot per
       action, never rephrased)
@@ -545,9 +559,9 @@ calling until it is accepted: `task_complete` is refused while no plan was accep
 - [ ] `draft_storyboard` was accepted; `design.json` untouched
 - `task_complete(summary="Storyboard scene <n>: <N> shots handed to the server; open: …")` (1–3
   lines). The takes land afterwards; this hands the design to the person, it does not finish it.
-- Retry drafting: keep the existing `shotlist.md`; call `draft_storyboard` for the shots the stop
-  reason names - every shot when no plan was accepted before (the first accepted plan must cover
-  them all) - then `task_complete`.
+- Retry drafting: keep the existing `shotlist.md`; `plan_shot` the shots the stop reason names -
+  every shot when no plan was accepted before (the first accepted hand-over must cover them all) -
+  then `draft_storyboard()`, then `task_complete`.
 
 ## Chat (after hand-over)
 
@@ -555,17 +569,18 @@ calling until it is accepted: `task_complete` is refused while no plan was accep
   missing take was discarded by the person).
 - Shot changes (add, retitle, change lines): `write_shot` for each changed or new shot — the
   same id replaces its section, a new shot gets an id after the highest and lands at the end;
-  `Transition` re-derived for shots whose predecessor changed; then `draft_storyboard` with ONLY
-  the changed or new shots. A refused shot is not saved: fix what the refusal names and send it
+  `Transition` re-derived for shots whose predecessor changed; then `plan_shot` for each changed or
+  new shot and `draft_storyboard()` (no arguments - it hands over only the shots planned since the last
+  hand-over). A refused shot is not saved: fix what the refusal names and send it
   again, or say it failed. Removing or reordering shots is the one case for a complete
   `sandbox_write_file` of the whole file (all checks apply; a refusal keeps your text as a draft
   that `sandbox_edit_file` fixes).
-- When you change a shot's lines with `write_shot` after its takes were rendered, add that shot to
-  your next `draft_storyboard` plan. Its picked take was rendered from the older lines: the studio
-  marks it "Older shot lines", Finish warns about it, and `draft_storyboard` refuses a plan that
-  leaves it out.
+- When you change a shot's lines with `write_shot` after its takes were rendered, plan it again
+  with `plan_shot` before your next `draft_storyboard()`. Its picked take was rendered from the older
+  lines: the studio marks it "Older shot lines", Finish warns about it, and `draft_storyboard`
+  refuses a hand-over that leaves it out.
 - "Another angle for shot 4" / a different pose: change the shot's lines, send it with
-  `write_shot`, call `draft_storyboard` for that shot. Never `wf_*` for a shot take.
+  `write_shot`, plan it with `plan_shot`, call `draft_storyboard()`. Never `wf_*` for a shot take.
 - Who is visible follows the shot lines: change `Visible:` / `Characters:` / `Outfits:` first.
 - Reply in one short line naming what THIS turn wrote or handed over, then stop; never claim a
   change you did not make. Never pick, discard or finish — point to the studio.
