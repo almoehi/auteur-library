@@ -440,7 +440,10 @@ from the shot's lines): `plan_shot` takes ONE plan - the fields below at the top
 alone and stores it; a repeat for the same shot id replaces the stored plan. A refusal lists only that
 shot's problems (an enum field names its allowed values): fix THAT plan and send it again, never
 touch other shots. Never put all shots into one call - a plan for every shot in one reply is too
-long and one mistake forces a rewrite of all of them.
+long and one mistake forces a rewrite of all of them. A plan is tied to the shot's lines it was made
+from: when you change a shot with `write_shot` after planning it, plan it again with a CHANGED plan
+(an identical repeat is not stored again) - `draft_storyboard` refuses a shot whose lines changed
+since its plan. A plan of a shot that is no longer in `shotlist.md` is dropped at hand-over.
 
 When your tools include `run_checks`, call it once after the last `write_shot` was accepted and
 fix every shot a rejected check names (`write_shot`, then `plan_shot` again for it, then
