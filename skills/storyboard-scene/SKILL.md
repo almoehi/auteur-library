@@ -32,7 +32,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   per shot: id, beat, place, who is in frame) — never validate every shot in your reasoning first;
   (2) `sandbox_write_file` the HEADER only — the title line and the `Format:` line, no shots —
   ONLY while `shotlist.md` has no shots yet (a retry or a later message never rewrites the file:
-  `read_file` it and continue with the first missing shot; a whole-file write that drops accepted
+  `read_artifact` it and continue with the first missing shot; a whole-file write that drops accepted
   shots is refused);
   (3) `write_shot` ONCE PER SHOT, in order, about 3 shots per MESSAGE of tool calls — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading — and `plan_shot` for the same shot
