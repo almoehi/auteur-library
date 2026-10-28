@@ -72,7 +72,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - Step fails twice -> stop; report which tasks were created (ids from results) and which failed (error text). Never claim a task `create_task` did not confirm.
 - `can_create_tasks: true` ONLY on `plan_designs`; unset on the others.
 - Task prompts below are VERBATIM: copy each fenced block word for word (it is the worker's whole instruction; the worker cannot load this skill). `{workspace.*}` placeholders stay literal (the server substitutes them).
-- Never paraphrase, shorten, reorder or drop a line: a paraphrase once dropped every nudity-conditional rule. Before each 4b/4c call re-read the prompt: it starts with the block's `Inputs:` line, keeps `Workspace content policy (nudity): {workspace.contentPolicy.nudity}` literal, and (4c) contains the `Contact` and `Sex act` / `Sex position` bullets and the nude-from-that-beat-on rule; anything missing → re-copy the block.
+- Never paraphrase, shorten, reorder or drop a line: a paraphrase once dropped every nudity-conditional rule. Before each 4b/4c call re-read the prompt: it starts with the block's `Inputs:` line, keeps `Workspace content policy (nudity): {workspace.contentPolicy.nudity}` literal, and (4c) contains the `Contact` and `Sex act` / `Sex position` bullets and the nude-from-that-beat-on and look-at-that-beat rules; anything missing → re-copy the block.
 
 ### 4a. write_screenplay
 
@@ -198,10 +198,20 @@ Beats section (same file, below the Places table)
 - A beat with a `Sex act` holds only that act (its lead-up — undressing, climbing on, straddling — is an earlier beat, `none`), so the shot that shows the act carries it whole.
 - POV beats: name the POV character in `Blocking` ("POV: <character_slug>"); that character is the camera and shows only their own limbs (hands, forearms, knees, feet), only when in frame, never a full-body figure.
 - Undressing (nudity `allowed`, adult only): the beat where a character undresses already carries `<character_slug>:nude`, and so does EVERY later beat of that character in the scene (until a later beat dresses them); the row's `Outfits` lists the `nude` pair too. Otherwise keep a tracker look.
+- A beat's `Outfits` is the look AT THAT BEAT, never the scene's end state. A character who changes look during the scene (undresses, changes clothes) keeps the look they arrived in in EVERY beat before the beat whose `Action` shows the change; the new look (`nude` included) starts at that beat. The change is never the character's first beat in the scene: at least one beat before it shows them in the earlier look (split the opening action if needed), so the row's `Outfits` union holds BOTH looks and the storyboard gets the earlier outfit's picture. Example:
+
+  | Beat # | Action | Outfits |
+  |---|---|---|
+  | 1.1 | Mira stands at the door in her raincoat | `mira:raincoat` |
+  | 1.2 | Mira lets the raincoat fall to the floor | `mira:nude` |
+  | 1.3 | Mira steps into the shower | `mira:nude` |
+
+  Row `Outfits`: `mira:raincoat; mira:nude`. Wrong: `mira:nude` in 1.1 (she still wears the raincoat), or a scene whose first beat is already the undressing.
+- Self-check before writing: for each character, read that scene's beats in order — the look changes only at the beat whose `Action` changes it, every beat before it keeps the earlier look, and no beat pairs `nude` (or a later look) while its `Action` / `Blocking` still has them wearing the earlier garments ("in her bikini").
 - Garment state: when a beat's action needs a body part the current look covers, the beat's `Action` / `Blocking` names the garment state ("cardigan slipped off her shoulders"); when it lasts into later beats it is its own WARDROBE TRACKER look in this and every later beat's `Outfits`.
 - Downstream use: the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the clip prompts are taken from the beats (`continuous` -> `continue` transition; `parallel` -> cutaway shot at its named place with that place's location design; extra location designs come from the beat `Location` slugs, outfit designs from the rows' `Outfits` union).
 
-Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm every `location_slug` has exactly one Places row with `set`, `space` and `connections` filled, no slug names a surface, every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, and a character stays `nude` after an undressing beat.
+Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm every `location_slug` has exactly one Places row with `set`, `space` and `connections` filled, no slug names a surface, every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, a character keeps the earlier look in every beat before the beat that changes it (the change never their first beat in the scene), and a character stays `nude` after an undressing beat.
 ````
 
 ### 4d. plan_designs
