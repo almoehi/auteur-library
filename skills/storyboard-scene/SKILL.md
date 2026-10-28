@@ -196,16 +196,27 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   frame: `Characters: none`, `Outfits: none`, `Visible: nobody`.
 - The exclusion clause states a count (`nobody else`, `no other hands`), never names people to
   exclude: negated names are weak in image models and tend to summon the people they name.
+- Things of the place the frame must NOT show (the pool behind the viewer, the doors) go only on
+  `Out of frame: <thing>, <thing>` — never a person (refused: people are `Visible:` and its count).
+  Nowhere else: no "no pool visible", "the doors behind the camera" or "out of frame" in `Action:`,
+  `Blocking:`, `Pose:`, `Frame:` or the plan prompt — a named thing is painted in. Those lines name
+  only what IS in frame (pick a location view whose picture lacks the thing, and say what fills
+  that part of the frame).
 - People without a design (extras, a crowd) get no key: they appear in `Action:` / `Frame:` and in
   the exclusion clause (`character_wife (upper body); three diners in the background, nobody else`).
 - `Outfits:` comes from the shot's beat (its opening beat), never the scene row; looks change
   within a scene. Valid pairs: `<characterKey>:<linked outfitKey>` (key from `design_plan.json`
   `outfits[]`, else `outfit_<c>_<look>`), `<characterKey>:nude`, `<characterKey>:none` (no
   outfit design for this look: the character design is the picture; looks: "References by
-  extent" in `workflow-calling-conventions`). A clothed look without a linked outfit design is
-  `:none`: every shot using it states the garments in `Pose:` (from the beat / the wardrobe
-  tracker row; `Pose:` survives into clip tasks), and the plan prompt states them in words;
-  note the missing outfit design in the hand-over summary.
+  extent" in `workflow-calling-conventions`). `:none` is for a character who wears nothing by
+  nature (a creature, an animal). A clothed person whose look has no linked outfit design is a
+  production defect: say so in the hand-over summary, write `:none`, state the garments in
+  `Pose:` (from the beat / the wardrobe tracker row; `Pose:` survives into clip tasks) and in the
+  plan prompt — and garments that come off still go in `Wardrobe:` (`removed:` / `partly:`, allowed
+  on a `:none` look), so they are carried and checked.
+- Partial undress inside an undressing beat: a shot that still shows a garment of the earlier look
+  keeps that OUTFIT key + `Wardrobe:` (`removed:` / `partly:`), even when the beat's Outfits says
+  `nude`; `:nude` starts at the first shot where nothing is worn.
 - `Blocking:` places only people in frame plus a POV owner: "the camera is the viewer's eyes
   (seated); the viewer's forearms and hands enter the lower frame". Never call a POV owner whose
   limbs are in `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
@@ -245,10 +256,16 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     (`on the viewer's lap`); a person without a stated seat gets put wherever the model likes. The write
     is refused when a person of `Characters:` is not named in `Blocking:` (rule R13; the viewer and
     anyone shown only by `limbs` are exempt; a non-viewer `lower body` person must be named).
-  - The camera sits where the viewer is: its height and direction follow the POV owner's posture and
+  - The camera IS the viewer's eyes: its height and direction follow the POV owner's posture and
     spot — a seated or lying viewer has an eye-level of a seated / lying person, never "water level" or
-    "from the floor" unless they are there. State `Camera:` and `Blocking:` from the same position;
-    a low angle is the viewer lying, a high angle the viewer standing.
+    "from the floor" unless they are there, never "at hip height", "from the side of the lounger" or
+    any position offset from the viewer's head (for that view write a third-person shot with the owner
+    as a figure). State `Camera:` and `Blocking:` from the same position. Angles by posture (rule R20,
+    the write is refused): a lying viewer looks up or along their own body — never `high angle` or
+    `top-down`; seated or kneeling never `top-down`; a slight high or low angle from a seat is fine.
+  - The viewer's `Visible:` detail states exactly what `Blocking:` / `Pose:` show of them
+    (`lower body` for "hands on the viewer's own thighs", `limbs: forearms and hands` when only the
+    hands are in frame): the render and the judge read the viewer's body from `Visible:` alone.
   - What the shot shows must be visible from that camera position in the place: before combining two
     things in one view (a hedge and a pool, a door and a window) check the place design — if they lie on
     opposite sides of the viewer, they are two shots, not one frame.
@@ -258,7 +275,9 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   - A `continue` shot keeps everyone's spot and posture, the viewer's included, from the previous shot
     — copy the previous `Blocking:` positions and change only what the new `Action:` moves, and say
     so in `Action:` ("the sister has risen"). A person who moved in the story but not in the lines
-    teleports in the render.
+    teleports in the render. A change of the viewer's posture is stated in `Action:` too ("the viewer
+    now lies back on the lounger") with the new `POV:` posture: the renderer then drops the previous
+    frame (its viewpoint is the old eyes) and carries the state in words.
   - `Visible:` extents must fit `Camera:`'s framing size: `full figure` needs `full` / `wide`,
     `upper body` needs `medium close-up` or wider; a `close-up` is `face` (or hands / feet as `limbs`).
     Writing "medium, head to waist" with `full figure` draws full figures (rule R12 refuses it). Pick
@@ -271,9 +290,9 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   <garment> (<end state>), …; removed: <garment>, …)`, `;` between characters: the `Outfits:` pair keeps
   the outfit key while ANY of its garments is still on (the server keeps the outfit picture and states
   what is worn in words, "wears only ..."). `<key>:nude` only when nothing is worn (a Wardrobe entry on a
-  `:nude` or `:none` look is refused). Every garment of the look that changed goes in exactly ONE list:
-  - `removed:` — fully OFF the body. It may lie or be held elsewhere in the frame ("the cardigan on the
-    paving" in `Pose:` / `Frame:`), but it is never described as worn anywhere in the shot.
+  `:nude` look is refused; on a `:none` look it is allowed — the garments in words only). Every garment of the look that changed goes in exactly ONE list:
+  - `removed:` — fully OFF the body. Leave it unmentioned everywhere else in the shot and the prompt —
+    never "held", never "in her hands", never "lying beside her": a named garment is painted back on.
   - `partly:` — still ON the body but displaced or open: lowered, pulled up, pushed up, unbuttoned,
     unzipped, a strap off one shoulder. Write the plain garment noun, then its END state in parentheses:
     `partly: grey shorts (lowered to mid-thigh)`. The state is where the garment is NOW (a still), never
@@ -298,12 +317,12 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     removed: bikini top)`.
   - Jacket open: `Wardrobe: character_officer (wearing: uniform trousers, boots; partly: uniform jacket
     (unbuttoned, open))`.
-  A keyframe is a still, so an undress is written as its END STATE, never as the motion: "bikini
-  top held in her hands at her chest, back bare", not "untying the strings, top slipping down"
-  (the model paints the tied top). In `Action:` / `Pose:` / `Frame:` and the prompt, a REMOVED
-  garment is either not mentioned at all or placed where it now lies ("the cardigan on the
-  paving") — "cardigan slipped off her shoulders" in `Pose:` summons the cardigan back on; a garment
-  that is still on her arms is `partly: cardigan (off both shoulders, at the elbows)` instead.
+  A keyframe is a still, so an undress is written as its END STATE, never as the motion: "back
+  bare, both hands at her waist", not "untying the strings, top slipping down" (the model paints
+  the tied top). In `Action:` / `Pose:` / `Frame:` and the prompt, a REMOVED garment is not
+  mentioned at all — "bikini top held in her hands" or "cardigan slipped off her shoulders" summons
+  it back on (live s3-02: 10 of 10 takes kept the held top on); a garment that is still on her arms
+  is `partly: cardigan (off both shoulders, at the elbows)` instead.
 - `State:` = transient, VISIBLE appearance of a person shown as a figure, `<characterKey> (<state>, <state>, …)`,
   `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
   `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
@@ -359,7 +378,9 @@ Re-read the shot silently before every `write_shot` (and every shot again before
     a side it is visible from;
   - the viewer's own seat, chair or lounger is never an object in the frame (the camera sits in it):
     only their limbs per `Visible:`; never "the wicker chair in front of the camera";
-  - a garment `removed:` in `Wardrobe:` is described as worn nowhere in the shot;
+  - a garment `removed:` in `Wardrobe:` is not mentioned anywhere in the shot (not held, not nearby);
+  - nothing that must stay out of frame is named in `Action:` / `Blocking:` / `Pose:` / `Frame:` (not
+    negated, not "behind the camera"): it is on `Out of frame:` only, and never a person;
 - `Wardrobe:` `wearing:` / `removed:` items are plain garment nouns, comma-separated, no descriptions;
   a garment still on but displaced is `partly: <garment> (<end state>)`, in one list only, its extent
   shows where it is worn (R19), and a `continue` shot restates it where its extent shows it (R17, the viewer's own too);
@@ -368,7 +389,9 @@ Re-read the shot silently before every `write_shot` (and every shot again before
   `State:` of everyone it shows (R18), or says what changed (an explicit `dry hair` rather than `(none)`);
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
 - geometry: everyone in frame is placed in `Blocking:` (spot + relative to the others and the viewer),
-  the camera height fits the viewer's posture, everything in one view is visible from the camera's
+  the camera is at the viewer's eyes and its angle fits their posture (R20: lying never high angle /
+  top-down, seated / kneeling never top-down), the viewer's `Visible:` detail is what `Blocking:` /
+  `Pose:` show of them, a posture change is said in `Action:`, everything in one view is visible from the camera's
   spot, the `Contact:` is within reach, a `continue` shot keeps the previous positions, every
   `Visible:` extent fits the `Camera:` size, and a limbs-only person has no `Wardrobe:` / torso wording;
   a POV owner in frame is `limbs` / `lower body` (lying: also `upper body`);
@@ -378,7 +401,9 @@ Re-read the shot silently before every `write_shot` (and every shot again before
 - every shot has `Beat:`; every beat has a shot; every beat's `Contact` is on a shot's `Contact:`
   whose touched parts the `Visible:` extents show (the viewer's lap / groin = `lower body`);
 - partial undress of an outfit = the outfit key + `Wardrobe:` (`removed:` fully off, `partly:` still on
-  but displaced); `:nude` only when nothing is worn;
+  but displaced) — also inside an undressing beat while a garment is still shown; `:nude` only when
+  nothing is worn; `:none` on a clothed person is a defect named in the summary, its garments that
+  come off still in `Wardrobe:`;
 - `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
   one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
   or angle (R16);
@@ -465,6 +490,9 @@ of your own can only disagree with it.
 - Add the shot's camera and framing, the place in words and the style line of the production
   (the medium / style of the story is kept verbatim).
 - No speech bubbles, captions, signs or lettering unless the shot asks for them.
+- Never name what must not be in the picture — not negated ("no pool"), not "behind the camera",
+  not "out of frame": the shot's `Out of frame:` line is the only place, and the server keeps it out
+  of the prompt. Describe what fills that part of the frame instead.
 - Words-only people — the POV owner and anyone seen only by `limbs` — are never a
   placeholder or a name: "the viewer's own forearms and hands at the lower edge" (a `[[key]]` of
   theirs is refused).
