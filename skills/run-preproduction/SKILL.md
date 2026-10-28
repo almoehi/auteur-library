@@ -230,7 +230,7 @@ Load and use skill: plan-designs
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md, with its Places table), artifact `screenplay` (screenplay.md).
 Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, set anchors, other locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` derived from the story below, default `landscape`; see the skill). Story (medium / format): {workspace.story.plot}
 Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design was created with `create_design` and the `artifact_index` audit passed; if `task_complete` is refused because no tasks were created, continue creating designs, and report only counts the tool results show.
-Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json`.
+Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list) and `design_plan.json` (one entry per `write_design` call, never one whole-file write).
 ```
 
 ## 5. Verify and reply

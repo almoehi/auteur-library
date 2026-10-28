@@ -12,9 +12,9 @@ agentType: worker
 
 # Plan Designs
 
-Plain LLM planning worker: read text, write `design_plan.json`, call `create_design`.
+Plain LLM planning worker: read text, write `design_plan.json` one entry per `write_design` call, call `create_design`.
 
-- Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file`, `create_design`, `task_complete`, `task_failed`.
+- Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file` (only `scene_list.md`), `write_design`, `create_design`, `task_complete`, `task_failed`.
 - `create_design` needs `can_create_tasks: true` on your task; use it only for the plan's designs. Never pass `policies` to it.
 - Output files (plain text only, never PDF / DOCX): `scene_list.md` and `design_plan.json`.
 - Never render, draft or write any design file (`design.json` included); design workers (`design-asset`, `storyboard-scene`) continue each design.
@@ -65,14 +65,16 @@ A SET = the locations of ONE property (a house with its terrace, garden and driv
 
 Build every entry with its FINAL key; nothing is decided later.
 
+0. Keep the reply short: first state the plan as a plain list of design keys, one line per key, in creation order (characters, set anchors, other locations, outfits, storyboards) - no long deliberation, no draft JSON in the reply. Then write the entries (step 7).
+
 1. Entries:
    - `characters`: every `character_<slug>.md` stem; look per "Characters and outfits".
    - `locations`: ONE per distinct `location_slug` over scene rows AND all Beats `Location` cells (including slugs seen once); never two for one slug.
      - Per scene, places ordered: row slug first, then beat-`Location` slugs in beat order, no duplicates. A location's `scenes` includes every scene whose beats use it.
      - Display name: the row's `Location` text for a row slug, else the slug's words in Title Case.
-     - Group into sets ("Sets"); each entry carries `set`, `anchor` (the anchor's key, absent on the anchor itself) in the plan.
+     - Group into sets ("Sets"): every location of a set carries the `set` attribute; a member links its anchor (`set_anchor`), the anchor links nothing.
    - `distinct_place: true` on a location whose shorter `key_slug` has at least two `_` words, all contained in another location's slug (`harbor_pier` / `harbor_pier_cafe`; one-word slugs never). No other entry has it.
-   - `outfits`: per "Characters and outfits". Every outfit's `character_slug` exists in `characters`.
+   - `outfits`: per "Characters and outfits". Every outfit carries `character_slug` and `look_slug` (the tracker row) and the link `{ "role": "character", "key": "character_<character_slug>" }`.
    - `storyboards`: one per scene (step 5).
 2. Slugs and keys:
    - slug = lowercase ASCII, non-alphanumerics to `_`, repeats collapsed, `_` trimmed; matches `[a-z0-9]+(_[a-z0-9]+)*`.
@@ -98,37 +100,39 @@ Build every entry with its FINAL key; nothing is decided later.
      - location: camera DIRECTIONS the beats look toward that a typical establishing view of the place does not show ("facing the pool", "looking back at the villa"); a direction is a short phrase naming what the camera faces. State the TURN in the entry whenever you know it: `<phrase> (left 45°)` / `(left 90°)` / `(right 45°)` / `(right 90°)`, e.g. "facing the pool (right 90°)" (the pool lies a quarter turn to the right of the main picture; the web studio and `design-asset` read the direction from those words, never from the phrase; the view id is the whole entry as a slug). Only turns of at most 90° from the main picture (left / right / a quarter turn): the view tool turns the camera up to 90° reliably. The opposite direction ("reverse", 180°, "the other side of the property") is NOT a view: plan it as its own sibling location of the same set (`set_anchor` link, own `connections`).
      - character, outfit: POSES and EXPRESSIONS the beats need ("kneeling", "lying on the lounger", "laughing", "eyes closed"); one pose or expression per entry. A pose belongs to the character; put it on the outfit only when it shows the garment in a way the beats need (e.g. "sitting, coat open").
 4. LoRAs: assign none. Never write `loras` or tag-based LoRA lists into the plan or `create_design` calls; the design's agent and the storyboard's shot curation pick LoRAs from the catalog's names and descriptions ("Curated LoRAs" in `workflow-calling-conventions`).
-5. Storyboards: per scene key `storyboard_scene_<n>` with:
+5. Storyboards: per scene key `storyboard_scene_<n>` (`display_name` "Scene <n>", `key_slug` `scene_<n>`) with attributes `scene` = `<n>`, `notes`, `format`:
    - `notes` = the Summary.
    - `format` `portrait` | `landscape`: from the story / plot (task prompt story line or "Workspace facts"), e.g. a vertical phone film = `portrait`; derive it, never ask; `landscape` if unstated; the SAME value for every scene.
    - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished). Check before creating it: every look worn in ANY beat of the scene — every `<c>:<look>` pair of the row's AND the beats' `Outfits` (not `nude` / `none`), the earlier look of a character who undresses mid-scene included — has its outfit link — links are fixed at creation, and a missing one leaves the storyboard without that outfit's picture. `create_design` refuses a storyboard missing any of the scene's place / character / outfit links and lists the missing ones as `{ role, key }`: copy them into `links` and retry.
-6. `designs`: THE work list — every key in creation order: characters, set anchors, other locations (members), outfits, storyboards. An anchor precedes its members (a member's `set_anchor` link needs it finished first).
-   - Add a `sets` array to the plan: per set `{ "set": <name>, "set_style": <text>, "anchor": <key>, "members": [<keys>] }`.
-7. Write into `/workspace/<your artifact id>/` with `sandbox_write_file`: `scene_list.md` FIRST (character-for-character copy of the `scene_list` artifact; the `design-plan-covers-scenes` check judges all output files), then `design_plan.json`:
+6. `sets` and `designs` (THE work list: every key in creation order - characters, set anchors and standalone places, set members, outfits, storyboards by scene) are filled in by `write_design`; never write them yourself.
+7. Write into `/workspace/<your artifact id>/`: `scene_list.md` FIRST with `sandbox_write_file` (character-for-character copy of the `scene_list` artifact; the `design-plan-covers-scenes` check judges all output files), then `design_plan.json` ONLY with `write_design` - ONE entry per call, a few calls per reply, in creation order (a link must name an entry already written). Never write `design_plan.json` with `sandbox_write_file`.
+   - An entry = the design's `create_design` arguments (`kind`, `display_name`, `key_slug`, `character_type`, `attributes`, `links`, `distinct_place`; no `start`, no `loras`) plus `scenes` and, for an outfit, `character_slug` and `look_slug`.
+   - A set member may omit `set` / `set_style`: they are copied from its anchor (one text per set).
+   - A refusal (`design <key> was NOT saved ...`) lists that entry's problems and their fix: fix exactly those and send that entry again; other entries stay. A wrong entry already written: send it again (same `kind` + `key_slug` replaces it) or `remove: true`.
+   - Success reads `design <key> written (<counts> in design_plan.json)`.
+
+Example calls (one production; a few per reply):
 
 ```json
-{
-  "characters": [ { "display_name": "Mira", "key_slug": "mira", "key": "character_mira", "character_type": "woman",
-      "attributes": [ { "key": "age", "value": "late 20s" }, { "key": "wardrobe", "value": "nude" } ],
-      "scenes": [1, 3] } ],
-  "locations": [ { "display_name": "Harbor", "key_slug": "harbor", "key": "location_harbor",
-      "attributes": [ { "key": "place", "value": "foggy fishing harbor" }, { "key": "space", "value": "exterior" },
-        { "key": "set", "value": "Harbor Quarter" }, { "key": "set_style", "value": "weathered timber, rusted steel, grey-blue palette" },
-        { "key": "connections", "value": "pier steps lead down to location_harbor_pier_cafe" } ], "scenes": [1, 3] },
-    { "display_name": "Harbor Pier Cafe", "key_slug": "harbor_pier_cafe", "key": "location_harbor_pier_cafe",
-      "attributes": [ { "key": "place", "value": "small waterfront cafe" }, { "key": "space", "value": "interior" },
-        { "key": "set", "value": "Harbor Quarter" }, { "key": "set_style", "value": "weathered timber, rusted steel, grey-blue palette" },
-        { "key": "connections", "value": "window wall faces the pier of location_harbor" } ],
-      "links": [ { "role": "set_anchor", "key": "location_harbor" } ], "scenes": [3] } ],
-  "sets": [ { "set": "Harbor Quarter", "set_style": "weathered timber, rusted steel, grey-blue palette",
-      "anchor": "location_harbor", "members": ["location_harbor_pier_cafe"] } ],
-  "outfits": [ { "character_slug": "mira", "look_slug": "raincoat", "key_slug": "mira_raincoat", "key": "outfit_mira_raincoat",
-      "display_name": "Mira - Raincoat", "attributes": [ { "key": "garments", "value": "yellow raincoat" } ], "scenes": [1, 3] } ],
-  "storyboards": [ { "scene": 1, "key_slug": "scene_1", "key": "storyboard_scene_1", "notes": "Mira reaches the harbor.", "format": "landscape",
-      "links": [ { "role": "location", "key": "location_harbor" }, { "role": "character", "key": "character_mira" },
-                 { "role": "outfit", "key": "outfit_mira_raincoat" } ] } ],
-  "designs": [ "character_mira", "location_harbor", "location_harbor_pier_cafe", "outfit_mira_raincoat", "storyboard_scene_1" ]
-}
+[
+  { "kind": "character", "display_name": "Mira", "key_slug": "mira", "character_type": "woman",
+    "attributes": [ { "key": "age", "value": "late 20s" }, { "key": "wardrobe", "value": "nude" } ], "scenes": [1, 3] },
+  { "kind": "location", "display_name": "Harbor", "key_slug": "harbor",
+    "attributes": [ { "key": "place", "value": "foggy fishing harbor" }, { "key": "space", "value": "exterior" },
+      { "key": "set", "value": "Harbor Quarter" }, { "key": "set_style", "value": "weathered timber, rusted steel, grey-blue palette" },
+      { "key": "connections", "value": "pier steps lead down to location_harbor_pier_cafe" } ], "scenes": [1, 3] },
+  { "kind": "location", "display_name": "Harbor Pier Cafe", "key_slug": "harbor_pier_cafe",
+    "attributes": [ { "key": "place", "value": "small waterfront cafe" }, { "key": "space", "value": "interior" },
+      { "key": "connections", "value": "window wall faces the pier of location_harbor" } ],
+    "links": [ { "role": "set_anchor", "key": "location_harbor" } ], "scenes": [3] },
+  { "kind": "outfit", "display_name": "Mira - Raincoat", "key_slug": "mira_raincoat", "character_slug": "mira", "look_slug": "raincoat",
+    "attributes": [ { "key": "garments", "value": "yellow raincoat" } ],
+    "links": [ { "role": "character", "key": "character_mira" } ], "scenes": [1, 3] },
+  { "kind": "storyboard", "display_name": "Scene 1", "key_slug": "scene_1",
+    "attributes": [ { "key": "scene", "value": "1" }, { "key": "notes", "value": "Mira reaches the harbor." }, { "key": "format", "value": "landscape" } ],
+    "links": [ { "role": "location", "key": "location_harbor" }, { "role": "character", "key": "character_mira" },
+               { "role": "outfit", "key": "outfit_mira_raincoat" } ] }
+]
 ```
 
 - The file names are canonical: write exactly these two into the `design_plan` artifact; if the declared files differ, still write them and add `file mismatch: <declared> vs scene_list.md, design_plan.json` to the summary.
@@ -136,13 +140,13 @@ Build every entry with its FINAL key; nothing is decided later.
 
 ## Phase 2 — Create the designs
 
-Walk `designs` in order, one `create_design` per key; arguments copied from the entry. Never re-judge, skip, merge or add entries (an odd-looking entry is created and noted). Skip only keys in `existing` (record them). ONE `create_design` per response, issued after the previous result; NEVER several in one response: later outfits / storyboards link the ACTUAL keys earlier results report (renames, reuses), and an outfit is refused until its character exists. Keep each result's key, `@name` and task id.
+Walk the creation order (the file's `designs` array = your step-0 key list), one `create_design` per key; arguments = the entry as written WITHOUT the plan-only facts `key`, `scenes`, `character_slug`, `look_slug`, plus `start` / `initial_drafts` below. Never re-judge, skip, merge or add entries (an odd-looking entry is created and noted). Skip only keys in `existing` (record them). ONE `create_design` per response, issued after the previous result; NEVER several in one response: later outfits / storyboards link the ACTUAL keys earlier results report (renames, reuses), and an outfit is refused until its character exists. Keep each result's key, `@name` and task id.
 
 - Common: `start: "attributes"`, `initial_drafts: 1`, `display_name`, `key_slug`, `attributes`.
 - character: `{ kind: "character", character_type }` (`character_type` REQUIRED; custom text allowed).
 - location: `{ kind: "location" }` + `distinct_place: true` when the entry has it; a set member also `links: [{ "role": "set_anchor", "key": <anchor's ACTUAL key from the registry> }]`. `create_design` refuses a `set_anchor` that itself has a `set_anchor`, and a `set` differing from the anchor's: fix the plan (star topology, identical `set`), do not drop the link.
 - outfit: `{ kind: "outfit", links: [{ "role": "character", "key": "character_<character_slug>" }] }` (always pass the link; the outfit is drafted as edits of that character's full-body shot).
-- storyboard: `{ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", links }` with attributes `scene` = `<n>`, `notes`, `format`.
+- storyboard: `{ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", links }` with the entry's attributes `scene`, `notes`, `format`.
 - `start: "attributes"` needs a non-sheet text-to-image workflow in the workspace (outfits: an image-to-image one).
 - Success reads `Design created: key <key>, @<name>, task id <id>, status <status>`; anything else (`error:` ...) is NOT created. Check the created key equals the entry's key.
 - Keep a registry `planned key -> actual key` (from results, reused existing keys, renamed keys). Later links use actual keys; never re-derive a key from a slug.
