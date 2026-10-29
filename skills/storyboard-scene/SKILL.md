@@ -204,6 +204,11 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
+  A `continue` shot changes framing (rule R16), and its clip must PERFORM that change: `Movement:` is a
+  push-in / pull-out / zoom for a size change, a pan / tilt / arc for an angle change (drift, handheld
+  and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
+  move can reach the new framing, write `Transition: cut — …` instead (the clip then starts on the
+  new keyframe).
 - `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
   (new / split shots get ids after the highest).
 - `Format:` on the line after the title, always: the `format` attribute, else the story's
@@ -598,6 +603,9 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] ONE moment and ONE framing per shot (no `then` / `after` / `before` / `followed by` /
       `cut to` / arrows, no two successive verbs; every multi-action beat split into one shot per
       action, never rephrased)
+- [ ] every `Transition: continue` shot has a `Movement:` (and, with `Timing: beats`, `camera` beats) that
+      performs its framing change (push / pull / zoom for size; pan / tilt / arc for angle; never
+      drift / handheld / hold); otherwise it is a `cut`
 - [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
 - [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at
       least 1 s, every figure and the camera covered, ending at `Duration:`), each `Dialogue:` line has a
