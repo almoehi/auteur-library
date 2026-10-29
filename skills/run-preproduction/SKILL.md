@@ -181,7 +181,7 @@ Beats section (same file, below the Places table)
     `Camera move` or a new beat).
   - `Camera move`: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift, orbit, or `hold` ONLY when the beat asks for stillness.
   - `Continuity` (relation to the PREVIOUS beat):
-    - `continuous` = the action carries straight on: same place, same moment, same people, even when the framing changes.
+    - `continuous` = the action carries straight on: same place, same moment, same people, even when the framing changes. A `continuous` beat whose framing differs from the previous beat's needs a `Camera move` that PERFORMS the change (push-in / pull-out / zoom for a size change; pan / tilt / orbit for an angle change); with `hold` or `handheld drift` it is `new moment` instead (the storyboard turns it into a `cut`, since a hold or drift cannot reach the new framing).
     - `parallel` = happens at the same time somewhere ELSE; MUST give its place in `Location` (reuse a table slug or define a new stable slug of lowercase a-z0-9 words joined by `_`, e.g. `driveway`; inventing a place slug is allowed).
     - `new moment` = a jump in time, place or subject, or an insert. The first beat of a scene is `new moment`.
   - `Blocking`: who is where, facing which way.

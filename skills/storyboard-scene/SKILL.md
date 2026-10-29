@@ -38,7 +38,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   complete section, starting with its `## <shotId> — <title>` heading — and `plan_shot` for the same shot
   right after its `write_shot` was accepted (one plan per call, see section 3); (4) `draft_storyboard()`
   with NO arguments.
-  `write_shot` checks only that shot (unlinked keys, R1–R20, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R20, with `Timing: beats` also R21–R23, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
@@ -86,7 +86,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 
 ## 2 Plan — `shotlist.md`
 
-The file is the header below plus one section per shot. Write the header (title + `Format:`) with
+The file is the header below plus one section per shot. Write the header (title + `Format:` + `Timing: beats` when the shots become clips) with
 `sandbox_write_file` (only while the file has no shots yet), then each shot section with `write_shot`, in order (each followed by its `plan_shot`).
 
 ```
