@@ -26,7 +26,7 @@ Use this skill when asked to write or enhance a prompt targeting:
 1. **Never alter the scene, subjects, or core action.** Add structure — do not redirect.
 2. **No invented elements.** Do not add characters, props, or events not in the input.
 3. **Always specify camera.** H3 defaults to continuous drift and reframing when nothing is stated.
-4. **Observable behavior, not emotions.** Describe what a camera can see — not what characters feel.
+4. **Observable behavior, not emotions.** Describe what a camera can see — not what characters feel. Vocal delivery is observable (audible) and is NOT covered by this ban: when the brief gives a spoken line's delivery (volume, pace, breath, pitch, a named emotion of the VOICE such as "whispered, trembling"), write it with the line (Step 6).
 5. **Audio is mandatory.** MiniMax H3 generates stereo audio natively. Every brief must include `overall_soundscape` and `non_diegetic_music` fields, even if set to `"N/A"`.
 6. **Use structured brief format.** Free-form prose is not accepted — output must use Template A or Template B.
 
@@ -163,9 +163,9 @@ Rules:
 - `[Shot 1]` has NO timestamp
 - All subsequent shots: `[Shot N] At MM:SS.mmm, ...` — timestamps strictly increasing, all within target duration
 - A cut introduces new information: subject, space, state, viewpoint, or time
-- Distance or angle changes only → use camera motion, not a cut
+- Inside a clip the framing changes ONLY through the brief's `Movement:`; a distance or angle change the brief gives no movement for is not written into this prompt at all (it is a cut between clips, planned by the caller)
 - Budget ~4 seconds for prop changes, handoffs, or complex actions
-- **Most important beat goes in the MIDDLE of the timeline — not last** (final beat is most likely compressed)
+- Write ONLY the beats the brief states. Never add behaviour (blinks, breaths, glances, weight shifts, props, small gestures) to fill time or to reach a beat count: a short action in a long clip is stated once, and the clip simply continues from its end state.
 
 ### Beat Structure
 
@@ -177,23 +177,19 @@ Each beat = one primary change + an observable end state:
 Strong end states: "The portafilter is now locked in the group head" ✅ / "Her hand rests flat on the table, palm down" ✅
 Weak end states: "He finishes the task" ❌ / "She feels calm" ❌
 
-### Duration → Beat Count Reference
+### Beats come from the brief, not from the duration
 
-| Duration | Segments |
-|---|---|
-| ~5 seconds | 2–3 beats |
-| ~8 seconds | 3–4 beats |
-| ~10 seconds | 4–5 beats |
-| ~15 seconds | 5–8 beats |
+The number of beats is whatever the brief states (its Action, Motion, Beat and Dialogue lines) — never a function of the clip duration. A change of state in the brief (wardrobe, pose, a prop moving) IS a beat: write it as the action in progress, from its start state to its end state.
 
 ---
 
 ## Step 4 — Specify Camera in Every Shot
 
-**Static shot template:**
+**Static shot template** — ONLY when the brief says `Movement: hold` (or `static`):
 ```
 Static [wide/medium/close] shot. The frame never moves. No push in, no tilt, no pan, no reframing.
 ```
+Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
 
 **Dynamic shot template:**
 ```
@@ -220,11 +216,12 @@ Rules: ONE camera move per shot. If static: state "frame never moves" AND list w
 
 **A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
-camera pushes in slowly ..."). **Default is a locked frame**: when the brief carries no `Movement:` that asks for a move
-(absent, `hold` or `static`), use the static template above - the frame never moves, no push-in,
-no reframing - and add no camera move of your own. Add the "no zoom / no push / no pan"
-refusals whenever the frame is locked. In a video continuation the prompt continues `<Video 1>` without a cut; the move
+camera pushes in slowly ..."). When the brief says `Movement: hold` (or `static`), use the static
+template above, including its "no zoom / no push / no pan" refusals. When the brief carries NO `Movement:` (absent, or `movement: none`),
+state the framing from the brief (shot size, angle), add NO camera move of your own and no static refusal list, and keep ONE short sentence: "The camera stays at this framing." (Iron Law 3). In a video continuation the prompt continues `<Video 1>` without a cut; the move
 continues or holds that of the prior clip.
+
+**The start-frame picture is the target framing.** When `<Picture 1>` is the storyboard keyframe of this shot (the picture lines say so), its framing IS this shot's framing: write that framing, and never describe a different framing as a camera move (no "pulls out to a wide", "pushes in to a close-up" unless the brief's `Movement:` says it). A change of framing between shots is a cut, not a move inside one clip.
 
 ---
 
@@ -249,6 +246,8 @@ All spoken content must use the speaker + dialogue tag system:
 **Speaker IDs:** `(S1)`, `(S2)`, ... — stable across all shots. Multi-speaker: `(S1,S2)` for simultaneous speech.
 
 **First appearance:** Establish outside the tag — character type, age, gender, whether on-screen, pitch, timbre, speaking rate, accent.
+
+**Delivery:** when the brief states how a line is spoken (emotion of the voice, volume, pace, breath, pitch), write it right before the tag, in the brief's words: `(S1) speaks, in a low, breathy, hesitant voice: <d>[English] ...</d>`. Delivery is audible, so it is not an "emotion label" (Iron Law 4). Never add a delivery the brief does not give.
 
 **Dialogue tag:**
 ```
@@ -305,6 +304,8 @@ At the moment dialogue ends: describe lips closing and speaking motion ceasing.
 
 Use `"N/A"` when a field has nothing to fill.
 
+**Out-of-frame exclusions.** When the brief carries an `Out of frame:` line and the workflow has no negative-prompt port, state it in the prompt body as one exclusion sentence: `Not in frame: no <thing>, no <thing>.` (the brief's things, verbatim). Do not drop it.
+
 ---
 
 ## Step 8 — Lock Wardrobe and On-Screen Text
@@ -345,7 +346,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 - [ ] Mode identified; correct template selected
 - [ ] Preamble line(s) present for i2va / fl2va / l2va
 - [ ] Camera specified in every shot OR explicit static lock with refusal list stated
-- [ ] Most important action placed in middle of timeline
+- [ ] Only the beats the brief states — no padding behaviour
 - [ ] Every beat ends with an observable end state
 - [ ] Every garment and accessory named for all characters
 - [ ] Non-diegetic music described without mood words
@@ -362,14 +363,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 
 ## Step 11 — Output
 
-Output the production brief directly — no wrapper template. MiniMax H3 uses a different output format from other models:
-
-```
-[Complete T2VA or Full-Reference brief — all fields, plain text, ready to paste]
-
-CHANGES SUMMARY:
-• [What was added or restructured — 3–5 concise bullets]
-```
+Output the production brief directly — no wrapper template. The `prompt` is ONLY the brief itself (all fields, plain text, ready to render): never append a "CHANGES SUMMARY", notes, bullets or any commentary to it, because everything in the prompt is rendered. Notes about what you added or restructured go in the tool result's separate `changes` field, never in `prompt`.
 
 ---
 
@@ -398,7 +392,7 @@ Observable positioning: describe physical spatial relationship to environment �
 
 ## Shot facts are kept
 
-When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible`, `Sex act` or `Sex position` text (legacy `Act`), carry it into the prompt in the same meaning and, for the sex act and position, in the same plain words (verbatim; no euphemism, no softening, nothing added). Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe one instant, not a sequence.
+When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible`, `Sex act` or `Sex position` text (legacy `Act`), carry it into the prompt in the same meaning and, for the sex act and position, in the same plain words (verbatim; no euphemism, no softening, nothing added). Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe the action of the clip as stated (a still keyframe is one instant; the clip is the motion from its start state to its end state).
 
 ## Fidelity
 

@@ -235,9 +235,9 @@ NEGATIVE PROMPT:
 
 **Negative prompt rule:** Negative prompt = quality defects (blur, artifacts, deformed anatomy, text/watermark) plus what the brief explicitly excludes. NEVER negate the medium or style the brief asks for (an illustrated, comic, anime, painted or stylised brief must not get CGI/anime/cartoon/illustration/digital-art negatives). If the brief states no exclusions, keep it to the quality defects. Skip the negative entirely for models that take none.
 
-CHANGES SUMMARY:
-• [What was added or restructured — 3–5 concise bullets]
 ```
+
+Never add a "CHANGES SUMMARY", notes or commentary to the prompt: everything in it is rendered. What you added or restructured goes in the tool result's separate `changes` field.
 
 ---
 
