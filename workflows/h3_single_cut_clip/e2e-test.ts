@@ -1,10 +1,10 @@
 /**
  * WorkflowAgent E2E — h3_single_cut_clip
  *
- * Covers the manifest contract (ref0 required and pinned as frame 0, ref1-ref5 optional, four
+ * Covers the manifest contract (ref0 required and pinned as frame 0, ref1-ref5 and the audio voice_ref_1 / voice_ref_2 optional, four
  * opt-in lora ports) and two renders that settle what only a real render can show:
  *   1. "one-ref" - ref0 alone (the mandatory start frame is enough).
- *   2. "refs"    - ref0 + ref1 + ref2.
+ *   2. "refs"    - ref0 + ref1 + ref2 + both voice references (stereo 32 kHz wav).
  * Both check the output is a video of the requested width x height.
  *
  * NSFW bundles read their fixtures from the SFW sibling (workflows/h3_single_cut_clip).
@@ -510,8 +510,8 @@ try {
   // 1a'. Reference image ports ────────────────────────────────────────────────
   const inputs: any[] = manifest.inputs ?? [];
   check(
-    "manifest has ref0-ref5 (images)",
-    inputs.length === 6 &&
+    "manifest has ref0-ref5 (images) and voice_ref_1 / voice_ref_2 (audio)",
+    inputs.length === 8 &&
       [0, 1, 2, 3, 4, 5].every((n) =>
         inputs.some((i) => i.name === `ref${n}` && i.kind === "image"),
       ),
@@ -521,6 +521,13 @@ try {
     "only ref0 is required",
     inputs.every((i) => i.required === (i.name === "ref0")),
     JSON.stringify(inputs.map((i) => [i.name, i.required])),
+  );
+  check(
+    "voice_ref_1 / voice_ref_2 are optional audio inputs",
+    ["voice_ref_1", "voice_ref_2"].every((n) =>
+      inputs.some((i) => i.name === n && i.kind === "audio" && !i.required),
+    ),
+    JSON.stringify(inputs.map((i) => [i.name, i.kind, i.required])),
   );
 
   // 1b. Pre-flight: verify model URLs from YAML before spending GPU budget ────
@@ -605,6 +612,16 @@ try {
       slots.map((n) => [`ref${n}`, imageUrls[n]]),
     );
 
+  // Stereo 32 kHz voice-timbre references (2 s sine tones) for voice_ref_1 / voice_ref_2.
+  const voiceUrls: Record<string, string> = {};
+  for (const port of ["voice_ref_1", "voice_ref_2"]) {
+    voiceUrls[port] = await ensureFixture(
+      `${S3_FIXTURE_PREFIX}/${port}.wav`,
+      _path.join(MEDIA_FIXTURE_DIR, `${port}.wav`),
+      "audio/wav",
+    );
+  }
+
   const promptText = (
     require("node:fs") as typeof import("node:fs")
   )
@@ -650,7 +667,7 @@ try {
   );
   const RUNS: { label: string; inputs: Record<string, string>; lora: boolean }[] = [
     { label: "one-ref", inputs: refs([0]), lora: false },
-    { label: "refs", inputs: refs([0, 1, 2]), lora: true },
+    { label: "refs", inputs: { ...refs([0, 1, 2]), ...voiceUrls }, lora: true },
   ];
   const renderIds: string[] = [];
   for (const run of RUNS) {

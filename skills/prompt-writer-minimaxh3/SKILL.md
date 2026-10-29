@@ -403,3 +403,7 @@ When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible`, `Sex act
 ## Fidelity
 
 When an `instruction` is supplied it is LOCKED: never drop or alter any element of it, never add states that were not asked for (no invented poses, sleep, etc.), and keep the prompt free of internal contradictions. You may only add image naming/order and the syntax this family requires.
+
+## Voice references
+
+When the brief lists voice references (a `voice_ref_k` audio input was supplied), write the line `<Audio j> is the voice-timbre reference for <Subject n> (S#).` verbatim, once per reference, in the subject definitions. `j` (the audio number), `n` and `S#` are exactly the numbers the brief gives: never renumber, never infer a speaker or subject the brief does not pair with a reference. The voice description for that speaker is the brief's voice text, passed through verbatim: never describe the voice again in different words, and never add a pitch, timbre, accent or age the brief does not state. When the brief lists no voice reference, write no `<Audio j>` line.

@@ -102,10 +102,20 @@ ports:
       description: "Optional: the same clip as prior_clip, passed a second time. It is read whole and only its soundtrack is used, as the voice reference (first 5 seconds), addressed as <Audio 1>. Supply it whenever prior_clip_start_time is above 0, because the trimmed read window is then too short to carry the voices. When omitted, the voice reference is the audio of the prior_clip read window."
       binding: video@our_ref_audio_src
       required: false
+    - name: voice_ref_1
+      kind: audio
+      description: "Optional stereo 32 kHz voice-timbre reference of speaker S1 (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 2>. In the prompt state it with one line: '<Audio 2> is the voice-timbre reference for <Subject N> (S1).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      binding: audio@voice_ref_1
+      required: false
+    - name: voice_ref_2
+      kind: audio
+      description: "Optional stereo 32 kHz voice-timbre reference of speaker S2 (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 3>. In the prompt state it with one line: '<Audio 3> is the voice-timbre reference for <Subject N> (S2).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      binding: audio@voice_ref_2
+      required: false
   params:
     - name: prompt_positive
       kind: string
-      description: "MiniMax H3 continuation prompt in English (use the prompt-writer-minimaxh3 skill). Six sections in order: (1) context header - how <Video 1> and the pictures align with the target and the target duration; (2) summary, starting with [video continuation]; (3) subject_definitions - <Video 1>, <Audio 1>, <Picture 1> (the seam frame: the last frame of <Video 1>) and one entry per supplied <Picture N> (ref<n> = <Picture n+1>); (4) integrated_multimodal_description - timestamped shots, resuming from the final frame of <Video 1>; (5) overall_soundscape; (6) non_diegetic_music. Only cite <Picture N> for images that were supplied."
+      description: "MiniMax H3 continuation prompt in English (use the prompt-writer-minimaxh3 skill). Six sections in order: (1) context header - how <Video 1> and the pictures align with the target and the target duration; (2) summary, starting with [video continuation]; (3) subject_definitions - <Video 1>, <Audio 1>, <Picture 1> (the seam frame: the last frame of <Video 1>) and one entry per supplied <Picture N> (ref<n> = <Picture n+1>); (4) integrated_multimodal_description - timestamped shots, resuming from the final frame of <Video 1>; (5) overall_soundscape; (6) non_diegetic_music. Only cite <Picture N> for images that were supplied. When voice_ref_k is supplied, add the line '<Audio k+1> is the voice-timbre reference for <Subject n> (S#).' to subject_definitions (<Audio 1> is the prior clip's soundtrack)."
       binding: value@182
       required: true
     - name: duration_seconds
@@ -205,6 +215,14 @@ context: |
   order without gaps (never ref3 without ref2) - otherwise the <Picture N> numbers in the prompt no
   longer match the ports. Cite a picture only when it was supplied, and give every cited picture a
   line in subject_definitions.
+
+  Voices: voice_ref_1 and voice_ref_2 are optional stereo 32 kHz voice-timbre references of the
+  speakers S1 / S2 (audio inputs; H3ReferenceAudio guards channels, rate and length). <Audio 1> is
+  always the soundtrack read from prior_clip (the mixed voices carried over), so the references are
+  <Audio 2> (voice_ref_1) and <Audio 3> (voice_ref_2; if only voice_ref_2 is supplied it is
+  <Audio 2>). Give each one line in subject_definitions: '<Audio k> is the voice-timbre reference
+  for <Subject n> (S#).' Supply the same references on every clip of a scene so a speaker keeps
+  one timbre across the chain.
 
   LoRAs: the LightX2V turbo LoRA (0.7) is baked in - do not select it on a port. lora_1-lora_4
   take style / character adapters from the workspace lora catalog (modelFamily minimaxh3); keep

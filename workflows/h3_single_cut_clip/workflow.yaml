@@ -8,7 +8,7 @@
 #
 # ─── Custom Nodes (all already in serverless-comfy/nodes.lock) ────────────────
 # MiniMaxH3ReferenceToVideo, MiniMaxH3SigmaShift, VAEDecodeAudio  built-in ComfyUI
-# H3KeyframeInject                https://github.com/jlucasmcrell/ComfyUI-H3-Multishot
+# H3KeyframeInject, H3ReferenceAudio  https://github.com/jlucasmcrell/ComfyUI-H3-Multishot
 #   (registered by the pack's h3_avbank_probe.py; it also patches the model's extra_conds so
 #   reference rows and the start keyframe can be combined)
 # ImageResize+                    https://github.com/cubiq/ComfyUI_essentials
@@ -82,10 +82,20 @@ ports:
       reference_role: reference
       label: "Picture 6"
       required: false
+    - name: voice_ref_1
+      kind: audio
+      description: "Optional stereo 32 kHz voice-timbre reference of speaker S1 (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 1>. In the prompt state it with one line: '<Audio 1> is the voice-timbre reference for <Subject N> (S1).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      binding: audio@voice_ref_1
+      required: false
+    - name: voice_ref_2
+      kind: audio
+      description: "Optional stereo 32 kHz voice-timbre reference of speaker S2 (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 2>. In the prompt state it with one line: '<Audio 2> is the voice-timbre reference for <Subject N> (S2).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      binding: audio@voice_ref_2
+      required: false
   params:
     - name: prompt_positive
       kind: string
-      description: "MiniMax H3 keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief). Sections in order: subject_definitions (<Picture 1> = the start frame, then one line per supplied reference, <Subject N> for characters), summary starting with [keyframe completion], retention_analysis, detailed_description (style first, then [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', later shots timestamped, dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. Only cite <Picture N> for references that were supplied."
+      description: "MiniMax H3 keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief). Sections in order: subject_definitions (<Picture 1> = the start frame, then one line per supplied reference, <Subject N> for characters), summary starting with [keyframe completion], retention_analysis, detailed_description (style first, then [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', later shots timestamped, dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. Only cite <Picture N> for references that were supplied. When voice_ref_k is supplied, add the line '<Audio k> is the voice-timbre reference for <Subject n> (S#).' to subject_definitions."
       binding: value@138
       required: true
     - name: duration_seconds
@@ -199,6 +209,13 @@ context: |
   detailed_description -> overall_soundscape -> non_diegetic_music. In subject_definitions
   <Picture 1> is the start frame; the first shot begins "For the target video, at 0.00 seconds,
   <Picture 1> is fully referenced." and describes the motion away from it, not its content.
+
+  Voices: voice_ref_1 and voice_ref_2 are optional stereo 32 kHz voice-timbre references of the
+  speakers S1 / S2 (audio inputs, H3ReferenceAudio guards channels, rate and length), cited in the
+  prompt as <Audio 1> / <Audio 2> (numbered by the references supplied - voice_ref_2 alone is
+  <Audio 1>). Give each cited audio one line in subject_definitions: '<Audio k> is the
+  voice-timbre reference for <Subject n> (S#).' Without them the voices come from the prompt text
+  alone and vary between clips.
 
   LoRAs: the LightX2V turbo LoRA (0.7) is baked in - do not select it on a port. lora_1-lora_4
   take style / character adapters from the workspace lora catalog (modelFamily minimaxh3).

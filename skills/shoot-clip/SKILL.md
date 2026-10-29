@@ -101,3 +101,13 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - `continue`: first frames fit the predecessor's last frames (same subject, place, lighting); a clear break -> one retry with a corrected prompt ("Check, retry once, suggest" in `workflow-calling-conventions`).
 - The prompt file holds the rendered prompt; no other file written.
 - `task_complete`: 1-3 lines — mode, measured duration, (continue) the start offset; no prompt / workflow restated ("Concise replies and task/artifact URIs" in `workflow-calling-conventions`).
+
+## 8. Speakers
+
+For every speaking character (a `Dialogue:` speaker of the shot, or a character the brief says speaks):
+
+- Read the character's `voice` attribute from its design (`read_artifact` on the character design: `design.json` / description) and pass that text VERBATIM in the prompt-writer `context`, next to the speaker number. Never paraphrase or invent a voice.
+- Pass the character's published `voice.wav` (the file `voice.wav` of the approved character design) as the clip workflow's `voice_ref_k`, where `k` is the speaker number `S<k>`, and tell the prompt writer each pairing (`voice_ref_k` = speaker `S<k>` = `<Subject n>`) and the `<Audio j>` number the workflow description gives for it.
+- Speaker numbers are FIXED: `S1`, `S2` follow the order of the speakers' rows in `character_table.md`, identical in every clip of the scene. A speaker keeps the same `S#` and the same `voice_ref_k` even when the other speaker is absent from a clip; never renumber.
+- `continue`: use the per-character voice references for the timbre instead of relying on the mixed soundtrack of the prior clip.
+- A character without a `voice.wav`: omit that `voice_ref_k` and keep the voice text only; never substitute another character's file.

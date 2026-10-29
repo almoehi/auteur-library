@@ -217,6 +217,14 @@
       "ref_images.ref_image_5": [
         "ref_image_6",
         0
+      ],
+      "ref_audios.ref_audio_0": [
+        "voice_ref_1_prep",
+        0
+      ],
+      "ref_audios.ref_audio_1": [
+        "voice_ref_2_prep",
+        0
       ]
     },
     "_meta": {
@@ -535,6 +543,50 @@
         "wh_height",
         0
       ]
+    }
+  },
+  "voice_ref_1": {
+    "inputs": {
+      "audio": "voice_ref_1.wav"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "Voice reference 1 (optional)"
+    }
+  },
+  "voice_ref_1_prep": {
+    "inputs": {
+      "audio": [
+        "voice_ref_1",
+        0
+      ],
+      "max_seconds": 5
+    },
+    "class_type": "H3ReferenceAudio",
+    "_meta": {
+      "title": "Voice reference 1: stereo 32 kHz guard"
+    }
+  },
+  "voice_ref_2": {
+    "inputs": {
+      "audio": "voice_ref_2.wav"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "Voice reference 2 (optional)"
+    }
+  },
+  "voice_ref_2_prep": {
+    "inputs": {
+      "audio": [
+        "voice_ref_2",
+        0
+      ],
+      "max_seconds": 5
+    },
+    "class_type": "H3ReferenceAudio",
+    "_meta": {
+      "title": "Voice reference 2: stereo 32 kHz guard"
     }
   }
 }
