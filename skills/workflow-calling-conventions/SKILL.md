@@ -63,11 +63,12 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 
 ## Render size and output files
 
-- No `width` / `height` by default (the render profile decides); set them only when the story or
-  shot needs a different format (they then override the profile's size).
-- `is_portrait` (`true` / `false`) turns the size to that orientation. Omit it on image-to-video
-  calls unless the shot's format differs from the keyframe: without it the size follows the
-  first-frame image, so a clip never crops or stretches its keyframe.
+- Text/image-to-image calls: no `width` / `height` by default (the render profile decides); set them
+  only when the story or shot needs a different format (they then override the profile's size).
+  `is_portrait` (`true` / `false`) turns the size to that orientation.
+- Image-to-video calls (a start/first-frame image): NEVER pass `width`, `height` or `is_portrait`.
+  The clip keeps its start frame's aspect ratio at the profile's video size (a continuation keeps the
+  prior clip's size); a contradicting value is refused.
 - Outputs route to the declared file named like the output port; else pass
   `output_ports={"<port>": "/workspace/<artifact id>/<file>"}`.
 

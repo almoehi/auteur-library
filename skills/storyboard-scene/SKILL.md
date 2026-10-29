@@ -38,7 +38,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   complete section, starting with its `## <shotId> — <title>` heading — and `plan_shot` for the same shot
   right after its `write_shot` was accepted (one plan per call, see section 3); (4) `draft_storyboard()`
   with NO arguments.
-  `write_shot` checks only that shot (unlinked keys, R1–R20, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R20, with `Timing: beats` also R21–R23, unreadable lines). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
@@ -86,18 +86,26 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 
 ## 2 Plan — `shotlist.md`
 
-The file is the header below plus one section per shot. Write the header (title + `Format:`) with
+The file is the header below plus one section per shot. Write the header (title + `Format:` + `Timing: beats` when the shots become clips) with
 `sandbox_write_file` (only while the file has no shots yet), then each shot section with `write_shot`, in order (each followed by its `plan_shot`).
 
 ```
 # Scene <n> shot list
 Format: portrait
+Timing: beats
 
 ## s3-01 — Short title
 Action: Wife, seated across the table, typing on her laptop, head down; the viewer's hands resting on the table edge
 Location: location_kitchen
 Camera: medium, eye level
 Movement: slow push-in
+Motion:
+0-3 s character_wife: keeps typing, head down
+3-6 s character_wife: lifts her head and looks at the viewer
+0-6 s viewer: hands rest on the table edge
+0-6 s camera: slow push-in
+Dialogue: 3.5-5 s character_wife (soft, tired, slow, a small sigh first): "It's late"
+Audio: quiet kitchen at night, fridge hum, distant rain
 Blocking: the camera is the viewer's eyes (seated); the viewer's forearms and hands enter the lower frame; wife across the table, facing the viewer, her hands on the laptop
 Pose: wife: hands on the keyboard, head down; the viewer's hands flat on the table
 Frame: wife centre background; the viewer's hands bottom foreground
@@ -108,11 +116,11 @@ Beat: 3.1
 Contact: character_wife (hands) on laptop keyboard; character_husband (hands) on table
 Characters: character_wife, character_husband
 Outfits: character_wife:outfit_wife_office; character_husband:outfit_husband_suit
-Duration: 4
+Duration: 6
 Transition: cut — first shot of the scene
 ```
 
-Every line is ONE line (no wrapping). The shot lines are the single authority for who is in frame,
+Every line is ONE line (no wrapping), except `Motion:` (one timed beat per line, below). The shot lines are the single authority for who is in frame,
 who touches what and how shots relate (the shot graph is read from `Transition:`); the structured
 plan of step 3 only adds placement, facing and the compose prompt.
 
@@ -145,14 +153,15 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     Never rephrase a sequence around them: it is fixed only by splitting it into shots. A word
     used for PLACE, not time, is reworded instead: "kneels before him" -> "kneels in front of him".
   - Two successive verbs ("stands and presses", "enters and crosses") = separate shots too, one per
-    action, in order (not checked by the server - your job).
+    action, in order (not checked by the server - your job). With `Timing: beats` one continuous
+    action stays ONE shot: its verbs are successive `Motion:` beats (see "Timed motion").
   - One shot: simultaneous actions joined by "as" / "while" (both happen in the same instant);
     speech, breath or a sound together with one action; a progressing state ("thrusting faster",
     "pace building").
-  - Visible only: no motives or camera motion. Speech goes on its own `Dialogue: <who>: "<words>"`
-    line, never in `Action:` (Action shows only the visible part: mouth open, calling).
+  - Visible only: no motives or camera motion. Speech goes on its own `Dialogue:` line (with
+    `Timing: beats`: `<t0>-<t1> s <character_key> (<delivery>): "<words>"`), never in `Action:` (Action shows only the visible part: mouth open, calling).
   - Bad → good: "Wife sighs and says it is late, closes the laptop and gets up" → s3-01
-    `Action: Wife, seated at the table, sighing` + `Dialogue: Wife: "It's late"`; s3-02
+    `Action: Wife, seated at the table, sighing` + `Dialogue: 1-2.5 s character_wife (tired, soft): "It's late"`; s3-02
     `Action: Wife, laptop closed, rising from her chair`.
     "Wife stands, moves to his chair, hands him the letter" → three shots: `Wife, rising from her
     chair` / `Wife, mid-stride toward his chair, letter in hand` / `Wife, beside his chair, holding
@@ -195,10 +204,45 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
+  A `continue` shot changes framing (rule R16), and its clip must PERFORM that change: `Movement:` is a
+  push-in / pull-out / zoom for a size change, a pan / tilt / arc for an angle change (drift, handheld
+  and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
+  move can reach the new framing, write `Transition: cut — …` instead (the clip then starts on the
+  new keyframe).
 - `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
   (new / split shots get ids after the highest).
 - `Format:` on the line after the title, always: the `format` attribute, else the story's
   orientation, else `landscape`.
+
+### Timed motion (header `Timing: beats`)
+
+Write `Timing: beats` under `Format:` whenever the shots become CLIPS. The keyframe stays a still of
+ONE instant; the clip carries the action. `Action:` is then the state at **0 s** (the keyframe),
+`Motion:` the action **in progress** from there, per subject, with timing. `Motion:`, `Dialogue:`
+and `Audio:` never reach the keyframe (the server leaves them out of the picture and of the stale
+check); they go to the clip prompt verbatim.
+
+- `Motion:` = one beat per line, `<t0>-<t1> s <subject>: <what is in progress>`. Subject = a `Characters:`
+  key, `camera` or `viewer` (the POV owner's own hands and limbs). Per subject the beats run from `0`
+  to `Duration` without a gap or an overlap. Every figure of `Characters:` (not the POV owner, not a
+  `limbs` person) has a beat; there is always at least one `camera` beat (`hold` is a beat too).
+  Write the action in progress ("reaches for the glass, fingers closing"), not an instant, and only
+  what the scene list's beat states: no filler behaviour.
+- Two verbs = two beats of ONE shot ("stands, then crosses" is `0-2 s … rises` and `2-5 s … crosses`),
+  never two shots, when the beat is one continuous action; a new place, framing or moment is still a new shot.
+- Never cut at a sub-second instant: every beat is at least 1 s (rule R22). A beat the clip cannot
+  show in 1 s is merged into its neighbour.
+- `Duration:` (3–10 s) is sized from the beats, the dialogue and a settle: the last word ends at
+  least 0.5 s before the shot ends.
+- `Dialogue:` = `<t0>-<t1> s <character_key> (<delivery>): "<words>"`, several separated by `;`. The speaker
+  is the character's design KEY. The delivery names emotion, volume, pace, breath and pitch ("soft, tired,
+  slow, a small sigh first") — what the voice does is audible, so emotion words belong here. Size each
+  line at about 2.5 words per second (plus 0.3 s of slack); lines never overlap and stay inside the shot
+  (rule R23).
+- `Audio:` = the scene's atmosphere (room tone, space, distance, mood), copied VERBATIM from the scene
+  list's `Audio` for this scene onto EVERY shot of the scene (the write is refused when it differs).
+- `Beat:` may list several beats (`Beat: 1.2, 1.3`) when one continuous action spans them.
+- The moment rules above (R9) apply to `Action:` and `Camera:` only: the sequence lives in `Motion:`.
 
 ### Who is in frame
 
@@ -559,7 +603,13 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] ONE moment and ONE framing per shot (no `then` / `after` / `before` / `followed by` /
       `cut to` / arrows, no two successive verbs; every multi-action beat split into one shot per
       action, never rephrased)
+- [ ] every `Transition: continue` shot has a `Movement:` (and, with `Timing: beats`, `camera` beats) that
+      performs its framing change (push / pull / zoom for size; pan / tilt / arc for angle; never
+      drift / handheld / hold); otherwise it is a `cut`
 - [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
+- [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at
+      least 1 s, every figure and the camera covered, ending at `Duration:`), each `Dialogue:` line has a
+      speaker key and a delivery and fits its time, and `Audio:` is the scene's, verbatim, on every shot
 - [ ] the POV owner is only "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` and the
       prompt (no name, key, placeholder or figure); no prompt copies another shot's people
 - [ ] no plan prompt states a people count (the server's frame requirements state it)
