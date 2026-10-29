@@ -34,7 +34,7 @@ Joins the finished clips of ONE scene, in task order, into the canonical `scene<
   printf "file '%s'\n" /tmp/assemble_scene<N>/clip1.mp4 … > list.txt
   ffmpeg -y -nostdin -f concat -safe 0 -i list.txt -c copy scene<N>_assembled.mp4
   ```
-- Always `ffmpeg -y -nostdin …` (every ffmpeg call, re-encodes included): sandbox stdin is closed, and without `-y` an existing output makes ffmpeg wait for an answer until the exec is killed at its timeout.
+- Always `ffmpeg -y -nostdin …` (every ffmpeg call, re-encodes included): sandbox stdin is closed, so without `-y` an existing output makes ffmpeg exit at once ("Not overwriting - exiting") instead of writing the file.
 - They differ: normalize and re-encode only then.
   - First clip's resolution and fps (scale with letterbox / pad, no stretching); `-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p`.
   - Audio `aac` at a common sample rate; `anullsrc` silence for clips without audio when any clip has audio.
