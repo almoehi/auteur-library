@@ -31,7 +31,7 @@
 // follows from it). `golem repl --script-file` runs one self-contained file and the fat image
 // mounts only workflows/, so they cannot share a module - keep both copies in sync.
 const WF_NAME = "h3_single_cut_clip_nsfw";
-const GPU_TYPE = "b200"; // the bundle is pinned to B200 (gpu_types: [b200])
+const GPU_TYPE = "h100"; // gpu_types: [h100, b200] - dispatch picks the cheapest deployed listed GPU, which is the H100
 const TIMEOUT_SEC = 7200;
 const PROVISION_TIMEOUT_MS = 60 * 60 * 1000; // ~38 GB models on first run
 const RENDER_TIMEOUT_MS = 45 * 60 * 1000;
