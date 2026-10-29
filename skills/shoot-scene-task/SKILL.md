@@ -73,7 +73,8 @@ Per shot, from its shotlist block (designs by KEY via `artifact_index`; `Outfits
 
 - Keep each shot's complete block (heading + every line to the next heading) VERBATIM for the clip task, EXCEPT the keyframe-plan lines `Workflow:`, `Refs:`, `Prompt:` that older storyboards may carry — strip those three (keyframe-only): includes `Blocking:`, `Pose:`, `Frame:`, `Visible:`, `POV:` and, in a `contentPolicy.nudity: allowed` workspace, `Sex act:` / `Sex position:`.
 - Extract per shot: id, title, `Action`, `Camera` (keyframe framing), `Movement` (video camera move), `Duration`, `Transition`, characters / outfits keys, `LoRAs` (the shot's curated list, verbatim in rank order; absent = none).
-- No `Movement:`: take it from the matching beat's `Camera move` in the `scene_list` artifact (`### Scene <n>` Beats table, read once); no beat either: derive it from the action and say so. Never turn a missing movement into "static".
+- No `Movement:`: take it from the matching beat's `Camera move` in the `scene_list` artifact (`### Scene <n>` Beats table, read once); no beat either: leave `movement: none` (the clip then adds no camera move). Never turn a missing movement into "static" and never derive one from the action.
+- The matching beat's row of the `scene_list` Beats table (Action, Blocking, Camera move, Continuity, … every column) is passed as `beat:` VERBATIM, never summarised or reworded (the shot's `Action:` is the 0 s state; the beat is what happens next).
 
 ### 2a-2. Frame edits
 
@@ -93,7 +94,8 @@ Clip M = shot M; start frame `frame_M`; `duration_seconds` = the shot's `Duratio
 
 Every boundary (shot M-1 -> M) is `continue` or `cut`:
 1. Take the shot's `Transition:` as given, with its reason; do not second-guess.
-2. No `Transition:` (older storyboard): decide ONCE here and note "decided here". CONTINUE when the action carries straight on in the same setup (same place, moment, people), even when the framing changes; CUT for a new moment, place or subject, or an insert.
+2. No `Transition:` (older storyboard): decide ONCE here and note "decided here". CONTINUE when the action carries straight on in the same setup (same place, moment, people) AND the framing does not change (`framing_change: no`) or the shot carries a real `Movement:` that performs the change; CUT for a new moment, place or subject, an insert, or a framing change with `Movement:` `hold` / none.
+2b. A `Transition: continue` shot whose framing changes (`framing_change: yes`) and whose `Movement:` is `hold` or none is planned as a `cut` (note "cut: framing changes without a camera move"): a continuation cannot change framing by itself and an invented reframe becomes a morph inside the clip.
 3. No video-continuation workflow -> every boundary is a CUT.
 
 - `continue`: rendered with the continuation workflow from clip M-1's real file; keeps `requires_tasks` / `requires_artifacts` on the predecessor (it cannot start before clip M-1 is approved). Mechanics (framing change, start offset, no hard cut): `shoot-clip` mode `continue`.
@@ -138,18 +140,22 @@ prompt:
   scene: "<Scene Name>"  (scene <N>)
   clip: <M> of <total>  — shot <shotId> "<title>"
   mode: continue | cut   (<one-line reason>)
-  framing_change: yes | no   (continue only; yes when this shot's Camera differs from the previous shot's: "previous: <its Camera>")
+  framing_change: yes | no   (continue only; MECHANICAL: yes iff this shot's `Camera:` line differs from the previous shot's after trimming and lower-casing both; write "previous: <its Camera>")
   shot_block: |
     <the shot's FULL block from shotlist.md, verbatim, every line: Action, Location, Camera,
      Movement, Transition, Characters, Outfits, Blocking, Pose, Frame, Visible, Duration and the
      Sex act: / Sex position: lines when present; NOT the keyframe-only Workflow: / Refs: / Prompt: lines>
   frame_edits: <the frame's published `edits`, verbatim; "none" when it has none>
   action: <the shot's Action>
+  beat: |
+    <this shot's row of the scene_list Beats table, verbatim, every column; omit the line when the scene list has no matching beat>
+  prior_shot_facts: |
+    <continue only: the PREVIOUS shot's Action:, Wardrobe: and State: lines from its shotlist block, verbatim>
   camera: <the shot's Camera - keyframe framing>
-  movement: <the shot's Movement VERBATIM>
+  movement: <the shot's Movement VERBATIM; "none" when neither the shot nor its beat has one>
   duration_seconds: <planned duration>
   start_frame: artifact://<storyboard id>/frame_<M>.<ext>   (exactly this storyboard artifact and frame file)
-  prior_clip: artifact://<scene<N>_clip<M-1> id>/<its video file>     (continue only)
+  prior_clip: scene<N>_clip<M-1>     (continue only: the KEY of clip M-1's output artifact; the clip worker resolves it to the real video file at run time - never type an artifact id or file here)
   references: <ONLY what Step 1b allows - usually none: then omit this line. Each entry
               artifact://<design id>/full_body_shot.<ext> (or a chosen view_<id>.<ext>), one per person
               whose face turns / comes closer / who enters, the location view only for a revealing camera
