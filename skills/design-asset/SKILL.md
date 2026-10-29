@@ -35,7 +35,7 @@ The web studio owns the design (`design.json`, takes, primary, description, LoRA
 
 1. `read_artifact(artifactId="<task id>")` -> artifact id, existing files, `design.json` (attributes, `displayName`, `links`, `loras`, `initialDrafts`).
 2. Extract:
-   - attributes (character: hair, age, build, wardrobe, mood; location: place, space, era, time of day, weather, and for a set `set`, `set_style`, `connections`);
+   - attributes (character: hair, age, build, wardrobe, mood - NOT `voice`: a character's `voice` is heard, never pictured, so it goes into no prompt, request or check; the finish records the voice sample from it; location: place, space, era, time of day, weather, and for a set `set`, `set_style`, `connections`);
    - a location with a `set_anchor` link is a SET MEMBER ("Sets" in `plan-designs`): the prompt's "Referenced designs" block carries the anchor's `full_body_shot:` ref (`artifact://<id>/full_body_shot.<ext>`); without that ref (anchor not finished) or without a reference-compose tool, draft with text-to-image from `set_style` + `connections` and say so in the hand-over;
    - `initialDrafts` (the task states it; default 1) and extension (default `png`);
    - workflow, by CAPABILITY (per tool description / `get_workflow_instructions`): the one the prompt names if it is among your `wf_*` tools, else the text-to-image tool whose model family matches the prompt or `design.json`.

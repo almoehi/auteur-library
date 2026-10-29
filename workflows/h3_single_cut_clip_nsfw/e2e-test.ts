@@ -1,11 +1,11 @@
 /**
  * WorkflowAgent E2E — h3_single_cut_clip_nsfw
  *
- * Covers the manifest contract (ref0 required and pinned as frame 0, ref1-ref5 optional, four
+ * Covers the manifest contract (ref0 required and pinned as frame 0, ref1-ref5 and the audio voice_ref_1 / voice_ref_2 optional, four
  * opt-in lora ports) and two renders that settle what only a real render can show:
- *   1. "one-ref" - ref0 alone (the mandatory start frame is enough).
- *   2. "refs"    - ref0 + ref1 + ref2 plus a lora_1 selection downloaded per call.
- * Both check the output is a video of the requested width x height.
+ *   1. "voice-sample" - ref0 alone, a short speaking clip; its output_audio (FLAC) is a character's voice sample.
+ *   2. "refs"         - ref0 + ref1 + ref2 + both voice references (voice_ref_1 is the FLAC of render 1, voice_ref_2 a stereo 32 kHz wav) plus a lora_1 selection downloaded per call.
+ * Both check the output is a video of the requested width x height. E2E_RUNS=voice-sample,refs selects the runs.
  *
  * NSFW bundles read their fixtures from the SFW sibling (workflows/h3_single_cut_clip).
  *
@@ -31,7 +31,7 @@
 // follows from it). `golem repl --script-file` runs one self-contained file and the fat image
 // mounts only workflows/, so they cannot share a module - keep both copies in sync.
 const WF_NAME = "h3_single_cut_clip_nsfw";
-const GPU_TYPE = "b200"; // the bundle is pinned to B200 (gpu_types: [b200])
+const GPU_TYPE = "h100"; // gpu_types: [h100, b200] - dispatch picks the cheapest deployed listed GPU, which is the H100
 const TIMEOUT_SEC = 7200;
 const PROVISION_TIMEOUT_MS = 60 * 60 * 1000; // ~38 GB models on first run
 const RENDER_TIMEOUT_MS = 45 * 60 * 1000;
@@ -478,6 +478,14 @@ try {
     manifest.outputs?.some((o: any) => o.role === "primary"),
     JSON.stringify(manifest.outputs),
   );
+  check(
+    "has the auxiliary audio output output_audio (a character's voice sample)",
+    manifest.outputs?.some(
+      (o: any) =>
+        o.name === "output_audio" && o.kind === "audio" && o.role === "auxiliary",
+    ),
+    JSON.stringify(manifest.outputs),
+  );
 
   // 1a. Lora port declarations — the compile-time contract from ports.loras ──────
   console.log(
@@ -510,8 +518,8 @@ try {
   // 1a'. Reference image ports ────────────────────────────────────────────────
   const inputs: any[] = manifest.inputs ?? [];
   check(
-    "manifest has ref0-ref5 (images)",
-    inputs.length === 6 &&
+    "manifest has ref0-ref5 (images) and voice_ref_1 / voice_ref_2 (audio)",
+    inputs.length === 8 &&
       [0, 1, 2, 3, 4, 5].every((n) =>
         inputs.some((i) => i.name === `ref${n}` && i.kind === "image"),
       ),
@@ -521,6 +529,13 @@ try {
     "only ref0 is required",
     inputs.every((i) => i.required === (i.name === "ref0")),
     JSON.stringify(inputs.map((i) => [i.name, i.required])),
+  );
+  check(
+    "voice_ref_1 / voice_ref_2 are optional audio inputs",
+    ["voice_ref_1", "voice_ref_2"].every((n) =>
+      inputs.some((i) => i.name === n && i.kind === "audio" && !i.required),
+    ),
+    JSON.stringify(inputs.map((i) => [i.name, i.kind, i.required])),
   );
 
   // 1b. Pre-flight: verify model URLs from YAML before spending GPU budget ────
@@ -605,6 +620,16 @@ try {
       slots.map((n) => [`ref${n}`, imageUrls[n]]),
     );
 
+  // Stereo 32 kHz voice-timbre references (2 s sine tones) for voice_ref_1 / voice_ref_2.
+  const voiceUrls: Record<string, string> = {};
+  for (const port of ["voice_ref_1", "voice_ref_2"]) {
+    voiceUrls[port] = await ensureFixture(
+      `${S3_FIXTURE_PREFIX}/${port}.wav`,
+      _path.join(MEDIA_FIXTURE_DIR, `${port}.wav`),
+      "audio/wav",
+    );
+  }
+
   const promptText = (
     require("node:fs") as typeof import("node:fs")
   )
@@ -644,57 +669,53 @@ try {
     ],
   });
 
-  // 4. Submit renders ────────────────────────────────────────────────────────
+  // 4. Renders, one after another ──────────────────────────────────────────────
+  // "voice-sample" makes a character's voice sample the way the design finish does: ref0 alone,
+  // a short speaking clip, and the clip's own soundtrack (output_audio, FLAC) is the sample.
+  // "refs" then renders with that very FLAC as voice_ref_1 (LoadAudio of an uploaded flac ->
+  // H3ReferenceAudio -> ref_audios) next to a stereo 32 kHz wav as voice_ref_2 and two pictures.
+  // E2E_RUNS=voice-sample,refs (default both) selects the runs; "refs" without "voice-sample"
+  // falls back to the wav fixture for voice_ref_1.
   console.log(
-    "\n── 4. Submit renders ────────────────────────────────────────────",
+    "\n── 4. Renders ───────────────────────────────────────────────────",
   );
-  const RUNS: { label: string; inputs: Record<string, string>; lora: boolean }[] = [
-    { label: "one-ref", inputs: refs([0]), lora: false },
-    { label: "refs", inputs: refs([0, 1, 2]), lora: true },
-  ];
+  const wanted = (process.env.E2E_RUNS ?? "voice-sample,refs").split(",");
+  let producedVoiceUrl: string | undefined;
   const renderIds: string[] = [];
-  for (const run of RUNS) {
+  const runRender = async (
+    label: string,
+    inputs: Record<string, string>,
+    lora: boolean,
+  ): Promise<any | undefined> => {
     const id = await agent.run(
       JSON.stringify(RENDER_PROFILE),
-      JSON.stringify(run.inputs),
+      JSON.stringify(inputs),
       JSON.stringify(baseParams),
       undefined,
       undefined,
-      run.lora && USE_LORA ? loraJson : undefined,
+      lora && USE_LORA ? loraJson : undefined,
       undefined, // notifyJson
     );
-    console.log(`  [${run.label}] renderId=${id}`);
-    check(`${run.label}: renderId non-empty`, id.length > 0, id);
+    console.log(`  [${label}] renderId=${id}`);
+    check(`${label}: renderId non-empty`, id.length > 0, id);
     renderIds.push(id);
-  }
-  check(
-    "renderIds are distinct (inputs and lora selections are hashed into the id)",
-    new Set(renderIds).size === renderIds.length,
-    JSON.stringify(renderIds),
-  );
-
-  // 5. Poll to completion, verify billing and outputs ─────────────────────────
-  // A failed render is recorded as a failed check and the remaining renders still run: the
-  // scenarios probe independent open questions (see the file header).
-  for (let i = 0; i < RUNS.length; i++) {
-    const label = RUNS[i].label;
-    console.log(`\n── 5.${i + 1} ${label} ─────────────────────────────────────────`);
+    console.log(`\n── 5 ${label} ─────────────────────────────────────────`);
     let result: any;
     try {
-      result = await pollUntilDone(agent, renderIds[i]);
+      result = await pollUntilDone(agent, id);
     } catch (err) {
       check(`${label}: render succeeded`, false, String(err));
-      continue;
+      return undefined;
     }
     check(
       `${label}: render succeeded`,
       result.phase === "succeeded",
       `phase=${result.phase}`,
     );
-    await checkBillingAfterRender(label, renderIds[i], "success");
+    await checkBillingAfterRender(label, id, "success");
     if ((result.outputs?.length ?? 0) === 0) {
       check(`${label}: outputs present`, false, JSON.stringify(result.outputs));
-      continue;
+      return undefined;
     }
     console.log(`  output: ${result.outputs[0].url}`);
     const getResp = await fetch(result.outputs[0].url);
@@ -707,7 +728,50 @@ try {
       size?.width === baseParams.width && size?.height === baseParams.height,
       JSON.stringify(size),
     );
+    return result;
+  };
+
+  if (wanted.includes("voice-sample")) {
+    const result = await runRender("voice-sample", refs([0]), false);
+    // The render reports its outputs in manifest output order (output i <-> manifest.outputs[i]).
+    const audioIndex = manifest.outputs.findIndex(
+      (o: any) => o.name === "output_audio",
+    );
+    const audio = result?.outputs?.[audioIndex];
+    check(
+      "voice-sample: output_audio is present",
+      audioIndex >= 0 && Boolean(audio?.url),
+      JSON.stringify(result?.outputs ?? []).slice(0, 300),
+    );
+    if (audio?.url) {
+      const audioResp = await fetch(audio.url);
+      const audioType = audioResp.headers.get("content-type") ?? "";
+      const bytes = Buffer.from(await audioResp.arrayBuffer());
+      check(
+        "voice-sample: output_audio is a FLAC file (stereo 32 kHz is what H3ReferenceAudio needs)",
+        audioResp.ok && bytes.subarray(0, 4).toString("latin1") === "fLaC",
+        `HTTP ${audioResp.status} ${audioType} ${bytes.length} bytes`,
+      );
+      // The flac goes back into the next render as a voice reference: stage it like a fixture.
+      producedVoiceUrl = audio.url;
+    }
   }
+  if (wanted.includes("refs")) {
+    await runRender(
+      "refs",
+      {
+        ...refs([0, 1, 2]),
+        ...voiceUrls,
+        ...(producedVoiceUrl ? { voice_ref_1: producedVoiceUrl } : {}),
+      },
+      true,
+    );
+  }
+  check(
+    "renderIds are distinct (inputs and lora selections are hashed into the id)",
+    new Set(renderIds).size === renderIds.length,
+    JSON.stringify(renderIds),
+  );
 
   console.log(
     `\n=== ${failures.length === 0 ? "ALL CHECKS PASSED ✓" : failures.length + " CHECK(S) FAILED ✗"} ===`,

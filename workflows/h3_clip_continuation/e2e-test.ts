@@ -1,10 +1,10 @@
 /**
  * WorkflowAgent E2E — h3_clip_continuation
  *
- * Covers the manifest contract (prior_clip required, ref1-ref7 and prior_clip_audio optional, no
+ * Covers the manifest contract (prior_clip required, ref1-ref7, prior_clip_audio and voice_ref_1 / voice_ref_2 optional, no
  * width/height params - the size comes from the prior clip, four opt-in lora ports) and two renders:
  *   1. "clip-only"  - prior_clip alone (no pictures, no prior_clip_audio).
- *   2. "clip+refs"  - prior_clip, prior_clip_audio, ref1 and ref2.
+ *   2. "clip+refs"  - prior_clip, prior_clip_audio, ref1, ref2 and both voice references (stereo 32 kHz wav).
  * Both check the output is a video whose size is the prior clip's size snapped to a multiple of 32
  * (python round-half-even: 1280x720 -> 1280x704; 736 is also accepted and printed).
  *
@@ -536,6 +536,13 @@ try {
     ),
     JSON.stringify(inputs.map((i) => i.name)),
   );
+  check(
+    "voice_ref_1 / voice_ref_2 are optional audio inputs",
+    ["voice_ref_1", "voice_ref_2"].every((n) =>
+      inputs.some((i) => i.name === n && i.kind === "audio" && !i.required),
+    ),
+    JSON.stringify(inputs.map((i) => [i.name, i.kind, i.required])),
+  );
 
   // 1b. Pre-flight: verify model URLs from YAML before spending GPU budget ────
   // Parses YAML directly — authoritative source of URLs, same data loadFromContent used.
@@ -618,6 +625,15 @@ try {
     Object.fromEntries(
       slots.map((n) => [`ref${n}`, imageUrls[(n - 1) % imageUrls.length]]),
     );
+  // Stereo 32 kHz voice-timbre references (2 s sine tones) for voice_ref_1 / voice_ref_2.
+  const voiceUrls: Record<string, string> = {};
+  for (const port of ["voice_ref_1", "voice_ref_2"]) {
+    voiceUrls[port] = await ensureFixture(
+      `${S3_FIXTURE_PREFIX}/${port}.wav`,
+      _path.join(MEDIA_FIXTURE_DIR, `${port}.wav`),
+      "audio/wav",
+    );
+  }
   const priorClipUrl = await ensureFixture(
     `${S3_FIXTURE_PREFIX}/prior_clip.mp4`,
     _path.join(MEDIA_FIXTURE_DIR, "prior_clip.mp4"),
@@ -683,6 +699,7 @@ try {
         prior_clip: priorClipUrl,
         prior_clip_audio: priorClipUrl,
         ...refs([1, 2]),
+        ...voiceUrls,
       },
       lora: true,
     },

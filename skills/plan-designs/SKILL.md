@@ -88,11 +88,12 @@ Build every entry with its FINAL key; nothing is decided later.
 
 | kind | keys |
 |---|---|
-| character | `character_type` (own `create_design` argument, not an attribute: woman, man, non-binary person, child, elderly person, animal, creature, robot, fantasy being, or free text); attributes `age`, `ethnicity`, `hair`, `eyes`, `build`, `wardrobe`, `features` |
+| character | `character_type` (own `create_design` argument, not an attribute: woman, man, non-binary person, child, elderly person, animal, creature, robot, fantasy being, or free text); attributes `age`, `ethnicity`, `hair`, `eyes`, `build`, `wardrobe`, `features`, `voice` |
 | outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` (from the tracker row) |
 | location | `place`, `space` (`interior` \| `exterior`, from the Places row), `era`, `time_of_day`, `weather`, `lighting`, `mood`, `set`, `set_style`, `connections`, `views` |
 
    - Character `hair`, `build` and `features` copy the profile's face, hair, skin tone and distinguishing marks verbatim; never summarize them away.
+   - Character `voice` (heard, never pictured: the finish records a short voice sample from it, and every clip passes it verbatim): comma-joined descriptors in this order - pitch (low / mid / high), timbre (gravelly, warm, breathy, nasal, smooth ...), apparent age, accent, pace, and ONE signature quality (a rasp, a lilt, a clipped delivery, a habitual sigh). Take what the profile states about the voice; otherwise invent one that fits the character's age, type and role. EVERY speaking character gets a `voice`, and the voices of the whole cast must differ CLEARLY: before writing the plan, list all voices side by side and make sure no two characters share the same pitch AND timbre, and that two characters who share a scene differ in at least pitch, timbre and pace. A non-speaking character (an animal, a creature without speech) gets no `voice`. Never name a real person, actor or celebrity as a voice reference.
    - One moment per design: ONE `time_of_day`, `lighting`, `weather`, season — the first scene's (else the most common); never several in one attribute.
    - Location attributes describe ONLY the place; `mood` only when the source gives the place's own atmosphere, else omit.
    - Under `forbidden` (and always for a minor) people are fully clothed.

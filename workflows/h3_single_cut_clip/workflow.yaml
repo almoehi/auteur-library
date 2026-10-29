@@ -8,9 +8,11 @@
 #
 # ─── Custom Nodes (all already in serverless-comfy/nodes.lock) ────────────────
 # MiniMaxH3ReferenceToVideo, MiniMaxH3SigmaShift, VAEDecodeAudio  built-in ComfyUI
-# H3KeyframeInject                https://github.com/jlucasmcrell/ComfyUI-H3-Multishot
-#   (registered by the pack's h3_avbank_probe.py; it also patches the model's extra_conds so
-#   reference rows and the start keyframe can be combined)
+# H3KeyframeInject, H3ReferenceAudio  https://github.com/jlucasmcrell/ComfyUI-H3-Multishot
+#   (H3KeyframeInject is registered by the pack's h3_avbank_probe.py; it also patches the model's
+#   extra_conds so reference rows and the start keyframe can be combined. H3ReferenceAudio is the
+#   pack's h3_advanced.py: it forces the reference to stereo 32 kHz and its first max_seconds)
+# SaveAudio                       built-in ComfyUI (output_audio: the clip's soundtrack as FLAC)
 # ImageResize+                    https://github.com/cubiq/ComfyUI_essentials
 # SolAttnPatch                    https://github.com/kijai/ComfyUI-SolAttn_triton
 # PathchSageAttentionKJ           https://github.com/kijai/ComfyUI-KJNodes
@@ -32,6 +34,7 @@ description: >
 url: workflow.json
 workflow_type: i2va
 model_family: minimaxh3
+capabilities: [voice-sample]  # a short speaking clip from a start frame whose own soundtrack (output_audio) is a character's voice sample: the add-views job of a finished character design makes it and publishes the audio as voice.<ext> (normally voice.flac)
 render_timeout_sec: 3600  # ~20 min typical H3 clip renders; the default 1800 s is too tight
 gpu_types: [h100, b200] # H100 while B200 has no capacity (2026-10-28; was pinned to B200 on 2026-10-26). Dispatch picks the cheapest deployed listed GPU, so this runs on H100.
 # sage_attention ships "disabled" (node 157): the SageAttention wheel in the compute image carries
@@ -82,10 +85,20 @@ ports:
       reference_role: reference
       label: "Picture 6"
       required: false
+    - name: voice_ref_1
+      kind: audio
+      description: "Optional stereo 32 kHz voice-timbre reference of ONE speaker (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 1>. ALWAYS fill voice_ref_1 before voice_ref_2: ComfyUI numbers the audio inputs that are connected in order, so the first reference supplied is always <Audio 1>. In the prompt state it with one line: '<Audio 1> is the voice-timbre reference for <Subject N> (S#).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      binding: audio@voice_ref_1
+      required: false
+    - name: voice_ref_2
+      kind: audio
+      description: "Optional stereo 32 kHz voice-timbre reference of a SECOND speaker (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 2>. Supply it only when voice_ref_1 is supplied (the numbering is by order of connection). In the prompt state it with one line: '<Audio 2> is the voice-timbre reference for <Subject N> (S#).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      binding: audio@voice_ref_2
+      required: false
   params:
     - name: prompt_positive
       kind: string
-      description: "MiniMax H3 keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief). Sections in order: subject_definitions (<Picture 1> = the start frame, then one line per supplied reference, <Subject N> for characters), summary starting with [keyframe completion], retention_analysis, detailed_description (style first, then [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', later shots timestamped, dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. Only cite <Picture N> for references that were supplied."
+      description: "MiniMax H3 keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief). Sections in order: subject_definitions (<Picture 1> = the start frame, then one line per supplied reference, <Subject N> for characters), summary starting with [keyframe completion], retention_analysis, detailed_description (style first, then [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', later shots timestamped, dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. Only cite <Picture N> for references that were supplied. When voice_ref_k is supplied, add the line '<Audio k> is the voice-timbre reference for <Subject n> (S#).' to subject_definitions."
       binding: value@138
       required: true
     - name: duration_seconds
@@ -176,6 +189,11 @@ ports:
       description: "Final video with audio, RIFE 2x interpolated, encoded at the fps param rate (default 48)."
       node_id: "145"
       role: primary
+    - name: output_audio
+      kind: audio
+      description: "The clip's own soundtrack as a lossless audio file (FLAC, before the video encode and the RIFE interpolation): a character's VOICE SAMPLE is this output of a short speaking clip - the add-views job of a finished character design publishes it as voice.flac, and it is the audio reference (voice_ref_N) of later clips. Request it only when you need the audio alone."
+      node_id: "voice_audio_out"
+      role: auxiliary
 context: |
   Use for the first clip of a scene and for every new shot after a cut (new framing, subject or
   insert). A boundary that continues this clip without a cut goes to h3_clip_continuation with
@@ -199,6 +217,15 @@ context: |
   detailed_description -> overall_soundscape -> non_diegetic_music. In subject_definitions
   <Picture 1> is the start frame; the first shot begins "For the target video, at 0.00 seconds,
   <Picture 1> is fully referenced." and describes the motion away from it, not its content.
+
+  Voices: voice_ref_1 and voice_ref_2 are optional stereo 32 kHz voice-timbre references of up to
+  two speakers (audio inputs, H3ReferenceAudio guards channels, rate and length). ComfyUI numbers
+  the audio inputs that are CONNECTED in order, so fill voice_ref_1 first: voice_ref_1 is always
+  <Audio 1>, voice_ref_2 (only with voice_ref_1) is <Audio 2>. Which speaker a reference belongs to
+  is stated in the prompt: give each cited audio one line in subject_definitions: '<Audio k> is the
+  voice-timbre reference for <Subject n> (S#).' Without them the voices come from the prompt text
+  alone and vary between clips. output_audio is the clip's own soundtrack as a FLAC file: request it
+  (as an output of a short speaking clip) to get a voice sample for a character.
 
   LoRAs: the LightX2V turbo LoRA (0.7) is baked in - do not select it on a port. lora_1-lora_4
   take style / character adapters from the workspace lora catalog (modelFamily minimaxh3).
