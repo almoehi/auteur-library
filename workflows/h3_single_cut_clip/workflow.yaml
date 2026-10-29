@@ -112,14 +112,14 @@ ports:
       default: -1
     - name: width
       kind: int
-      description: "Output width in pixels. Snapped to the nearest multiple of 32 in the graph (the model needs it), so any value works; the render profile's size applies here and every continuation inherits it from the clip."
+      description: "Output width in pixels. Snapped to the nearest multiple of 32 in the graph (the model needs it), so any value works. Do not set it: the clip takes its start frame's aspect ratio at the render profile's video size, and every continuation keeps the clip's size."
       binding: value@wh_width
       constraints: { min: 256, max: 1920 }
       required: false
       default: 480
     - name: height
       kind: int
-      description: "Output height in pixels. Snapped to the nearest multiple of 32 in the graph (the model needs it), so any value works; the render profile's size applies here and every continuation inherits it from the clip."
+      description: "Output height in pixels. Snapped to the nearest multiple of 32 in the graph (the model needs it), so any value works. Do not set it: the clip takes its start frame's aspect ratio at the render profile's video size, and every continuation keeps the clip's size."
       binding: value@wh_height
       constraints: { min: 256, max: 1920 }
       required: false
