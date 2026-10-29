@@ -32,6 +32,7 @@ description: >
 url: workflow.json
 workflow_type: i2va
 model_family: minimaxh3
+capabilities: [voice-sample]  # a short speaking clip from a start frame: the design finish records a character's voice sample with it (audio extracted as voice.wav)
 render_timeout_sec: 3600  # ~20 min typical H3 clip renders; the default 1800 s is too tight
 gpu_types: [h100, b200] # H100 while B200 has no capacity (2026-10-28; was pinned to B200 on 2026-10-26). Dispatch picks the cheapest deployed listed GPU, so this runs on H100.
 # sage_attention ships "disabled" (node 157): the SageAttention wheel in the compute image carries
