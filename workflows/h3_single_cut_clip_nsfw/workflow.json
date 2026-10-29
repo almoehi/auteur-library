@@ -598,5 +598,18 @@
     "_meta": {
       "title": "Voice reference 2: stereo 32 kHz guard"
     }
+  },
+  "voice_audio_out": {
+    "inputs": {
+      "audio": [
+        "121",
+        0
+      ],
+      "filename_prefix": "audio/h3_voice"
+    },
+    "class_type": "SaveAudio",
+    "_meta": {
+      "title": "Save the clip soundtrack (voice sample)"
+    }
   }
 }

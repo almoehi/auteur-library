@@ -12,7 +12,8 @@
 # MiniMaxH3ReferenceToVideo, MiniMaxH3SigmaShift, VAEDecodeAudio  built-in ComfyUI
 # H3KeyframeInject, H3LastFrame, H3ReferenceAudio   https://github.com/jlucasmcrell/ComfyUI-H3-Multishot
 #   (H3KeyframeInject is registered by the pack's h3_avbank_probe.py; it also patches the model's
-#   extra_conds so reference rows and the start keyframe can be combined)
+#   extra_conds so reference rows and the start keyframe can be combined. H3ReferenceAudio is the
+#   pack's h3_advanced.py: it forces the reference to stereo 32 kHz and its first max_seconds)
 # SolAttnPatch                    https://github.com/kijai/ComfyUI-SolAttn_triton
 # PathchSageAttentionKJ           https://github.com/kijai/ComfyUI-KJNodes
 # VHS_LoadVideoFFmpeg, VHS_VideoInfoLoaded, VHS_VideoCombine  https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
@@ -104,12 +105,12 @@ ports:
       required: false
     - name: voice_ref_1
       kind: audio
-      description: "Optional stereo 32 kHz voice-timbre reference of speaker S1 (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 2>. In the prompt state it with one line: '<Audio 2> is the voice-timbre reference for <Subject N> (S1).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      description: "Optional stereo 32 kHz voice-timbre reference of ONE speaker (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 2> (<Audio 1> is always the prior clip's mixed soundtrack - never cite it as anyone's voice when a voice reference is supplied). ALWAYS fill voice_ref_1 before voice_ref_2: ComfyUI numbers the audio inputs that are connected in order. In the prompt state it with one line: '<Audio 2> is the voice-timbre reference for <Subject N> (S#).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
       binding: audio@voice_ref_1
       required: false
     - name: voice_ref_2
       kind: audio
-      description: "Optional stereo 32 kHz voice-timbre reference of speaker S2 (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 3>. In the prompt state it with one line: '<Audio 3> is the voice-timbre reference for <Subject N> (S2).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      description: "Optional stereo 32 kHz voice-timbre reference of a SECOND speaker (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 3>. Supply it only when voice_ref_1 is supplied (the numbering is by order of connection). In the prompt state it with one line: '<Audio 3> is the voice-timbre reference for <Subject N> (S#).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
       binding: audio@voice_ref_2
       required: false
   params:
@@ -216,13 +217,15 @@ context: |
   longer match the ports. Cite a picture only when it was supplied, and give every cited picture a
   line in subject_definitions.
 
-  Voices: voice_ref_1 and voice_ref_2 are optional stereo 32 kHz voice-timbre references of the
-  speakers S1 / S2 (audio inputs; H3ReferenceAudio guards channels, rate and length). <Audio 1> is
-  always the soundtrack read from prior_clip (the mixed voices carried over), so the references are
-  <Audio 2> (voice_ref_1) and <Audio 3> (voice_ref_2; if only voice_ref_2 is supplied it is
-  <Audio 2>). Give each one line in subject_definitions: '<Audio k> is the voice-timbre reference
-  for <Subject n> (S#).' Supply the same references on every clip of a scene so a speaker keeps
-  one timbre across the chain.
+  Voices: voice_ref_1 and voice_ref_2 are optional stereo 32 kHz voice-timbre references of up to
+  two speakers (audio inputs; H3ReferenceAudio guards channels, rate and length). ComfyUI numbers
+  the audio inputs that are CONNECTED in order: <Audio 1> is always the soundtrack read from
+  prior_clip (the mixed voices carried over - never cite it as anyone's voice when a voice
+  reference is supplied), voice_ref_1 is always <Audio 2> and voice_ref_2 (only with voice_ref_1)
+  <Audio 3>. Fill voice_ref_1 first. Which speaker a reference belongs to is stated in the prompt:
+  give each one line in subject_definitions: '<Audio k> is the voice-timbre reference for
+  <Subject n> (S#).' Supply the same references on every clip of a scene so a speaker keeps one
+  timbre across the chain.
 
   LoRAs: the LightX2V turbo LoRA (0.7) is baked in - do not select it on a port. lora_1-lora_4
   take style / character adapters from the workspace lora catalog (modelFamily minimaxh3); keep

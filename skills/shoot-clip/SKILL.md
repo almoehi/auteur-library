@@ -78,7 +78,8 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
   - `movement` VERBATIM ("hold" = locked-off frame; without a move asked for, the frame never moves: no push-in, no reframing);
   - `cut` with a start frame: describe only the motion from that frame;
   - `style` verbatim (a clip in another medium is a miss);
-  - `frame_edits` restated as a constraint: never re-add an element an edit removed ("remove the car" = no car in the clip prompt).
+  - `frame_edits` restated as a constraint: never re-add an element an edit removed ("remove the car" = no car in the clip prompt);
+  - `speakers` (only when the clip has dialogue): the clip's speakers in ONE fixed order - the order of their first appearance in the rows of `character_table.md`, among the clip's speakers only: `S1` is the first, `S2` the next, `S3` ... (never the order of the dialogue lines). One line each: `S# = <Subject n> = <character design key>`, then the character's `voice` attribute text VERBATIM (`read_artifact` of the character design, its `design.json` attributes; never paraphrase, shorten or invent a voice). Voice references (the workflow has two voice ports, `voice_ref_1` and `voice_ref_2`): the first TWO speakers that have a published voice sample get one; a third or further speaker, or one without a sample, has the voice text only - never another character's file. Tell the writer the pairing and the audio numbers: single cut - `voice_ref_1` is `<Audio 1>`, `voice_ref_2` is `<Audio 2>`; `continue` - `<Audio 1>` is the prior clip's mixed soundtrack (NEVER cited as anyone's voice when a voice reference is supplied), `voice_ref_1` is `<Audio 2>`, `voice_ref_2` is `<Audio 3>`.
 - Use `negative_prompt` when the workflow has a negative-prompt port.
 
 ## 6. Render
@@ -86,6 +87,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - Kickoff lists checks gating this clip: call `run_checks` BEFORE the render and fix every listed problem (a rejection after rendering wastes the render; "Checks that gate the task" in `workflow-calling-conventions`).
 - ONE `wf_*` call: frames / clip / references, drafted prompt, planned duration, (continue) `prior_clip_start_time`; `draft` quality unless the task says otherwise; the `.mp4` routed to the canonical path (`output_ports`).
 - A `cut` call MUST carry `start_frame` on the start-image port.
+- Voice references: the voice sample is the file `voice.<ext>` of the approved character design (`artifact://<design id>/voice.flac`). Pass the first referenced speaker's sample as `voice_ref_1` and the second's as `voice_ref_2` - ALWAYS fill `voice_ref_1` first (ComfyUI numbers the audio inputs that are connected in order, so a lone second reference would change every `<Audio k>` number). Use the same speakers' references on every clip of a scene so a voice keeps one timbre; in a `continue` the voice references replace the mixed prior soundtrack as the timbre source. A speaker without a sample: voice text only, no port.
 - Do NOT pass `width` / `height` by default (the render profile decides); set them only when the task carries them or the shot needs another format. Size and `is_portrait`: "Render size" of `workflow-calling-conventions`.
 - Error: read the failure result. `retryable: false` (infrastructure failure the server already retried, or `cancelled`) -> do NOT render again: quote the error in the final reply and end WITHOUT `task_failed` / `task_complete`. Otherwise (a wrong argument or output you can fix): re-read instructions, fix, retry ONCE with the SAME workflow; failing again -> quote the error and end the same way. The server enforces this: a task has a budget of 2 failed renders, and once it is used up every `wf_*` call is refused with "render failures for this task are used up (2 of 2): report the problem and stop - do not render again" and the task ends as a declared failure - never try to render after that. A failed render never makes another workflow type acceptable (no text-to-video fallback).
 - Write the canonical `_prompt.txt` from the EXACT prompt passed to the render (continue: plus a line `prior_clip_start_time: <value>`); never reworded.
@@ -101,13 +103,3 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - `continue`: first frames fit the predecessor's last frames (same subject, place, lighting); a clear break -> one retry with a corrected prompt ("Check, retry once, suggest" in `workflow-calling-conventions`).
 - The prompt file holds the rendered prompt; no other file written.
 - `task_complete`: 1-3 lines — mode, measured duration, (continue) the start offset; no prompt / workflow restated ("Concise replies and task/artifact URIs" in `workflow-calling-conventions`).
-
-## 8. Speakers
-
-For every speaking character (a `Dialogue:` speaker of the shot, or a character the brief says speaks):
-
-- Read the character's `voice` attribute from its design (`read_artifact` on the character design: `design.json` / description) and pass that text VERBATIM in the prompt-writer `context`, next to the speaker number. Never paraphrase or invent a voice.
-- Pass the character's published `voice.wav` (the file `voice.wav` of the approved character design) as the clip workflow's `voice_ref_k`, where `k` is the speaker number `S<k>`, and tell the prompt writer each pairing (`voice_ref_k` = speaker `S<k>` = `<Subject n>`) and the `<Audio j>` number the workflow description gives for it.
-- Speaker numbers are FIXED: `S1`, `S2` follow the order of the speakers' rows in `character_table.md`, identical in every clip of the scene. A speaker keeps the same `S#` and the same `voice_ref_k` even when the other speaker is absent from a clip; never renumber.
-- `continue`: use the per-character voice references for the timbre instead of relying on the mixed soundtrack of the prior clip.
-- A character without a `voice.wav`: omit that `voice_ref_k` and keep the voice text only; never substitute another character's file.
