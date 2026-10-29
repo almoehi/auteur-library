@@ -214,9 +214,9 @@ ENHANCED PROMPT:
 NEGATIVE PROMPT:
 N/A — FLUX 3 has no separate negative prompt field. Audio suppression via "No sound" appended to prompt if needed.
 
-CHANGES SUMMARY:
-• [What was added or restructured — 3–5 concise bullets]
 ```
+
+Never add a "CHANGES SUMMARY", notes or commentary to the prompt: everything in it is rendered. What you added or restructured goes in the tool result's separate `changes` field.
 
 ---
 

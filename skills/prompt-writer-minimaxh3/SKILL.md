@@ -163,7 +163,7 @@ Rules:
 - `[Shot 1]` has NO timestamp
 - All subsequent shots: `[Shot N] At MM:SS.mmm, ...` — timestamps strictly increasing, all within target duration
 - A cut introduces new information: subject, space, state, viewpoint, or time
-- Distance or angle changes only → use camera motion, not a cut
+- Inside a clip the framing changes ONLY through the brief's `Movement:`; a distance or angle change the brief gives no movement for is not written into this prompt at all (it is a cut between clips, planned by the caller)
 - Budget ~4 seconds for prop changes, handoffs, or complex actions
 - Write ONLY the beats the brief states. Never add behaviour (blinks, breaths, glances, weight shifts, props, small gestures) to fill time or to reach a beat count: a short action in a long clip is stated once, and the clip simply continues from its end state.
 
@@ -217,8 +217,8 @@ Rules: ONE camera move per shot. If static: state "frame never moves" AND list w
 **A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
 camera pushes in slowly ..."). When the brief says `Movement: hold` (or `static`), use the static
-template above, including its "no zoom / no push / no pan" refusals. When the brief carries NO `Movement:`,
-state the framing from the brief (shot size, angle) and add NO camera move of your own and no static refusal list. In a video continuation the prompt continues `<Video 1>` without a cut; the move
+template above, including its "no zoom / no push / no pan" refusals. When the brief carries NO `Movement:` (absent, or `movement: none`),
+state the framing from the brief (shot size, angle), add NO camera move of your own and no static refusal list, and keep ONE short sentence: "The camera stays at this framing." (Iron Law 3). In a video continuation the prompt continues `<Video 1>` without a cut; the move
 continues or holds that of the prior clip.
 
 **The start-frame picture is the target framing.** When `<Picture 1>` is the storyboard keyframe of this shot (the picture lines say so), its framing IS this shot's framing: write that framing, and never describe a different framing as a camera move (no "pulls out to a wide", "pushes in to a close-up" unless the brief's `Movement:` says it). A change of framing between shots is a cut, not a move inside one clip.
@@ -304,7 +304,7 @@ At the moment dialogue ends: describe lips closing and speaking motion ceasing.
 
 Use `"N/A"` when a field has nothing to fill.
 
-**Out-of-frame exclusions.** When the brief carries an `Out of frame:` line and the workflow has no negative-prompt port, state it in the prompt body as one exclusion sentence: `Nothing else is visible: no <thing>, no <thing>.` (the brief's things, verbatim). Do not drop it.
+**Out-of-frame exclusions.** When the brief carries an `Out of frame:` line and the workflow has no negative-prompt port, state it in the prompt body as one exclusion sentence: `Not in frame: no <thing>, no <thing>.` (the brief's things, verbatim). Do not drop it.
 
 ---
 

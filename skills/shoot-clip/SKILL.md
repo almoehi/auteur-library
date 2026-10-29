@@ -53,8 +53,8 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 - Measure the predecessor with `get_video_info` (`path_or_url="artifact://<id>/<file>"`); never use its planned length.
 - `prior_clip_start_time` = REAL duration minus 1-2 s (inside the last 1-2 s); move earlier until the workflow's minimum of reference frames remains. Pass it on the render call and in the summary.
 - The prompt continues `<Video 1>` in the same shot: same framing, subject and setup, the action carrying on, the `movement` continuing or holding. NO cut ("the target video cuts to …"), no new composition. Output is only the new segment; do not merge.
-- `framing_change: yes` is only valid with a real `movement` (a push, pull, pan, tilt, orbit …): add this shot's storyboard frame as an extra reference image (named as the port descriptions do, e.g. "Picture 1 is the target framing") and write the shot's `movement` VERBATIM as the only camera move - never invent a reframing to reach the new framing; subjects, place, lighting, wardrobe stay those of `<Video 1>`.
-- `framing_change: yes` with `movement` `hold` (or none) is a CUT, not a continuation: the task was planned wrong. `task_failed("framing change with movement hold: this boundary is a cut")` (deterministic; the coordinator re-plans it as a `cut`). A new subject or insert is a CUT too.
+- `framing_change: yes` is valid only with a `movement` that can reach the new framing (push / pull / zoom for a change of shot size, pan / tilt / arc for a change of angle; a drift or handheld movement does not): add this shot's storyboard frame as an extra reference image (named as the port descriptions do, e.g. "Picture 1 is the target framing") and write the shot's `movement` VERBATIM as the only camera move - never invent a reframing; subjects, place, lighting, wardrobe stay those of `<Video 1>`.
+- `framing_change: yes` without such a movement (`hold`, none, drift) means the task was planned wrong: `task_failed("framing change without a camera move that can reach it: this boundary must be a cut")` - a declared failure; render nothing, and do not claim it will be re-planned. A new subject or insert is a CUT too.
 
 ## 4. LoRAs (motion first)
 
@@ -68,7 +68,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - **Completeness check (before the render).** `review_prompt` with the `prompt_id` the draft returned (never retype the prompt) and `review_instructions` = the `shot_block` + `beat` + `prior_shot_facts` VERBATIM, prefixed with the single line "Check that the prompt states every element of this shot (who, where, extent, pose, wardrobe and state changes, the action from start to end, camera move, dialogue, out-of-frame constraints) and contradicts none. List each missing or contradicted element." Do NOT write your own rubric, scoring criteria or "what a good clip looks like": the shot block IS the rubric. Severity "significant" -> `enhance_prompt` with `prompt_id` and the review text as `additional_context`, once.
 - Re-run ("## Instructions for this run" in the kickoff): the instructions OVERRIDE the shot block wherever they conflict.
   - Drop contradicted lines (e.g. "no contact", "neutral expression") from `context`; pass the instructions VERBATIM as `instruction` (not only inside `context`).
-  - Previous prompt available (old `_prompt.txt` or `render_info`): `enhance_prompt(original_prompt, instruction)` INSTEAD of `draft_prompt`, then the completeness check once with the same `instruction`, `enhance_prompt` once more only on severity "significant" (max 2 enhances + 1 review). All before the one render.
+  - Previous prompt available (old `_prompt.txt` or `render_info`): `enhance_prompt(original_prompt, instruction)` INSTEAD of `draft_prompt`, then the completeness check once on the writer result (draft or enhance, by its `prompt_id`) with the same `instruction`, `enhance_prompt` once more only on severity "significant" (max 2 enhances + 1 review). All before the one render.
 - The clip's motion is a FROM -> TO delta, written into `context` as the action in progress (never as a frozen pose, never as a list of prohibitions):
   - `continue`: FROM = the end state of the prior clip (`prior_shot_facts`: its Action / Wardrobe / State), TO = this shot's state (`shot_block` Action / Wardrobe / State). A Wardrobe or State change between the two (a garment removed, wet hair, a prop picked up) IS this clip's action: state it as happening during the clip, in the shot block's words.
   - `cut`: FROM = the start frame, TO = what the `beat` text says happens (verbatim). The shot's `Action:` is the state AT 0 s; the beat carries it forward.
@@ -86,7 +86,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
   - `style` verbatim (a clip in another medium is a miss);
   - `frame_edits` restated as a constraint: never re-add an element an edit removed ("remove the car" = no car in the clip prompt);
   - prohibitions (an `Out of frame:` line, a removed element, "no contact") are stated ONCE as constraints in `context` ("Constraint: nothing of X is visible") - never pasted as raw "do not" text into the drafted prompt, and never added to the prompt after the writer returned.
-- Use `negative_prompt` when the workflow has a negative-prompt port.
+- Use `negative_prompt` when the workflow has a negative-prompt port; then also route the shot's `Out of frame:` things there (appended to it) instead of the prompt body. Without a negative port they stay in `context` as a constraint, and the writer states them as "Not in frame: no …".
 
 ## 6. Render
 

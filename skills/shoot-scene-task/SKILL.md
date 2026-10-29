@@ -93,9 +93,9 @@ The storyboard design's `design.json` `published.outputs[]` entry of each `frame
 Clip M = shot M; start frame `frame_M`; `duration_seconds` = the shot's `Duration` (whole seconds, at least 1). The first clip is a fresh start (treated as a cut).
 
 Every boundary (shot M-1 -> M) is `continue` or `cut`:
-1. Take the shot's `Transition:` as given, with its reason; do not second-guess.
+1. Take the shot's `Transition:` as given, with its reason; do not second-guess (except the framing check 2b below).
 2. No `Transition:` (older storyboard): decide ONCE here and note "decided here". CONTINUE when the action carries straight on in the same setup (same place, moment, people) AND the framing does not change (`framing_change: no`) or the shot carries a real `Movement:` that performs the change; CUT for a new moment, place or subject, an insert, or a framing change with `Movement:` `hold` / none.
-2b. A `Transition: continue` shot whose framing changes (`framing_change: yes`) and whose `Movement:` is `hold` or none is planned as a `cut` (note "cut: framing changes without a camera move"): a continuation cannot change framing by itself and an invented reframe becomes a morph inside the clip.
+2b. EXCEPTION to 1 (this check overrides a given `Transition: continue`): a `continue` shot whose framing changes (`framing_change: yes`) is kept as `continue` only when its `Movement:` can reach the new framing - push / pull / zoom for a change of shot size, pan / tilt / arc for a change of angle; `hold`, none, a drift or handheld movement cannot. Otherwise plan a `cut` (note "cut: framing changes without a camera move that can reach it"): a continuation cannot change framing by itself and an invented reframe becomes a morph inside the clip.
 3. No video-continuation workflow -> every boundary is a CUT.
 
 - `continue`: rendered with the continuation workflow from clip M-1's real file; keeps `requires_tasks` / `requires_artifacts` on the predecessor (it cannot start before clip M-1 is approved). Mechanics (framing change, start offset, no hard cut): `shoot-clip` mode `continue`.
@@ -143,8 +143,8 @@ prompt:
   framing_change: yes | no   (continue only; MECHANICAL: yes iff this shot's `Camera:` line differs from the previous shot's after trimming and lower-casing both; write "previous: <its Camera>")
   shot_block: |
     <the shot's FULL block from shotlist.md, verbatim, every line: Action, Location, Camera,
-     Movement, Transition, Characters, Outfits, Blocking, Pose, Frame, Visible, Duration and the
-     Sex act: / Sex position: lines when present; NOT the keyframe-only Workflow: / Refs: / Prompt: lines>
+     Movement, Transition, Characters, Outfits, Wardrobe, State, Blocking, Pose, Frame, Visible,
+     Contact, Out of frame, Duration and the Sex act: / Sex position: lines when present; NOT the keyframe-only Workflow: / Refs: / Prompt: lines>
   frame_edits: <the frame's published `edits`, verbatim; "none" when it has none>
   action: <the shot's Action>
   beat: |
