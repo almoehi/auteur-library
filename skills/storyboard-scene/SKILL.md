@@ -402,7 +402,8 @@ check); they go to the clip prompt verbatim.
   as "must show" and the judge checks it; nothing carries over unless the line says it. A lasting change (a new outfit, a haircut) is
   a new look in the scene list instead.
 - `Contact:` = every touch the frame shows, `<characterKey> (<body part>) on <characterKey> (<body part>)`
-  or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). Body parts
+  or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). A thing is
+  plain words, never written like a person: `character_brianna (hands) on bin lid`, not `bin (lid)`. Body parts
   (exactly these; singular or `lips` accepted): head, face, mouth, neck, shoulders, chest, breasts,
   back, waist, belly, hips, buttocks, groin, lap, thighs, legs, knees, feet, arms, forearms, hands,
   fingers. Copy the beat's `Contact` onto the shot that shows the touch: a beat with a `Contact` needs
