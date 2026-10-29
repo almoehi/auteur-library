@@ -733,21 +733,23 @@ try {
 
   if (wanted.includes("voice-sample")) {
     const result = await runRender("voice-sample", refs([0]), false);
-    const audio = (result?.outputs ?? []).find(
-      (o: any) => o.port === "output_audio",
+    // The render reports its outputs in manifest output order (output i <-> manifest.outputs[i]).
+    const audioIndex = manifest.outputs.findIndex(
+      (o: any) => o.name === "output_audio",
     );
+    const audio = result?.outputs?.[audioIndex];
     check(
       "voice-sample: output_audio is present",
-      audio !== undefined,
-      JSON.stringify((result?.outputs ?? []).map((o: any) => o.port)),
+      audioIndex >= 0 && Boolean(audio?.url),
+      JSON.stringify(result?.outputs ?? []).slice(0, 300),
     );
-    if (audio) {
+    if (audio?.url) {
       const audioResp = await fetch(audio.url);
       const audioType = audioResp.headers.get("content-type") ?? "";
       const bytes = Buffer.from(await audioResp.arrayBuffer());
       check(
-        "voice-sample: output_audio is a non-empty audio file",
-        audioResp.ok && bytes.length > 1000,
+        "voice-sample: output_audio is a FLAC file (stereo 32 kHz is what H3ReferenceAudio needs)",
+        audioResp.ok && bytes.subarray(0, 4).toString("latin1") === "fLaC",
         `HTTP ${audioResp.status} ${audioType} ${bytes.length} bytes`,
       );
       // The flac goes back into the next render as a voice reference: stage it like a fixture.
