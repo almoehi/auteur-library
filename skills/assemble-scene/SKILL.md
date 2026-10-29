@@ -32,8 +32,9 @@ Joins the finished clips of ONE scene, in task order, into the canonical `scene<
 - All clips share codec, resolution, fps, pixel format and audio layout (or none has audio): concat demuxer, stream copy.
   ```bash
   printf "file '%s'\n" /tmp/assemble_scene<N>/clip1.mp4 … > list.txt
-  ffmpeg -f concat -safe 0 -i list.txt -c copy scene<N>_assembled.mp4
+  ffmpeg -y -nostdin -f concat -safe 0 -i list.txt -c copy scene<N>_assembled.mp4
   ```
+- Always `ffmpeg -y -nostdin …` (every ffmpeg call, re-encodes included): sandbox stdin is closed, and without `-y` an existing output makes ffmpeg wait for an answer until the exec is killed at its timeout.
 - They differ: normalize and re-encode only then.
   - First clip's resolution and fps (scale with letterbox / pad, no stretching); `-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p`.
   - Audio `aac` at a common sample rate; `anullsrc` silence for clips without audio when any clip has audio.
@@ -42,6 +43,6 @@ Joins the finished clips of ONE scene, in task order, into the canonical `scene<
 ## 4. Verify and deliver
 
 - Probe the result: video stream present; duration ≈ sum of clip durations (±1 s); intended resolution / fps.
-- Failure -> retry once with the re-encode route; still failing -> `task_failed` with the error (nothing written yet).
+- A command that exited 0 and wrote the output succeeded: probe the file instead of re-running it. Failure (non-zero exit, timeout, bad probe) -> retry once with the re-encode route; still failing -> `task_failed` with the error (nothing written yet).
 - Only after verification passes, write the result to the declared output path, exactly `scene<N>_assembled.mp4` (write nothing earlier or elsewhere).
 - `task_complete`: 1-3 lines — total duration and route (copy / re-encode), not the per-clip list ("Concise replies and task/artifact URIs" in `workflow-calling-conventions`).
