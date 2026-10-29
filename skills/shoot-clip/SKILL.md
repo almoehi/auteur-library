@@ -18,7 +18,7 @@ One task = one clip = one render. Never render another clip, another take of thi
 
 Task prompt fields:
 - Required: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`), `movement`, `duration_seconds`, `start_frame`, `style`, the canonical output files (`.mp4` and `_prompt.txt`); `continue` also `prior_clip` (the KEY of clip M-1's output artifact, e.g. `scene2_clip3`).
-- Used when present: `action`, `camera`, `beat` (the scene-list beat of this shot, verbatim), `prior_shot_facts` (`continue`: the previous shot's Action / Wardrobe / State lines), `references`, `framing_change`, `negative_prompt`, `preferred_workflow`, `loras` (the shot's curated LoRAs), `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`, `width` / `height`.
+- Used when present: `action`, `camera`, `beat` (the scene-list beat of this shot, verbatim), `prior_shot_facts` (`continue`: the previous shot's Action / Wardrobe / State lines), `references`, `framing_change`, `negative_prompt`, `preferred_workflow`, `loras` (the shot's curated LoRAs), `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`. (`width` / `height` are ignored: a clip keeps its start frame's shape.)
 
 `task_failed(reason)` (render nothing; deterministic causes only) when:
 - a required field is missing (name it);
