@@ -213,7 +213,10 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   push-in / pull-out / zoom for a size change, a pan / tilt / arc for an angle change (drift, handheld
   and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
   move can reach the new framing, write `Transition: cut — …` instead (the clip then starts on the
-  new keyframe).
+  new keyframe). The write is refused (rule R25) when a size change has no size move (push-in /
+  pull-out / pull back / dolly / zoom) or an angle change no angle move (pan / tilt / arc / orbit /
+  crane / boom) in `Movement:` (or a `camera` beat) — both changed needs both; a push-in cannot turn
+  an eye-level shot into a low-angle one.
 - `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
   (new / split shots get ids after the highest).
 - `Format:` on the line after the title, always: the `format` attribute, else the story's
@@ -502,7 +505,8 @@ send that shot again:
   come off still in `Wardrobe:`;
 - `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
   one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
-  or angle (R16);
+  or angle (R16), and its `Movement:` performs that change — size move for a size change, angle
+  move (pan / tilt / arc) for an angle change, else `cut` (R25);
 - `(view <id>)` on `Location:` / `Outfits:` / `Characters:` only with a listed view id; the shot's `Blocking:` /
   `Frame:` match the chosen picture's layout;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
