@@ -56,18 +56,23 @@ built from it.
 | `write_shot` refused a shot | the refusal text | it names the rule; e.g. a touched thing is plain words ("on bin lid", never "bin (lid)") |
 | A storyboard / frame job looks stuck | the job's step and the renderer's phase / progress | 20+ minutes of rendering and checking is normal; stuck = no progress and no render in flight |
 | An agent says it fixed something, nothing changed | re-read `shotlist.md` / the artifact | no tool was called -> re-send the request naming the exact tools and asking to quote each result |
-| A re-run changed more than asked | diff the artifact before vs after | the instruction was not followed -> restore the unrelated parts; say what changed |
+| A re-run changed more than asked | diff the artifact before vs after | the instruction was not followed -> restore it from the old text (step 3.2), say what changed |
 
 ## 3. Fix at that layer (smallest fix, in this order)
 
 1. **Run mode first.** Before anything that resets dependents, the person switches the workspace to
    **Manual** (the header switch); then reset tasks wait ("Paused") until run, and nothing re-shoots
    on its own. You cannot switch it: ask, and wait.
-2. **Scene list** (`create_scenes` or the task that produced `scene_list`): `reset_task` with
-   `cascade: false` and `instructions` that state the exact correction and "change nothing else"
-   (e.g. "Row 3.1 starts in the sister's bikini look and ends nude: list both looks; apply the look
-   rule to every row"). Only that task re-runs; its readers keep their output. Afterwards diff the new
-   file against the old one and restore anything it changed beyond the correction.
+2. **Scene list** (`create_scenes` or the task that produced `scene_list`). A re-run REWRITES the
+   whole file, even when told "change nothing else" (live: a one-row look fix restructured every
+   scene and dropped three beats). So:
+   - BEFORE the re-run, `read` the current file and keep its full text (it is the restore source).
+   - Re-run with `reset_task` (`cascade: false`) and `instructions` that carry the COMPLETE corrected
+     file between BEGIN / END markers and say "write exactly this, byte for byte, in one file write;
+     do not edit, re-plan or apply any rule to it" - never a description of the change.
+   - AFTER it, `read` the new file and compare it line by line with the text you sent; any other
+     difference: run it again the same way, or stop and tell the person. Only then touch what is
+     built from it.
 3. **Storyboard** (one scene): a storyboard reads the scene list when it drafts, so after a scene-list
    fix it must draft again. Unfinished: `reset_task` it with `cascade: false` (start over) and
    `instructions` naming the shots to fix and why. Finished: the person uses "Re-run from here" (all
@@ -81,7 +86,9 @@ built from it.
    with ONE concrete sentence of what must be visible ("his penis penetrates her from behind; his
    groin against her buttocks"). It keeps the frame and repairs only what the note names. Not
    available to an agent: ask the person.
-6. **Clips**: fix the brief, not the clip - a pending clip task with `modify_task` (prompt), a
+6. **Any other text artifact** (a shot list, a design plan, a brief): the same rule as the scene
+   list - keep the old text before a re-run, send the complete corrected text, compare after.
+7. **Clips**: fix the brief, not the clip - a pending clip task with `modify_task` (prompt), a
    finished one with `reset_task` (`cascade: false`, `instructions`). A clip that cannot be planned
    right because its shot is wrong goes back to step 4.
 
