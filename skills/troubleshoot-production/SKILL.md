@@ -71,7 +71,7 @@ to verify a fix.
 | `write_shot` refused a shot | the refusal text | it names the rule; e.g. a touched thing is plain words ("on bin lid", never "bin (lid)") |
 | A storyboard / frame job looks stuck | the job's step and the renderer's phase / progress | 20+ minutes of rendering and checking is normal; stuck = no progress and no render in flight |
 | An agent says it fixed something, nothing changed | re-read `shotlist.md` / the artifact | no tool was called -> re-send the request naming the exact tools and asking to quote each result |
-| A re-run changed more than asked | diff the artifact before vs after | the instruction was not followed -> restore it from the old text (step 3.2), say what changed |
+| A re-run changed more than asked | diff the artifact before vs after | the instruction was not followed -> ask for a re-run with the old text (step 4), say what changed |
 
 ## 4. Fix what you own, ask for the rest
 
