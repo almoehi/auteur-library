@@ -38,6 +38,37 @@ built from it.
 - Never trust an agent's reply that it "updated" or "fixed" something: re-read the artifact. A reply
   without a tool result behind it changed nothing.
 
+## 1b. Look before you judge (mandatory, before any root cause)
+
+Text tells you what was ASKED; only the pictures tell you what HAPPENED. Inspect every involved image
+and clip with a vision model before naming a cause - and again to verify the fix.
+
+- **What to look at:** the frame / picked take of each involved shot AND of the shot before it; each
+  involved clip; for a `continue` clip also the LAST frame of the previous clip; for a take that failed
+  its check, the take itself next to the shot's references (the designs it must match).
+- **Who can look:** a worker (sandbox + `describe_image`). The coordinator has no sandbox or vision
+  tool: create a short `llm` task ("Inspect s3-02 for: <symptom>", prompt: load skill
+  `troubleshoot-production`, step 1b; output a file `inspect_<shot>.png` + a text verdict) or ask the
+  storyboard's worker in its chat - and read the result before judging.
+- **How (worker):**
+  1. `sandbox_fetch` each image / clip by its `artifact://` reference into `/workspace/in/`.
+  2. A clip becomes ONE strip of evenly spaced frames - never look at a single frame of a clip:
+     `ffmpeg -v error -i in/clip.mp4 -vf "fps=6/<duration s>,scale=480:-1,tile=6x1" -frames:v 1 strip.png`
+     (`get_video_info` gives the duration); the previous clip's last frame:
+     `ffmpeg -v error -sseof -0.05 -i in/prev.mp4 -frames:v 1 -vf scale=480:-1 prev_last.png`.
+  3. Put everything to compare side by side in ONE sheet, in time order (previous last frame |
+     keyframe | clip strip, or reference | take): `ffmpeg -i a.png -i b.png -filter_complex hstack=2
+     sheet.png` (or `vstack` for strips), and save it into this task's artifact directory as
+     `/workspace/<artifactId>/inspect_<shot>.png` so it has an `artifact://` reference.
+  4. `describe_image(url="artifact://<artifactId>/inspect_<shot>.png", prompt=...)` with a FOCUSED
+     prompt: say what the panels are, left to right; ask the symptom as yes/no questions plus why; and
+     always ask the continuity questions: "Does the clip start exactly where the previous panel ends?
+     Does any person or object jump to another position, size or camera position between neighbouring
+     panels? Can ONE camera move (push / pull / pan / tilt / arc) get from panel A to panel B?"
+     One sheet, one call; a second call only for a new question.
+- **Record it:** the report's **Seen** line quotes what the vision model saw (panel by panel). A root
+  cause that contradicts what was seen is wrong - look again or re-read the lines.
+
 ## 2. Find the faulty layer (symptom -> where to look -> what it means)
 
 | Symptom | Check | Faulty layer if... |
@@ -46,7 +77,8 @@ built from it.
 | | the shots of that beat | no shot wears the earlier look, or no `Motion:` beat performs the change -> **storyboard** |
 | An action never happens (she never jumps); the clip is a still | the shot's `Motion:` | a beat holds one pose for the whole shot ("0-4 s hangs airborne") -> **storyboard** (motion is the action in progress) |
 | | a `continue` clip whose next keyframe is a different moment | a continuation only knows where it starts -> **clip planning**: make it its own cut, or split the action into beats |
-| A clip morphs / cuts inside itself | `Transition: continue` + a changed `Camera:` + `Movement:` | the move cannot reach the new framing (hold, drift, handheld) -> it is a **cut** (planner rule; `shoot-clip` shoots it as a cut) |
+| A clip morphs, teleports or cuts inside itself | `Transition: continue` + the `Camera:` change vs the previous shot + `Movement:`; the sheet of step 1b (previous clip's last frame, this keyframe, this clip) | a continuation clip must LAND on its keyframe, so an unreachable keyframe morphs. The move must perform the change: a size change needs push / pull / zoom, an angle or position change a pan / tilt / arc (hold, drift, handheld never) - a push-in for an angle change cannot. Move does not match, or the vision model says no single move gets from the previous frame to this keyframe -> the **storyboard** drew an unreachable frame (fix the shot: `cut`, or a matching move) and the clip is shot as a **cut** now (`reset_task` its brief, step 3.7) |
+| A clip lands on another composition than it started from | the 1b sheet: previous last frame vs keyframe | the two frames are from different camera positions -> as above: a cut, not a continuation |
 | A small character (doll, pet, creature) is person-sized | the character design's words; the shot's `Pose:` / `Visible:` | the size is not stated, or the shot pictures it as a full figure beside its holder -> **design / storyboard** ("a small doll in her arms", upper body) |
 | Wrong colour of a garment / gown | `render_info` prompt vs the outfit design's colours | the prompt names another colour ("golden ballgown" vs a pink design) -> **prompt / plan**, not the render |
 | | strong coloured light in the shot | warm light tints pale fabric -> **shot lines**: state "stays <colour> under the <light>" |
@@ -100,6 +132,6 @@ Never delete a task or artifact to "start clean" unless the person asks; never r
 - Re-read every artifact you changed (the row, the shot block, the brief) and check the new frames /
   clips against the symptom: look at them (`agent_oneshot` with a vision agent: "Does shot s3-02 show
   her top coming off? yes/no + why").
-- Reply in this shape: **Symptom** (one line) - **Root cause** (the layer and the line that was
+- Reply in this shape: **Symptom** (one line) - **Seen** (what the vision model saw in the 1b sheet) - **Root cause** (the layer and the line that was
   wrong) - **Fix** (what you changed, with the tool results) - **Still open** (anything only the
   person can do: run mode, Replace frame, recreating a storyboard).
