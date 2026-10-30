@@ -194,7 +194,12 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
 - A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. A `partly:` garment must be restated wherever this shot's extent shows it — the viewer's own too (the waistband of their own shorts still lowered in a `lower body` shot); where the extent does not show it (a close-up above the waist, a `limbs` viewer) leave it out — it is not in frame, and R19 refuses it there.
 - A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the pool).
-- `Transition:` from the beat's Continuity. The FIRST word is the mode and decides the shot graph:
+- `Transition:` says how THIS shot follows the PREVIOUS one (the cut or continuation INTO this shot) —
+  never how it leads to the next. Shot 1 is always `cut — first shot of the scene`; the last shot's line
+  is about the shot before it (never "end of scene"). Write it from THIS shot's first beat's Continuity:
+  a beat whose Continuity is `new moment` / `parallel` starts with a `cut` (the write is refused
+  otherwise); later shots of the same beat follow the rules below.
+  The FIRST word is the mode and decides the shot graph:
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
   SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
   `continue` at another place renders without the previous frame: make it a `cut`), e.g.
@@ -625,6 +630,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] ONE moment and ONE framing per shot (no `then` / `after` / `before` / `followed by` /
       `cut to` / arrows, no two successive verbs; every multi-action beat split into one shot per
       action, never rephrased)
+- [ ] every `Transition:` describes the step FROM the previous shot INTO this one (shot 1 `cut`; no
+      "end of scene"; the first shot of a `new moment` / `parallel` beat is a `cut`)
 - [ ] every `Transition: continue` shot has a `Movement:` (and, with `Timing: beats`, `camera` beats) that
       performs its framing change (push / pull / zoom for size; pan / tilt / arc for angle; never
       drift / handheld / hold); otherwise it is a `cut`
