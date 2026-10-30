@@ -17,8 +17,9 @@ One task = one clip = one render. Never render another clip, another take of thi
 ## 1. Preflight
 
 Task prompt fields:
-- Required: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`), `movement`, `duration_seconds`, `start_frame`, `style`, the canonical output files (`.mp4` and `_prompt.txt`); `continue` also `prior_clip` (the KEY of clip M-1's output artifact, e.g. `scene2_clip3`).
-- Used when present: `action`, `camera`, `beat` (the scene-list beat of this shot, verbatim), `prior_shot_facts` (`continue`: the previous shot's Action / Wardrobe / State lines), `references`, `framing_change`, `negative_prompt`, `preferred_workflow`, `loras` (the shot's curated LoRAs), `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`. (`width` / `height` are ignored: a clip keeps its start frame's shape.)
+- Required: `scene`, `clip`, `shot`, `movement`, `duration_seconds`, `style`, the canonical output files (`.mp4` and `_prompt.txt`) and the clip-plan lines GIVEN by the brief (derived by the server's `clip_plan`, never judged here): `clip_plan`, `mode` (`continue` | `cut`), `mode_reason`, `framing_change`, `movement_required`, `target_frame_pinned`, `start_frame`, `prior_shot`, `next_continues`; `continue` also `prior_clip` (the KEY of clip M-1's output artifact, e.g. `scene2_clip3`).
+- A brief without the `clip_plan:` line is not valid: `task_failed` ("clip brief has no clip_plan - ask the coordinator to re-plan the scene").
+- Used when present: `action`, `camera`, `beat` (the scene-list beat of this shot, verbatim), `prior_shot_facts` (`continue`: the previous shot's Action / Wardrobe / State lines), `references`, `negative_prompt`, `preferred_workflow`, `loras` (the shot's curated LoRAs), `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`. (`width` / `height` are ignored: a clip keeps its start frame's shape.)
 
 `task_failed(reason)` (render nothing; deterministic causes only) when:
 - a required field is missing (name it);
@@ -38,7 +39,7 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 | Mode | Workflow | Inputs |
 |---|---|---|
 | `cut` | image-to-video, type `i2v` / `i2va` (flf2v only when its last frame is optional) | `start_frame` ALWAYS on the first-frame port; references in the optional reference-image ports matched by `reference_role` / `label` (else port order and descriptions); unfilled ports stay OMITTED |
-| `continue` | video-continuation (video input port for the prior clip) | `prior_clip`; on `framing_change: yes` also `start_frame` as an extra reference image if a free image port exists |
+| `continue` | video-continuation (video input port for the prior clip) | `prior_clip`; on `target_frame_pinned: yes` also `start_frame` as an extra reference image (the target framing) if a free image port exists |
 
 - A `cut` is never faked through the continuation workflow and never rendered text-to-video.
 
@@ -53,9 +54,9 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 - Measure the predecessor with `get_video_info` (`path_or_url="artifact://<id>/<file>"`); never use its planned length.
 - `prior_clip_start_time` = REAL duration minus 1-2 s (inside the last 1-2 s); move earlier until the workflow's minimum of reference frames remains. Pass it on the render call and in the summary.
 - The prompt continues `<Video 1>` in the same shot: same framing, subject and setup, the action carrying on, the `movement` continuing or holding. NO cut ("the target video cuts to …"), no new composition. Output is only the new segment; do not merge.
-- `framing_change: yes` is valid only with a `movement` that can reach the new framing (push / pull / zoom for a change of shot size, pan / tilt / arc for a change of angle; a drift or handheld movement does not): add this shot's storyboard frame as an extra reference image (named as the port descriptions do, e.g. "Picture 1 is the target framing") and write the shot's `movement` VERBATIM as the only camera move - never invent a reframing; subjects, place, lighting, wardrobe stay those of `<Video 1>`.
-- Test the `movement` against the change before choosing `continue`: a change of shot size needs a size move (push / pull / dolly / zoom), a change of angle needs an angle move (pan / tilt / arc / orbit / crane), both need both - a push-in does NOT turn eye level into low angle. The planner's rule R25 refuses such a pair at the storyboard write, so a brief that still carries one is planned wrong and is shot as a `cut` (below).
-- `framing_change: yes` without such a movement (`hold`, none, drift) was planned wrong, and the boundary is a CUT: shoot this clip in mode `cut` instead - never `task_failed`, never a reframing continuation. `start_frame` = the brief's `start_frame`, else this shot's published frame of the storyboard (`read_artifact` on the storyboard artifact: the `frame_<i>` whose shot is this shot); the prompt describes this shot's own Action / Motion from that frame, not the prior clip. Keep the task's file name and outputs; begin the reply with `Shot as a cut: framing change without a camera move that can reach it.` A new subject or insert is a CUT too.
+- `target_frame_pinned: yes` (the shot's own frame differs in framing from the prior clip's end): add `start_frame` as an extra reference image (named as the port descriptions do, e.g. "Picture 1 is the target framing") and write the shot's `movement` VERBATIM as the only camera move - never invent a reframing; subjects, place, lighting, wardrobe stay those of `<Video 1>`. `movement_required` names the move classes (size, angle) the written `movement` performs; do not change or add to it.
+- The mode is GIVEN: render exactly the brief's `mode`. Never re-judge it, never switch a `continue` to a `cut` (or the reverse) yourself; a clip that visibly does not work is reported in the final reply, not re-planned.
+- `next_continues: yes`: the next clip continues from this clip's last seconds, so this clip must not end in a cut-away (no new composition, subject or insert at its end; the last frames keep the shot).
 
 ## 4. LoRAs (motion first)
 
@@ -104,7 +105,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 
 - Call `render_info({ render_id })` with the returned `renderId` and compare with your call:
   - `cut`: `start_frame` on the start-image port and exactly the task's `references` (none when the task lists none);
-  - `continue`: the prior clip (and the frame on a framing change);
+  - `continue`: the prior clip (and the frame when `target_frame_pinned: yes`);
   - wrong or empty media inputs -> re-render ONCE with the corrected call; still wrong -> `task_complete` stating the problem (`task_failed` is refused once the outputs are written).
 - The `.mp4` exists at exactly the canonical path and is a `wf_*` render (a path elsewhere breaks the artifact build: render again to the declared path).
 - `get_video_info`: duration within ±0.6 s of `duration_seconds`; outside -> re-render ONCE (same prompt, new seed), keep the better; still off -> report the measured value rather than looping.

@@ -37,7 +37,7 @@ Coordinator skill: validates prerequisites, reads the scene's storyboard design,
 - Scene: stated explicitly ("Scene 2", "s2", "the rain scene"). Ambiguous -> ask: "Which scene should I shoot? Available scenes: [from the `scene_list` artifact]".
 - Video workflows, from the `wf_*` tool list by type / capability in each description and `get_workflow_instructions`, never by name:
   - Fresh-start (REQUIRED, for `cut` and first clips): image-to-video, type `i2v` / `i2va` (flf2v only when its last frame is optional). Text-to-video is not a substitute. None in the workspace -> create nothing; say: "Cannot shoot <scene>: this workspace has no image-to-video workflow. Add one (Workflows page) and ask me again."
-  - Video-continuation (optional; a video input for the prior clip): for `continue` clips. Without it every boundary is a `cut`.
+  - Video-continuation (optional; a video input for the prior clip): for `continue` clips (`clip_plan` knows whether the workspace has one).
 - A user-named workflow must qualify for these roles, else say why and stop. Several i2v / i2va qualify and none named: prefer one that also takes reference images (a `reference_role` image input); ask only if they differ in a way the user must choose.
 
 ## Step 1 — Preflight
@@ -56,7 +56,7 @@ Per shot, from its shotlist block (designs by KEY via `artifact_index`; `Outfits
 - A PERSON pictured in the frame gets ONE image only when the motion changes what the frame shows of them: their face turns toward or away from the camera, comes much closer, or they enter / re-enter the frame (Action, Pose, Movement). The image: the outfit design that matches what they wear IN THIS SHOT; for `<c>:nude` / `<c>:none`, or a partly undressed outfit look (`Wardrobe: … removed:`), the CHARACTER design. One image per person, never both.
 - The LOCATION gets an image only when the camera move reveals space the frame does not show (`Movement:` a pan, turn, orbit or travel - not `hold`, not a handheld drift): the published view whose description faces that direction, else none. Never the location of another shot.
 - NEVER a picture of the `POV:` owner or a `limbs` person (words only), nor their outfit ("References by extent" in `workflow-calling-conventions`).
-- `continue` clips: no references (the prior clip and, on a framing change, this shot's frame carry everything) - except a person who enters the frame during the clip.
+- `continue` clips (block says `mode: continue`): no references (the prior clip and, when `target_frame_pinned: yes`, this shot's frame carry everything) - except a person who enters the frame during the clip.
 - Older shotlists with slugs instead of keys: map via the `scene_list` row (`location_slug`, beat `Location` slugs, per-BEAT `Outfits` `<character>:<look>`) to `location_<slug>`, `outfit_<character>_<look>`, `character_<character>` (suffix tolerated).
 - Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), a chosen `view_<id>.<ext>`, never a `sheet.<ext>` (a grid of angles / poses). Missing designs are not fatal: note and continue without.
 - Reference = `artifact://<artifact id>/<file>` (real file name). Order: location (if any), then people. The clip's own frame is the `start_frame`, never a reference.
@@ -92,13 +92,13 @@ The storyboard design's `design.json` `published.outputs[]` entry of each `frame
 
 Clip M = shot M; start frame `frame_M`; `duration_seconds` = the shot's `Duration` (whole seconds, at least 1). The first clip is a fresh start (treated as a cut).
 
-Every boundary (shot M-1 -> M) is `continue` or `cut`:
-1. Take the shot's `Transition:` as given, with its reason; do not second-guess (except the framing check 2b below).
-2. No `Transition:` (older storyboard): decide ONCE here and note "decided here". CONTINUE when the action carries straight on in the same setup (same place, moment, people) AND the framing does not change (`framing_change: no`) or the shot carries a real `Movement:` that performs the change; CUT for a new moment, place or subject, an insert, or a framing change with `Movement:` `hold` / none.
-2b. EXCEPTION to 1 (this check overrides a given `Transition: continue`): a `continue` shot whose framing changes (`framing_change: yes`) is kept as `continue` only when its `Movement:` can reach the new framing - push / pull / zoom for a change of shot size, pan / tilt / arc for a change of angle; `hold`, none, a drift or handheld movement cannot. Otherwise plan a `cut` (note "cut: framing changes without a camera move that can reach it"): a continuation cannot change framing by itself and an invented reframe becomes a morph inside the clip.
-3. No video-continuation workflow -> every boundary is a CUT.
+Call `clip_plan(<storyboard>)` ONCE per scene (the key, `@scene_<n>` or `artifact://<id>` of the Step 1a storyboard). The server derives every clip's mode and framing facts from the current published storyboard; you copy them.
+- Result: a PROBLEMS line (if any), a table (clip | shot | mode | reason | overrides shotlist | why) and per clip a fenced block of brief lines (`clip_plan:`, `mode:`, `mode_reason:`, `framing_change:`, `movement_required:`, `target_frame_pinned:`, `start_frame:`, `prior_shot:`, `next_continues:`).
+- A PROBLEMS line (frame count, a shot without a frame, an unreadable shotlist) -> create nothing; tell the user what it says and stop.
+- Copy each clip's block VERBATIM into its 4a brief. Never decide, change, upgrade or "fix" a mode, reason or framing line yourself, whatever a shot's `Transition:` says: the server decides `continue` only when the written move can perform the change, otherwise the clip is a `cut`.
+- Clip 1 is a fresh start (`cut`, reason `first-shot`).
 
-- `continue`: rendered with the continuation workflow from clip M-1's real file; keeps `requires_tasks` / `requires_artifacts` on the predecessor (it cannot start before clip M-1 is approved). Mechanics (framing change, start offset, no hard cut): `shoot-clip` mode `continue`.
+- `continue`: rendered with the continuation workflow from clip M-1's real file; keeps `requires_tasks` / `requires_artifacts` on the predecessor (it cannot start before clip M-1 is approved). Mechanics (start offset, no hard cut): `shoot-clip` mode `continue`.
 - `cut`: i2v / i2va from `frame_M` as first frame plus the Step 1b references; no clip dependency (renders in parallel); never faked through the continuation workflow, never text-to-video.
 
 ### 3b. Canonical names (set once, never renamed)
@@ -113,7 +113,7 @@ Per clip M of scene N (slug = 2-3 word kebab-case label from the shot, e.g. `lob
 | prompt file | `scene<N>_clip<M>_<slug>_prompt.txt` |
 | assembly | task `assemble_scene<N>`, artifact `scene<N>_assembly`, file `scene<N>_assembled.mp4` |
 
-Write out the FULL plan before creating anything (all clip keys + `assemble_scene<N>`; Step 4c reconciles against it), one row per clip: clip, shot, boundary (`start` | `continue` | `cut`, from storyboard or decided here), reason, duration, movement, task / artifact, video file.
+Write out the FULL plan before creating anything (all clip keys + `assemble_scene<N>`; Step 4c reconciles against it), one row per clip: clip, shot, mode and reason (from `clip_plan`), duration, movement, task / artifact, video file.
 
 ## Step 4 — Create the tasks
 
@@ -127,8 +127,8 @@ title:                "Shoot <Scene Name> – clip <M> (<shot title>)"
 description:          one line: what the clip shows
 agent:                an agent from available_agents with the wf_* workflow tools and the sandbox
                       (default workspace: `generic`); never a planner, coordinator or director, never an unlisted one
-requires_tasks:       ["shoot_scene<N>_clip<M-1>"]   — ONLY for a `continue` clip
-requires_artifacts:   ["scene<N>_clip<M-1>"]         — ONLY for a `continue` clip
+requires_tasks:       ["shoot_scene<N>_clip<M-1>"]   — ONLY when the block says `mode: continue` (its `prior_shot`)
+requires_artifacts:   ["scene<N>_clip<M-1>"]         — ONLY when the block says `mode: continue` (its `prior_shot`)
 can_create_tasks:     NOT set
 output_artifact_name: scene<N>_clip<M>
 output_artifact_description: "<Scene Name> clip <M>"
@@ -139,8 +139,8 @@ prompt:
 
   scene: "<Scene Name>"  (scene <N>)
   clip: <M> of <total>  — shot <shotId> "<title>"
-  mode: continue | cut   (<one-line reason>)
-  framing_change: yes | no   (continue only; MECHANICAL: yes iff this shot's `Camera:` line differs from the previous shot's after trimming and lower-casing both; write "previous: <its Camera>")
+  <the clip's `clip_plan` block lines, VERBATIM and unchanged: clip_plan, mode, mode_reason, framing_change,
+   movement_required, target_frame_pinned, start_frame, prior_shot, next_continues>
   shot_block: |
     <the shot's FULL block from shotlist.md, verbatim, every line: Action, Location, Camera,
      Movement, Transition, Characters, Outfits, Wardrobe, State, Blocking, Pose, Frame, Visible,
@@ -150,12 +150,11 @@ prompt:
   beat: |
     <this shot's row of the scene_list Beats table, verbatim, every column; omit the line when the scene list has no matching beat>
   prior_shot_facts: |
-    <continue only: the PREVIOUS shot's Action:, Wardrobe: and State: lines from its shotlist block, verbatim>
+    <only when the block says `mode: continue`: the PREVIOUS shot's Action:, Wardrobe: and State: lines from its shotlist block, verbatim>
   camera: <the shot's Camera - keyframe framing>
   movement: <the shot's Movement VERBATIM; "none" when neither the shot nor its beat has one>
   duration_seconds: <planned duration>
-  start_frame: artifact://<storyboard id>/frame_<M>.<ext>   (exactly this storyboard artifact and frame file)
-  prior_clip: scene<N>_clip<M-1>     (continue only: the KEY of clip M-1's output artifact; the clip worker resolves it to the real video file at run time - never type an artifact id or file here)
+  prior_clip: scene<N>_clip<M-1>     (only when the block says `mode: continue`: the KEY of clip M-1's output artifact; the clip worker resolves it to the real video file at run time - never type an artifact id or file here)
   references: <ONLY what Step 1b allows - usually none: then omit this line. Each entry
               artifact://<design id>/full_body_shot.<ext> (or a chosen view_<id>.<ext>), one per person
               whose face turns / comes closer / who enters, the location view only for a revealing camera
@@ -208,12 +207,14 @@ Schedule EVERY clip of EVERY requested scene plus each scene's `assemble_scene<N
 1-3 short lines ("Concise replies and task/artifact URIs" in `workflow-calling-conventions`): no file names, durations, workflow / skill names; tasks as `task://<runtime id>` from the results; never claim a task neither `create_task` nor `task_index` confirmed.
 
 > Scheduled Scene <N>: <total> clips (task://<clip1>, task://<clip2>, ...) + assembly task://<assemble>. Cut clips render in parallel; continuations follow their predecessor.
+> Planned as a cut although the shotlist says continue: clip <M> (<reason>) — only if any.
 > Already scheduled (skipped): task://<id>, ... — only if any.
 > Not created: <clip/assembly>: <error> — only if any still failed after 4c.
 
 ## Rules
 
 - Resolve scene and workflow before reading artifacts.
+- Modes come only from `clip_plan`; the Step 5 reply names every clip the table marks "overrides shotlist" (with the server's reason) so the user can fix the storyboard.
 - Dependencies: `continue` clip requires its predecessor's task AND artifact; `cut` none; assembly requires ALL clip tasks and artifacts of ITS scene.
 - Canonical names from Step 3b are embedded in each prompt and `output_files`; the prompt's "Output files" list must match `output_files` exactly (a mismatch makes the build reject).
 - Clip tasks never get `can_create_tasks`.
