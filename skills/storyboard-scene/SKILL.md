@@ -342,6 +342,14 @@ check); they go to the clip prompt verbatim.
     as a figure). State `Camera:` and `Blocking:` from the same position. Angles by posture (rule R20,
     the write is refused): a lying viewer looks up or along their own body — never `high angle` or
     `top-down`; seated or kneeling never `top-down`; a slight high or low angle from a seat is fine.
+  - A first-person act at the viewer's own groin (`Contact:` names the POV owner's `groin`) must have
+    the contact point IN the frame. A standing or kneeling viewer looks DOWN at the joined hips:
+    `Camera: high angle, medium shot` (or closer), the partner's extent `back`, `upper body` or
+    `lower body` - never `eye level` / `low angle`, never a `full` / `wide` shot, never the partner's
+    `full figure` (at eye level the joined hips lie below the frame; a full figure only fits at a
+    distance where the bodies cannot be joined - the write is refused). A seated or lying viewer's
+    partner is in front of / on them, so their usual angles hold. A beat that needs the whole place
+    or the whole body is a third-person shot, or a shot before the bodies join.
   - The viewer's `Visible:` detail states exactly what `Blocking:` / `Pose:` show of them
     (`lower body` for "hands on the viewer's own thighs", `limbs: forearms and hands` when only the
     hands are in frame): the render and the judge read the viewer's body from `Visible:` alone.
@@ -629,6 +637,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] every POV owner's `Visible:` extent covers each part of their own body that `Pose:` /
       `Blocking:` / `Contact:` put in frame: hands resting on their own thighs or lap are `lower body`,
       never `limbs` (the judge fails every take whose frame shows more of the viewer than `Visible:`)
+- [ ] every first-person act at the viewer's groin looks down at it (high angle, medium or closer,
+      the partner never `full figure`) - the contact point is inside the frame
 - [ ] no plan prompt states a people count (the server's frame requirements state it)
 - [ ] every beat's `Sex act` / `Sex position` is carried by the shot(s) that show it (nudity
       `allowed` only)
