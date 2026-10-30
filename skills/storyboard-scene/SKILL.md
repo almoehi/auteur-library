@@ -626,6 +626,9 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
       speaker key and a delivery and fits its time, and `Audio:` is the scene's, verbatim, on every shot
 - [ ] the POV owner is only "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` and the
       prompt (no name, key, placeholder or figure); no prompt copies another shot's people
+- [ ] every POV owner's `Visible:` extent covers each part of their own body that `Pose:` /
+      `Blocking:` / `Contact:` put in frame: hands resting on their own thighs or lap are `lower body`,
+      never `limbs` (the judge fails every take whose frame shows more of the viewer than `Visible:`)
 - [ ] no plan prompt states a people count (the server's frame requirements state it)
 - [ ] every beat's `Sex act` / `Sex position` is carried by the shot(s) that show it (nudity
       `allowed` only)
