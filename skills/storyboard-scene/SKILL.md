@@ -308,6 +308,11 @@ check); they go to the clip prompt verbatim.
   never as a figure. Another person shown by `lower body` IS a figure: they are counted, pictured
   (design picture and outfit) and placed in `Blocking:`.
 - `Pose:` per person in frame (body position); for a `:none` look also its garments.
+- A character with a `true size (not human-sized)` line in the Referenced designs block (a doll, a pet, a
+  giant) is NOT drawn at a person's size: its `Pose:` says how it is held and how big it is ("a small doll
+  in her arms at her chest"), and a `Contact:` entry states the hold; a held small character is pictured
+  small in the holder's arms or hands, never as a person-sized figure standing beside them (its `Visible:`
+  extent is still what the frame shows of it).
 - **Identity comes from the design picture, never from words.** Shot lines (`Action:`, `Blocking:`, `Pose:`,
   `Frame:`) and plan prompts describe only pose, expression, wardrobe state and position — never a pictured
   person's face, skin tone, hair, age or build: the approved design picture is the authority, and a
