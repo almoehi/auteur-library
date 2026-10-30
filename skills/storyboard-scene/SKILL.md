@@ -227,7 +227,9 @@ check); they go to the clip prompt verbatim.
   to `Duration` without a gap or an overlap. Every figure of `Characters:` (not the POV owner, not a
   `limbs` person) has a beat; there is always at least one `camera` beat (`hold` is a beat too).
   Write the action in progress ("reaches for the glass, fingers closing"), not an instant, and only
-  what the scene list's beat states: no filler behaviour.
+  what the scene list's beat states: no filler behaviour. A pose held for the whole shot is no motion:
+  "0-4 s hangs airborne" is wrong; a jump is "0-1 s pushes off the edge, arms swinging forward;
+  1-2 s flies out over the water, body stretching; 2-4 s breaks the surface in a splash, sinking".
 - Two verbs = two beats of ONE shot ("stands, then crosses" is `0-2 s … rises` and `2-5 s … crosses`),
   never two shots, when the beat is one continuous action; a new place, framing or moment is still a new shot.
 - Never cut at a sub-second instant: every beat is at least 1 s (rule R22). A beat the clip cannot
@@ -283,6 +285,12 @@ check); they go to the clip prompt verbatim.
 - Partial undress inside an undressing beat: a shot that still shows a garment of the earlier look
   keeps that OUTFIT key + `Wardrobe:` (`removed:` / `partly:`), even when the beat's Outfits says
   `nude`; `:nude` starts at the first shot where nothing is worn.
+- A beat whose ACTION changes a look (undresses, unties, takes off, puts on) starts in the EARLIER
+  look, whatever its Outfits column says: the shot(s) before the change wear it, and the change itself
+  is a `Motion:` beat ("4-6 s character_sister: unties her bikini top and lets it fall"). When the
+  scene list gives only the later look for such a beat, take the earlier one from the character's
+  previous beat in this scene (or its wardrobe-tracker row) and name the mismatch in the hand-over
+  summary - never drop the change.
 - `Blocking:` places only people in frame plus a POV owner: "the camera is the viewer's eyes
   (seated); the viewer's forearms and hands enter the lower frame". Never call a POV owner whose
   limbs are in `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
