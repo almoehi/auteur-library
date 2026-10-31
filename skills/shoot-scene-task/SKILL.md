@@ -6,7 +6,7 @@ description: >
   "plan and shoot artifact://<storyboard>", "shoot storyboard_scene_3", "shoot @scene_3",
   "shoot scenes 1 and 4" (several scenes or storyboards in one request).
   Validates prerequisites, reads each scene's finished storyboard design (shot list + keyframes),
-  and schedules ONE task per clip (one clip per shot) plus one assembly task PER scene that joins
+  and schedules ONE task per clip (one clip per shot, or one per multi-shot bundle when the clip plan bundles shots) plus one assembly task PER scene that joins
   the clips into the scene video. Load this skill instead of creating a single worker task that
   renders the clips itself. Also handles direct assembly requests — "assemble scene 3",
   "stitch the clips of scene 2", "render the final cut of scene 1" — by (re)creating only the
@@ -19,7 +19,7 @@ agentType: workspace
 
 # Shoot Scene
 
-Coordinator skill: validates prerequisites, reads the scene's storyboard design, plans one clip per shot and creates ONE task per clip (worker skill `shoot-clip`) plus ONE assembly task (worker skill `assemble-scene`). Never let a worker render several clips.
+Coordinator skill: validates prerequisites, reads the scene's storyboard design, plans the clips and creates ONE task per clip (worker skill `shoot-clip`) plus ONE assembly task (worker skill `assemble-scene`). A clip is one shot, or - only when the clip plan says so (Step 3a-2) - one bundle of 2-4 consecutive shots rendered as ONE multi-shot clip. Never let a worker render several clips for different tasks.
 
 - A scene is named by a storyboard artifact URI, `storyboard_scene_<n>` or `@scene_<n>` (scene number from the storyboard key).
 - Several scenes in one request: run Steps 0-4 per scene in the given order (clip tasks + `assemble_scene<N>` each; never merge scenes); one combined Step 5 reply.
@@ -90,7 +90,7 @@ The storyboard design's `design.json` `published.outputs[]` entry of each `frame
 
 ### 3a. One clip per shot
 
-Clip M = shot M; start frame `frame_M`; `duration_seconds` = the shot's `Duration` (whole seconds, at least 1). The first clip is a fresh start (treated as a cut).
+Unless Step 3a-2 bundles it: clip M = shot M; start frame `frame_M`; `duration_seconds` = the shot's `Duration` (whole seconds, at least 1). The first clip is a fresh start (treated as a cut).
 
 Every boundary (shot M-1 -> M) is `continue` or `cut`:
 1. Take the shot's `Transition:` as given, with its reason; do not second-guess (except the framing check 2b below).
@@ -100,6 +100,14 @@ Every boundary (shot M-1 -> M) is `continue` or `cut`:
 
 - `continue`: rendered with the continuation workflow from clip M-1's real file; keeps `requires_tasks` / `requires_artifacts` on the predecessor (it cannot start before clip M-1 is approved). Mechanics (framing change, start offset, no hard cut): `shoot-clip` mode `continue`.
 - `cut`: i2v / i2va from `frame_M` as first frame plus the Step 1b references; no clip dependency (renders in parallel); never faked through the continuation workflow, never text-to-video.
+
+### 3a-2. Bundles (from the clip plan, never decided here)
+
+Call the `clip_plan` tool once per scene (it is the authority for modes, references and bundles). Its `bundles` list shots the server joins into ONE multi-shot clip (same place, cut junctions only, at most 4 shots and 15 s); each plan entry carries a `bundleId` (`null` = a single-shot clip).
+- One clip task per plan entry that is not bundled (Steps 3a, 4a) and ONE clip task per bundle (Step 4a-2). Clips are numbered 1..K in plan order; a bundle is one clip, so clip numbers no longer equal shot numbers: record each clip's shots in the Step 3b plan.
+- A bundle is a fresh start (like a `cut`): no dependency on the previous clip. The shot after a bundle is a `continue` clip when the plan says so (`breakAfter` = why the bundle ended); it then requires the BUNDLE's task and artifact.
+- The plan's modes and break reasons win over the in-skill rules of 3a/2b whenever `clip_plan` answers; bundle membership is never authored, widened or split by hand.
+- No `clip_plan` tool, or a plan with no `bundles` (no multi-shot workflow in the workspace, nothing joinable): everything above is skipped and the one-clip-per-shot flow runs unchanged.
 
 ### 3b. Canonical names (set once, never renamed)
 
@@ -113,7 +121,7 @@ Per clip M of scene N (slug = 2-3 word kebab-case label from the shot, e.g. `lob
 | prompt file | `scene<N>_clip<M>_<slug>_prompt.txt` |
 | assembly | task `assemble_scene<N>`, artifact `scene<N>_assembly`, file `scene<N>_assembled.mp4` |
 
-Write out the FULL plan before creating anything (all clip keys + `assemble_scene<N>`; Step 4c reconciles against it), one row per clip: clip, shot, boundary (`start` | `continue` | `cut`, from storyboard or decided here), reason, duration, movement, task / artifact, video file.
+Write out the FULL plan before creating anything (all clip keys + `assemble_scene<N>`; Step 4c reconciles against it), one row per clip: clip, shot(s) (a bundle lists all its shots), boundary (`start` | `continue` | `cut`, from storyboard or decided here), reason, duration, movement, task / artifact, video file.
 
 ## Step 4 — Create the tasks
 
@@ -174,6 +182,32 @@ prompt:
 - The prompt MUST open with the exact line `Load and use skill: shoot-clip` (it lets the worker `load_skill`).
 - `preferred_workflow` comes from the workspace's `wf_` list for the clip's mode (never from memory): the continuation workflow for `continue`, the i2v / i2va one for `cut` / start.
 
+### 4a-2. Bundle clip task
+
+Same id / artifact / file names and `output_files` as 4a (the bundle is clip M); no `requires_*`; `can_create_tasks` NOT set; title "Shoot <Scene Name> – clip <M> (shots <first>-<last>)". Prompt:
+
+```
+  Load and use skill: shoot-clip
+
+  scene: "<Scene Name>"  (scene <N>)
+  clip: <M> of <total>  — bundle <bundleId>, shots <shotId>, <shotId>[, ...]
+  mode: bundle
+  bundle: <bundleId>      (the id `shoot_bundle` takes)
+  duration_seconds: <the bundle's durationSeconds>
+  bundle_brief: |
+    <the bundle brief block from `clip_plan`, VERBATIM, every line (shot blocks with time windows, picture_map:, continuity_constraints:, Audio:)>
+  style: <the workspace medium/style line, verbatim>
+  negative_prompt: <as 4a>
+  fallback_shots:     (used ONLY if the bundle fails review twice; one entry per shot, in order, each filled exactly like a 4a `cut` clip: shot_block, frame_edits, action, beat, camera, movement, duration_seconds, start_frame, references (Step 1b), loras)
+    - shot <shotId>: ...
+
+  Output files (canonical — do not rename):
+    scene<N>_clip<M>_<slug>.mp4
+    scene<N>_clip<M>_<slug>_prompt.txt
+```
+
+No `start_frame`, `references`, guide frames, cut times or `loras` at bundle level: `shoot_bundle` fills every mechanical port from the plan. Verbatim rules of 4a apply to `bundle_brief` and `fallback_shots`.
+
 ### 4b. Assembly task
 
 ```
@@ -193,7 +227,7 @@ prompt:
   scene: "<Scene Name>"  (scene <N>)
   clips (in order, concatenate back to back):
     1. artifact://<id of scene<N>_clip1>/scene<N>_clip1_<slug>.mp4   — <duration>s
-    2. …
+    2. …   (clips in PLAN order; a bundle clip is already cut internally and is listed once, with the bundle's duration)
   Output file (canonical — do not rename): scene<N>_assembled.mp4
 ```
 
@@ -214,6 +248,6 @@ Schedule EVERY clip of EVERY requested scene plus each scene's `assemble_scene<N
 ## Rules
 
 - Resolve scene and workflow before reading artifacts.
-- Dependencies: `continue` clip requires its predecessor's task AND artifact; `cut` none; assembly requires ALL clip tasks and artifacts of ITS scene.
+- Dependencies: `continue` clip requires its predecessor's task AND artifact (a bundle counts as the predecessor of the shot after it); `cut` and bundle clips none; assembly requires ALL clip tasks and artifacts of ITS scene.
 - Canonical names from Step 3b are embedded in each prompt and `output_files`; the prompt's "Output files" list must match `output_files` exactly (a mismatch makes the build reject).
 - Clip tasks never get `can_create_tasks`.
