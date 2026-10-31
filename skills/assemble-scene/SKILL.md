@@ -4,7 +4,7 @@ description: >
   Use when the task prompt says "Load and use skill: assemble-scene", or tasks you with joining
   the rendered clips of one scene into a single scene video — e.g. "assemble scene 2", "stitch the
   clips of scene 3", "render the final cut of scene 1" (a direct user request is turned into the
-  `assemble_scene<N>` task by the coordinator skill shoot-scene-task). Produces
+  assembly task by the coordinator skill shoot-scene-task). Produces
   one mp4 with all clips back to back in clip order (ffmpeg in the sandbox, no transitions).
   Do NOT invoke for rendering or shooting clips (shoot-clip), planning a scene
   (shoot-scene-task), quality checks, or full-film assembly.
@@ -13,7 +13,7 @@ agentType: worker
 
 # Assemble Scene
 
-Joins the finished clips of ONE scene, in task order, into the canonical `scene<N>_assembled.mp4`. No transitions, no trimming, no rendering.
+Joins the finished clips of ONE scene, in task order, into the canonical output file the task names (`<name>_assembled.mp4`, e.g. `scene3_v2_assembled.mp4`; the examples below write it `scene<N>_assembled.mp4`). No transitions, no trimming, no rendering.
 
 ## 1. Preflight
 
@@ -44,5 +44,5 @@ Joins the finished clips of ONE scene, in task order, into the canonical `scene<
 
 - Probe the result: video stream present; duration ≈ sum of clip durations (±1 s); intended resolution / fps.
 - A command that exited 0 and wrote the output succeeded: probe the file instead of re-running it. Failure (non-zero exit, timeout, bad probe) -> retry once with the re-encode route; still failing -> `task_failed` with the error (nothing written yet).
-- Only after verification passes, write the result to the declared output path, exactly `scene<N>_assembled.mp4` (write nothing earlier or elsewhere).
+- Only after verification passes, write the result to the declared output path, exactly the task's output file name (write nothing earlier or elsewhere).
 - `task_complete`: 1-3 lines — total duration and route (copy / re-encode), not the per-clip list ("Concise replies and task/artifact URIs" in `workflow-calling-conventions`).
