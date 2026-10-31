@@ -103,11 +103,11 @@ Every boundary (shot M-1 -> M) is `continue` or `cut`:
 
 ### 3a-2. Bundles (from the clip plan, never decided here)
 
-Call the `clip_plan` tool once per scene (it is the authority for modes, references and bundles). Its `bundles` list shots the server joins into ONE multi-shot clip (same place, cut junctions only, at most 4 shots and 15 s); each plan entry carries a `bundleId` (`null` = a single-shot clip).
-- One clip task per plan entry that is not bundled (Steps 3a, 4a) and ONE clip task per bundle (Step 4a-2). Clips are numbered 1..K in plan order; a bundle is one clip, so clip numbers no longer equal shot numbers: record each clip's shots in the Step 3b plan.
-- A bundle is a fresh start (like a `cut`): no dependency on the previous clip. The shot after a bundle is a `continue` clip when the plan says so (`breakAfter` = why the bundle ended); it then requires the BUNDLE's task and artifact.
+Call the `clip_plan` tool once per scene (it is the authority for modes, references and bundles). Its text has a table with a `bundle` column, a `bundles` list (shots the server joins into ONE multi-shot clip: same place, cut junctions only, at most 4 shots and 15 s) and, per bundle, a section holding the bundle brief followed by "Single-clip fallback" blocks per member shot. A `PROBLEMS` line = stop and tell the user.
+- One clip task per plan entry that is not bundled (Steps 3a, 4a) and ONE clip task per bundle (Step 4a-2). A bundle is ONE clip in the numbering: clips are numbered 1..K in plan order, so clip numbers no longer equal shot numbers; record each clip's shots in the Step 3b plan.
+- A bundle is a fresh start (like a `cut`): no dependency on the previous clip. The shot after a bundle is a `continue` clip when the plan says so (`break_after` = why the bundle ended); it requires the BUNDLE's task and artifact, and its prior shot is the bundle's LAST member shot: it continues from the bundle clip's last seconds.
 - The plan's modes and break reasons win over the in-skill rules of 3a/2b whenever `clip_plan` answers; bundle membership is never authored, widened or split by hand.
-- No `clip_plan` tool, or a plan with no `bundles` (no multi-shot workflow in the workspace, nothing joinable): everything above is skipped and the one-clip-per-shot flow runs unchanged.
+- No bundles in the plan (no multi-shot workflow in the workspace, nothing joinable): everything above is skipped and the one-clip-per-shot flow runs unchanged.
 
 ### 3b. Canonical names (set once, never renamed)
 
@@ -192,21 +192,19 @@ Same id / artifact / file names and `output_files` as 4a (the bundle is clip M);
   scene: "<Scene Name>"  (scene <N>)
   clip: <M> of <total>  — bundle <bundleId>, shots <shotId>, <shotId>[, ...]
   mode: bundle
-  bundle: <bundleId>      (the id `shoot_bundle` takes)
+  storyboard: <the storyboard key, for the worker's own `clip_plan` call>
   duration_seconds: <the bundle's durationSeconds>
   bundle_brief: |
-    <the bundle brief block from `clip_plan`, VERBATIM, every line (shot blocks with time windows, picture_map:, continuity_constraints:, Audio:)>
+    <the bundle's brief block from `clip_plan`, VERBATIM, every line from `clip_plan:` through the shot blocks; it carries `bundle_ref:`, `picture_map:`, `continuity_constraints:`, the scene audio>
   style: <the workspace medium/style line, verbatim>
   negative_prompt: <as 4a>
-  fallback_shots:     (used ONLY if the bundle fails review twice; one entry per shot, in order, each filled exactly like a 4a `cut` clip: shot_block, frame_edits, action, beat, camera, movement, duration_seconds, start_frame, references (Step 1b), loras)
-    - shot <shotId>: ...
 
   Output files (canonical — do not rename):
     scene<N>_clip<M>_<slug>.mp4
     scene<N>_clip<M>_<slug>_prompt.txt
 ```
 
-No `start_frame`, `references`, guide frames, cut times or `loras` at bundle level: `shoot_bundle` fills every mechanical port from the plan. Verbatim rules of 4a apply to `bundle_brief` and `fallback_shots`.
+No `start_frame`, `references`, guide frames, cut times or `loras`: `shoot_bundle` fills every mechanical port from the plan. The single-clip fallback blocks are NOT copied here: the worker reads them from `clip_plan` itself, if ever needed. The verbatim rule of 4a applies to `bundle_brief`.
 
 ### 4b. Assembly task
 
