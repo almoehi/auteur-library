@@ -3,8 +3,8 @@ name: shoot-clip
 description: >
   Use when the task prompt says "Load and use skill: shoot-clip", or tasks you with rendering
   ONE video clip of a scene — e.g. "shoot clip 3 of scene 2". Produces exactly one rendered
-  clip (from a storyboard frame, or continuing the previous clip) plus the prompt that was
-  rendered. Do NOT invoke for planning or scheduling a scene (shoot-scene-task), joining clips
+  clip (from a storyboard frame, continuing the previous clip, or one multi-shot bundle of
+  consecutive shots) plus the prompt that was rendered. Do NOT invoke for planning or scheduling a scene (shoot-scene-task), joining clips
   (assemble-scene), storyboard or keyframe rendering (storyboard-scene), prompt writing only,
   or continuing a clip on a person's request (shoot-continuation).
 agentType: worker
@@ -12,11 +12,12 @@ agentType: worker
 
 # Shoot Clip — render exactly one clip
 
-One task = one clip = one render. Never render another clip, another take of this clip (except the single retries of section 7), or other shots. Never `create_task`. This skill is the authority for the `continue` mechanics (section 3), which `shoot-continuation` reuses.
+One task = one clip = one render. Never render another clip, another take of this clip (except the single retries of section 7 and the bundle fallback of section 8), or other shots. A task with `mode: bundle` shoots ONE multi-shot clip: follow section 8 instead of sections 2-6. A `continue` clip right after a bundle has the bundle's LAST member shot as its prior shot: its `prior_clip` is the bundle clip, measured and offset like any prior clip (section 3), so it continues from the bundle's last seconds. Never `create_task`. This skill is the authority for the `continue` mechanics (section 3), which `shoot-continuation` reuses.
 
 ## 1. Preflight
 
 Task prompt fields:
+- `mode: bundle` (field `bundle_brief`): section 8 only; its fields are listed there.
 - Required: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`), `movement`, `duration_seconds`, `start_frame`, `style`, the canonical output files (`.mp4` and `_prompt.txt`); `continue` also `prior_clip` (the KEY of clip M-1's output artifact, e.g. `scene2_clip3`).
 - Used when present: `action`, `camera`, `beat` (the scene-list beat of this shot, verbatim), `prior_shot_facts` (`continue`: the previous shot's Action / Wardrobe / State lines), `references`, `framing_change`, `negative_prompt`, `preferred_workflow`, `loras` (the shot's curated LoRAs), `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`. (`width` / `height` are ignored: a clip keeps its start frame's shape.)
 
@@ -111,3 +112,13 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - `continue`: first frames fit the predecessor's last frames (same subject, place, lighting); a clear break -> one retry with a corrected prompt ("Check, retry once, suggest" in `workflow-calling-conventions`).
 - The prompt file holds the rendered prompt; no other file written.
 - `task_complete`: 1-3 lines — mode, measured duration, (continue) the start offset; no prompt / workflow restated ("Concise replies and task/artifact URIs" in `workflow-calling-conventions`).
+
+## 8. Mode `bundle` (one multi-shot clip, several shots)
+
+Task fields: `storyboard`, `bundle_brief` (its `bundle_ref:` line names the bundle), `duration_seconds`, `style`, `negative_prompt`, the canonical files. `task_failed` (deterministic) when `bundle_brief` has no `bundle_ref:` line or a canonical file is missing, or `shoot_bundle` is unavailable. The server owns everything mechanical: NEVER set guide frames, cut times, keyframes, reference order, identity references, LoRAs, voice references, ports or size, and never pass any of them; the plan already decided them.
+
+1. **Prompt.** `load_skill` `prompt-writer-minimaxh3` via the "Prompt route" of `workflow-calling-conventions`: ONE `draft_prompt` (workflow `h3_multishot_clip` or the multi-shot workflow of your tools) with `context` = the `bundle_brief` VERBATIM (every line: shot blocks with time windows, `picture_map:`, `continuity_constraints:`, `Audio:`), `style` verbatim, `duration_seconds`; no `image_inputs` (the brief's `picture_map:` names the pictures). Then ONE `review_prompt` as in section 5 with the brief as the instructions, adding: "every continuity_constraints line appears verbatim; each shot has its `[Shot k]` at its brief time". Fix a gap with one `enhance_prompt`. Do not invent, number or reorder pictures yourself.
+2. **Render.** `run_checks` first if the kickoff lists checks. ONE `shoot_bundle({ bundle, prompt_id })`: `bundle` is the brief's `bundle_ref:` value passed unchanged (`<storyboard key>#<bundle id>@<shotlist md5>`; a bare `b1` is refused) and `prompt_id` is the writer's result id, never retyped text (the prompt-route guard refuses it); `seed` only on a retry. The `.mp4` goes to the canonical path. No other `wf_*` call. An `error:` result means the plan changed or has problems: call `clip_plan(storyboard)` again and read it - if the bundle is gone or its `bundle_ref` / brief changed, redo step 1 from the NEW brief (that is not a review failure); if the plan has `PROBLEMS`, `task_failed` with them. Never retry the same call blindly.
+3. **Review per segment.** `get_video_info` (duration within ±0.6 s of `duration_seconds`). Then, per shot k of the brief, extract that shot's time window as ONE strip (`troubleshoot-production` step 2 recipe: `ffmpeg -y -nostdin -ss <start> -t <window> -i clip.mp4 -vf "fps=6/<window s>,scale=480:-1,tile=6x1" -frames:v 1 strip_k.png`, saved under your artifact folder) and compare it with that shot's block (`describe_image` on the strip with the shot block's who / where / extent / pose / wardrobe / action / camera as the question). Also check the cut: the first frame of each later segment shows its shot's keyframe composition (framing and place), and the cuts fall within 0.75 s of the brief's times. A segment that misses its block, a drifted or missing cut, or a continuity constraint broken = a failed review.
+4. **Retry, then fall back.** A failed review: ONE re-render with a corrected prompt (`enhance_prompt` with the review text) and a new seed. A second failed review: NEVER a third bundle attempt. Call `clip_plan(storyboard)` and use the "Single-clip fallback for bundle" blocks of this bundle: re-shoot the shots as single clips with the existing single-clip path, one render per member block (mode `cut` - a bundle joins only cut junctions; its block supplies the fields of sections 1-6: shot block, start frame, references, loras …; own prompt), then join them in order into the canonical `.mp4` (`assemble-scene` concat recipe: `ffmpeg -y -nostdin -f concat ...`). The task's render budget is two failed renders: if it is used up, `task_complete` stating the problem instead.
+5. **Audit and finish.** `render_info` on the returned `renderId`: it is the bundle workflow and the prompt matches yours. Write `_prompt.txt` from the exact rendered prompt (a fallback lists each single clip's prompt under a `[shot <id>]` heading). `task_complete`: 1-3 lines - mode `bundle`, measured duration, per-shot review result, and `fell back to single clips` when it did.

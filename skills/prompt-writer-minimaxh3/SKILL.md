@@ -104,7 +104,7 @@ After the preamble, begin the timeline body immediately with `[Shot 1]`.
 
 ### Template B: Full-Reference Brief
 
-Six sections in this order:
+Six sections in this order (seven when the brief carries `continuity_constraints:`):
 ```
 subject_definitions:
 [Define all referenced subjects and media with labels]
@@ -115,6 +115,9 @@ summary:
 retention_analysis:
 [Per-asset retention level for all referenced media]
 
+continuity_constraints:
+[ONLY when the brief has a continuity_constraints section: its lines, VERBATIM]
+
 detailed_description:
 [Main body: 350–500 words; establish style BEFORE [Shot 1]]
 
@@ -124,6 +127,8 @@ overall_soundscape:
 non_diegetic_music:
 [1–3 sentences: instrumentation, tempo, rhythm, dynamics]
 ```
+
+**`continuity_constraints:`** — the brief's `continuity_constraints:` lines are locked phrases (who faces away, what stays on or off, which states persist, the camera keeping its framing). Copy every line verbatim into this section: never drop, merge, reword or move one into the timeline, and keep each at its shot. No brief section = no section; never invent constraints.
 
 **Media reference labels** — assigned by type, 1-based, independent per category. Never rename or renumber:
 - Images: `<Picture 1>`, `<Picture 2>`, ...
@@ -166,6 +171,14 @@ Rules:
 - Inside a clip the framing changes ONLY through the brief's `Movement:`; a distance or angle change the brief gives no movement for is not written into this prompt at all (it is a cut between clips, planned by the caller)
 - Budget ~4 seconds for prop changes, handoffs, or complex actions
 - Write ONLY the beats the brief states. Never add behaviour (blinks, breaths, glances, weight shifts, props, small gestures) to fill time or to reach a beat count: a short action in a long clip is stated once, and the clip simply continues from its end state.
+
+### Bundle mode (a multi-shot brief)
+
+A brief with a `picture_map:` and several shot blocks with absolute time windows is ONE render of consecutive shots, cut inside the clip; use Template B (`keyframe completion`).
+- `subject_definitions` and `retention_analysis` come from the `picture_map:`: one line per Picture N exactly as the map names it (which keyframe at which time, which identity reference); never invent, renumber or add a picture, and take each retention level from the map.
+- One `[Shot k]` per shot block, in order: `[Shot 1] [Style]. [Camera]. ...` without timestamp, then `[Shot k] At MM:SS.mmm, the camera cuts to [framing]. ...` at the block's start time exactly as the brief gives it (bundle time, never shifted or rounded). Each shot states its keyframe framing as the opening frame, its own Movement and its timed Motion / Dialogue beats at their bundle times.
+- Timed beats stay timed: write each at its time inside its shot, with its mechanics and end state as the brief states them. No filler motion between beats (rule above); a shot's stretch with no beat continues from the last end state.
+- Dialogue crossing a cut follows the cross-cut dialogue rules (Step 6); the scene `Audio:` goes once into `overall_soundscape`.
 
 ### Beat Structure
 
@@ -357,6 +370,8 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 - [ ] `<cutoff>` placed inside `</d>` after last word — not outside
 - [ ] `[unclear]` placed inside `<d>` block — not outside
 - [ ] fl2va + ref2va not combined in same generation
+- [ ] `continuity_constraints:` copied verbatim when the brief has it (none dropped or reworded)
+- [ ] Bundle: one `[Shot k]` per shot block at the brief's times; picture lines from the `picture_map:` only
 - [ ] Original scene and subjects unchanged
 
 ---
