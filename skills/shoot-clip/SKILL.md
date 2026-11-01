@@ -83,6 +83,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
   - the `shot_block` VERBATIM (Blocking, Pose, Frame, Visible, Sex act, Sex position stay as written);
   - the brief's `Visible anatomy (must show)` line VERBATIM when it has one (the genitals and join the act must display), with the shot's `State:` fluids (`shot_block`): the writer names them in plain anatomical words;
   - the brief's `Lighting (scene, keep)` line VERBATIM when it has one (the writer keeps the phrase);
+  - the brief's `Expression (<name>): … (must show)` lines VERBATIM when it has them;
   - characters / outfits / location and the path used;
   - `beat` VERBATIM (the scene-list beat text: Action, Blocking, Camera move …), and `prior_shot_facts` for a `continue`;
   - `movement` VERBATIM ("hold" = locked-off frame; no `movement` = the framing of `camera`, no camera move added);

@@ -176,7 +176,7 @@ Beats section (same file, below the Places table)
 - Columns, ALL filled in EVERY beat (an empty cell fails the `scenes-complete` check):
   - `Beat #`: `<scene>.<n>` (`1.1`, `1.2`, …), unique and never renumbered on a rewrite — the
     storyboard's shots name their beat by it (`Beat: 1.2`).
-  - `Action`: what visibly happens.
+  - `Action`: what visibly happens. Name the characters' visible emotion where it matters ("Mira, smiling nervously, …").
   - `Location`: a `location_slug`. For every non-`parallel` beat EXACTLY the scene row's own slug; only a `parallel` beat names another place.
   - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `jonas:work_suit; mira:raincoat`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty.
   - `Framing`: ONE opening shot size and angle (never "close-up then wide": a change of framing is a

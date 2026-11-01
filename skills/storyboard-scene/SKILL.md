@@ -441,6 +441,13 @@ check); they go to the clip prompt verbatim.
   mentioned at all — "bikini top held in her hands" or "cardigan slipped off her shoulders" summons
   it back on (live s3-02: 10 of 10 takes kept the held top on); a garment that is still on her arms
   is `partly: cardigan (off both shoulders, at the elbows)` instead.
+- `Expression:` = the face at t=0 of the keyframe, `<characterKey> (<expression>, <expression>, …)`, `;` between characters
+  (e.g. `Expression: character_sister (seductive smile, flushed cheeks, eyes on the lens); character_husband (shocked)`):
+  at most 4 short phrases per person, each at most 40 characters — seductive, flirtatious, shocked, blushing, aroused, nervous,
+  smug, ecstatic, tearful, determined. Every shot with a visible face has one entry per person whose face shows (extent
+  `full figure` / `upper body` / `face`); never for the POV owner or a `back` / `limbs` / `lower body` person. It is the face,
+  `State:` is the body (wet hair, semen); keep it consistent with the beat's emotion. An expression that CHANGES during
+  the clip is a `Motion:` beat, not a second `Expression:`.
 - `State:` = transient, VISIBLE appearance of a person shown as a figure, `<characterKey> (<state>, <state>, …)`,
   `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
   `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
