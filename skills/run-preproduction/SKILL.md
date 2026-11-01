@@ -145,6 +145,10 @@ First step, before writing
 
 Output
 - Write `scene_list.md` as plain Markdown (never PDF or DOCX): ONE scene table, a Places table, then a Beats section.
+- Write it in parts, never in one call (one long write breaks the tool call): first `sandbox_write_file` the scene table, the
+  Places table and, per scene, its `### Scene <n>` heading followed by the single placeholder line `BEATS <n>`. The server
+  refuses this first write as incomplete and keeps it as a draft - expected. Then, per scene, ONE `sandbox_edit_file`
+  replacing `BEATS <n>` with that scene's Beats table, until no placeholder is left and the write is accepted.
 
 Scene table columns
 - `Scene #` | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Lighting` | `Summary` | `Characters present` | `Outfits` | `Audio`.
