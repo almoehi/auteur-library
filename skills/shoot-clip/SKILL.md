@@ -81,6 +81,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 - `duration_seconds` = the planned duration, passed to `draft_prompt` AND as the render call's duration parameter (the name the `wf_*` description gives, e.g. `video_length`): the same number.
 - `context`:
   - the `shot_block` VERBATIM (Blocking, Pose, Frame, Visible, Sex act, Sex position stay as written);
+  - the brief's `Visible anatomy (must show)` line VERBATIM when it has one (the genitals and join the act must display), with the shot's `State:` fluids (`shot_block`): the writer names them in plain anatomical words;
   - characters / outfits / location and the path used;
   - `beat` VERBATIM (the scene-list beat text: Action, Blocking, Camera move …), and `prior_shot_facts` for a `continue`;
   - `movement` VERBATIM ("hold" = locked-off frame; no `movement` = the framing of `camera`, no camera move added);
