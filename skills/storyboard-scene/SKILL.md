@@ -439,6 +439,10 @@ check); they go to the clip prompt verbatim.
   changes such a state (she climbs out of the pool → `State: character_sister (wet hair, wet skin)`) and
   in EVERY later shot of the scene that shows the person while it lasts — a `continue` shot must restate
   it (rule R18); a `cut` shot later in the same moment should repeat it too (not checked — your job).
+  A visible body fluid is a `State:` entry of the person it is on (`semen on her face`,
+  `saliva on her lips and chin`, `sweaty`, `wet glistening vulva`), from the shot that first shows it until it
+  is cleaned or covered. A `cumshot` shot's `Contact:` names where it lands
+  (`character_husband (groin) on character_sister (face)`).
   When it ends, say so, preferably as the explicit new state (`dry hair`, `dry skin`): the judge checks
   a named state best. `(none)` means back to the design's own look (the server then states "no longer:
   <the previous shot's states>"); write it alone, never mixed with states. The server states each state
