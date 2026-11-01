@@ -1,0 +1,23 @@
+subject_definitions:
+<Picture 1> is the storyboard keyframe of shot 1 and the start frame of the target video: at 0.00 seconds it is fully referenced - framing, set, light and people as shown.
+<Picture 2> is the storyboard keyframe of shot 2: at 4.00 seconds it is fully referenced - framing, set, light and people as shown.
+<Subject 1> is the woman defined by <Picture 3>; her face, hair and clothing follow that picture.
+
+summary:
+[keyframe completion] A 9-second two-shot video, live-action, cinematic, soft natural interior light. Hard cut at 4.00 seconds.
+
+retention_analysis:
+<Picture 1>: fully_preserved at 0.00 seconds.
+<Picture 2>: fully_preserved at 4.00 seconds.
+<Picture 3>: fully_preserved (identity, hair, clothing).
+
+detailed_description:
+Live-action, cinematic, soft natural interior light, shallow depth of field.
+[Shot 1] For the target video, at 0.00 seconds, <Picture 1> is fully referenced. Medium-wide shot, camera static. <Subject 1> enters from the right edge of frame and walks across the room toward the camera (0-2.5 s). She slows and turns three-quarters toward the lens (2.5-4 s).
+[Shot 2] At 00:04.000, the camera cuts to a close-up from the front at eye level, matching <Picture 2>. <Subject 1> looks into the lens and smiles (0-2 s). She tilts her head and holds the look (2-5 s). Hair, clothing and light stay unchanged throughout.
+
+overall_soundscape:
+Soft footsteps on a wooden floor, a light rustle of fabric as she turns, low room tone.
+
+non_diegetic_music:
+N/A

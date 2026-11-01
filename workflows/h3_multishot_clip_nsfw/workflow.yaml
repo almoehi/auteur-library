@@ -1,0 +1,339 @@
+# ─── Source ───────────────────────────────────────────────────────────────────
+# NSFW variant of h3_multishot_clip: the same graph and ports with a skin-realism and an anatomy
+# LoRA baked into the Power Lora Loader next to the LightX2V turbo LoRA. Generated from the SFW
+# bundle by h3_single_cut_clip/derive_nsfw.py - change h3_multishot_clip and re-run it, never edit
+# this bundle by hand. Sources and node notes: see h3_multishot_clip.
+#
+# ─── Custom Nodes (all already in serverless-comfy/nodes.lock) ────────────────
+# MiniMaxH3ReferenceToVideo, MiniMaxH3AddGuide, MiniMaxH3SigmaShift, VAEDecodeAudio
+#                                 built-in ComfyUI (MiniMaxH3AddGuide: comfy_extras/nodes_minimax_h3.py)
+# H3KeyframeInject, H3ReferenceAudio  https://github.com/jlucasmcrell/ComfyUI-H3-Multishot
+#   (H3KeyframeInject is registered by the pack's h3_avbank_probe.py; it also patches the model's
+#   extra_conds so reference rows and the start keyframe can be combined. H3ReferenceAudio is the
+#   pack's h3_advanced.py: it forces the reference to stereo 32 kHz and its first max_seconds)
+# ImageResize+                    https://github.com/cubiq/ComfyUI_essentials
+# SolAttnPatch                    https://github.com/kijai/ComfyUI-SolAttn_triton
+# PathchSageAttentionKJ           https://github.com/kijai/ComfyUI-KJNodes
+# VHS_VideoCombine                https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+# Power Lora Loader (rgthree)     https://github.com/rgthree/rgthree-comfy
+# ComfyMathExpression             https://github.com/evanspearman/ComfyMath
+# RIFE VFI                        https://github.com/Fannovel16/ComfyUI-Frame-Interpolation
+# easy cleanGpuUsed / easy seed   https://github.com/yolain/ComfyUI-Easy-Use
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: h3_multishot_clip_nsfw
+description: >
+  Renders 2-4 consecutive shots of one scene as ONE clip - video with synchronized audio - with
+  hard cuts at computed frames: ref0 is the keyframe of shot 1 (pinned as frame 0), key1-key3 are
+  the keyframes of shots 2-4, each pinned at its guide frame (a hard keyframe is a cut), plus up
+  to five identity references (character and outfit sheets), driven by one structured MiniMax H3
+  prompt with a timed [Shot n] block per shot. Trained length 5-15 s. Guide frames and the keyframe
+  order are computed by the server from the shots' Durations, never set by hand. Not for a single
+  shot (h3_single_cut_clip_nsfw), not for continuing a clip without a cut (h3_clip_continuation_nsfw), not
+  for text-only generation.
+  NSFW variant: a skin-realism (0.5) and an anatomy (0.6) LoRA are baked in next to the turbo
+  LoRA; the four LoRA ports take act / detail adapters from the workspace catalog.
+url: workflow.json
+workflow_type: i2va
+model_family: minimaxh3
+content: nsfw
+capabilities: [multi-shot-clip]  # 2-4 consecutive shots of one scene as one clip: hard keyframes (cuts) at the guide frames
+render_timeout_sec: 5400  # up to 15 s of video; ~12 s clips take ~20-30 min on a100, the 1800 s default is too tight
+gpu_types: [h100, b200] # as h3_single_cut_clip_nsfw (H100 while B200 has no capacity). Dispatch picks the cheapest deployed listed GPU.
+# sage_attention ships "disabled" (node 157): the SageAttention wheel in the compute image carries
+# sm_80 kernels only (l40s / h100 failed with "no kernel image is available"); the harness also
+# forces it off on h100.
+
+ports:
+  inputs:
+    - name: ref0
+      kind: image
+      description: "Keyframe of shot 1, addressed as <Picture 1>: it is pinned as frame 0 (the start frame), so the clip opens exactly on it. Center-cropped to width x height - give it the clip's aspect ratio. Also a reference: everything visible in it keeps its look. One keyframe per shot, in shot order: ref0, key1, key2, key3."
+      binding: image@ref_image_1
+      reference_role: subject
+      label: "Picture 1"
+      required: true
+    - name: key1
+      kind: image
+      description: "Keyframe of shot 2, addressed as <Picture 2>: pinned as a HARD keyframe at guide1_frame, so the clip cuts to it there. Required: a bundle has at least two shots. Also a reference image. Supplied in shot order by the server."
+      binding: image@key_image_1
+      reference_role: reference
+      label: "Picture 2"
+      required: true
+    - name: key2
+      kind: image
+      description: "Optional keyframe of shot 3, addressed as <Picture 3>: pinned as a hard keyframe at guide2_frame. Supply only together with key1 and guide2_frame. When omitted its guide node is bypassed (no duplicated anchor) and the pictures after it move up (the pictures are numbered by the images supplied)."
+      binding: image@key_image_2
+      reference_role: reference
+      label: "Picture 3"
+      required: false
+    - name: key3
+      kind: image
+      description: "Optional keyframe of shot 4, addressed as <Picture 4>: pinned as a hard keyframe at guide3_frame. Supply only together with key2 and guide3_frame. When omitted its guide node is bypassed and the pictures after it move up."
+      binding: image@key_image_3
+      reference_role: reference
+      label: "Picture 4"
+      required: false
+    - name: ref1
+      kind: image
+      description: "Optional identity reference 1: the identity / design sheet of the main character in the clip, addressed as the first picture after the keyframes (<Picture 3> in a 2-shot bundle, <Picture 5> in a 4-shot one). Supply the identity references in order without gaps: ref1 before ref2. Together with the keyframes at most 9 images."
+      binding: image@ref_image_2
+      reference_role: reference
+      label: "Picture 5"
+      required: false
+    - name: ref2
+      kind: image
+      description: "Optional identity reference 2, the next picture: a second character, an outfit, the location plate, a prop. Give it a one-line role in subject_definitions. Supply only when ref1 is supplied."
+      binding: image@ref_image_3
+      reference_role: reference
+      label: "Picture 6"
+      required: false
+    - name: ref3
+      kind: image
+      description: "Optional identity reference 3, the next picture; same uses as ref2. Supply only when ref2 is supplied."
+      binding: image@ref_image_4
+      reference_role: reference
+      label: "Picture 7"
+      required: false
+    - name: ref4
+      kind: image
+      description: "Optional identity reference 4, the next picture; same uses as ref2. Supply only when ref3 is supplied."
+      binding: image@ref_image_5
+      reference_role: reference
+      label: "Picture 8"
+      required: false
+    - name: ref5
+      kind: image
+      description: "Optional identity reference 5, the next picture; same uses as ref2. Supply only when ref4 is supplied."
+      binding: image@ref_image_6
+      reference_role: reference
+      label: "Picture 9"
+      required: false
+    - name: voice_ref_1
+      kind: audio
+      description: "Optional stereo 32 kHz voice-timbre reference of ONE speaker (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 1>. ALWAYS fill voice_ref_1 before voice_ref_2: ComfyUI numbers the audio inputs that are connected in order, so the first reference supplied is always <Audio 1>. In the prompt state it with one line: '<Audio 1> is the voice-timbre reference for <Subject N> (S#).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      binding: audio@voice_ref_1
+      required: false
+    - name: voice_ref_2
+      kind: audio
+      description: "Optional stereo 32 kHz voice-timbre reference of a SECOND speaker (about 5 s of that character's voice, a .wav; mono or another rate is converted, only the first 5 s are used), referenced in the prompt as <Audio 2>. Supply it only when voice_ref_1 is supplied (the numbering is by order of connection). In the prompt state it with one line: '<Audio 2> is the voice-timbre reference for <Subject N> (S#).' - the model then speaks that subject's dialogue in this timbre. When omitted the graph runs exactly as without voice references."
+      binding: audio@voice_ref_2
+      required: false
+  params:
+    - name: prompt_positive
+      kind: string
+      description: "MiniMax H3 multi-shot keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief, bundle form). Sections in order: subject_definitions (one line per keyframe: '<Picture n> is the storyboard keyframe of shot k ... at T seconds it is fully referenced', then one line per identity reference, <Subject N> for characters), summary starting with [keyframe completion] and naming the hard cuts, retention_analysis, detailed_description (style first, then one timed block per shot: [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', each later shot opening 'At 00:T.TTT, the camera cuts to ... matching <Picture n>.', dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. The cut times in the prompt must equal the guide frames / 24. Only cite <Picture N> for images that were supplied. When voice_ref_k is supplied, add the line '<Audio k> is the voice-timbre reference for <Subject n> (S#).' to subject_definitions."
+      binding: value@138
+      required: true
+    - name: guide1_frame
+      kind: int
+      description: "Frame (24 fps, counted from the clip start) where key1 is pinned as a hard keyframe: the cut into shot 2. Computed by the server as round(cut seconds x 24) from the shots' Durations - never set by hand, and equal to the cut time stated in the prompt x 24."
+      binding: frame_idx@guide1
+      constraints: { min: 1, max: 360 }
+      required: true
+    - name: guide2_frame
+      kind: int
+      description: "Frame (24 fps) where key2 is pinned as a hard keyframe: the cut into shot 3. Computed by the server, never set by hand; later than guide1_frame. Only used when key2 is supplied."
+      binding: frame_idx@guide2
+      constraints: { min: 1, max: 360 }
+      required: false
+      default: 192
+    - name: guide3_frame
+      kind: int
+      description: "Frame (24 fps) where key3 is pinned as a hard keyframe: the cut into shot 4. Computed by the server, never set by hand; later than guide2_frame. Only used when key3 is supplied."
+      binding: frame_idx@guide3
+      constraints: { min: 1, max: 360 }
+      required: false
+      default: 288
+    - name: duration_seconds
+      kind: float
+      description: "Target clip playback duration in seconds: the sum of the shots' Durations, at most 15 (the trained length; longer clips break into unplanned cuts). Converted to the nearest valid MiniMax H3 frame count at the native 24 fps (15 s -> 15.06 s). Every guide frame must fall inside the clip."
+      binding: value@132
+      constraints: { min: 5.0, max: 16.0 }
+      required: false
+      default: 5.0
+      role: duration
+    - name: steps
+      kind: int
+      description: "Denoising steps. The baked-in turbo LoRA (0.7) is tuned for 6-8 steps; 4 is the fastest usable draft."
+      binding: steps@124
+      constraints: { min: 1, max: 50 }
+      required: false
+      default: 8
+    - name: seed
+      kind: int
+      description: "Random seed for reproducibility. -1 draws a new one, so a second take differs from the first."
+      binding: seed@142
+      seed: true
+      required: false
+      default: -1
+    - name: width
+      kind: int
+      description: "Output width in pixels. Snapped to the nearest multiple of 32 in the graph (the model needs it), so any value works. Do not set it: the clip takes its start frame's aspect ratio at the render profile's video size,."
+      binding: value@wh_width
+      constraints: { min: 256, max: 1920 }
+      required: false
+      default: 480
+    - name: height
+      kind: int
+      description: "Output height in pixels. Snapped to the nearest multiple of 32 in the graph (the model needs it), so any value works. Do not set it: the clip takes its start frame's aspect ratio at the render profile's video size,."
+      binding: value@wh_height
+      constraints: { min: 256, max: 1920 }
+      required: false
+      default: 864
+    - name: fps
+      kind: int
+      description: "Output (playback) frame rate. 48 is the model's native 24 fps through RIFE 2x and keeps the clip duration."
+      binding: value@146
+      constraints: { min: 1, max: 120 }
+      required: false
+      default: 48
+      role: output-fps
+    - name: sage_attention
+      kind: string
+      description: "SageAttention mode of the KJNodes patch. Leave at 'disabled' unless the compute image is known to carry SageAttention kernels for the card."
+      binding: sage_attention@157
+      required: false
+      default: disabled
+  # Node 674 (Power Lora Loader (rgthree)) carries the lora slots. bindWorkflow()
+  # (video-harness/src/render/manifest.ts) KEEPS the workflow.json-authored slot verbatim: the
+  # always-on LightX2V turbo distillation (lora_1, 0.7), skin-realism slider (lora_2, 0.5) and anatomy
+  # LoRA (lora_3, MysticXXX 0.6) need no port and can never be wiped or
+  # overwritten by a port. Each port below that resolves to a lora (a workspace lora-catalog name)
+  # is APPENDED after it, in declaration order. `default` is left UNSET on all four: a default would
+  # append that lora on every render. `strength` is only the fallback for a catalog entry that
+  # declares none - strength resolves call-time lora_<port>_strength -> catalog default -> this value.
+  loras:
+    - name: lora_1
+      kind: lora
+      description: "Optional LoRA slot 1 (act or detail adapter trained for MiniMax H3). Appended after the three always-on LoRAs baked into the workflow (turbo, realism slider, anatomy). Inactive unless a catalog lora name is passed. Pick from lora_index (modelFamily minimaxh3); add the lora's trigger word to the prompt when it has one. Never select the three baked-in LoRAs here - that loads a second copy."
+      binding: "674"
+      strength: 0.8
+      required: false
+    - name: lora_2
+      kind: lora
+      description: "Optional LoRA slot 2. Stacks on top of the baked-in LoRAs and lora_1. Inactive unless a catalog lora name is passed."
+      binding: "674"
+      strength: 0.8
+      required: false
+    - name: lora_3
+      kind: lora
+      description: "Optional LoRA slot 3. Stacks on top of the baked-in LoRAs and lora_1-lora_2. Inactive unless a catalog lora name is passed."
+      binding: "674"
+      strength: 0.8
+      required: false
+    - name: lora_4
+      kind: lora
+      description: "Optional LoRA slot 4. Stacks on top of the baked-in LoRAs and lora_1-lora_3. Inactive unless a catalog lora name is passed."
+      binding: "674"
+      strength: 0.8
+      required: false
+  outputs:
+    - name: output_video
+      kind: video
+      description: "Final multi-shot video with audio, RIFE 2x interpolated, encoded at the fps param rate (default 48). The cuts sit at the guide frames."
+      node_id: "145"
+      role: primary
+context: |
+  Use for 2-4 consecutive shots of one scene that cut hard into each other at one location
+  (the server decides which shots form a bundle and fills every mechanical port). One shot, or a
+  shot that continues the previous one without a cut, goes to h3_single_cut_clip_nsfw / h3_clip_continuation_nsfw.
+
+  Keyframes: one keyframe per shot, in shot order: ref0 (shot 1, frame 0), key1 (shot 2), key2 (shot 3),
+  key3 (shot 4). Each keyN is pinned as a HARD keyframe at guideN_frame: the clip jumps to it there,
+  so a cut lands at guideN_frame / 24 seconds (measured: within a few frames of the plan). A hard keyframe
+  cannot be a camera move into the next framing: it is always a cut. Keyframes are also attached as reference
+  images, so they count against the 9 reference slots. Center-cropped to width x height: give them the clip's
+  aspect ratio.
+
+  Order: ref0, key1, [key2], [key3], then ref1-ref5. Pictures are numbered by the images supplied, in this order,
+  without gaps: a 2-shot bundle's first identity reference is <Picture 3>, a 4-shot bundle's <Picture 5>. A bundle
+  leaves 9 - (number of shots) identity slots (7 for 2 shots, 5 for 4). Supply the keyframes in order (never key2
+  without key1) and the identity references without gaps; an absent key bypasses its guide node.
+
+  Prompt format - full-reference brief (prompt-writer-minimaxh3 Template B, bundle form), English:
+  subject_definitions -> summary ([keyframe completion] ..., naming the hard cuts) -> retention_analysis ->
+  detailed_description -> overall_soundscape -> non_diegetic_music. subject_definitions has one line per keyframe
+  with its time ("<Picture 2> is the storyboard keyframe of shot 2: at 4.00 seconds it is fully referenced");
+  detailed_description has a timed block per shot: "[Shot 1] For the target video, at 0.00 seconds, <Picture 1> is
+  fully referenced. ...", then "[Shot 2] At 00:04.000, the camera cuts to <framing> matching <Picture 2>. ...".
+  Per-shot actions are timed relative to the shot start. The cut times must equal guideN_frame / 24.
+
+  Length: trained for about 5-15 s. A 4-shot 15 s bundle holds its cuts and keyframes (measured at draft size);
+  24 s clips repeat actions and cut where nothing was planned. duration_seconds is the sum of the shots'
+  Durations, at most 15.
+
+  Voices: voice_ref_1 and voice_ref_2 are optional stereo 32 kHz voice-timbre references of up to
+  two speakers (audio inputs, H3ReferenceAudio guards channels, rate and length). ComfyUI numbers
+  the audio inputs that are CONNECTED in order, so fill voice_ref_1 first: voice_ref_1 is always
+  <Audio 1>, voice_ref_2 (only with voice_ref_1) is <Audio 2>. Which speaker a reference belongs to
+  is stated in the prompt: give each cited audio one line in subject_definitions: '<Audio k> is the
+  voice-timbre reference for <Subject n> (S#).' Without them the voices come from the prompt text
+  alone and vary between clips.
+
+  LoRAs: three are always on and baked into the graph - the LightX2V turbo distillation (0.7),
+  a skin-realism slider (0.5) and an anatomy LoRA (0.6). Do not select them on a port. lora_1-lora_4
+  take act / detail adapters from the workspace lora catalog (modelFamily minimaxh3).
+
+  Resolution: width and height are snapped to the nearest multiple of 32 in the graph (size_w / size_h;
+  e.g. 720 -> 704). Portrait 480x864 default, 864x480 landscape, 864x1536 for final quality.
+
+  GPU / VRAM: 40 GB minimum (Qwen3VL 32B text encoder ~16 GB, REF2VA int8 model ~21 GB).
+  First run downloads ~43 GB of models (shared with h3_single_cut_clip_nsfw). A 12-second bundle at
+  8 steps takes about 20-30 minutes on a100.
+models:
+  # MiniMax H3 reference-to-video weights (an A/B against the fl2va weights of the predecessor
+  # bundles kept the characters closer to their reference images at the same speed).
+  - name: minimax_h3_ref2va_pruned_int8_convrot
+    type: unet
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors
+        sha256: 9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779
+
+  - name: qwen3vl_32b_minimax_h3_nvfp4_awq
+    type: clip
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+        sha256: 35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6
+
+  - name: minimax_h3_audio_vae_fp32
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+        sha256: 8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48
+
+  - name: minimax_h3_video_vae_fp16
+    type: vae
+    files:
+      - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+        sha256: 7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522
+
+  # The always-on turbo LoRA baked into the Power Lora Loader node (see ports.loras).
+  - name: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy
+    type: lora
+    files:
+      - url: https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        filename: minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors
+        sha256: fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1
+
+  # CivitAI blocks datacenter IPs, so the two CivitAI-sourced NSFW LoRAs come from the model-cache mirror.
+  - name: PlagueKind-tiddies-realismslider
+    type: lora
+    files:
+      - url: https://s3.us-east-1.amazonaws.com/auteur-model-cache-20260905193718168400000001/public/lora/PlagueKind-tiddies-realismslider.safetensors
+        filename: PlagueKind-tiddies-realismslider.safetensors
+        sha256: e5c8c275af58663a664ad2922cc10a248bff70b941043375d2c82d9cc55b7030
+
+  - name: MysticXXX_MMH3-V3
+    type: lora
+    files:
+      - url: https://s3.us-east-1.amazonaws.com/auteur-model-cache-20260905193718168400000001/public/lora/MysticXXX_MMH3-V3.safetensors
+        filename: MysticXXX_MMH3-V3.safetensors
+        sha256: 99307e313784cbea7d9ee2a56ecb8794272f1024737985b824eca8c5c619a0b6
+
+  - name: rife49
+    type: rife
+    files:
+      - url: https://huggingface.co/marduk191/rife/resolve/main/rife49.pth
+        filename: rife49.pth
+        sha256: e55fd00f3cc184e3c65961f4bb827a9da022e78eed36b055242c0ac30000d533

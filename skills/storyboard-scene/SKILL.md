@@ -126,7 +126,7 @@ plan of step 3 only adds placement, facing and the compose prompt.
 
 ### Curate the shot's LoRAs (first step of every shot)
 
-BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first, inferred from each LoRA's name and description: everything the shot shows - the production's style and look, the pictured characters (character LoRAs), outfits and clothing, props, the place, camera / lens / lighting, pose and action, anatomy and detail - and the act and position only when the shot has a `Sex act:` / `Sex position:` (rank the LoRA serving it high). Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Mix model families freely (the server keeps those of the render workflow's family); no need to avoid a LoRA the workflow already loads (the render skips it). The server loads this list on EVERY take render and repair of the shot, after the design's explicit studio picks (which rank first; the port cap cuts your tail); the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15).
+BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first, inferred from each LoRA's name and description: everything the shot shows - the production's style and look, the pictured characters (character LoRAs), outfits and clothing, props, the place, camera / lens / lighting, pose and action, anatomy and detail - and the act and position only when the shot has a `Sex act:` / `Sex position:` (rank the LoRA serving it high). Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Curate LoRAs of the storyboard's RENDER families only: the family of the keyframe (compose) workflow and of the masked-inpaint workflow that paints an act into it (read `model_family` of the workflows in the workflow index / workspace facts and `modelFamily` per LoRA in `lora_index`) - a LoRA of any other family NEVER loads on these renders (the write tool notes it as "never loaded"). For a shot with a `Sex act:` include that family's ACT-DETAIL LoRAs and rank them FIRST - the genital / anatomy detail LoRAs of the body parts the act shows and the act / position LoRA, inferred from each LoRA's name and description - because the inpaint workflow has only 4 LoRA ports and the tail is cut; a shot whose shown act lists no LoRA of the keyframe family is REFUSED at the write (when the catalog has one). Example, a flux2 storyboard, vaginal penetration from behind: `LoRAs: flux2_nsfw_penis, flux2_nsfw_vulva, flux2_nsfw_sex_aio, flux2_nsfw_realism` (never `krea2_nsfw_penis` there). No need to avoid a LoRA the workflow already loads (the render skips it). The server loads this list on EVERY take render and repair of the shot, after the design's explicit studio picks (which rank first; the port cap cuts your tail); the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15; a shown act needs a LoRA of the keyframe workflow's family when the catalog has one). The accepted `write_shot` result lists what will load per render, so you see the port cut.
 
 ### Shots
 
@@ -238,12 +238,26 @@ check); they go to the clip prompt verbatim.
   what the scene list's beat states: no filler behaviour. A pose held for the whole shot is no motion:
   "0-4 s hangs airborne" is wrong; a jump is "0-1 s pushes off the edge, arms swinging forward;
   1-2 s flies out over the water, body stretching; 2-4 s breaks the surface in a splash, sinking".
+- A beat carries its MECHANICS, stated as the action in progress: which hand, which fastening or
+  motion ("left hand pulls the cord loose", not "undresses"), where a garment or prop goes ("the top
+  drops to the floor by her feet"; "the cup is set on the table's near edge") and the end state it
+  leaves ("the cardigan hangs open off one shoulder"). Every garment or prop a beat touches gets an
+  end state in that beat or a later beat of the shot; none is left unresolved.
+- Rule R26 (clip rule, refused at the write like R25, never part of the keyframe gate): a `Wardrobe:` or
+  `State:` entry that differs between shot k and shot k+1 must be PERFORMED by a `Motion:` beat in shot k
+  or k+1 that names the garment (or state) and where it ends up. A change nobody performs is refused: write
+  the beat, or keep the entry the same.
+- Speech direction belongs to the beat it happens in: the `Motion:` beat of the speaker says how they
+  speak or hold themselves while speaking ("speaks over her shoulder without turning"), the `Dialogue:`
+  line carries the words and voice delivery.
 - Two verbs = two beats of ONE shot ("stands, then crosses" is `0-2 s … rises` and `2-5 s … crosses`),
   never two shots, when the beat is one continuous action; a new place, framing or moment is still a new shot.
 - Never cut at a sub-second instant: every beat is at least 1 s (rule R22). A beat the clip cannot
   show in 1 s is merged into its neighbour.
-- `Duration:` (3–10 s) is sized from the beats, the dialogue and a settle: the last word ends at
-  least 0.5 s before the shot ends.
+- `Duration:` (3–10 s) is sized from the beats, the dialogue and a settle: sum what the beats need
+  (a mechanic with several steps takes its real time), the dialogue at its pace, then a settle so the
+  end state is visible; the last word ends at least 0.5 s before the shot ends. Never pad a short
+  action to a round length.
 - `Dialogue:` = `<t0>-<t1> s <character_key> (<delivery>): "<words>"`, several separated by `;`. The speaker
   is the character's design KEY. The delivery names emotion, volume, pace, breath and pitch ("soft, tired,
   slow, a small sigh first") — what the voice does is audible, so emotion words belong here. Size each
@@ -643,6 +657,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at
       least 1 s, every figure and the camera covered, ending at `Duration:`), each `Dialogue:` line has a
       speaker key and a delivery and fits its time, and `Audio:` is the scene's, verbatim, on every shot
+- [ ] with `Timing: beats`: every beat names its mechanics and end state; every `Wardrobe:` / `State:`
+      difference to the next shot is performed by a beat naming the garment and where it ends up (R26)
 - [ ] the POV owner is only "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` and the
       prompt (no name, key, placeholder or figure); no prompt copies another shot's people
 - [ ] every POV owner's `Visible:` extent covers each part of their own body that `Pose:` /

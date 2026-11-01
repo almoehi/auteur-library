@@ -1,4 +1,4 @@
-"""Derive h3_*_nsfw bundles from the SFW h3_single_cut_clip / h3_clip_continuation bundles.
+"""Derive h3_*_nsfw bundles from the SFW h3_single_cut_clip / h3_multishot_clip / h3_clip_continuation bundles.
 
 The NSFW variant = the SFW graph + the skin-realism (0.5) and anatomy (0.6) LoRAs baked into the
 Power Lora Loader, their model entries, and the NSFW wording. Re-run after every change to either
@@ -12,7 +12,7 @@ import re
 import sys
 
 LIB = pathlib.Path(sys.argv[1])
-LORA_NODE = {"h3_single_cut_clip": "674", "h3_clip_continuation": "our_loras"}
+LORA_NODE = {"h3_single_cut_clip": "674", "h3_multishot_clip": "674", "h3_clip_continuation": "our_loras"}
 BAKED = {
     "lora_2": {"on": True, "lora": "PlagueKind-tiddies-realismslider.safetensors", "strength": 0.5},
     "lora_3": {"on": True, "lora": "MysticXXX_MMH3-V3.safetensors", "strength": 0.6},
@@ -49,9 +49,8 @@ for base, node in LORA_NODE.items():
     (dst / "workflow.json").write_text(json.dumps(graph, indent=2, ensure_ascii=False) + "\n")
 
     y = (src / "workflow.yaml").read_text()
-    y = re.sub(r"\bh3_single_cut_clip\b", "h3_single_cut_clip_nsfw", y)
-    y = re.sub(r"\bh3_clip_continuation\b", "h3_clip_continuation_nsfw", y)
-    y = y.replace("h3_single_cut_clip_nsfw_nsfw", "h3_single_cut_clip_nsfw").replace("h3_clip_continuation_nsfw_nsfw", "h3_clip_continuation_nsfw")
+    for name in LORA_NODE:
+        y = re.sub(rf"\b{name}\b(?!_nsfw)", f"{name}_nsfw", y)
     head_start, head_end = y.index("# ─── Source"), y.index("# ─── Custom Nodes")
     y = (y[:head_start] + "# ─── Source ───────────────────────────────────────────────────────────────────\n"
          f"# NSFW variant of {base}: the same graph and ports with a skin-realism and an anatomy\n"
