@@ -128,6 +128,15 @@ plan of step 3 only adds placement, facing and the compose prompt.
 
 BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first, inferred from each LoRA's name and description: everything the shot shows - the production's style and look, the pictured characters (character LoRAs), outfits and clothing, props, the place, camera / lens / lighting, pose and action, anatomy and detail - and the act and position only when the shot has a `Sex act:` / `Sex position:` (rank the LoRA serving it high). Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Curate LoRAs of the storyboard's RENDER families only: the family of the keyframe (compose) workflow and of the masked-inpaint workflow that paints an act into it (read `model_family` of the workflows in the workflow index / workspace facts and `modelFamily` per LoRA in `lora_index`) - a LoRA of any other family NEVER loads on these renders (the write tool notes it as "never loaded"). For a shot with a `Sex act:` include that family's ACT-DETAIL LoRAs and rank them FIRST - the genital / anatomy detail LoRAs of the body parts the act shows and the act / position LoRA, inferred from each LoRA's name and description - because the inpaint workflow has only 4 LoRA ports and the tail is cut; a shot whose shown act lists no LoRA of the keyframe family is REFUSED at the write (when the catalog has one). Example, a flux2 storyboard, vaginal penetration from behind: `LoRAs: flux2_nsfw_penis, flux2_nsfw_vulva, flux2_nsfw_sex_aio, flux2_nsfw_realism` (never `krea2_nsfw_penis` there). No need to avoid a LoRA the workflow already loads (the render skips it). The server loads this list on EVERY take render and repair of the shot, after the design's explicit studio picks (which rank first; the port cap cuts your tail); the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15; a shown act needs a LoRA of the keyframe workflow's family when the catalog has one). The accepted `write_shot` result lists what will load per render, so you see the port cut.
 
+### Cinematography (the shot rules below, R1-R26 and the POV / act rules R4 / R20 / R24 take precedence)
+
+- Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide.
+- Shot size follows intensity: wide -> medium -> close as it rises; never the same size three shots in a row; an insert only for an object the story needs.
+- Keep each person's screen side from the scene's `Blocking` (left / right of frame) for the whole scene; over-the-shoulder shots keep the same shoulder; never mirror a person between shots unless they move.
+- A `continue` shot changes framing clearly: at least one size step or a visible angle change (more than about 30 degrees), performed by its `Movement:` (R25); a change no move performs is a `cut`.
+- `Frame:` states the composition at t=0 (the keyframe is the opening frame): which third the subject sits in, foreground / midground / background, room in the direction they face; and it repeats the scene's `Lighting` phrase from the scene table (never contradicts it).
+- `Duration:` guide (3-10 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
+
 ### Shots
 
 - One shot = ONE moment (a keyframe is a single still), one place (`Location:`), one framing
@@ -173,8 +182,8 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   at least one shot (all checked at the write: `beat 1.3: no shot shows it`).
 - A sequence is fixed ONLY by splitting it into shots, never by rephrasing it into one sentence
   (participles or "as" around successive actions are still a sequence).
-- Typically 4–10 shots covering the whole scene in story order, an establishing shot first when
-  the place is new. Sections follow story order; a split keeps its id for the first part.
+- Typically 4–10 shots covering the whole scene in story order, an establishing wide first when
+  the place is new (scene 1: after its hook, see Cinematography). Sections follow story order; a split keeps its id for the first part.
 - A `parallel` beat = its own cutaway shot at its place, its characters from that beat:
   `Transition: cut — cutaway (parallel action)`; the main action resumes in a later shot
   (`cut — back to …`).

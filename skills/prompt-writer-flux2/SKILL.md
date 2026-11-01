@@ -117,6 +117,8 @@ Write a descriptive prose prompt instead of an instruction: Subject (with physic
 Action → Setting → Lighting (source, direction, quality) → Style/medium → framing. Natural
 sentences, 30–80 words, positive phrasing only.
 
+Composition vocabulary (t2i and ref2i): shot size (`extreme close-up` … `wide`), angle (`eye-level` | `low angle` | `high angle` | `top-down` | `Dutch angle`), lens feel (`35mm` environmental, `50mm` neutral, `85mm` compressed / isolated background, `wide-angle` expansive), `rule of thirds` / `subject in the left third`, foreground / midground / background, lead room (space in the direction the subject faces), `negative space`. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim.
+
 ---
 
 ## Output

@@ -225,7 +225,7 @@ POV
 Roll Clockwise / Roll Counterclockwise
 ```
 
-Rules: ONE camera move per shot. If static: state "frame never moves" AND list what should not happen.
+Rules: ONE camera move per shot, and a SUBTLE one (a push-in changes the frame by about 10%); never combine a camera move with a fast subject action in one short clip. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim. If static: state "frame never moves" AND list what should not happen.
 
 **A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The

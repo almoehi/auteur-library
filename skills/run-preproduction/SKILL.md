@@ -37,8 +37,8 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - Intent of each check (rules live in the spec):
   - `screenplay-quality`: screenplay faithfully adapts the plot in proper format.
   - `cast-quality`: every cast role (animals / creatures with a story role included) has a complete profile; no two characters look alike (twins excepted).
-  - `scenes-quality`: scene list covers all beats, numbered, INT/EXT, location, one-line action.
-  - `scenes-complete`: location slug, INT/EXT, looks per character, beats with camera move / continuity / `Outfits` (+ sex columns when nudity allowed), a `## Places` row per location slug (set, space, connections), no location that is a surface.
+  - `scenes-quality`: scene list covers all beats, numbered, INT/EXT, location, time of day, lighting, one-line summary.
+  - `scenes-complete`: location slug, INT/EXT, a `Lighting` phrase per scene, looks per character, beats with camera move / continuity / `Outfits` (+ sex columns when nudity allowed), a `## Places` row per location slug (set, space, connections), no location that is a surface.
   - `design-plan-covers-scenes`: plan has every character, location and (character, look) outfit of the scene list; locations of one property are sets (`set_anchor` links, one `set_style` per set).
   - `designs-cover-plan`: a design was created (or existed) for every planned key; no stray or duplicate designs.
   - `storyboards-cover-scenes`: a storyboard exists for every scene.
@@ -107,6 +107,7 @@ Identity (decided here, once)
 Files
 - Write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`.
 - Each file has exactly these five `##` headings, in this order: `NAME`, `ROLE`, `PERSONALITY`, `VISUAL PROFILE`, `WARDROBE TRACKER`. A file missing any is incomplete and must not be submitted.
+- `PERSONALITY` ends with two lines: `Want:` (what the character pursues) and `Obstacle:` (what stops them, or their flaw).
 - `VISUAL PROFILE`: one `key: value` line each for character type, age, ethnicity, height, face (shape, notable features), hair (colour, length, style), skin tone, eyes, build, build detail, proportions, posture, distinguishing features.
   - No `[...]` placeholders or blanks: every field gets a concrete value, or `n/a` when it does not apply.
   - Invent a fitting value the screenplay does not contradict rather than leave a field open.
@@ -146,15 +147,16 @@ Output
 - Write `scene_list.md` as plain Markdown (never PDF or DOCX): ONE scene table, a Places table, then a Beats section.
 
 Scene table columns
-- `Scene #` | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Summary` | `Characters present` | `Outfits` | `Audio`.
+- `Scene #` | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Lighting` | `Summary` | `Characters present` | `Outfits` | `Audio`.
 - `location_slug` names a SPACE a camera can stand in ("hallway", "backyard_pool_terrace"), never a surface or feature of one (a wall, door, window, table): those belong to the space's `connections` and to shot framing. Never a slug like `grey_house_wall`.
 - `Audio`: the scene's atmosphere in one line — room tone, the space (small and dry / large and echoing), distance of the sounds, mood ("quiet kitchen at night, fridge hum, distant rain"). No dialogue and no events; the storyboard copies it verbatim onto every shot of the scene and the clip prompts carry it. Filled for EVERY scene.
-- `Summary`: one sentence naming every entrance, exit and spoken line that matters to the story, not only the main action.
+- `Lighting`: ONE short phrase naming the scene's single motivated light: a visible source, its direction, quality and colour / time ("window light from the left, soft, warm afternoon"). One setup per scene; the storyboard and clip briefs repeat it verbatim. Filled for EVERY scene.
+- `Summary`: one sentence "<who> wants <goal>; <obstacle>; ends with <changed situation>" (every scene turns something), plus any entrance, exit or spoken line that matters to the story.
 - `Characters present`: slugs equal the `character_<slug>.md` stems; every listed character appears in some beat's `Outfits` of that scene, else drop them from the row.
 - `Outfits`: `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `mira:raincoat; jonas:work_suit`.
   - A character who changes look inside the scene appears once per look: `mira:raincoat; mira:nightgown`.
   - The row's `Outfits` is exactly the UNION of its beats' `Outfits`: nothing missing, nothing extra.
-- A scene row = ONE place and ONE continuous time. A change of place starts a new scene; never merge places into one row ("Backyard terrace / Hallway" is two scenes). The ~4-scene short-film default never overrides this: add scenes rather than merge places.
+- A scene row = ONE place and ONE continuous time. A change of place starts a new scene; never merge places into one row ("Backyard terrace / Hallway" is two scenes). Runtime budget: use the runtime the story states; otherwise plan 3-5 scenes for a 1-5 minute film, one new turn per scene, and scene 1's first beat is the hook (an action or a question). The budget never overrides this: add scenes rather than merge places.
 
 Looks
 - Allowed look values: a look slug from that character's WARDROBE TRACKER (copy exactly; add a tracker row only if the screenplay demands one, and say so in the summary), `nude`, or `none` — ONLY for a character who wears nothing by nature (a creature or an animal). A person whose beat `Action` / `Blocking` names garments carries a WARDROBE TRACKER look, never `none` (a `none` look has no outfit picture, so its garments coming off are neither pictured nor checked; the `scenes-complete` check refuses it).
@@ -179,12 +181,12 @@ Beats section (same file, below the Places table)
   - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `jonas:work_suit; mira:raincoat`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty.
   - `Framing`: ONE opening shot size and angle (never "close-up then wide": a change of framing is a
     `Camera move` or a new beat).
-  - `Camera move`: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift, orbit, or `hold` ONLY when the beat asks for stillness.
+  - `Camera move`: push-in, pull-out, pan left/right, tilt up/down, track, crane, handheld drift, orbit, or `hold` ONLY when the beat asks for stillness. Every move has a reason: push-in = emphasis / intimacy, pull-out = reveal / isolation, track = follow, handheld = tension, orbit = reveal the space around a still subject, hold = stillness / dread. One slow move per beat; no orbit or crane on a close-up.
   - `Continuity` (relation to the PREVIOUS beat):
     - `continuous` = the action carries straight on: same place, same moment, same people, even when the framing changes. A `continuous` beat whose framing differs from the previous beat's needs a `Camera move` that PERFORMS the change (push-in / pull-out / zoom for a size change; pan / tilt / orbit for an angle change); with `hold` or `handheld drift` it is `new moment` instead (the storyboard turns it into a `cut`, since a hold or drift cannot reach the new framing).
     - `parallel` = happens at the same time somewhere ELSE; MUST give its place in `Location` (reuse a table slug or define a new stable slug of lowercase a-z0-9 words joined by `_`, e.g. `driveway`; inventing a place slug is allowed).
     - `new moment` = a jump in time, place or subject, or an insert. The first beat of a scene is `new moment`.
-  - `Blocking`: who is where, facing which way.
+  - `Blocking`: who is where, facing which way; in a conversation name each person's screen side (left / right of frame), kept for the whole scene.
   - `Contact`: who touches whom or what, and where on the body or object, in plain body-part words
     (hands, mouth, shoulders, waist, lap, groin, …): the storyboard turns it into the shot's
     structured `Contact:` line; `none` when nothing does.
