@@ -74,7 +74,7 @@ Structure the enhanced prompt in this priority order. Elements are ordered by im
 
 ### Element 1 — Subject
 
-Specify physical attributes concretely: age range, build, hair (length + texture + color), clothing (material + color + fit), accessories, expression.
+Specify physical attributes concretely: age range, build, hair (length + texture + color), clothing (garment type and cut + material + color + embellishment + fit, see "Wardrobe terms"), accessories, expression.
 
 Weak → Strong:
 - ❌ "A woman in a red dress" → ✅ "A woman in her late 30s, angular features, tousled dark hair, wearing a structured crimson silk dress with a halter neck, a single pearl earring, posture direct and poised"
@@ -165,6 +165,12 @@ Close the prompt with the intended crop:
 | `4:3 standard crop` | Decks, print, editorial cards |
 
 ---
+
+## Wardrobe terms
+
+- Name garments the way a costume department would: garment type and cut, material, colour or pattern, embellishment, fit or length, how it is worn ("cropped double-breasted wool blazer, navy, gold buttons, worn open" - never "nice jacket" or "sparkly outfit").
+- Name only what the caller or the pictures state; never invent construction details (pockets, buttons, trims) nobody gave you.
+- The server may append an `Outfit (<Name>): ...` line after your prompt (the outfit design's garment list, verbatim). Do not write that line yourself, and do not repeat or paraphrase its garments: describe pose, action and how the clothes sit now (open, rolled, wet), not the outfit again.
 
 ## Step 3 — Text Rendering (if required)
 

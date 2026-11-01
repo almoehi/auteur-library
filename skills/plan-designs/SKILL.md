@@ -27,7 +27,7 @@ Content policy = `{workspace.contentPolicy.nudity}` (absent or empty = `forbidde
 - Outfits: exactly ONE outfit design per WARDROBE TRACKER row (look slug = the row's look slug); no exceptions (no "most worn", no "differs visibly" judgement). A tracker row that is nudity itself (no garments) is not an outfit.
 - Character design `wardrobe`, decided by AGE and POLICY only:
   - nudity `allowed` + human adult (18+ stated or clearly implied): `nude`, for EVERY such adult.
-  - minor, nudity `forbidden`, or clothed non-human: plain neutral clothing (e.g. "plain neutral clothing: simple fitted grey t-shirt and trousers").
+  - minor, nudity `forbidden`, or clothed non-human: plain neutral clothing in construction terms (e.g. "plain neutral clothing: fitted grey cotton crew-neck t-shirt, straight-leg charcoal trousers").
   - creature / animal wearing nothing: `none`; no tracker rows; scene pair `<c>:none`.
   - Never decided by nudity on screen or by character-table notes ("face never shown", "always clothed on screen"): the character design is the identity / anatomy reference.
   - An outfit's garments never go into the character's `wardrobe`.
@@ -89,7 +89,7 @@ Build every entry with its FINAL key; nothing is decided later.
 | kind | keys |
 |---|---|
 | character | `character_type` (own `create_design` argument, not an attribute: woman, man, non-binary person, child, elderly person, animal, creature, robot, fantasy being, or free text); attributes `age`, `ethnicity`, `hair`, `eyes`, `build`, `wardrobe`, `features`, `voice` |
-| outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` (from the tracker row) |
+| outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` (from the tracker row); `garments` in construction terms, one comma-joined entry per garment: type and cut, then defining details ("cropped double-breasted wool blazer with gold buttons, high-waisted wide-leg trousers, pointed-toe leather pumps"), never vague tags ("nice outfit", "sparkly dress"), never details the sources do not state |
 | location | `place`, `space` (`interior` \| `exterior`, from the Places row), `era`, `time_of_day`, `weather`, `lighting`, `mood`, `set`, `set_style`, `connections`, `views` |
 
    - Character `hair`, `build` and `features` copy the profile's face, hair, skin tone and distinguishing marks verbatim; never summarize them away.
