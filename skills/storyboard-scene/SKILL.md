@@ -22,6 +22,13 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 
 ## Hard rules
 
+- Work in small steps. Never plan the whole scene's shot list in your head before acting. After
+  reading the inputs, outline the scene as short beat lines (one line per beat, at most a few
+  sentences of thinking), then decide ONLY the next 1-3 shots, call their tools, and decide the
+  following shots after those results. Keep each deliberation short: the server checks the shot
+  rules on every `write_shot`, so send the shot and fix what it refuses instead of pre-verifying
+  every rule yourself. A long silent deliberation before the first tool call exhausts the output
+  budget and the run fails.
 - Never write, rename or delete `design.json`, a take file or a published name (`full_body_shot.*`,
   `sheet.*`, `view_*`, `frame_*`). The server owns the takes; the person picks, discards and
   finishes in the studio.
