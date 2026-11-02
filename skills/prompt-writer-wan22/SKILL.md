@@ -115,19 +115,29 @@ Shot sizes: `extreme close-up` | `close-up` | `medium close-up` | `medium shot` 
 | Movement | Phrase |
 |---|---|
 | No movement | `static shot`, `locked-off frame` |
-| Horizontal | `slow pan left/right` |
-| Vertical pivot | `slow tilt up/down` |
-| Approach | `slow push in`, `dolly in` |
-| Retreat | `pull back`, `dolly out` |
+| Turn in place, horizontal | `slow pan left/right` |
+| Turn in place, vertical | `slow tilt up/down` |
+| Approach (camera travels) | `slow push in`, `dolly in` |
+| Retreat (camera travels) | `pull back`, `dolly out` |
+| Lens only (camera stays) | `slow zoom in/out` |
+| Slide sideways | `slow truck left/right` |
 | Follow | `tracking shot` |
 | Circle | `arc shot`, `orbits 15°–30° clockwise` |
-| Rise | `crane up` |
+| Rise / lower | `crane up/down`, `pedestal up/down` |
+| Focus shift (no move) | `focus racks from <near thing> to <subject>` |
 | Handheld | `handheld with subtle wobble` |
 | Aerial | `drone shot perspective` |
 
+Keep the moves apart - each is a different picture:
+- dolly / push ≠ zoom: a push-in moves the camera (the foreground slides past), a zoom only changes the lens. For a size change write the push-in unless the brief says zoom.
+- pan ≠ truck: a pan turns the camera in place, a truck slides it sideways (the subject crosses the frame, near things faster than far ones). A pan or tilt never shows a new side of the subject or a new camera height: a new side is an arc, a new height a crane / pedestal.
+- `static` is strict: no movement, no zoom, no focus change.
+- Write the RESULT of the move - what the frame shows when it ends: `slow pan left to reveal the green door`, `slow push in, ending on a close-up of her face`. Take the target from the brief's `Movement:`; never invent one.
+- A rack focus names BOTH ends: `focus starts on the wine glass in the foreground, then racks to her face; at the end her face is sharp and the glass blurred`. The frame stays still.
+
 Lens: `medium focal length` (default) | `telephoto` | `shallow depth of field` | `anamorphic bokeh`
 
-A `Movement:` from the brief (shotlist / beat) IS the camera instruction: use that move, not a different one. `static shot` / `locked-off frame` and "no zoom / no push" locks whenever the movement says `hold` or is absent: the frame never moves unless the brief asks for a move.
+A `Movement:` from the brief (shotlist / beat) IS the camera instruction: use that move, not a different one. `static shot` / `locked-off frame` and "no zoom / no push / no focus change" locks whenever the movement says `hold` or is absent: the frame never moves unless the brief asks for a move.
 
 Contradictions to avoid: `drone shot` + `extreme close-up` / `static shot` + `slow pan` / `dolly in` + `pull back`
 
