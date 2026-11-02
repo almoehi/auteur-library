@@ -24,6 +24,7 @@ url: workflow.json
 model_family: krea2
 content: nsfw
 workflow_type: t2i
+capabilities: [staging-draft]
 gpu_types: [rtx4090, l40s]
 ports:
   params:

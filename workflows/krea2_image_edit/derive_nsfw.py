@@ -143,6 +143,8 @@ y = replace_span(y, FINDINGS_OLD_START, FINDINGS_OLD_END, FINDINGS_NEW)
 y = must_replace(y, f"name: {BASE}\n", f"name: {BASE}_nsfw\n")
 y = replace_span(y, "description: >", "url: workflow.json", DESC_NEW)
 y = must_replace(y, "\nmodel_family: krea2\n", "\nmodel_family: krea2\ncontent: nsfw\n")
+# stage A of the two-stage act route (staging drafts) may use the NSFW edit workflow
+y = must_replace(y, "\ncapabilities: [multi-reference-edit]\n", "\ncapabilities: [multi-reference-edit, staging-draft]\n")
 y = must_replace(y, "a storyboard frame, a frame whose people get swapped", "a storyboard frame, an act frame whose people get swapped")
 y = must_replace(y, "    - name: identity_strength\n", NSFW_STRENGTH_PARAM + "    - name: identity_strength\n")
 y = must_replace(y, LORA_DESC_SFW, LORA_DESC_NSFW, count=4)
