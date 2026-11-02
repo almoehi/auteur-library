@@ -5,7 +5,8 @@ description: >
   flux2), above all an image edit — e.g. "dress her in the coat from the reference photo",
   "write an edit instruction for the FLUX.2 edit workflow", "swap the handbag using figure 2",
   "make the jacket red in this take". Produces a concise, instruction-style image-edit prompt
-  that names the inputs as "Figure 1" / "Figure 2" and states what to keep.
+  that names the inputs as "Figure 1" / "Figure 2" and states what to keep, and a short,
+  importance-ordered storyboard keyframe prompt for the FLUX.2 Klein reference-compose workflows.
   Do NOT invoke for Qwen-Image-Edit (qwenimage), KREA-2, FLUX 3 video, or any video/animation
   workflow.
 agentType: worker,render
@@ -130,12 +131,26 @@ precedence over any formatting here). Alternative takes of the same edit come fr
 ## Short prompts per workflow kind
 
 - **EDIT workflows** (i2i): the change first, at most 2 short keep locks (naming only what must stay - never "everything else" or the composition when the camera / angle / framing changes; that is a new composition for a ref2i / t2i workflow), no restated character or location descriptions (the reference images carry them), and one image-naming sentence ("Picture 1 is ...").
-- **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
+- **REFERENCE-TO-IMAGE workflows** (ref2i): describe the NEW image as a scene, in the order of "Keyframe compose prompts" below; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 - **VIDEO workflows** (i2v / ref2v / continuation): motion and camera first; do not re-describe what the start frame or references already show.
+
+## Keyframe compose prompts (ref2i storyboard keyframes, FLUX.2 Klein)
+
+FLUX.2 Klein is step-distilled and runs at cfg 1: there is NO negative prompt, and every word you write is drawn. Earlier words weigh most. The server puts each person's picture label (with an identity note) where you write their placeholder, adds LoRA trigger words in front and appends the shot's frame requirements after your text - so your prose only has to set up the picture, briefly and in the right order.
+
+- **Length:** 60-120 words of your own, not counting the placeholders. Never restate the brief's requirement lines one by one.
+- **Order:** (1) the people by placeholder and what their bodies do - the sex act and position in the FIRST sentence, right after the placeholders ("[[a]] and [[b]] have vaginal sex standing face to face: ..."); (2) where they touch; (3) what each wears or has taken off; (4) the place; (5) camera, framing, light and style last.
+- **Hands:** state each hand exactly once, with its owner and side ("her left hand on his shoulder; his right hand on her hip"). Do not repeat a hand from Action, Pose and Contact in three wordings; when they disagree, follow Contact.
+- **Mirrors:** whenever a mirror is in the frame, say what it shows - whose reflection, seen from where - or that it reflects only the wall or room behind the camera. A reflection shows a person from the side facing the mirror, never a second, separate person.
+- **Crying** is an expression: "glistening eyes, wet lashes, a faint clear shine on her cheeks". Never "tear tracks", "streaks" or anything running down the face - it is drawn as fluid.
+- **Body fluids:** name semen, sweat or saliva only when the brief's `Visible anatomy` / `State` lines require it, once, with where it is. Wet hair or skin from water is "wet hair", "water droplets on her shoulders".
+- **Removed garments:** say what is visible instead - "bare legs", "barefoot", "bare chest", "naked below the waist". A garment named, even as removed, gets painted in. Feet are "bare feet" - never "heels" (drawn as high-heeled shoes).
+- **Genitals:** describe them once and consistently (e.g. "an average-sized erect penis"); never add a size word the brief does not give.
+- **Colours of the place:** copy the place's own colour and material words from the brief; do not paraphrase them.
 
 ## Shot facts are kept
 
-When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible`, `Sex act` or `Sex position` text (legacy `Act`), carry it into the prompt in the same meaning and, for the sex act and position, in the same plain words (verbatim; no euphemism, no softening, nothing added). For an explicit act, name the visible genitals and any visible body fluids in plain anatomical words, as the brief's `Visible anatomy (must show)` and `State (...)` lines say - never euphemisms like "joined" or "groin to groin". Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe one instant, not a sequence. Carry the brief's `Expression (<name>): … (must show)` lines into the prompt verbatim.
+When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible`, `Sex act` or `Sex position` text (legacy `Act`), carry it into the prompt in the same meaning and, for the sex act and position, in the same plain words (verbatim; no euphemism, no softening, nothing added). For an explicit act, name the visible genitals in plain anatomical words, as the brief's `Visible anatomy (must show)` line says - never euphemisms like "joined" or "groin to groin" - and any body fluid only as "Keyframe compose prompts" above allows. Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe one instant, not a sequence. Carry the brief's `Expression (<name>): … (must show)` lines into the prompt in the same meaning, as what the camera sees (crying: as "Keyframe compose prompts" above says).
 
 ## Wardrobe terms
 
