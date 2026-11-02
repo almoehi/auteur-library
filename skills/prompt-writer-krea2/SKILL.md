@@ -264,6 +264,16 @@ Never add a "CHANGES SUMMARY", notes or commentary to the prompt: everything in 
 - This family has text-to-image workflows only: keep the prompt as short as the element stack allows. If it is used for an edit, put the change first with at most 2 short keep locks naming only what must stay (never "keep everything else" or the composition when the camera / angle / viewpoint / framing changes: lock appearance only, and prefer a ref2i / t2i render for a new view), no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
 - **REFERENCE-TO-IMAGE workflows** (ref2i, if one uses this family): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 
+## Staging draft (two-stage keyframe, stage A)
+
+When the brief says it is a STAGING DRAFT, the picture is a quick draft whose only jobs are the act, the poses, the body positions and the camera; real identities are composed onto it afterwards.
+
+- No names, no `[[...]]` placeholders, no face descriptions: call the people only by the generic words the brief uses ("the woman on the left", "the man").
+- The act comes first, in plain explicit sentences: who does what to whom, which bodies are joined, in the brief's own words. Then contact, clothing state (what is worn, what is bare), the room, the camera and framing last.
+- Each hand is named once, with its owner and side, and the total never differs from the brief's hand count.
+- When the brief says to keep the room of Picture 1, say that its camera position, walls, furniture, windows, doors and light stay exactly as they are and the people are added into it; do not describe the room again.
+- Never caption tokens: no labels, quoted text, brackets, hashtags or lettering; plain descriptive sentences only.
+
 ## Shot facts are kept
 
 When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible`, `Sex act` or `Sex position` text (legacy `Act`), carry it into the prompt in the same meaning and, for the sex act and position, in the same plain words (verbatim; no euphemism, no softening, nothing added). For an explicit act, name the visible genitals and any visible body fluids in plain anatomical words, as the brief's `Visible anatomy (must show)` and `State (...)` lines say - never euphemisms like "joined" or "groin to groin". Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe one instant, not a sequence. Carry the brief's `Expression (<name>): … (must show)` lines into the prompt verbatim. Keep the brief's `Lighting (scene, keep)` phrase verbatim.

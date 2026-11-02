@@ -539,7 +539,9 @@ check); they go to the clip prompt verbatim.
   (groin, buttocks, breasts); a close-up whose contacts are hands on shoulders keeps the lines,
   but the act is then stated as ongoing out of frame and is not required in the picture.
 - Act / position LoRAs: curate them on the `LoRAs:` line like any other (infer from name and description which
-  serve the act; rank them high; see "Act shots" in "Curated LoRAs" for the order) and name the act and position exactly from the vocabulary in
+  serve the act; rank them high; see "Act shots" in "Curated LoRAs" for the order; a third-person act shot
+  also gets the krea2 act LoRAs on that line - the staging drafts render on krea2 and load them, the real
+  keyframe renders ignore a LoRA of another family) and name the act and position exactly from the vocabulary in
   `workflow-calling-conventions` ("Explicit acts and positions"). If the catalog tags LoRAs with `sexActs` /
   `sexPositions`, the server adds a matching tagged LoRA when none of your listed ones covers the shot's act.
 
@@ -654,6 +656,9 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   body (ankles in a medium full shot) only for standing people.
 - `support` = what they sit, stand or lie on, or are in, when it matters — name the container:
   "in the pool basin", "on the white sun lounger" (the take check holds every figure to it).
+  A THIRD-PERSON act shot (a `Sex act:` and no `POV:`) ALWAYS names the anchor furniture the act uses
+  in `support` ("on the bed", "against the kitchen counter", "on the sofa"): the two-stage keyframe
+  route stages the act on it before the real people are composed in.
   `contact_with` = who or what they touch (from `Blocking:`), only when there is contact.
 - The POV owner (`POV:`) is the camera. When their limbs are in frame (they are in `Characters:`):
   an entity with `region.depth: "frame-edge"` and `limbs` (matching their `Visible:` detail) — never
