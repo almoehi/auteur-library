@@ -322,7 +322,7 @@ check); they go to the clip prompt verbatim.
   on a `:none` look), so they are carried and checked.
 - Wardrobe is carried through the scene: once any garment of a person is `partly:` / `removed:`, every
   later shot showing them has a full `Wardrobe:` entry (also a `cut`, not only a `continue`); a garment the
-  act or blocking needs off (his shirt, for skin contact) is `removed:` in some shot's `Wardrobe:` BEFORE
+  act or blocking needs off (e.g. a top, for skin contact) is `removed:` in some shot's `Wardrobe:` BEFORE
   it must be off - for every person, not just one; a `removed:` garment never returns unless an `Action:`
   puts it back on; and a garment is worn once (no doubled layers, e.g. two tops).
 - Partial undress inside an undressing beat: a shot that still shows a garment of the earlier look
@@ -481,7 +481,7 @@ check); they go to the clip prompt verbatim.
   it (rule R18); a `cut` shot later in the same moment should repeat it too (not checked — your job).
   A distinctive marking in the character's digest (tattoo, scar, birthmark) is placed in every shot
   whose extent shows that body area: a `State:` entry with side + body part and whether it shows or is
-  covered (`tattoo on left forearm, visible`; `tattoo on left shoulder, under the sleeve`) - otherwise it
+  covered (`tattoo left forearm, visible`; `tattoo left shoulder, under sleeve` - each state at most 40 characters) - otherwise it
   drifts onto clothing, the wrong arm or another person. A marking of a `limbs` / POV person goes in words in `Pose:`.
   A visible body fluid is a `State:` entry of the person it is on (`semen on her face`,
   `saliva on her lips and chin`, `sweaty`, `wet glistening vulva`), from the shot that first shows it until it
