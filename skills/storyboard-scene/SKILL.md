@@ -320,6 +320,11 @@ check); they go to the clip prompt verbatim.
   `Pose:` (from the beat / the wardrobe tracker row; `Pose:` survives into clip tasks) and in the
   plan prompt — and garments that come off still go in `Wardrobe:` (`removed:` / `partly:`, allowed
   on a `:none` look), so they are carried and checked.
+- Wardrobe is carried through the scene: once any garment of a person is `partly:` / `removed:`, every
+  later shot showing them has a full `Wardrobe:` entry (also a `cut`, not only a `continue`); a garment the
+  act or blocking needs off (his shirt, for skin contact) is `removed:` in some shot's `Wardrobe:` BEFORE
+  it must be off - for every person, not just one; a `removed:` garment never returns unless an `Action:`
+  puts it back on; and a garment is worn once (no doubled layers, e.g. two tops).
 - Partial undress inside an undressing beat: a shot that still shows a garment of the earlier look
   keeps that OUTFIT key + `Wardrobe:` (`removed:` / `partly:`), even when the beat's Outfits says
   `nude`; `:nude` starts at the first shot where nothing is worn.
@@ -397,6 +402,14 @@ check); they go to the clip prompt verbatim.
   - Contact must be physically possible from the stated positions: whoever touches whom is within
     reach from their seats / postures (`kneeling between his thighs` needs him seated with open knees,
     not lying flat on a lounger). If the Blocking cannot reach the Contact, change the Blocking.
+    Each `Pose:` is physically possible for the stated posture: weight rests on supported feet, knees or
+    hips, and a limb reaches only what it touches ("standing" with "her heels on his lower back" is
+    impossible - make her lifted / seated, or drop the contact).
+  - A state of the place a shot sets or relies on (door closed / locked, lights on, curtain drawn) is
+    restated in the `Action:` or `Frame:` of EVERY later shot at that place that shows the fixture - the
+    location picture shows its own state and wins over a shot that stays silent.
+  - A mirror in frame: `Frame:` / `Action:` says whose reflection it shows (one person, never the other
+    one inside it) or that the angle shows no reflection; people at a mirror otherwise render without one.
   - A `continue` shot keeps everyone's spot and posture, the viewer's included, from the previous shot
     — copy the previous `Blocking:` positions and change only what the new `Action:` moves, and say
     so in `Action:` ("the sister has risen"). A person who moved in the story but not in the lines
@@ -407,6 +420,8 @@ check); they go to the clip prompt verbatim.
     `upper body` needs `medium close-up` or wider; a `close-up` is `face` (or hands / feet as `limbs`).
     Writing "medium, head to waist" with `full figure` draws full figures (rule R12 refuses it). Pick
     the extent the size really shows, or the size the extent needs — never both wide and tight.
+    The extent is also what the framing actually shows, not only the minimum size: `lower body` on a
+    waist-up two-shot contradicts its `Camera:`; write `upper body` there.
   - Describe only what the extent shows. A person shown by `limbs` (the viewer's hands) has no
     `Wardrobe:` entry (rule R14) and no garment, torso or lap wording anywhere in `Pose:` / `Frame:`:
     "grey shorts lowered" next to `limbs: hands` makes every take show the abdomen and lap. If the
@@ -454,7 +469,9 @@ check); they go to the clip prompt verbatim.
   smug, ecstatic, tearful, determined. Every shot with a visible face has one entry per person whose face shows (extent
   `full figure` / `upper body` / `face`); never for the POV owner or a `back` / `limbs` / `lower body` person. It is the face,
   `State:` is the body (wet hair, semen); keep it consistent with the beat's emotion. An expression that CHANGES during
-  the clip is a `Motion:` beat, not a second `Expression:`.
+  the clip is a `Motion:` beat, not a second `Expression:`. Crying is an expression (`teary eyes`,
+  `glistening eyes`), never fluid on the skin: "tear tracks" / "tear-streaked" render as thick streaks;
+  name no body fluid a shot does not explicitly need.
 - `State:` = transient, VISIBLE appearance of a person shown as a figure, `<characterKey> (<state>, <state>, …)`,
   `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
   `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
@@ -462,6 +479,10 @@ check); they go to the clip prompt verbatim.
   changes such a state (she climbs out of the pool → `State: character_sister (wet hair, wet skin)`) and
   in EVERY later shot of the scene that shows the person while it lasts — a `continue` shot must restate
   it (rule R18); a `cut` shot later in the same moment should repeat it too (not checked — your job).
+  A distinctive marking in the character's digest (tattoo, scar, birthmark) is placed in every shot
+  whose extent shows that body area: a `State:` entry with side + body part and whether it shows or is
+  covered (`tattoo on left forearm, visible`; `tattoo on left shoulder, under the sleeve`) - otherwise it
+  drifts onto clothing, the wrong arm or another person. A marking of a `limbs` / POV person goes in words in `Pose:`.
   A visible body fluid is a `State:` entry of the person it is on (`semen on her face`,
   `saliva on her lips and chin`, `sweaty`, `wet glistening vulva`), from the shot that first shows it until it
   is cleaned or covered. A `cumshot` shot's `Contact:` names where it lands
@@ -471,7 +492,8 @@ check); they go to the clip prompt verbatim.
   <the previous shot's states>"); write it alone, never mixed with states. The server states each state
   as "must show" and the judge checks it; nothing carries over unless the line says it. A lasting change (a new outfit, a haircut) is
   a new look in the scene list instead.
-- `Contact:` = every touch the frame shows, `<characterKey> (<body part>) on <characterKey> (<body part>)`
+- `Contact:` = every touch the frame shows at ONE instant (never a motion path of successive contacts - that is
+  `Motion:`), `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). A thing is
   plain words, never written like a person: `character_brianna (hands) on bin lid`, not `bin (lid)`. Body parts
   (exactly these; singular or `lips` accepted): head, face, mouth, neck, shoulders, chest, breasts,
