@@ -200,14 +200,16 @@ The number of beats is whatever the brief states (its Action, Motion, Beat and D
 
 **Static shot template** — ONLY when the brief says `Movement: hold` (or `static`):
 ```
-Static [wide/medium/close] shot. The frame never moves. No push in, no tilt, no pan, no reframing.
+Static [wide/medium/close] shot. The frame never moves. No push in, no zoom, no tilt, no pan, no reframing, no focus change.
 ```
 Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
 
 **Dynamic shot template:**
 ```
-The camera [movement] with [amplitude] amplitude at [speed] speed [toward/around/across] [target element].
+The camera [movement] with [amplitude] amplitude at [speed] speed [toward/around/across] [target element], [ending on / to reveal] [what the frame shows when the move ends].
 ```
+
+Always write the RESULT of the move: what the frame shows when it ends ("The camera pans left slowly to reveal the green café door", "The camera arcs 45 degrees to the right around her, ending on a three-quarter view of her face"). Take the target from the brief's `Movement:` (`pan left to reveal the door`) or, without one, from the shot's own framing; never invent a target the brief does not name.
 
 Complete camera vocabulary:
 ```
@@ -220,12 +222,22 @@ Pedestal Up / Pedestal Down
 Arc Shot
 Tracking Shot
 Static Shot
+Rack Focus
 Shake Slightly / Shake Strongly
 POV
 Roll Clockwise / Roll Counterclockwise
 ```
 
-Rules: ONE camera move per shot, and a SUBTLE one (a push-in changes the frame by about 10%); never combine a camera move with a fast subject action in one short clip. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim. If static: state "frame never moves" AND list what should not happen.
+What each move does (keep them apart - each is a different picture):
+- **Push In / Pull Out** - the camera travels toward / away from the subject: the shot size changes and the foreground slides past.
+- **Zoom In / Zoom Out** - the lens only, the camera stays. On MiniMax H3 a zoom renders like a push-in (spike 2026-11-02): write Push In / Pull Out for a size change; never promise a flattened background.
+- **Pan Left / Right, Tilt Up / Down** - the camera turns IN PLACE: other things come into frame, but the side of the subject it sees does not change (spike: "pans right, ending on a three-quarter view" stayed frontal). Never write a pan or tilt to reach a new side or a new camera height.
+- **Truck Left / Right** - the camera slides sideways: the subject crosses the frame, near things faster than far ones.
+- **Arc Shot** - the camera travels around the subject: the ONLY move that turns a front view into a three-quarter or side view (spike: a 45-degree arc landed on three-quarter). State the degrees (15-45) and the side it ends on.
+- **Pedestal Up / Down** (or crane) - the camera rises / lowers: the only move that changes the camera height (eye level -> low / high angle); pair it with the tilt that keeps the subject in frame and state the angle it ends at. Its effect is small in one clip.
+- **Rack focus** (no camera move): name BOTH ends - "Focus starts on [near thing], [subject] soft; then racks to [subject]; at the end [subject] is sharp and [near thing] blurred." (spike: performed). A rack focus is not a camera move: the frame stays still. Write it with the static frame ("The frame never moves. No push in, no zoom, no pan, no tilt, no reframing.") and WITHOUT "no focus change".
+
+Rules: ONE camera move per shot - unless the brief's `Movement:` names several (e.g. `push-in and arc right`, one per framing change): then write each, in the brief's order, in one camera sentence - and a SUBTLE one (a push-in changes the frame by about 10%); never combine a camera move with a fast subject action in one short clip. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim. If static: state "frame never moves" AND list what should not happen.
 
 **A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
@@ -358,7 +370,8 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 
 - [ ] Mode identified; correct template selected
 - [ ] Preamble line(s) present for i2va / fl2va / l2va
-- [ ] Camera specified in every shot OR explicit static lock with refusal list stated
+- [ ] Camera specified in every shot OR explicit static lock with refusal list stated (no push in, no zoom, no pan, no tilt, no reframing, no focus change)
+- [ ] Every camera move states what the frame shows when it ends; a new side of the subject only by Arc, a new camera height only by Pedestal / crane; a rack focus names where focus starts and ends
 - [ ] Only the beats the brief states — no padding behaviour
 - [ ] Every beat ends with an observable end state
 - [ ] Every garment and accessory named for all characters

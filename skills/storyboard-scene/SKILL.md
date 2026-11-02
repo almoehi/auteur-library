@@ -227,13 +227,29 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
   A `continue` shot changes framing (rule R16), and its clip must PERFORM that change: `Movement:` is a
-  push-in / pull-out / zoom for a size change, a pan / tilt / arc for an angle change (drift, handheld
-  and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
+  move that can REACH the new framing (the "Camera moves" table below; drift, handheld, pan, tilt,
+  truck, track and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
   move can reach the new framing, write `Transition: cut — …` instead (the clip then starts on the
-  new keyframe). The write is refused (rule R25) when a size change has no size move (push-in /
-  pull-out / pull back / dolly / zoom) or an angle change no angle move (pan / tilt / arc / orbit /
-  crane / boom) in `Movement:` (or a `camera` beat) — both changed needs both; a push-in cannot turn
-  an eye-level shot into a low-angle one.
+  new keyframe). The write is refused (rule R25) when a changed dimension has no move of its row in
+  `Movement:` (or a `camera` beat) — several changed need one move each; a push-in cannot turn an
+  eye-level shot into a low-angle one, and a pan cannot turn a front view into a three-quarter one.
+
+  **Camera moves** (THE vocabulary of `Movement:`; write `<move> [speed] [to | to reveal | ending on <what the
+  frame shows when the move ends>]`, e.g. `slow push-in, ending on her hands`, `pan left to reveal the door`,
+  `arc 45 degrees right, ending on a three-quarter view of her face`; the target comes from the beat):
+
+  | Framing change | Move that performs it |
+  |---|---|
+  | shot size (wide / medium / close-up ...) | push-in / pull-out / pull back / dolly in / dolly out / zoom in / zoom out (prefer the push-in: a zoom changes only the lens) |
+  | side of the subject (front / side / three-quarter / behind / over the shoulder) | arc / orbit (the camera travels around the subject); front <-> behind (180°) is always a `cut` |
+  | camera height (eye level / low / high angle / top-down) | crane / boom / pedestal up or down (a tilt alone does not) |
+  | dutch angle | roll (guidance: the write rule checks it only when both `Camera:` lines name a dutch angle) |
+  | POV / no POV | none: always a `cut` (guidance, not checked by the write rule) |
+
+  Pan / tilt (the camera turns in place), truck (slides sideways), track (follows), handheld and drift
+  reframe WITHIN the same view: allowed as a shot's move, but they never perform a framing change.
+  `hold` = strictly static: no move, no zoom, no focus change. A focus shift is
+  `rack focus from <near thing> to <subject>` (both ends named; the frame stays still).
 - `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
   (new / split shots get ids after the highest).
 - `Format:` on the line after the title, always: the `format` attribute, else the story's
@@ -569,8 +585,9 @@ send that shot again:
   come off still in `Wardrobe:`;
 - `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
   one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
-  or angle (R16), and its `Movement:` performs that change — size move for a size change, angle
-  move (pan / tilt / arc) for an angle change, else `cut` (R25);
+  or angle (R16), and its `Movement:` performs that change — a move of the "Camera moves" row of each
+  changed dimension (size: push / pull / dolly / zoom; side: arc / orbit; height: crane / boom /
+  pedestal), else `cut` (R25);
 - `(view <id>)` on `Location:` / `Outfits:` / `Characters:` only with a listed view id; the shot's `Blocking:` /
   `Frame:` match the chosen picture's layout;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
@@ -701,8 +718,9 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] every `Transition:` describes the step FROM the previous shot INTO this one (shot 1 `cut`; no
       "end of scene"; the first shot of a `new moment` / `parallel` beat is a `cut`)
 - [ ] every `Transition: continue` shot has a `Movement:` (and, with `Timing: beats`, `camera` beats) that
-      performs its framing change (push / pull / zoom for size; pan / tilt / arc for angle; never
-      drift / handheld / hold); otherwise it is a `cut`
+      performs its framing change (push / pull / zoom for size; arc / orbit for the side; crane /
+      boom / pedestal for the height; never pan / tilt / truck / drift / handheld / hold); otherwise
+      it is a `cut`
 - [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
 - [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at
       least 1 s, every figure and the camera covered, ending at `Duration:`), each `Dialogue:` line has a
