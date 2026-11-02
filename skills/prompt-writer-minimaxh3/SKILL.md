@@ -237,7 +237,7 @@ What each move does (keep them apart - each is a different picture):
 - **Pedestal Up / Down** (or crane) - the camera rises / lowers: the only move that changes the camera height (eye level -> low / high angle); pair it with the tilt that keeps the subject in frame and state the angle it ends at. Its effect is small in one clip.
 - **Rack focus** (no camera move): name BOTH ends - "Focus starts on [near thing], [subject] soft; then racks to [subject]; at the end [subject] is sharp and [near thing] blurred." (spike: performed). A rack focus is not a camera move: the frame stays still. Write it with the static frame ("The frame never moves. No push in, no zoom, no pan, no tilt, no reframing.") and WITHOUT "no focus change".
 
-Rules: ONE camera move per shot, and a SUBTLE one (a push-in changes the frame by about 10%); never combine a camera move with a fast subject action in one short clip. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim. If static: state "frame never moves" AND list what should not happen.
+Rules: ONE camera move per shot - unless the brief's `Movement:` names several (e.g. `push-in and arc right`, one per framing change): then write each, in the brief's order, in one camera sentence - and a SUBTLE one (a push-in changes the frame by about 10%); never combine a camera move with a fast subject action in one short clip. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim. If static: state "frame never moves" AND list what should not happen.
 
 **A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The

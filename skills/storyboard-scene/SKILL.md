@@ -241,10 +241,10 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   | Framing change | Move that performs it |
   |---|---|
   | shot size (wide / medium / close-up ...) | push-in / pull-out / pull back / dolly in / dolly out / zoom in / zoom out (prefer the push-in: a zoom changes only the lens) |
-  | side of the subject (front / side / three-quarter / behind / over the shoulder) | arc / orbit (the camera travels around the subject) |
+  | side of the subject (front / side / three-quarter / behind / over the shoulder) | arc / orbit (the camera travels around the subject); front <-> behind (180°) is always a `cut` |
   | camera height (eye level / low / high angle / top-down) | crane / boom / pedestal up or down (a tilt alone does not) |
-  | dutch angle | roll |
-  | POV / no POV | none: always a `cut` |
+  | dutch angle | roll (guidance: the write rule checks it only when both `Camera:` lines name a dutch angle) |
+  | POV / no POV | none: always a `cut` (guidance, not checked by the write rule) |
 
   Pan / tilt (the camera turns in place), truck (slides sideways), track (follows), handheld and drift
   reframe WITHIN the same view: allowed as a shot's move, but they never perform a framing change.
