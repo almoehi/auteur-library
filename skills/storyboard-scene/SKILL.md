@@ -507,8 +507,7 @@ check); they go to the clip prompt verbatim.
   When it ends, say so, preferably as the explicit new state (`dry hair`, `dry skin`): the judge checks
   a named state best. `(none)` means back to the design's own look (the server then states "no longer:
   <the previous shot's states>"); write it alone, never mixed with states. The server states each state
-  as "must show" and the judge checks it; nothing carries over unless the line says it. A lasting change (a new outfit, a haircut) is
-  a new look in the scene list instead.
+  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale lace panties; removed: yellow sundress)`); a `continue` shot restates it (R17).
 - `Contact:` = every touch the frame shows at ONE instant (never a motion path of successive contacts - that is
   `Motion:`), `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). A thing is
