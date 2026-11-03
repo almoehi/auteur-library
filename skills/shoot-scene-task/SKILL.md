@@ -49,19 +49,9 @@ Coordinator skill: validates prerequisites, reads the scene's clip plan and has 
 - None exists: "Cannot shoot <scene>: it has no storyboard design yet. Create and finish it in the design studio (Pre-production -> Storyboards) and ask me again."
 - Not approved: "Cannot shoot <scene>: the storyboard design `<key>` is not finished yet. Finish it in the design studio (Pre-production -> Storyboards) and ask me again."
 
-### 1b. Reference designs (the `references` argument; default NONE)
+### 1b. Reference pictures: the server binds them
 
-The clip starts from its storyboard frame, which already fixes identity, outfit, place, light and composition. A reference is added ONLY for what the frame cannot keep over the clip; by default a clip has NO references (an extra picture fights the frame: an outfit re-dresses a nude person, a sheet adds grid artifacts, a wrong place replaces the scene). References apply to SINGLE clips only; a bundle's references are chosen by the server.
-
-Per single clip, from its shot block in `shotlist.md` (`read_artifact(artifactId="storyboard_scene_<n>", artifact_file="shotlist.md")`; designs by KEY via `artifact_index`; `Outfits:` per shot, never a scene-level look):
-- A PERSON pictured in the frame gets ONE image only when the motion changes what the frame shows of them: their face turns toward or away from the camera, comes much closer, or they enter / re-enter the frame (Action, Pose, Movement). The image: the outfit design that matches what they wear IN THIS SHOT; for `<c>:nude` / `<c>:none`, or a partly undressed outfit look (`Wardrobe: … removed:`), the CHARACTER design. One image per person, never both.
-- The LOCATION gets an image only when the camera move reveals space the frame does not show (`Movement:` a pan, turn, orbit or travel - not `hold`, not a handheld drift): the published view whose description faces that direction, else none. Never the location of another shot.
-- NEVER a picture of the `POV:` owner or a `limbs` person (words only), nor their outfit ("References by extent" in `workflow-calling-conventions`).
-- `continue` clips: no references (the prior clip and, on a framing change, this shot's frame carry everything) - except a person who enters the frame during the clip.
-- Older shotlists with slugs instead of keys: map via the `scene_list` row (`location_slug`, beat `Location` slugs, per-BEAT `Outfits` `<character>:<look>`) to `location_<slug>`, `outfit_<character>_<look>`, `character_<character>` (suffix tolerated).
-- Image per design: the published `full_body_shot.<ext>` (`primary.<ext>` in older designs), a chosen `view_<id>.<ext>`, never a `sheet.<ext>` (a grid of angles / poses). Missing designs are not fatal: note and continue without.
-- Reference = `artifact://<artifact id>/<file>` (real file name). Order: location (if any), then people. The clip's own frame is the start frame, never a reference.
-- Result: `references: [{ clip: <clip number of the plan>, files: ["artifact://…", …] }, …]`, only clips that get any.
+You choose NO reference pictures and pass none (`create_clip_tasks` has no `references` argument). For every clip - single `cut`, `continue` and bundle - the server decides who is pictured (never the `POV:` owner or a `limbs` person), in which look (outfit design while worn; the character design for `:nude` / `:none` and for removed garments; both for a partly undressed look), which published image (full-body shot or the shot's named view, never a sheet), in which priority and on which workflow port, and writes it into each clip brief's `picture_map:`; the clip worker renders through `shoot_clip` / `shoot_bundle`, which bind exactly that map. A continuation re-supplies its chain's identity. Missing designs are noted in the brief (`picture_notes:`), never fatal.
 
 ### 1c. Idempotency
 
@@ -71,7 +61,7 @@ Per single clip, from its shot block in `shotlist.md` (`read_artifact(artifactId
 
 - `clip_plan(storyboard)` once per scene. It is the authority for modes (`cut` / `continue`), reasons, bundles, start frames and framing; its text shows the clips and the bundles it will make. A `PROBLEMS` line = stop and tell the user. Never decide, change or "improve" a mode, a bundle or a clip number yourself.
 - `style` defaults to the workspace plot (`{workspace.story.plot}`, "Medium / style is kept" in `workflow-calling-conventions`): pass `style` only to override. `negative_prompt`: the preferred video workflow's recommended negative (`get_workflow_instructions`); omit when the workflow has no negative port.
-- The server reads the shotlist, scene list beats, frame edits and the shots' LoRAs itself: read them only for Step 1b.
+- The server reads the shotlist, scene list beats, frame edits and the shots' LoRAs itself: you read none of it.
 
 ## Step 3 — Create the tasks (ONE call per scene)
 
@@ -80,7 +70,6 @@ create_clip_tasks({
   storyboard: "storyboard_scene_<n>",
   key_prefix: "shoot_scene<N>",          // a new shoot of the same scene: shoot_scene<N>_v2, _v3 ...
   negative_prompt: "<as Step 2>",        // optional
-  references: [ ... ],                   // optional, Step 1b
   agent: "<id>"                          // optional: default `generic`; else an agent from available_agents with the wf_* tools and the sandbox, never a planner, coordinator or director
 })
 ```

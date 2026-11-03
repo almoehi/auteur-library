@@ -29,6 +29,7 @@ Use this skill when asked to write or enhance a prompt targeting:
 4. **Observable behavior, not emotions.** Describe what a camera can see — not what characters feel. Vocal delivery is observable (audible) and is NOT covered by this ban: when the brief gives a spoken line's delivery (volume, pace, breath, pitch, a named emotion of the VOICE such as "whispered, trembling"), write it with the line (Step 6).
 5. **Audio is mandatory.** MiniMax H3 generates stereo audio natively. Every brief must include `overall_soundscape` and `non_diegetic_music` fields, even if set to `"N/A"`.
 6. **Use structured brief format.** Free-form prose is not accepted — output must use Template A or Template B.
+7. **Looks come from the `picture_map:` and the shot block only.** When the brief has a `picture_map:` (every clip task: single cut, continuation, bundle), `subject_definitions` take each subject's look - nude, or the garments worn, a persisting state - ONLY from that subject's picture line (the text after the dash: `nude in this clip`, `wearing: wool coat`) and the shot's `Wardrobe:` / `State:` lines. Never copy a look from the style line, the story or plot text, a design's name, another shot, or your own assumption about the character (a plot that says a character wears a bikini does not dress a nude clip). A picture whose line says `face and identity only` gives face and identity, never its clothes; one that says `bare skin where garments are off` shows what is NOT worn. A person with no picture line is described by the shot block alone. One line per `<Picture N>` / `<Video 1>` / `<Audio N>` exactly as the map names it - never invent, renumber, add or drop a picture.
 
 ---
 
@@ -335,7 +336,7 @@ Use `"N/A"` when a field has nothing to fill.
 
 ## Step 8 — Lock Wardrobe and On-Screen Text
 
-**Wardrobe** — name every garment and accessory explicitly (H3 drifts wardrobe across long generations):
+**Wardrobe** — name every garment and accessory the LOOK of the `picture_map:` line / the shot's `Wardrobe:` states, explicitly (H3 drifts wardrobe across long generations); a nude look names none, and no garment is added (Iron Law 7):
 ```
 "Preserve [hair description], [top garment + material], [bottom garment], [outer layer], [accessories], [footwear]."
 ```
