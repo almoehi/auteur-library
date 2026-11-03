@@ -400,7 +400,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 
 ## Step 11 — Output
 
-Output the production brief directly — no wrapper template. The `prompt` is ONLY the brief itself (all fields, plain text, ready to render): never append a "CHANGES SUMMARY", notes, bullets or any commentary to it, because everything in the prompt is rendered. Notes about what you added or restructured go in the tool result's separate `changes` field, never in `prompt`.
+Output the production brief directly — no wrapper template. The brief is the whole output: exactly the text the video model receives (all fields, plain text, ready to render), nothing else. No change notes or summary, and no headings, titles or labels copied from your inputs (story brief, workspace facts, shot lines).
 
 ---
 
