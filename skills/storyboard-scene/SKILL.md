@@ -112,7 +112,7 @@ Motion:
 0-6 s viewer: hands rest on the table edge
 0-6 s camera: slow push-in
 Dialogue: 3.5-5 s character_wife (soft, tired, slow, a small sigh first): "It's late"
-Audio: quiet kitchen at night, fridge hum, distant rain
+Audio: small dry kitchen at night, fridge hum, rain on the window
 Blocking: the camera is the viewer's eyes (seated); the viewer's forearms and hands enter the lower frame; wife across the table, facing the viewer, her hands on the laptop
 Pose: wife: hands on the keyboard, head down; the viewer's hands flat on the table
 Frame: wife centre background; the viewer's hands bottom foreground
@@ -297,7 +297,7 @@ check); they go to the clip prompt verbatim.
   line at about 2.5 words per second (plus 0.3 s of slack); lines never overlap and stay inside the shot
   (rule R23).
 - `Audio:` = the scene's atmosphere (room tone, space, distance, mood), copied VERBATIM from the scene
-  list's `Audio` for this scene onto EVERY shot of the scene (the write is refused when it differs).
+  list's `Audio` for this scene onto EVERY shot of the scene (the write is refused when it differs). The ambient bed is ALWAYS audible at a natural level: 'quiet', 'distant', 'faint' or 'hushed' may describe the PLACE (its size, its sources), never the loudness of the sound; every clip carries an audible ambient bed. A scene `Audio` that names only a level ("quiet", "silence") is a scene-list defect: say so in the task result, do not copy it into a clip.
 - `Beat:` may list several beats (`Beat: 1.2, 1.3`) when one continuous action spans them.
 - The moment rules above (R9) apply to `Action:` and `Camera:` only: the sequence lives in `Motion:`.
 

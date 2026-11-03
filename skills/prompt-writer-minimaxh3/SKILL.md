@@ -315,7 +315,7 @@ At the moment dialogue ends: describe lips closing and speaking motion ceasing.
 - Diegetic music (characters can hear it — radio, TV, live performer): describe in timeline at the moment it starts
 
 **2. Physical action sounds + ambient environment** → `overall_soundscape` field only
-- Room tone, ambient baseline
+- Room tone, ambient baseline - ALWAYS stated and audible at a natural level in every clip, also one without dialogue or action sounds. Write the sound sources of the scene `Audio:` ("fridge hum, rain on the window"), never a level: "quiet", "distant", "faint", "silent" may describe the place (a small dry room, a large echoing hall), not how loud the bed is. A clip is never prompted as silent or near-silent.
 - Physical action sounds: footsteps, impacts, fabric rustling, breathing, machine sounds
 - Non-verbal human sounds: laughter, panting, exhales
 - NOT dialogue, NOT singing, NOT diegetic music
@@ -379,6 +379,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 - [ ] On-screen text typed exactly with typography and position
 - [ ] Timestamps strictly increasing; all within target duration (4–15 integer seconds)
 - [ ] Diegetic sounds in timeline body; ambient/physical in `overall_soundscape`; score in `non_diegetic_music`
+- [ ] `overall_soundscape` names an audible ambient bed in natural-level words (no "quiet" / "faint" / "silent" bed)
 - [ ] Speaker IDs established on first appearance; dialogue verbatim in language tags
 - [ ] `<cutoff>` placed inside `</d>` after last word — not outside
 - [ ] `[unclear]` placed inside `<d>` block — not outside
