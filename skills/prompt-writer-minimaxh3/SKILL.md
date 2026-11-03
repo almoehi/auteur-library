@@ -175,6 +175,7 @@ Rules:
 - Budget ~4 seconds for prop changes, handoffs, or complex actions
 - Write ONLY the beats the brief states. Never add behaviour (blinks, breaths, glances, weight shifts, props, small gestures) to fill time or to reach a beat count: a short action in a long clip is stated once, and the clip simply continues from its end state.
 - **The clip ends with the shot's last Motion beat.** Its end state is the clip's last state: never write what happens after it - not the next shot's action (a step, a jump, a dive, an exit, an arrival), not as "then …", not as "as the camera …". A beat that ends "her weight shifting toward the pool" ends there; the jump is the next clip.
+- **The clip's last timestamp segment holds the end state.** The brief's end hold (the `end_hold:` line of a single clip, a bundle shot's `motion ... everyone: holds the end pose ...` line) is the timeline's final segment: write it as the last timed sentence at its time, in the clip's own words - "At 00:06.000, she stands still at the pool edge, her back to the camera; nothing moves; the camera holds its final framing." - the end state of the last beat, held, and nobody starting anything new. It counts as within the target duration (it runs to the end of the clip, the render may be a little longer). Never fill it with motion, never leave it out.
 - **One camera sentence, and it agrees with `Movement:`.** A brief that names a move gets that move and nothing that contradicts it - never "The camera stays at this framing" (or "static", "locked") next to a pull-out, push-in, arc or pan. The "stays at this framing" sentence is ONLY for a brief with no `Movement:`.
 - **Keep every hold, facing and out-of-frame line.** Each line of the brief that says what stays (`back to camera`, `faces away`, `never turns toward the camera`, `no part of the viewer is visible`, `nobody else`, the `Visible:` extent, the `POV:` / `camera_body:` lines) appears in the prompt - never dropped to save words (a prompt without "back to camera" turned her to the lens; one without "no part of the viewer visible" showed the viewer's legs). Restating what the start frame shows is fine.
 - The server reads every clip prompt back against these lines before it renders; a prompt that breaks one comes back to you ONCE as a correction naming the finding and the shot lines - fix exactly those points and keep the rest.
@@ -389,7 +390,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 - [ ] Every garment and accessory named for all characters
 - [ ] Non-diegetic music described without mood words
 - [ ] On-screen text typed exactly with typography and position
-- [ ] Timestamps strictly increasing; all within target duration (4–15 integer seconds)
+- [ ] Timestamps strictly increasing; all within target duration (4–15 integer seconds); the last segment is the brief's end hold (the end state held, nothing moves)
 - [ ] Diegetic sounds in timeline body; ambient/physical in `overall_soundscape`; score in `non_diegetic_music`
 - [ ] `overall_soundscape` names an audible ambient bed in natural-level words (no "quiet" / "faint" / "silent" bed)
 - [ ] Speaker IDs established on first appearance; dialogue verbatim in language tags
