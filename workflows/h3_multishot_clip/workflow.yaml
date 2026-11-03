@@ -129,6 +129,7 @@ ports:
       kind: string
       description: "MiniMax H3 multi-shot keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief, bundle form). Sections in order: subject_definitions (one line per keyframe: '<Picture n> is the storyboard keyframe of shot k ... at T seconds it is fully referenced', then one line per identity reference, <Subject N> for characters), summary starting with [keyframe completion] and naming the hard cuts, retention_analysis, detailed_description (style first, then one timed block per shot: [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', each later shot opening 'At 00:T.TTT, the camera cuts to ... matching <Picture n>.', dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. The cut times in the prompt must equal the guide frames / 24. Only cite <Picture N> for images that were supplied. When voice_ref_k is supplied, add the line '<Audio k> is the voice-timbre reference for <Subject n> (S#).' to subject_definitions."
       binding: value@138
+      append_section: detailed_description
       required: true
     - name: guide1_frame
       kind: int

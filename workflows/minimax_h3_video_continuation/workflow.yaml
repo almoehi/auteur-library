@@ -100,6 +100,7 @@ ports:
       kind: string
       description: "MiniMax H3 REF2V structured prompt in English. Six required sections in order: (1) context header describing how <Video 1> and <Picture 1–N> relate to the target clip; (2) summary: one-line bracketed description; (3) subject_definitions: <Video 1> for prior_clip, <Picture 1>/<Subject 1> for character_sheet, <Picture 2>/<Subject 2> for environment_plate, and <Picture 3/4/5> for each supplied ref_picture_3/4/5 — label each with a one-line note describing its role (pose, prop, extra character view, etc.); (4) integrated_multimodal_description: timestamped shots with camera direction, 300–450 words; (5) overall_soundscape; (6) non_diegetic_music. Omit <Picture N> definitions for optional ports that were not supplied. Use the prompt system at https://github.com/bitsofintelligence101-lab/workflows/tree/main/nsfw/h3 to generate prompts from a short brief plus the reference images."
       binding: value@182
+      append_section: integrated_multimodal_description
       required: true
     - name: steps
       kind: int

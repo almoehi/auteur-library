@@ -117,6 +117,7 @@ ports:
       kind: string
       description: "MiniMax H3 continuation prompt in English (use the prompt-writer-minimaxh3 skill). Six sections in order: (1) context header - how <Video 1> and the pictures align with the target and the target duration; (2) summary, starting with [video continuation]; (3) subject_definitions - <Video 1>, <Audio 1>, <Picture 1> (the seam frame: the last frame of <Video 1>) and one entry per supplied <Picture N> (ref<n> = <Picture n+1>); (4) integrated_multimodal_description - timestamped shots, resuming from the final frame of <Video 1>; (5) overall_soundscape; (6) non_diegetic_music. Only cite <Picture N> for images that were supplied. When voice_ref_k is supplied, add the line '<Audio k+1> is the voice-timbre reference for <Subject n> (S#).' to subject_definitions (<Audio 1> is the prior clip's soundtrack)."
       binding: value@182
+      append_section: integrated_multimodal_description
       required: true
     - name: duration_seconds
       kind: float

@@ -101,6 +101,7 @@ ports:
       kind: string
       description: "MiniMax H3 keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief). Sections in order: subject_definitions (<Picture 1> = the start frame, then one line per supplied reference, <Subject N> for characters), summary starting with [keyframe completion], retention_analysis, detailed_description (style first, then [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', later shots timestamped, dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. Only cite <Picture N> for references that were supplied. When voice_ref_k is supplied, add the line '<Audio k> is the voice-timbre reference for <Subject n> (S#).' to subject_definitions."
       binding: value@138
+      append_section: detailed_description
       required: true
     - name: duration_seconds
       kind: float
