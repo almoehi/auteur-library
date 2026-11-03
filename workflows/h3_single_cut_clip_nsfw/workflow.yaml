@@ -36,6 +36,22 @@ workflow_type: i2va
 model_family: minimaxh3
 content: nsfw
 capabilities: [voice-sample]  # a short speaking clip from a start frame whose own soundtrack (output_audio) is a character's voice sample: the add-views job of a finished character design makes it and publishes the audio as voice.<ext> (normally voice.flac)
+# Declared MiniMax H3 camera/limits (camera spike 2026-11-02 + clip runs): read by the clip planner and shoot-clip from workflow_index
+camera:
+  reliable: [push in, pull out, arc, truck, rack focus, hold]  # zoom = push in (no lens zoom); pan reveal is subtle (~10% of the width: name the target); rack focus works when both ends are named
+  max_arc_degrees: 45  # only an arc changes the side seen, 15-45 degrees per clip; pan / tilt never do
+  unreliable: [crane, pedestal, whip pan, dolly zoom]  # pedestal / crane give only a small height change; dolly zoom is not performed
+limits:
+  - class: medium-transition  # a body entering or leaving another medium fails inside one clip
+    note: "Entering or leaving water (or another medium) inside one clip fails: cut at take-off and start the next clip already in the new medium."
+  - class: micro-motion  # small motions render static
+    note: "Micro-motions (fingertips, blinks) stay static: write a larger visible motion or a close insert of the thing."
+  - class: late-interaction  # hand-offs drift late in the clip
+    note: "Hand-offs and contact later than about 3 s into the clip drift: put the interaction early and keep it short."
+    max_start_seconds: 3
+  - class: short-utterance  # one-word whisper is inaudible
+    note: "A one-word whisper is inaudible: a spoken line needs at least 3 words."
+    min_words: 3
 render_timeout_sec: 3600  # ~20 min typical H3 clip renders; the default 1800 s is too tight
 gpu_types: [h100, b200] # H100 while B200 has no capacity (2026-10-28; was pinned to B200 on 2026-10-26). Dispatch picks the cheapest deployed listed GPU, so this runs on H100.
 # sage_attention ships "disabled" (node 157): the SageAttention wheel in the compute image carries

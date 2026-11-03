@@ -206,21 +206,22 @@ Never apply this template next to a camera move, and never to a shot whose brief
 
 **Dynamic shot template:**
 ```
-The camera [movement] with [amplitude] amplitude at [speed] speed [toward/around/across] [target element], [ending on / to reveal] [what the frame shows when the move ends].
+The camera [movement] [toward/around/across] [target element], [ending on / to reveal] [what the frame shows when the move ends].
 ```
+
+Speed is carried by the shot's duration and the beat times, never by an amplitude / speed filler ("with moderate amplitude at medium speed" adds nothing); one plain adverb ("slowly") is enough. Never combine `handheld` / shake wording with the static template; handheld is ONE short sway clause on a dynamic move.
 
 Always write the RESULT of the move: what the frame shows when it ends ("The camera pans left slowly to reveal the green café door", "The camera arcs 45 degrees to the right around her, ending on a three-quarter view of her face"). Take the target from the brief's `Movement:` (`pan left to reveal the door`) or, without one, from the shot's own framing; never invent a target the brief does not name.
 
 Complete camera vocabulary:
 ```
-Zoom In / Zoom Out
 Push In / Pull Out
 Pan Left / Pan Right
 Truck Left / Truck Right
 Tilt Up / Tilt Down
 Pedestal Up / Pedestal Down
-Arc Shot
-Tracking Shot
+Arc Left / Arc Right
+Follow / Lead (travel with a moving subject)
 Static Shot
 Rack Focus
 Shake Slightly / Shake Strongly
@@ -230,10 +231,11 @@ Roll Clockwise / Roll Counterclockwise
 
 What each move does (keep them apart - each is a different picture):
 - **Push In / Pull Out** - the camera travels toward / away from the subject: the shot size changes and the foreground slides past.
-- **Zoom In / Zoom Out** - the lens only, the camera stays. On MiniMax H3 a zoom renders like a push-in (spike 2026-11-02): write Push In / Pull Out for a size change; never promise a flattened background.
+- **Zoom** - there is no lens zoom on MiniMax H3: a zoom renders like a push-in (spike 2026-11-02). Write "pushes in" / "pulls out" for a size change; never promise a flattened background or a dolly-zoom effect.
 - **Pan Left / Right, Tilt Up / Down** - the camera turns IN PLACE: other things come into frame, but the side of the subject it sees does not change (spike: "pans right, ending on a three-quarter view" stayed frontal). Never write a pan or tilt to reach a new side or a new camera height.
 - **Truck Left / Right** - the camera slides sideways: the subject crosses the frame, near things faster than far ones.
-- **Arc Shot** - the camera travels around the subject: the ONLY move that turns a front view into a three-quarter or side view (spike: a 45-degree arc landed on three-quarter). State the degrees (15-45) and the side it ends on.
+- **Arc Left / Arc Right** - the camera travels around the subject: the ONLY move that turns a front view into a three-quarter or side view (spike: a 45-degree arc landed on three-quarter). Convention: "arcs left" = the camera travels to ITS OWN left (counter-clockwise from above), which from a frontal camera reveals the subject's right side. State left / right, 15-45 degrees per clip (front -> side 90 degrees is a cut or two clips) and the side it ends on.
+- **Follow / Lead** - the camera travels with a moving subject and keeps its framing (there is no "Tracking Shot": write "follows <subject>", or "trucks left / right" for plain sideways travel).
 - **Pedestal Up / Down** (or crane) - the camera rises / lowers: the only move that changes the camera height (eye level -> low / high angle); pair it with the tilt that keeps the subject in frame and state the angle it ends at. Its effect is small in one clip.
 - **Rack focus** (no camera move): name BOTH ends - "Focus starts on [near thing], [subject] soft; then racks to [subject]; at the end [subject] is sharp and [near thing] blurred." (spike: performed). A rack focus is not a camera move: the frame stays still. Write it with the static frame ("The frame never moves. No push in, no zoom, no pan, no tilt, no reframing.") and WITHOUT "no focus change".
 

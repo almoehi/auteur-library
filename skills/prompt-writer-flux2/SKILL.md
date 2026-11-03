@@ -120,6 +120,8 @@ sentences, 30–80 words, positive phrasing only.
 
 Composition vocabulary (t2i and ref2i): shot size (`extreme close-up` … `wide`), angle (`eye-level` | `low angle` | `high angle` | `top-down` | `Dutch angle`), lens feel (`35mm` environmental, `50mm` neutral, `85mm` compressed / isolated background, `wide-angle` expansive), `rule of thirds` / `subject in the left third`, foreground / midground / background, lead room (space in the direction the subject faces), `negative space`. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim.
 
+**`Lens:` line of the brief** (the shot's optional `Lens: <wide|normal|long> [<N>mm][, <deep|shallow> focus][, focus on <thing>]`): map the class to a focal length and depth of field in the prompt - wide <= 28 mm (`24mm wide-angle lens`), normal 35-50 mm (`35mm` / `50mm lens`), long >= 85 mm (`85mm lens`, compressed background); an explicit `N mm` wins; `deep focus` = `deep depth of field (everything sharp)`, `shallow focus` = `shallow depth of field`, `focus on <thing>` = that thing sharp, the rest soft. Keep the medium rule above (no photography language for a drawn medium). A keyframe prompt NEVER carries Movement words (push in, pan, arc, handheld, tracking ...): a keyframe is one instant.
+
 ---
 
 ## Output
