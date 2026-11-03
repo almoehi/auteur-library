@@ -25,7 +25,6 @@ Task prompt fields:
 - a required field is missing (name it);
 - `continue`: the `prior_clip` key does not resolve (`artifact_index`) to an artifact with an approved video file - resolve the key to `artifact://<artifactId>/<its .mp4>` HERE, at run time (`read_artifact`), and use that reference for every later step;
 - `shoot_clip` is unavailable, or answers that the workspace has no workflow for this mode (reason: name it - "no image-to-video workflow - add one and ask again" / "no video-continuation workflow").
-- `continue`: `prepare_continuation` answers an `error:` twice (the prior clip cannot be measured): reason "seam check failed: <its error>".
 
 ## 2. Workflow and pictures: the server's
 
@@ -38,7 +37,7 @@ Task prompt fields:
 
 A continuation starts from the prior clip's REAL last frame. The server checks that seam; you never measure, offset or compare it yourself.
 
-- FIRST call `prepare_continuation({ clip_ref: <the brief's clip_ref> })` - once, before drafting the prompt (the answer is remembered; a retry returns the same). The server derives everything else (this shot's lines, its storyboard keyframe, the continuation workflow, the prior shot's camera) from the clip plan, and the prior clip is the video your task requires; add `prior_clip: artifact://<id>/<mp4>` only when the result asks for it. On an `error:` result retry ONCE; failing again -> `task_failed` (reason `seam check failed`).
+- FIRST call `prepare_continuation({ clip_ref: <the brief's clip_ref> })` - once, before drafting the prompt (the answer is remembered; a retry returns the same). The server derives everything else (this shot's lines, its storyboard keyframe, the continuation workflow, the prior shot's camera) from the clip plan, and the prior clip is the video your task requires; add `prior_clip: artifact://<id>/<mp4>` only when the result asks for it. On an `error:` result retry ONCE; failing again -> shoot the clip as a CUT: `shoot_clip({ clip, prompt_id, as_cut: true })` renders it from the shot's own start frame with the single-cut workflow - draft the prompt for that (this shot's own Action / Motion from its first frame) and begin the final reply with `Shot as a cut: seam check failed - <its error>.` Never `task_failed` for a failed seam step.
 - `prior_clip_start_time`, the pinned `end_frame` and the prior clip's audio are filled in by `shoot_clip` from that answer: NEVER compute, pass or bind them yourself, never call a `wf_*` tool for this clip. The result's `end_frame` only reports what will be pinned (`{ port, source }` or `null`; `storyboard`: the shot's own frame, judged reachable from the real end; `derived-crop`: a crop of the real last frame for a push-in) - quote the source in the summary; the prompt's final beat of Motion arrives at the framing it shows.
 - `outcome: as-planned`: write the prompt from the brief as planned (`prior_shot_facts` holds).
 - `outcome: adjusted`: the prior clip's real end differs from the plan. Use the result's `brief` block: its `seam_state` is what the last frame of `<Video 1>` really shows - the shot's Motion starts FROM it and moves toward the shot's lines without a jump, a lunge or a cut. It REPLACES `prior_shot_facts`; never brief from the planned end state. Put the `brief` block in the prompt `context`.
