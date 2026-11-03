@@ -24,7 +24,7 @@ Required in the task prompt: prior clip `artifact://<artifactId>/<fileName>`, pr
 ## 2. Brief
 
 - With instructions: they are the brief, in the person's words; add no characters, props or locations.
-- Without: derive the next beat from the prior clip's render prompt (provenance, or the prior task's description via `task_index` / `read_artifact`), the story plot, and the storyboard / scene list artifacts (`artifact_index`). A direct, plausible continuation of the last seconds: same place, time of day, lighting, wardrobe, camera language unless the brief changes them.
+- Without: derive the next beat from the prior clip's render prompt (provenance, or the prior task's description via `task_index` / `read_artifact`), the story plot and setting (`{workspace.story.setting}`), and the storyboard / scene list artifacts (`artifact_index`). A direct, plausible continuation of the last seconds: same place, time of day, lighting, wardrobe, camera language unless the brief changes them.
 - A brief that asks for a new framing, subject or insert is a CUT: do not render it here (it needs a fresh image-to-video render, `shoot-clip` mode `cut`); say so in the summary.
 
 ## 3. Render

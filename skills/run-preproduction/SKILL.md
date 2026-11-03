@@ -23,6 +23,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 
 - Story brief = `{workspace.story.plot}`. Empty or placeholder -> create nothing; tell the user:
   "Cannot run pre-production: the workspace has no story plot. Add one (workspace spec `story.plot`) and ask me again."
+- Setting = `{workspace.story.setting}` (WHEN / WHERE: era, place, technology level) and style = `{workspace.story.style}` (HOW the film looks) are GIVEN facts of the workspace - read them from the Workspace facts below, never infer them from the plot. Wardrobe, props, devices, architecture and places of every task you create follow the setting; designs and takes follow the style ("Setting is kept" / "Medium / style is kept" in `workflow-calling-conventions`). Empty = none stated: take the era from the plot only then.
 - Call `task_index`, `artifact_index`, `policy_index`, `available_agents`.
 - Idempotency: skip every task / artifact that already exists and is live (not failed / cancelled).
   All four exist -> report their statuses and stop. Only a tail missing -> create just the tail
@@ -81,7 +82,7 @@ create_task({ id: "write_screenplay", requires_tasks: [], requires_artifacts: []
   agent: <writer>, policies: ["screenplay-quality"], prompt: <below>,
   output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"] })
 ```
-prompt: adapt `{workspace.story.plot}` into a film screenplay (INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX.
+prompt: adapt `{workspace.story.plot}` into a film screenplay set in `{workspace.story.setting}` (its technology, props, wardrobe and places; INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX.
 
 ### 4b. character_table
 

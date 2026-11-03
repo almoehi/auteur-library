@@ -11,6 +11,8 @@ agentType: worker,render
 
 # WAN 2.2 / WAN 2.6 — Prompt Writer
 
+When the task carries a `Production context` block (`Setting:` / `Style:`), obey it in every prompt: the setting decides which wardrobe, props, devices, vehicles and architecture may appear (nothing of another era), the style is the look - state it verbatim as the medium / film look and never contradict it.
+
 ## When this skill applies
 
 Use this skill when asked to write or enhance a prompt targeting:

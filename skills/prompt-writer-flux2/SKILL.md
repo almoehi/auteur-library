@@ -14,6 +14,8 @@ agentType: worker,render
 
 # FLUX.2 — Edit Instruction Writer
 
+When the task carries a `Production context` block (`Setting:` / `Style:`), obey it in every prompt: the setting decides which wardrobe, props, devices, vehicles and architecture may appear (nothing of another era), the style is the look - state it verbatim as the medium / film look and never contradict it.
+
 ## When this skill applies
 
 Use this skill for workflows with `model_family: flux2` — primarily **image edits**
