@@ -247,7 +247,7 @@ NEGATIVE PROMPT:
 
 ```
 
-The prompt is the whole output: exactly the text the generation model receives, nothing else. No change notes or summary, and no headings, titles or labels copied from your inputs (story brief, workspace facts, shot lines).
+The prompt is the whole output: exactly the text the generation model receives, nothing else. No change notes or summary in it - any notes about what you changed or why go in the answer's separate `changes` field (it may be empty), never into the prompt - and no headings, titles or labels copied from your inputs (story brief, workspace facts, shot lines).
 
 ---
 

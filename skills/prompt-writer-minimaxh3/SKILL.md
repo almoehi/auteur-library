@@ -174,6 +174,10 @@ Rules:
 - Inside a clip the framing changes ONLY through the brief's `Movement:`; a distance or angle change the brief gives no movement for is not written into this prompt at all (it is a cut between clips, planned by the caller)
 - Budget ~4 seconds for prop changes, handoffs, or complex actions
 - Write ONLY the beats the brief states. Never add behaviour (blinks, breaths, glances, weight shifts, props, small gestures) to fill time or to reach a beat count: a short action in a long clip is stated once, and the clip simply continues from its end state.
+- **The clip ends with the shot's last Motion beat.** Its end state is the clip's last state: never write what happens after it - not the next shot's action (a step, a jump, a dive, an exit, an arrival), not as "then …", not as "as the camera …". A beat that ends "her weight shifting toward the pool" ends there; the jump is the next clip.
+- **One camera sentence, and it agrees with `Movement:`.** A brief that names a move gets that move and nothing that contradicts it - never "The camera stays at this framing" (or "static", "locked") next to a pull-out, push-in, arc or pan. The "stays at this framing" sentence is ONLY for a brief with no `Movement:`.
+- **Keep every hold, facing and out-of-frame line.** Each line of the brief that says what stays (`back to camera`, `faces away`, `never turns toward the camera`, `no part of the viewer is visible`, `nobody else`, the `Visible:` extent, the `POV:` / `camera_body:` lines) appears in the prompt - never dropped to save words (a prompt without "back to camera" turned her to the lens; one without "no part of the viewer visible" showed the viewer's legs). Restating what the start frame shows is fine.
+- The server reads every clip prompt back against these lines before it renders; a prompt that breaks one comes back to you ONCE as a correction naming the finding and the shot lines - fix exactly those points and keep the rest.
 
 ### Bundle mode (a multi-shot brief)
 
@@ -248,7 +252,7 @@ Rules: ONE camera move per shot - unless the brief's `Movement:` names several (
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
 camera pushes in slowly ..."). When the brief says `Movement: hold` (or `static`), use the static
 template above, including its "no zoom / no push / no pan" refusals. When the brief carries NO `Movement:` (absent, or `movement: none`),
-state the framing from the brief (shot size, angle), add NO camera move of your own and no static refusal list, and keep ONE short sentence: "The camera stays at this framing." (Iron Law 3). In a video continuation the prompt continues `<Video 1>` without a cut; the move
+state the framing from the brief (shot size, angle), add NO camera move of your own and no static refusal list, and keep ONE short sentence: "The camera stays at this framing." (Iron Law 3; only here - never next to a `Movement:` move). In a video continuation the prompt continues `<Video 1>` without a cut; the move
 continues or holds that of the prior clip.
 
 **A first-person camera is the viewer's head (brief line `camera_body:`).** `POV` in the vocabulary above names a viewpoint, never a camera move: do not write "POV" as a move. When the brief carries `camera_body: the viewer's eyes (<posture>[, attached to <person>]) - <what it may do>`, the camera is the viewer's eyes and the clip obeys that line: write ONE locked-camera sentence after the camera sentence, driven by it - "The camera is locked to the viewer's head and never leaves it; it may only turn." when the line says `turns only, never translates` (a lying viewer, or any viewer attached to a person), "... it may only turn and lean in or back a little." for `leans in or back`, "... turn and step in or back." for `steps`, "... turn and walk forward." for `walks or follows`. Then state the move the brief's `Movement:` names (a turn is "The camera turns slowly to the left, ending on ..."), never a push-in, pull-out, arc, pedestal, truck, track or zoom, and never anything that shows the viewer's head or face, breaks a held contact or turns the subject: a first-person clip has no such move (the plan makes that framing change a cut). Copy `camera_body:` into the section of locked lines like any other brief constraint.
@@ -400,7 +404,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 
 ## Step 11 — Output
 
-Output the production brief directly — no wrapper template. The brief is the whole output: exactly the text the video model receives (all fields, plain text, ready to render), nothing else. No change notes or summary, and no headings, titles or labels copied from your inputs (story brief, workspace facts, shot lines).
+Output the production brief directly — no wrapper template. The brief is the whole output: exactly the text the video model receives (all fields, plain text, ready to render), nothing else. No change notes or summary in it - any notes about what you changed or why go in the answer's separate `changes` field (it may be empty), never into the prompt - and no headings, titles or labels copied from your inputs (story brief, workspace facts, shot lines).
 
 ---
 
