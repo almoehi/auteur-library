@@ -18,13 +18,13 @@ One task = one clip = one render. Never render another clip, another take of thi
 
 Task prompt fields:
 - `mode: bundle` (field `bundle_brief`): section 8 only; its fields are listed there.
-- Required: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`), `movement`, `duration_seconds`, `start_frame`, `style`, the canonical output files (`.mp4` and `_prompt.txt`); `continue` also `prior_clip` (the KEY of clip M-1's output artifact, e.g. `scene2_clip3`).
+- Required: `scene`, `clip`, `shot`, `mode` (`continue` | `cut`), `movement`, `duration_seconds`, `style`, the canonical output files (`.mp4` and `_prompt.txt`); `cut` also `start_frame`; `continue` also `prior_clip` (the KEY of clip M-1's output artifact, e.g. `scene2_clip3`) and `seam_keyframe` (this shot's own storyboard frame: the seam check's comparison image and the render source if the seam forces a cut - NEVER an input of a continuation).
 - Used when present: `action`, `camera`, `beat` (the scene-list beat of this shot, verbatim), `prior_shot_facts` (`continue`: the previous shot's Action / Wardrobe / State lines), `references`, `framing_change`, `negative_prompt`, `preferred_workflow`, `loras` (the shot's curated LoRAs), `shot_block` (the shot's full block: Blocking, Pose, Frame, Visible, Sex act, Sex position …), `frame_edits`. (`width` / `height` are ignored: a clip keeps its start frame's shape.)
 
 `task_failed(reason)` (render nothing; deterministic causes only) when:
 - a required field is missing (name it);
 - `continue`: the `prior_clip` key does not resolve (`artifact_index`) to an artifact with an approved video file - resolve the key to `artifact://<artifactId>/<its .mp4>` HERE, at run time (`read_artifact`), and use that reference for every later step;
-- the `start_frame` file is missing / unreadable (only `start_frame: none` may be rendered text-to-video);
+- a `cut`'s `start_frame` file is missing / unreadable (only `start_frame: none` may be rendered text-to-video); a `continue`'s `seam_keyframe` is missing / unreadable;
 - `cut` with a start frame and no image-to-video workflow among your `wf_*` tools: reason "this workspace has no image-to-video workflow - add one and ask again" (never fall back to text-to-video: it cannot take the frame).
 
 Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied URL.
@@ -39,7 +39,7 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 | Mode | Workflow | Inputs |
 |---|---|---|
 | `cut` | image-to-video, type `i2v` / `i2va` (flf2v only when its last frame is optional) | `start_frame` ALWAYS on the first-frame port; references in the optional reference-image ports matched by `reference_role` / `label` (else port order and descriptions); unfilled ports stay OMITTED |
-| `continue` | video-continuation (video input port for the prior clip) | `prior_clip`; on `framing_change: yes` also `start_frame` as an extra reference image if a free image port exists |
+| `continue` | video-continuation (video input port for the prior clip) | `prior_clip` and the `prior_clip_start_time` that `prepare_continuation` returned; NEVER a storyboard frame (not `seam_keyframe`, not any `frame_<i>`) on any image port |
 
 - A `cut` is never faked through the continuation workflow and never rendered text-to-video.
 
@@ -51,12 +51,17 @@ Reference every image / clip as `artifact://<artifactId>/<file>`, never a copied
 
 ## 3. Mode `continue` (authority for continuation mechanics)
 
-- Measure the predecessor with `get_video_info` (`path_or_url="artifact://<id>/<file>"`); never use its planned length.
-- `prior_clip_start_time` = REAL duration minus 1-2 s (inside the last 1-2 s); move earlier until the workflow's minimum of reference frames remains. Pass it on the render call and in the summary.
+A continuation starts from the prior clip's REAL last frame (the workflow pins it as frame 0). The server checks that seam; you never measure, offset or compare it yourself.
+
+- FIRST call `prepare_continuation({ clip_ref: "artifact://<id>/<prior clip .mp4>", keyframe_ref: <the brief's seam_keyframe>, shot_block: <the brief's shot_block VERBATIM> })` - once, before drafting the prompt (the answer is remembered; a retry returns the same). On an `error:` result retry ONCE; failing again, shoot this clip as a `cut` (below) with the reason `seam-unchecked`.
+- `prior_clip_start_time` = the result's `prior_clip_start_time`, passed on the render call and written to the summary. NEVER compute it, never use the planned length.
+- `outcome: as-planned`: write the prompt from the brief as planned (`prior_shot_facts` holds).
+- `outcome: adjusted`: the prior clip's real end differs from the plan. Use the result's `brief` block: its `seam_state` is what the last frame of `<Video 1>` really shows - the shot's Motion starts FROM it and moves toward the shot's lines without a jump, a lunge or a cut. It REPLACES `prior_shot_facts`; never brief from the planned end state. Put the `seam_state` in the prompt `context`.
+- `outcome: cut` (reason `seam-incompatible`): the shot cannot continue from the prior clip's real end. Shoot this clip in mode `cut` (the single-cut image-to-video workflow, section 2) with `start_frame` = the result's `start_frame`; the prompt describes this shot's own Action / Motion from that frame, not the prior clip. Keep the task's file name and outputs; begin the reply with `Shot as a cut: seam-incompatible - <the result's note>.` Never `task_failed`.
 - The prompt continues `<Video 1>` in the same shot: same framing, subject and setup, the action carrying on, the `movement` continuing or holding. NO cut ("the target video cuts to …"), no new composition. Output is only the new segment; do not merge.
-- `framing_change: yes` is valid only with a `movement` that can reach the new framing (push / pull / zoom for a change of shot size, arc / orbit for a new side of the subject, crane / pedestal for a new camera height; a pan, tilt, truck, drift or handheld movement does not): add this shot's storyboard frame as an extra reference image (named as the port descriptions do, e.g. "Picture 1 is the target framing") and write the shot's `movement` VERBATIM as the only camera move - never invent a reframing; subjects, place, lighting, wardrobe stay those of `<Video 1>`.
-- Test the `movement` against the change before choosing `continue`: a change of shot size needs a size move (push / pull / dolly / zoom), a new side of the subject an arc / orbit, a new camera height a crane / boom / pedestal, several changes one move each - a pan does NOT turn a front view into a three-quarter one, a push-in does NOT turn eye level into low angle. The planner's rule R25 refuses such a pair at the storyboard write, so a brief that still carries one is planned wrong and is shot as a `cut` (below).
-- `framing_change: yes` without such a movement (`hold`, none, drift) was planned wrong, and the boundary is a CUT: shoot this clip in mode `cut` instead - never `task_failed`, never a reframing continuation. `start_frame` = the brief's `start_frame`, else this shot's published frame of the storyboard (`read_artifact` on the storyboard artifact: the `frame_<i>` whose shot is this shot); the prompt describes this shot's own Action / Motion from that frame, not the prior clip. Keep the task's file name and outputs; begin the reply with `Shot as a cut: framing change without a camera move that can reach it.` A new subject or insert is a CUT too.
+- NEVER bind a storyboard frame into a continuation: not `seam_keyframe`, not the shot's `frame_<i>`, not as a "target framing" reference. A framing change is performed by the shot's `movement` alone (`framing_change: yes` is valid only with a `movement` that can reach the new framing: push / pull / zoom for a change of shot size, arc / orbit for a new side of the subject, crane / pedestal for a new camera height; a pan, tilt, truck, drift or handheld movement does not); write the shot's `movement` VERBATIM as the only camera move - never invent a reframing; subjects, place, lighting, wardrobe stay those of `<Video 1>`.
+- Test the `movement` against the change before choosing `continue`: a change of shot size needs a size move (push / pull / dolly / zoom), a new side of the subject an arc / orbit, a new camera height a crane / boom / pedestal, several changes one move each - a pan does NOT turn a front view into a three-quarter one, a push-in does NOT turn eye level into low angle. The planner's rule R25 refuses such a pair at the storyboard write, so a brief that still carries one is planned wrong and is shot as a `cut`.
+- `framing_change: yes` without such a movement (`hold`, none, drift) was planned wrong, and the boundary is a CUT: shoot this clip in mode `cut` instead - never `task_failed`, never a reframing continuation. `start_frame` = the brief's `seam_keyframe`, else this shot's published frame of the storyboard (`read_artifact` on the storyboard artifact: the `frame_<i>` whose shot is this shot); the prompt describes this shot's own Action / Motion from that frame, not the prior clip. Keep the task's file name and outputs; begin the reply with `Shot as a cut: framing change without a camera move that can reach it.` A new subject or insert is a CUT too.
 
 ## 4. LoRAs (motion first)
 
@@ -72,11 +77,11 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
   - Drop contradicted lines (e.g. "no contact", "neutral expression") from `context`; pass the instructions VERBATIM as `instruction` (not only inside `context`).
   - Previous prompt available (old `_prompt.txt` or `render_info`): `enhance_prompt(original_prompt, instruction)` INSTEAD of `draft_prompt`, then the completeness check once on the writer result (draft or enhance, by its `prompt_id`) with the same `instruction`, `enhance_prompt` once more only on severity "significant" (max 2 enhances + 1 review). All before the one render.
 - The clip's motion is a FROM -> TO delta, written into `context` as the action in progress (never as a frozen pose, never as a list of prohibitions):
-  - `continue`: FROM = the end state of the prior clip (`prior_shot_facts`: its Action / Wardrobe / State), TO = this shot's state (`shot_block` Action / Wardrobe / State). A Wardrobe or State change between the two (a garment removed, wet hair, a prop picked up) IS this clip's action: state it as happening during the clip, in the shot block's words.
+  - `continue`: FROM = the end state of the prior clip (the `seam_state` of an `adjusted` seam - the real last frame -, else the planned `prior_shot_facts`: its Action / Wardrobe / State), TO = this shot's state (`shot_block` Action / Wardrobe / State). A Wardrobe or State change between the two (a garment removed, wet hair, a prop picked up) IS this clip's action: state it as happening during the clip, in the shot block's words.
   - `cut`: FROM = the start frame, TO = what the `beat` text says happens (verbatim). The shot's `Action:` is the state AT 0 s; the beat carries it forward.
   - Add no behaviour the shot block and beat do not state.
 - Always pass `workflow_name`, `context`, `duration_seconds`, and:
-  - `image_inputs`: every image the render passes, as `{port, ref}` (start frame, references, target frame on a framing change);
+  - `image_inputs`: every image the render passes, as `{port, ref}` (a `cut`'s start frame, references; a `continue` passes references only - never a storyboard frame);
   - `verbatim_phrases`: the shot's `Sex act:` / `Sex position:` values (only when `shot_block` has them; read only in a workspace with `contentPolicy.nudity: allowed`) and dialogue to keep.
 - `duration_seconds` = the planned duration, passed to `draft_prompt` AND as the render call's duration parameter (the name the `wf_*` description gives, e.g. `video_length`): the same number.
 - `context`:
@@ -85,7 +90,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
   - the brief's `Lighting (scene, keep)` line VERBATIM when it has one (the writer keeps the phrase);
   - the brief's `Expression (<name>): … (must show)` lines VERBATIM when it has them;
   - characters / outfits / location and the path used;
-  - `beat` VERBATIM (the scene-list beat text: Action, Blocking, Camera move …), and `prior_shot_facts` for a `continue`;
+  - `beat` VERBATIM (the scene-list beat text: Action, Blocking, Camera move …), and for a `continue` the `seam_state` (`adjusted`) or `prior_shot_facts` (`as-planned`);
   - `movement` VERBATIM ("hold" = locked-off frame; no `movement` = the framing of `camera`, no camera move added);
   - `cut` with a start frame: describe only the motion from that frame;
   - `style` verbatim (a clip in another medium is a miss);
@@ -97,7 +102,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 ## 6. Render
 
 - Kickoff lists checks gating this clip: call `run_checks` BEFORE the render and fix every listed problem (a rejection after rendering wastes the render; "Checks that gate the task" in `workflow-calling-conventions`).
-- ONE `wf_*` call: frames / clip / references, drafted prompt, planned duration, (continue) `prior_clip_start_time`; `draft` quality unless the task says otherwise; the `.mp4` routed to the canonical path (`output_ports`).
+- ONE `wf_*` call: frames / clip / references, drafted prompt, planned duration, (continue) the `prior_clip_start_time` of `prepare_continuation`; `draft` quality unless the task says otherwise; the `.mp4` routed to the canonical path (`output_ports`).
 - A `cut` call MUST carry `start_frame` on the start-image port.
 - Voice references: the voice sample is the file `voice.<ext>` of the approved character design (`artifact://<design id>/voice.flac`). Pass the first referenced speaker's sample as `voice_ref_1` and the second's as `voice_ref_2` - ALWAYS fill `voice_ref_1` first (ComfyUI numbers the audio inputs that are connected in order, so a lone second reference would change every `<Audio k>` number). Use the same speakers' references on every clip of a scene so a voice keeps one timbre; in a `continue` the voice references replace the mixed prior soundtrack as the timbre source. A speaker without a sample: voice text only, no port.
 - NEVER pass `width`, `height` or `is_portrait` on a clip: the clip keeps its start frame's aspect ratio (a contradicting value is refused). Size: "Render size" of `workflow-calling-conventions`.
@@ -108,7 +113,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
 
 - Call `render_info({ render_id })` with the returned `renderId` and compare with your call:
   - `cut`: `start_frame` on the start-image port and exactly the task's `references` (none when the task lists none);
-  - `continue`: the prior clip (and the frame on a framing change);
+  - `continue`: the prior clip and its `prior_clip_start_time` as `prepare_continuation` returned it, and NO storyboard frame on any image port (a frame there = re-render ONCE without it);
   - wrong or empty media inputs -> re-render ONCE with the corrected call; still wrong -> `task_complete` stating the problem (`task_failed` is refused once the outputs are written).
 - The `.mp4` exists at exactly the canonical path and is a `wf_*` render (a path elsewhere breaks the artifact build: render again to the declared path).
 - `get_video_info`: duration within ±0.6 s of `duration_seconds`; outside -> re-render ONCE (same prompt, new seed), keep the better; still off -> report the measured value rather than looping.
