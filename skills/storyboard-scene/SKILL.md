@@ -139,12 +139,17 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 
 ### Cinematography (the shot rules below, R1-R29 and the POV / act rules R4 / R20 / R24 / R29 take precedence)
 
-- Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide.
+- Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide (`Format: portrait`: one vertical establishing frame instead, see below).
 - Shot size follows intensity: wide -> medium -> close as it rises; never the same size three shots in a row; an insert only for an object the story needs.
 - Keep each person's screen side from the scene's `Blocking` (left / right of frame) for the whole scene; over-the-shoulder shots keep the same shoulder; never mirror a person between shots unless they move.
 - A `continue` shot changes framing clearly: at least one size step or a visible angle change (more than about 30 degrees), performed by its `Movement:` (R25); a change no move performs is a `cut`.
 - `Frame:` states the composition at t=0 (the keyframe is the opening frame): which third the subject sits in, foreground / midground / background, room in the direction they face; and it repeats the scene's `Lighting` phrase from the scene table (never contradicts it).
 - `Duration:` guide (3-10 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
+- `Format: portrait` (a vertical frame shows little side to side; these override the size and establishing-wide rules of this skill):
+  - Size mix led by `close-up`, `medium close-up` and two-shots (a two-shot = a `medium close-up` or `medium` with both people in frame); "shot size follows intensity" runs medium -> medium close-up -> close-up -> extreme close-up.
+  - An `extreme close-up` for every sensation beat: the body part the scene list's `Action` names as the signal (a hand stopping short, lips parting, skin, breath).
+  - Two people side by side or one behind the other, close (within arm's reach), never at opposite edges of the frame.
+  - The widest shot is ONE person `full shot`; never a `wide` with more than one full figure. A new place's establishing image is one vertical frame (a doorway, a corridor, a window), not a `wide` of the room.
 
 ### Shots
 
@@ -192,7 +197,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - A sequence is fixed ONLY by splitting it into shots, never by rephrasing it into one sentence
   (participles or "as" around successive actions are still a sequence).
 - Typically 4–10 shots covering the whole scene in story order, an establishing wide first when
-  the place is new (scene 1: after its hook, see Cinematography). Sections follow story order; a split keeps its id for the first part.
+  the place is new (`Format: portrait`: one vertical establishing frame, see Cinematography) (scene 1: after its hook, see Cinematography). Sections follow story order; a split keeps its id for the first part.
 - A `parallel` beat = its own cutaway shot at its place, its characters from that beat:
   `Transition: cut — cutaway (parallel action)`; the main action resumes in a later shot
   (`cut — back to …`).
@@ -286,8 +291,8 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 
 - `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
   (new / split shots get ids after the highest).
-- `Format:` on the line after the title, always: the `format` attribute, else the story's
-  orientation, else `landscape`.
+- `Format:` on the line after the title, always: the `format` attribute, else the production
+  canvas `{workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}` (`portrait` when the height is larger than the width, e.g. 9:16), else `landscape`.
 
 ### Shot design for video models
 

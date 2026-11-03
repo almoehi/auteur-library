@@ -73,7 +73,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - Step fails twice -> stop; report which tasks were created (ids from results) and which failed (error text). Never claim a task `create_task` did not confirm.
 - `can_create_tasks: true` ONLY on `plan_designs`; unset on the others.
 - Task prompts below are VERBATIM: copy each fenced block word for word (it is the worker's whole instruction; the worker cannot load this skill). `{workspace.*}` placeholders stay literal (the server substitutes them).
-- Never paraphrase, shorten, reorder or drop a line: a paraphrase once dropped every nudity-conditional rule. Before each 4b/4c call re-read the prompt: it starts with the block's `Inputs:` line, keeps `Workspace content policy (nudity): {workspace.contentPolicy.nudity}` literal, and (4c) contains the `Contact` and `Sex act` / `Sex position` bullets and the LOOK RULE block, and the look-at-that-beat rule; anything missing → re-copy the block.
+- Never paraphrase, shorten, reorder or drop a line: a paraphrase once dropped every nudity-conditional rule. Before each 4b/4c call re-read the prompt: it starts with the block's `Inputs:` line, keeps `Workspace content policy (nudity): {workspace.contentPolicy.nudity}` literal, and (4a) the `Production canvas` / `Portrait canvas` lines, and (4c) contains the `Frame` block, the `Contact` and `Sex act` / `Sex position` bullets and the LOOK RULE block, and the look-at-that-beat rule; anything missing → re-copy the block.
 
 ### 4a. write_screenplay
 
@@ -82,7 +82,12 @@ create_task({ id: "write_screenplay", requires_tasks: [], requires_artifacts: []
   agent: <writer>, policies: ["screenplay-quality"], prompt: <below>,
   output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"] })
 ```
-prompt: adapt `{workspace.story.plot}` into a film screenplay set in `{workspace.story.setting}` (its technology, props, wardrobe and places; INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX.
+prompt:
+```
+Adapt {workspace.story.plot} into a film screenplay set in {workspace.story.setting} (its technology, props, wardrobe and places; INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX.
+Production canvas: {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height} (width x height). Portrait = the height is larger than the width (e.g. 9:16); otherwise, or when empty, landscape.
+Portrait canvas: write scenes that play in close-ups and two-shots. Two characters who share a moment are within arm's reach; an entrance comes into a tight frame (a hand on the door frame, a face into frame), never across a room; avoid action that needs a wide frame (a crowd, three or more people at once, crossing a large space); at most one establishing image per new place, framed vertically.
+```
 
 ### 4b. character_table
 
@@ -151,6 +156,12 @@ Output
   Places table and, per scene, its `### Scene <n>` heading followed by the single placeholder line `BEATS <n>`. The server
   refuses this first write as incomplete and keeps it as a draft - expected. Then, per scene, ONE `sandbox_edit_file`
   replacing `BEATS <n>` with that scene's Beats table, until no placeholder is left and the write is accepted.
+
+Frame
+- Production canvas: {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height} (width x height). Portrait = the height is larger than the width (e.g. 9:16); otherwise, or when empty, landscape.
+- Portrait: close-ups, medium close-ups and two-shots carry every scene; an extreme close-up is the insert for a sensation; the widest `Framing` is one person full length; never three or more people in one frame (split the beat by who is in frame).
+- Landscape: a wide establishes a new place, mediums play action, close-ups are for decisions and feelings.
+- A beat that holds an inner moment (a feeling, a want, a memory) names its visible or audible signal in `Action` (breath, hands, skin, eyes, mouth, voice: "her breath catches, her fingers stop short of his wrist") and a `Framing` that shows it ("extreme close-up of her hand"); never an unfilmable state alone ("she feels guilty").
 
 Scene table columns
 - `Scene #` | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Lighting` | `Summary` | `Characters present` | `Outfits` | `Audio`.
@@ -221,7 +232,7 @@ Beats section (same file, below the Places table)
 - Garment state: when a beat's action needs a body part the current look covers, the beat's `Action` / `Blocking` names the garment state ("cardigan slipped off her shoulders"); the beat keeps the outfit look (LOOK RULE) and never gets a tracker row or look slug of its own for that state.
 - Downstream use: the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the clip prompts are taken from the beats (`continuous` -> `continue` transition; `parallel` -> cutaway shot at its named place with that place's location design; extra location designs come from the beat `Location` slugs, outfit designs from the rows' `Outfits` union).
 
-Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm every `location_slug` has exactly one Places row with `set`, `space` and `connections` filled, no slug names a surface, every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs unless one continuous action, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, a character keeps the earlier look in every beat before the beat that changes it (the change never their first beat in the scene), `nude` only where nothing is worn, and it stays until a beat puts a garment on; a partly worn outfit keeps its look, and `none` is used only for a character who wears nothing by nature (never for a person whose beat names garments).
+Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm on a portrait canvas no beat's `Framing` holds three or more people or is wider than one person full length, every beat with an inner moment names its visible / audible signal in `Action`, every `location_slug` has exactly one Places row with `set`, `space` and `connections` filled, no slug names a surface, every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs unless one continuous action, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, a character keeps the earlier look in every beat before the beat that changes it (the change never their first beat in the scene), `nude` only where nothing is worn, and it stays until a beat puts a garment on; a partly worn outfit keeps its look, and `none` is used only for a character who wears nothing by nature (never for a person whose beat names garments).
 ````
 
 ### 4d. plan_designs
@@ -238,7 +249,7 @@ Both output files are declared (`scene_list.md` is a verbatim copy so the checks
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md, with its Places table), artifact `screenplay` (screenplay.md).
-Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, set anchors, other locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` derived from the story below, default `landscape`; see the skill). Story (medium / format): {workspace.story.plot}
+Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, set anchors, other locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` from the production canvas {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}: `portrait` when the height is larger than the width, else `landscape`; see the skill). Story: {workspace.story.plot}
 Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design was created with `create_design` and the `artifact_index` audit passed; if `task_complete` is refused because no tasks were created, continue creating designs, and report only counts the tool results show.
 Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list: never retype it - download it in place with `get_artifact_url("scene_list", "scene_list.md")` then `sandbox_fetch` of the returned ref to `scene_list.md` in this task's `design_plan` output directory, `/workspace/<artifact id>/`) and `design_plan.json` (one entry per `write_design` call, never one whole-file write).
 ```
