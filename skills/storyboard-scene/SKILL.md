@@ -105,12 +105,12 @@ Timing: beats
 Action: Wife, seated across the table, typing on her laptop, head down; the viewer's hands resting on the table edge
 Location: location_kitchen
 Camera: medium, eye level
-Movement: slow push-in
+Movement: slow lean in
 Motion:
 0-3 s character_wife: keeps typing, head down
 3-6 s character_wife: lifts her head and looks at the viewer
 0-6 s viewer: hands rest on the table edge
-0-6 s camera: slow push-in
+0-6 s camera: slow lean in
 Dialogue: 3.5-5 s character_wife (soft, tired, slow, a small sigh first): "It's late"
 Audio: quiet kitchen at night, fridge hum, distant rain
 Blocking: the camera is the viewer's eyes (seated); the viewer's forearms and hands enter the lower frame; wife across the table, facing the viewer, her hands on the laptop
@@ -135,7 +135,7 @@ plan of step 3 only adds placement, facing and the compose prompt.
 
 BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first, inferred from each LoRA's name and description: everything the shot shows - the production's style and look, the pictured characters (character LoRAs), outfits and clothing, props, the place, camera / lens / lighting, pose and action, anatomy and detail - and the act and position only when the shot has a `Sex act:` / `Sex position:` (rank the LoRA serving it high). Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Curate LoRAs of the storyboard's RENDER families only: the family of the keyframe (compose) workflow and of the masked-inpaint workflow that paints an act into it (read `model_family` of the workflows in the workflow index / workspace facts and `modelFamily` per LoRA in `lora_index`) - a LoRA of any other family NEVER loads on these renders (the write tool notes it as "never loaded"). For a shot with a `Sex act:` include that family's ACT-DETAIL LoRAs and rank them FIRST - the genital / anatomy detail LoRAs of the body parts the act shows and the act / position LoRA, inferred from each LoRA's name and description - because the inpaint workflow has only 4 LoRA ports and the tail is cut; a shot whose shown act lists no LoRA of the keyframe family is REFUSED at the write (when the catalog has one). Example, a flux2 storyboard, vaginal penetration from behind: `LoRAs: flux2_nsfw_penis, flux2_nsfw_vulva, flux2_nsfw_sex_aio, flux2_nsfw_realism` (never `krea2_nsfw_penis` there). No need to avoid a LoRA the workflow already loads (the render skips it). The server loads this list on EVERY take render and repair of the shot, after the design's explicit studio picks (which rank first; the port cap cuts your tail); the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15; a shown act needs a LoRA of the keyframe workflow's family when the catalog has one). The accepted `write_shot` result lists what will load per render, so you see the port cut.
 
-### Cinematography (the shot rules below, R1-R26 and the POV / act rules R4 / R20 / R24 take precedence)
+### Cinematography (the shot rules below, R1-R29 and the POV / act rules R4 / R20 / R24 / R29 take precedence)
 
 - Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide.
 - Shot size follows intensity: wide -> medium -> close as it rises; never the same size three shots in a row; an insert only for an object the story needs.
@@ -245,9 +245,28 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   | camera height (eye level / low / high angle / top-down) | crane / boom / pedestal up or down (a tilt alone does not) |
   | dutch angle | roll (guidance: the write rule checks it only when both `Camera:` lines name a dutch angle) |
   | POV / no POV | none: always a `cut` (guidance, not checked by the write rule) |
+  | a first-person (`POV:`) shot, any change | only what the viewer's body can do - the table below; every other change is a `cut` |
 
   Pan / tilt (the camera turns in place), truck (slides sideways), track (follows), handheld and drift
   reframe WITHIN the same view: allowed as a shot's move, but they never perform a framing change.
+
+  **A first-person camera is the viewer's EYES** (rule R29, refused at the write on a `cut` shot as much as a
+  `continue` shot; R25 reads the same table). The `Movement:` of a `POV:` shot - and its `camera` beats - may
+  only name what the viewer's body does, by their posture and whether they are attached (a `Contact:` joins
+  them to another person; a contact with a thing does not attach them):
+
+  | Viewer | Free | Attached (a `Contact:` with a person) |
+  |---|---|---|
+  | `lying` | turn: look, turn the head, pan, tilt | turn only |
+  | `seated` / `kneeling` | turn + a small lean in / back | turn only |
+  | `standing` | turn + a step in / back | turn only |
+  | `walking` | turn + walk / follow | turn only |
+
+  Never arc / orbit, crane / boom / pedestal, dolly / track, zoom or push-in for a first-person shot: the
+  viewer's head does not travel (a pull back from a lying viewer leaves the viewer's head, shows the face, breaks
+  the contact or turns the subject). So a NEW framing for a seated, lying or attached viewer is a `cut`: write
+  `Transition: cut — <reason>` and give the next shot its own framing; keep a `continue` first-person shot to a
+  look or turn, or to the lean / step / walk its row allows.
   `hold` = strictly static: no move, no zoom, no focus change. A focus shift is
   `rack focus from <near thing> to <subject>` (both ends named; the frame stays still).
 - `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
@@ -269,17 +288,30 @@ check); they go to the clip prompt verbatim.
   `limbs` person) has a beat; there is always at least one `camera` beat (`hold` is a beat too).
   Write the action in progress ("reaches for the glass, fingers closing"), not an instant, and only
   what the scene list's beat states: no filler behaviour. A pose held for the whole shot is no motion:
-  "0-4 s hangs airborne" is wrong; a jump is "0-1 s pushes off the edge, arms swinging forward;
-  1-2 s flies out over the water, body stretching; 2-4 s breaks the surface in a splash, sinking".
+  "0-4 s hangs airborne" is wrong; a jump is "0-1 s crouches, arms swinging back; 1-2 s pushes off the
+  step, both feet leaving the floor; 2-4 s lands on both feet, knees bending".
 - A beat carries its MECHANICS, stated as the action in progress: which hand, which fastening or
   motion ("left hand pulls the cord loose", not "undresses"), where a garment or prop goes ("the top
   drops to the floor by her feet"; "the cup is set on the table's near edge") and the end state it
   leaves ("the cardigan hangs open off one shoulder"). Every garment or prop a beat touches gets an
   end state in that beat or a later beat of the shot; none is left unresolved.
+- **The picture lines show the instant BEFORE Motion beat 1** (rule R27, refused at the write: the server asks
+  the decision model whether `Action:` / `Pose:` / `Blocking:` / `Wardrobe:` / `State:` show each person
+  before, partway through or after their first beat). The keyframe is the START frame of the clip, so it
+  shows each person as they are when their first beat begins; the beat performs the change; the result is
+  the NEXT shot's picture. Counter-example (live): a beat "0-2 s climbs out of the pool" with picture lines
+  "stands at the pool's edge, dripping" - the clip never shows her climbing out. Right: the picture lines say
+  she stands IN the water at the ladder, hands on the rail, and the beat "0-2 s pulls herself up the ladder
+  and steps out onto the deck" performs it; the next shot's lines show her on the deck, `State: wet hair`.
+  Same for "push up, swing legs over": the picture lines show her lying, not already seated at the edge.
+  A person without a first beat is not asked. Write the opening state in words of a still, never as the
+  motion.
 - Rule R26 (clip rule, refused at the write like R25, never part of the keyframe gate): a `Wardrobe:` or
-  `State:` entry that differs between shot k and shot k+1 must be PERFORMED by a `Motion:` beat in shot k
-  or k+1 that names the garment (or state) and where it ends up. A change nobody performs is refused: write
-  the beat, or keep the entry the same.
+  `State:` entry that differs between shot k and shot k+1 must be PERFORMED by a `Motion:` beat of shot k
+  that names the garment (or state) and where it ends up; shot k+1's `Wardrobe:` / `State:` show the RESULT.
+  A beat of shot k+1 does not count: its own picture lines would already show the end state of what its own
+  Motion then does (the keyframe never shows the opening moment). A change nobody in shot k performs is
+  refused: write the beat into shot k, or keep k+1's entry as in k.
 - Speech direction belongs to the beat it happens in: the `Motion:` beat of the speaker says how they
   speak or hold themselves while speaking ("speaks over her shoulder without turning"), the `Dialogue:`
   line carries the words and voice delivery.
@@ -347,15 +379,17 @@ check); they go to the clip prompt verbatim.
   `nude`; `:nude` starts at the first shot where nothing is worn.
 - A beat whose ACTION changes a look (undresses, unties, takes off, puts on) starts in the EARLIER
   look, whatever its Outfits column says: the shot(s) before the change wear it, and the change itself
-  is a `Motion:` beat ("4-6 s character_sister: unties her bikini top and lets it fall"). When the
+  is a `Motion:` beat of the shot that ends where the new look shows ("4-6 s character_sister: unties her
+  bikini top and lets it fall"); the NEXT shot's `Wardrobe:` shows the top removed. When the
   scene list gives only the later look for such a beat, take the earlier one from the character's
   previous beat in this scene (or its wardrobe-tracker row) and name the mismatch in the hand-over
   summary - never drop the change.
 - `Blocking:` places only people in frame plus a POV owner: "the camera is the viewer's eyes
   (seated); the viewer's forearms and hands enter the lower frame". Never call a POV owner whose
   limbs are in `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
-- `POV: <characterKey> (seated|standing|kneeling|lying)` only for a first-person camera (no other
-  posture: the write is refused); the posture is said in words only ("first-person view,
+- `POV: <characterKey> (seated|standing|kneeling|lying|walking)` only for a first-person camera; the
+  posture is REQUIRED (a `POV:` line without one, or with another, is refused - there is no default);
+  the posture decides what the camera may do (the first-person camera table under "Camera moves"); the posture is said in words only ("first-person view,
   standing"). A first-person view shows only the viewer's own body seen from their eyes; the
   posture decides the extent in frame (rule R4): seated / kneeling / standing `limbs` or `lower body`
   (lap, thighs — and the hands resting there); lying also `upper body` (the chest seen from above) —
@@ -474,9 +508,10 @@ check); they go to the clip prompt verbatim.
     removed: bikini top)`.
   - Jacket open: `Wardrobe: character_officer (wearing: uniform trousers, boots; partly: uniform jacket
     (unbuttoned, open))`.
-  A keyframe is a still, so an undress is written as its END STATE, never as the motion: "back
-  bare, both hands at her waist", not "untying the strings, top slipping down" (the model paints
-  the tied top). In `Action:` / `Pose:` / `Frame:` and the prompt, a REMOVED garment is not
+  A keyframe is a still, so a garment state is written as the state of the still, never as the motion:
+  "back bare, both hands at her waist", not "untying the strings, top slipping down" (the model paints
+  the tied top). The shot whose Motion performs the undress shows the BEFORE state in its picture lines
+  (R27); the following shot shows this removed state. In `Action:` / `Pose:` / `Frame:` and the prompt, a REMOVED garment is not
   mentioned at all — "bikini top held in her hands" or "cardigan slipped off her shoulders" summons
   it back on (live s3-02: 10 of 10 takes kept the held top on); a garment that is still on her arms
   is `partly: cardigan (off both shoulders, at the elbows)` instead.
@@ -492,8 +527,9 @@ check); they go to the clip prompt verbatim.
 - `State:` = transient, VISIBLE appearance of a person shown as a figure, `<characterKey> (<state>, <state>, …)`,
   `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
   `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
-  the POV owner or a `limbs` person — they are words only). Write it in the shot where the action
-  changes such a state (she climbs out of the pool → `State: character_sister (wet hair, wet skin)`) and
+  the POV owner or a `limbs` person — they are words only). Write it in the first shot AFTER the action
+  that changes such a state (her beat "climbs out of the pool" is in shot k → shot k+1 has `State:
+  character_sister (wet hair, wet skin)`; shot k itself, which starts before she climbs out, does not) and
   in EVERY later shot of the scene that shows the person while it lasts — a `continue` shot must restate
   it (rule R18); a `cut` shot later in the same moment should repeat it too (not checked — your job).
   A distinctive marking in the character's digest (tattoo, scar, birthmark) is placed in every shot
@@ -730,7 +766,12 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
       least 1 s, every figure and the camera covered, ending at `Duration:`), each `Dialogue:` line has a
       speaker key and a delivery and fits its time, and `Audio:` is the scene's, verbatim, on every shot
 - [ ] with `Timing: beats`: every beat names its mechanics and end state; every `Wardrobe:` / `State:`
-      difference to the next shot is performed by a beat naming the garment and where it ends up (R26)
+      difference to the next shot is performed by a beat of THIS shot naming the garment and where it
+      ends up (R26), and this shot's own picture lines show each person at the instant before their
+      first beat (R27)
+- [ ] every `POV:` line names a posture; every first-person shot's `Movement:` / `camera` beats only name
+      what the viewer's posture allows (R29 table); a new framing for a seated, lying or attached
+      viewer is a `cut`
 - [ ] the POV owner is only "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` and the
       prompt (no name, key, placeholder or figure); no prompt copies another shot's people
 - [ ] every POV owner's `Visible:` extent covers each part of their own body that `Pose:` /

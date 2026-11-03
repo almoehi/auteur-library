@@ -246,6 +246,8 @@ template above, including its "no zoom / no push / no pan" refusals. When the br
 state the framing from the brief (shot size, angle), add NO camera move of your own and no static refusal list, and keep ONE short sentence: "The camera stays at this framing." (Iron Law 3). In a video continuation the prompt continues `<Video 1>` without a cut; the move
 continues or holds that of the prior clip.
 
+**A first-person camera is the viewer's head (brief line `camera_body:`).** `POV` in the vocabulary above names a viewpoint, never a camera move: do not write "POV" as a move. When the brief carries `camera_body: the viewer's eyes (<posture>[, attached to <person>]) - <what it may do>`, the camera is the viewer's eyes and the clip obeys that line: write ONE locked-camera sentence after the camera sentence, driven by it - "The camera is locked to the viewer's head and never leaves it; it may only turn." when the line says `turns only, never translates` (a lying viewer, or any viewer attached to a person), "... it may only turn and lean in or back a little." for `leans in or back`, "... turn and step in or back." for `steps`, "... turn and walk forward." for `walks or follows`. Then state the move the brief's `Movement:` names (a turn is "The camera turns slowly to the left, ending on ..."), never a push-in, pull-out, arc, pedestal, truck, track or zoom, and never anything that shows the viewer's head or face, breaks a held contact or turns the subject: a first-person clip has no such move (the plan makes that framing change a cut). Copy `camera_body:` into the section of locked lines like any other brief constraint.
+
 **The start-frame picture is the target framing.** When `<Picture 1>` is the storyboard keyframe of this shot (the picture lines say so), its framing IS this shot's framing: write that framing, and never describe a different framing as a camera move (no "pulls out to a wide", "pushes in to a close-up" unless the brief's `Movement:` says it). A change of framing between shots is a cut, not a move inside one clip.
 
 ---
@@ -371,6 +373,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 - [ ] Mode identified; correct template selected
 - [ ] Preamble line(s) present for i2va / fl2va / l2va
 - [ ] Camera specified in every shot OR explicit static lock with refusal list stated (no push in, no zoom, no pan, no tilt, no reframing, no focus change)
+- [ ] A brief with `camera_body:` gets the locked-head sentence and only the moves that line allows (never a translation); POV is never written as a move
 - [ ] Every camera move states what the frame shows when it ends; a new side of the subject only by Arc, a new camera height only by Pedestal / crane; a rack focus names where focus starts and ends
 - [ ] Only the beats the brief states — no padding behaviour
 - [ ] Every beat ends with an observable end state
