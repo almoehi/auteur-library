@@ -177,7 +177,7 @@ Rules:
 - **The clip ends with the shot's last Motion beat.** Its end state is the clip's last state: never write what happens after it - not the next shot's action (a step, a jump, a dive, an exit, an arrival), not as "then …", not as "as the camera …". A beat that ends "her weight shifting toward the pool" ends there; the jump is the next clip.
 - **One camera sentence, and it agrees with `Movement:`.** A brief that names a move gets that move and nothing that contradicts it - never "The camera stays at this framing" (or "static", "locked") next to a pull-out, push-in, arc or pan. The "stays at this framing" sentence is ONLY for a brief with no `Movement:`.
 - **Keep every hold, facing and out-of-frame line.** Each line of the brief that says what stays (`back to camera`, `faces away`, `never turns toward the camera`, `no part of the viewer is visible`, `nobody else`, the `Visible:` extent, the `POV:` / `camera_body:` lines) appears in the prompt - never dropped to save words (a prompt without "back to camera" turned her to the lens; one without "no part of the viewer visible" showed the viewer's legs). Restating what the start frame shows is fine.
-- The server puts its own `Shot limits (authoritative ...)` block in front of the rendered prompt (the last beat, the camera, the keep lines). Never write that block yourself and never contradict it.
+- The server reads every clip prompt back against these lines before it renders; a prompt that breaks one comes back to you ONCE as a correction naming the finding and the shot lines - fix exactly those points and keep the rest.
 
 ### Bundle mode (a multi-shot brief)
 
