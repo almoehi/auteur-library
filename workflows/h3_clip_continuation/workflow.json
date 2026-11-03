@@ -460,6 +460,10 @@
       "length": [
         "156",
         1
+      ],
+      "end_image": [
+        "end_frame_img",
+        0
       ]
     }
   },
@@ -613,6 +617,15 @@
     "class_type": "H3ReferenceAudio",
     "_meta": {
       "title": "Voice reference 2: stereo 32 kHz guard"
+    }
+  },
+  "end_frame_img": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "end_frame.png"
+    },
+    "_meta": {
+      "title": "end frame (last-frame anchor)"
     }
   }
 }
