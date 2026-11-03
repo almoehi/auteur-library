@@ -295,7 +295,7 @@ The clip is rendered by a video model with declared limits (`limits:` in `workfl
 - **Cut at take-off, restart in the new medium.** A body entering or leaving another medium (diving into water, stepping into fire or smoke) is never inside one clip: end the shot at take-off and start the next shot (a `cut`) already in the water. A medium transition inside a clip fails.
 - **Interactions early and short.** Hand-offs, contact and exchanges belong in the first 3 s of a clip; late interactions drift. Split a long interaction across shots rather than stretching it.
 - **Micro-actions need size.** Fingertips, blinks, a flicker of a smile stay static in a clip: write them as a larger visible motion (the whole hand, a head turn) or as a close insert of the thing (`insert` = a close-up of a thing).
-- **Spoken lines are at least 3 words** (a one-word whisper is inaudible); lengthen a short utterance or fold it into a longer line.
+- **Spoken lines read best with at least 3 words** (a one-word whisper is hard to hear): a shorter line is only a non-blocking note on the saved shot; lengthen it or fold it into a longer line when you can.
 - Camera moves come only from the workflow's reliable list and within `max_arc_degrees`; otherwise `cut`.
 
 ### Timed motion (header `Timing: beats`)
