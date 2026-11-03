@@ -106,7 +106,8 @@ Timing: beats
 Action: Wife, seated across the table, typing on her laptop, head down; the viewer's hands resting on the table edge
 Location: location_kitchen
 Camera: medium, eye level
-Movement: slow lean in
+Lens: normal 35mm, shallow focus
+Movement: push in, slow, from medium to close-up, ending on her face
 Motion:
 0-3 s character_wife: keeps typing, head down
 3-6 s character_wife: lifts her head and looks at the viewer
@@ -203,7 +204,8 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   - Match by the DESCRIPTION, never by the view's number: a location view fits when its `Ahead:` (and `Left:` / `Right:`) is what the shot's `Frame:` puts ahead and beside; a sheet view of a person fits when its angle / pose is the one the shot needs. A view listed without a description has an unknown direction: never pick it. When no listed picture (main or view) shows the direction the shot looks in, do not take the nearest one: name the gap in the summary (the design's "Add views" can make that view) and write the shot for the closest picture you do have.
   - `Blocking:` / `Frame:` follow the CHOSEN picture's layout, not the main one's.
   - Never invent a view id: only listed ones are valid (the write is refused for another). A `continue` shot keeps the previous shot's location KEY; its view may change with the framing.
-- `Movement:` = the beat's camera move verbatim (`hold` only when the beat asks for stillness).
+- `Movement:` = the beat's camera move in the canonical grammar of "Camera moves" below (`hold` only when the beat asks for stillness); the `from` / `to` frames follow the `Transition:` rule there.
+- `Lens:` (optional, keyframe-relevant): `Lens: <wide|normal|long> [<N>mm][, <deep|shallow> focus][, focus on <thing>]`. Classes: wide <= 28 mm (default 24), normal 35-50 mm (default 35), long >= 85 mm (default 85); an explicit N must fit the class. It sets perspective and depth of field of the keyframe, never movement; leave it out when the scene's look needs nothing special.
 - Coverage of one moment: consecutive `continue` shots change the framing size or the angle
   (wide from behind → medium close-up of her face over her shoulder → close-up of his hands on her
   hips). A continue shot with the SAME framing size, angle and `Location:` as the previous one is
@@ -228,52 +230,73 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
   A `continue` shot changes framing (rule R16), and its clip must PERFORM that change: `Movement:` is a
-  move that can REACH the new framing (the "Camera moves" table below; drift, handheld, pan, tilt,
-  truck, track and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
+  move that can REACH the new framing (the "Camera moves" table below; handheld, pan, tilt,
+  truck, follow and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
   move can reach the new framing, write `Transition: cut — …` instead (the clip then starts on the
   new keyframe). The write is refused (rule R25) when a changed dimension has no move of its row in
   `Movement:` (or a `camera` beat) — several changed need one move each; a push-in cannot turn an
   eye-level shot into a low-angle one, and a pan cannot turn a front view into a three-quarter one.
 
-  **Camera moves** (THE vocabulary of `Movement:`; write `<move> [speed] [to | to reveal | ending on <what the
-  frame shows when the move ends>]`, e.g. `slow push-in, ending on her hands`, `pan left to reveal the door`,
-  `arc 45 degrees right, ending on a three-quarter view of her face`; the target comes from the beat):
+  **Camera moves** (THE vocabulary and grammar of `Movement:`, parsed and checked by the server):
+
+  ```
+  Movement: <step>[; <step>]...[, handheld|steadicam|gimbal [subtle|moderate|strong]]
+  <step> := <move> [<dir>] [<N>°] [, slow|medium|fast] [, from <frame> to <frame>]
+            [, following <key> | , to reveal <thing> | , ending on <thing>]
+  <move> := hold | pan | tilt | roll | push in | pull out | truck | follow | lead | pedestal | crane | arc
+            | whip pan | dolly zoom | rack focus
+  <dir>  := left | right | up | down       <frame> := a framing size and/or camera-angle words
+  ```
+
+  Examples: `hold`; `push in, slow, from medium to close-up, ending on her face`;
+  `arc right 45°, from from the front to three-quarter, ending on her profile`;
+  `pedestal down, slow, from eye level to low angle; tilt up, ending on her face`;
+  `truck left, slow, following character_wife, handheld subtle`; `rack focus from the glass to her face`.
 
   | Framing change | Move that performs it |
   |---|---|
-  | shot size (wide / medium / close-up ...) | push-in / pull-out / pull back / dolly in / dolly out / zoom in / zoom out (prefer the push-in: a zoom changes only the lens) |
-  | side of the subject (front / side / three-quarter / behind / over the shoulder) | arc / orbit (the camera travels around the subject); front <-> behind (180°) is always a `cut` |
-  | camera height (eye level / low / high angle / top-down) | crane / boom / pedestal up or down (a tilt alone does not) |
-  | dutch angle | roll (guidance: the write rule checks it only when both `Camera:` lines name a dutch angle) |
-  | POV / no POV | none: always a `cut` (guidance, not checked by the write rule) |
-  | a first-person (`POV:`) shot, any change | only what the viewer's body can do - the table below; every other change is a `cut` |
+  | shot size (wide / medium / close-up ...) | `push in` / `pull out` (must END tighter / wider than it starts; about one size step per 5 s on MiniMax H3). Write `push in` / `pull out`, never `zoom`, `dolly in`, `track` (accepted only as aliases) |
+  | side of the subject (front / side / three-quarter / behind / over the shoulder) | `arc left` / `arc right` `[N°]`; front <-> behind (180°) is always a `cut` |
+  | camera height (eye level / low / high angle / top-down) | `crane` / `pedestal` up or down, ending in a higher / lower height band (a tilt alone does not) |
+  | dutch angle | `roll` (checked only when both `Camera:` lines name a dutch angle) |
+  | POV / no POV | none: always a `cut` |
 
-  Pan / tilt (the camera turns in place), truck (slides sideways), track (follows), handheld and drift
-  reframe WITHIN the same view: allowed as a shot's move, but they never perform a framing change.
+  - **Arc convention**: `arc left` = the camera travels to ITS OWN left (counter-clockwise seen from above); from a frontal camera it reveals the subject's RIGHT side. About 45° = front -> three-quarter, about 90° = front -> side (profile); stay at 15-45° per clip on MiniMax H3. Only an arc changes the side seen: pan / tilt / truck never do.
+  - `pan` / `tilt` (turn in place), `truck left|right` (travel sideways), `follow <key>` / `lead <key>` (travel with a moving subject, framing kept) reframe WITHIN the same view: allowed as a shot's move, never a framing change. Never write `track` (ambiguous): use `truck`, `follow` / `lead` or `push in`.
+  - `handheld` / `steadicam` / `gimbal` are MODIFIERS of the whole `Movement:` (after the last step), never a move; "drift" is not a move. `dolly zoom` is size-neutral (performs no size change).
+  - `hold` = strictly static: no move, no zoom, no focus change. A focus shift is `rack focus from <near thing> to <subject>` (both ends named; the frame stays still).
+  - Speed words (`slow` = spans the clip, `medium` = about half, `fast` = <= 1 s) carry no guarantee; `Duration:` and the beat times carry the speed.
+  - **`from <frame> to <frame>` depends on this shot's `Transition:`** (the server checks both against the `Camera:` lines; a mismatch is refused):
+    - `Transition: continue`: `from` = the PREVIOUS shot's `Camera:`, `to` = THIS shot's `Camera:` — the move reaches this shot's keyframe (`push in, slow, from medium to close-up`, this shot's `Camera:` opening with `close-up`).
+    - `Transition: cut` (and the first shot): `from` = THIS shot's own `Camera:` (the opening), `to` = the framing at the END of the clip (free) — the move happens during this shot (`arc right 45°, from from the front to three-quarter`).
+    `Camera:` itself is always the opening frame of THIS shot; a move that "starts at A" on a cut shot is `Camera:` A plus the move.
+  - **A first-person camera is the viewer's EYES** (rule R29, refused at the write on a `cut` shot as much as a `continue` shot; R25 reads the same table). The `Movement:` of a `POV:` shot - and its `camera` beats - may only name what the viewer's body does, by their posture and whether they are attached (a `Contact:` joins them to another person; a contact with a thing does not attach them):
 
-  **A first-person camera is the viewer's EYES** (rule R29, refused at the write on a `cut` shot as much as a
-  `continue` shot; R25 reads the same table). The `Movement:` of a `POV:` shot - and its `camera` beats - may
-  only name what the viewer's body does, by their posture and whether they are attached (a `Contact:` joins
-  them to another person; a contact with a thing does not attach them):
+    | Viewer | Free | Attached (a `Contact:` with a person) |
+    |---|---|---|
+    | `lying` | turn: `look <dir> [N°]`, `turn head` | turn only |
+    | `seated` / `kneeling` | turn + a small `lean in` / `lean back` | turn only |
+    | `standing` | turn + `step in` / `step back` | turn only |
+    | `walking` | turn + `walk`, `walk after <key>` (never `follow` in a POV shot) | turn only |
 
-  | Viewer | Free | Attached (a `Contact:` with a person) |
-  |---|---|---|
-  | `lying` | turn: look, turn the head, pan, tilt | turn only |
-  | `seated` / `kneeling` | turn + a small lean in / back | turn only |
-  | `standing` | turn + a step in / back | turn only |
-  | `walking` | turn + walk / follow | turn only |
+    Never arc, crane / pedestal, truck, push in / pull out or zoom for a first-person shot: the viewer's head does not travel (a pull back from a lying viewer leaves the viewer's head, shows the face, breaks the contact or turns the subject). So a NEW framing for a seated, lying or attached viewer is a `cut`: write `Transition: cut — <reason>` and give the next shot its own framing; keep a `continue` first-person shot to a look or turn, or to the lean / step / walk its row allows.
+  - Keyframe prompts (`plan_shot` prompt, image writers) NEVER carry movement words: a keyframe is one instant.
+  - Read the clip workflow's declared `camera:` (reliable moves, `max_arc_degrees`, unreliable moves) and `limits:` from `workflow_index` BEFORE writing `Movement:` / `Motion:`: a move the workflow cannot perform reliably makes a `continue` a cut (write `cut`), and a beat that matches a limit class is designed around it (see "Shot design for video models").
 
-  Never arc / orbit, crane / boom / pedestal, dolly / track, zoom or push-in for a first-person shot: the
-  viewer's head does not travel (a pull back from a lying viewer leaves the viewer's head, shows the face, breaks
-  the contact or turns the subject). So a NEW framing for a seated, lying or attached viewer is a `cut`: write
-  `Transition: cut — <reason>` and give the next shot its own framing; keep a `continue` first-person shot to a
-  look or turn, or to the lean / step / walk its row allows.
-  `hold` = strictly static: no move, no zoom, no focus change. A focus shift is
-  `rack focus from <near thing> to <subject>` (both ends named; the frame stays still).
 - `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
   (new / split shots get ids after the highest).
 - `Format:` on the line after the title, always: the `format` attribute, else the story's
   orientation, else `landscape`.
+
+### Shot design for video models
+
+The clip is rendered by a video model with declared limits (`limits:` in `workflow_index`); design the shots around them instead of hoping:
+
+- **Cut at take-off, restart in the new medium.** A body entering or leaving another medium (diving into water, stepping into fire or smoke) is never inside one clip: end the shot at take-off and start the next shot (a `cut`) already in the water. A medium transition inside a clip fails.
+- **Interactions early and short.** Hand-offs, contact and exchanges belong in the first 3 s of a clip; late interactions drift. Split a long interaction across shots rather than stretching it.
+- **Micro-actions need size.** Fingertips, blinks, a flicker of a smile stay static in a clip: write them as a larger visible motion (the whole hand, a head turn) or as a close insert of the thing (`insert` = a close-up of a thing).
+- **Spoken lines are at least 3 words** (a one-word whisper is inaudible); lengthen a short utterance or fold it into a longer line.
+- Camera moves come only from the workflow's reliable list and within `max_arc_degrees`; otherwise `cut`.
 
 ### Timed motion (header `Timing: beats`)
 
@@ -624,8 +647,7 @@ send that shot again:
 - `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
   one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
   or angle (R16), and its `Movement:` performs that change — a move of the "Camera moves" row of each
-  changed dimension (size: push / pull / dolly / zoom; side: arc / orbit; height: crane / boom /
-  pedestal), else `cut` (R25);
+  changed dimension (size: push in / pull out; side: arc; height: crane / pedestal), else `cut` (R25);
 - `(view <id>)` on `Location:` / `Outfits:` / `Characters:` only with a listed view id; the shot's `Blocking:` /
   `Frame:` match the chosen picture's layout;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
@@ -759,8 +781,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] every `Transition:` describes the step FROM the previous shot INTO this one (shot 1 `cut`; no
       "end of scene"; the first shot of a `new moment` / `parallel` beat is a `cut`)
 - [ ] every `Transition: continue` shot has a `Movement:` (and, with `Timing: beats`, `camera` beats) that
-      performs its framing change (push / pull / zoom for size; arc / orbit for the side; crane /
-      boom / pedestal for the height; never pan / tilt / truck / drift / handheld / hold); otherwise
+      performs its framing change (push in / pull out for size; arc for the side; crane /
+      pedestal for the height; never pan / tilt / truck / follow / handheld / hold); otherwise
       it is a `cut`
 - [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
 - [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at

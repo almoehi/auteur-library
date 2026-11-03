@@ -38,6 +38,22 @@ workflow_type: i2va
 model_family: minimaxh3
 content: nsfw
 capabilities: [multi-shot-clip]  # 2-4 consecutive shots of one scene as one clip: hard keyframes (cuts) at the guide frames
+# Declared MiniMax H3 camera/limits (camera spike 2026-11-02 + clip runs): read by the clip planner and shoot-clip from workflow_index
+camera:
+  reliable: [push in, pull out, arc, truck, pan, tilt, rack focus, hold]  # zoom = push in (no lens zoom); pan reveal is subtle (~10% of the width: name the target); rack focus works when both ends are named
+  max_arc_degrees: 45  # only an arc changes the side seen, 15-45 degrees per clip; pan / tilt never do
+  unreliable: [crane, pedestal, whip pan, dolly zoom]  # pedestal / crane give only a small height change; dolly zoom is not performed
+limits:
+  - class: medium-transition  # a body entering or leaving another medium fails inside one clip
+    note: "Entering or leaving water (or another medium) inside one clip fails: cut at take-off and start the next clip already in the new medium."
+  - class: micro-motion  # small motions render static
+    note: "Micro-motions (fingertips, blinks) stay static: write a larger visible motion or a close insert of the thing."
+  - class: late-interaction  # hand-offs drift late in the clip
+    note: "Hand-offs and contact later than about 3 s into the clip drift: put the interaction early and keep it short."
+    max_start_seconds: 3
+  - class: short-utterance  # one-word whisper is inaudible
+    note: "A one-word whisper is inaudible: a spoken line needs at least 3 words."
+    min_words: 3
 render_timeout_sec: 5400  # up to 15 s of video; ~12 s clips take ~20-30 min on a100, the 1800 s default is too tight
 gpu_types: [h100, b200] # as h3_single_cut_clip_nsfw (H100 while B200 has no capacity). Dispatch picks the cheapest deployed listed GPU.
 # sage_attention ships "disabled" (node 157): the SageAttention wheel in the compute image carries

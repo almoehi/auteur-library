@@ -119,15 +119,14 @@ Shot sizes: `extreme close-up` | `close-up` | `medium close-up` | `medium shot` 
 | No movement | `static shot`, `locked-off frame` |
 | Turn in place, horizontal | `slow pan left/right` |
 | Turn in place, vertical | `slow tilt up/down` |
-| Approach (camera travels) | `slow push in`, `dolly in` |
-| Retreat (camera travels) | `pull back`, `dolly out` |
-| Lens only (camera stays) | `slow zoom in/out` |
+| Approach (camera travels) | `slow push in` |
+| Retreat (camera travels) | `slow pull out` |
 | Slide sideways | `slow truck left/right` |
-| Follow | `tracking shot` |
-| Circle | `arc shot`, `orbits 15°–30° clockwise` |
+| Follow | `follows <subject>` (travel with a moving subject, framing kept) |
+| Circle | `arcs left` / `arcs right` 15°–30° (left = the camera travels to its own left, counter-clockwise from above) |
 | Rise / lower | `crane up/down`, `pedestal up/down` |
 | Focus shift (no move) | `focus racks from <near thing> to <subject>` |
-| Handheld | `handheld with subtle wobble` |
+| Handheld (modifier of a move, never alone) | `handheld with subtle wobble` |
 | Aerial | `drone shot perspective` |
 
 Keep the moves apart - each is a different picture:
