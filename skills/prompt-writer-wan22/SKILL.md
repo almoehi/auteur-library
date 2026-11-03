@@ -266,7 +266,7 @@ NEGATIVE PROMPT:
 
 ```
 
-Never add a "CHANGES SUMMARY", notes or commentary to the prompt: everything in it is rendered. What you added or restructured goes in the tool result's separate `changes` field.
+The prompt is the whole output: exactly the text the generation model receives, nothing else. No change notes or summary, and no headings, titles or labels copied from your inputs (story brief, workspace facts, shot lines).
 
 ---
 
