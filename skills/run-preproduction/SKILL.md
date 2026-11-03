@@ -147,7 +147,7 @@ prompt:
 Inputs: artifact `character_table` (all character_*.md files), artifact `screenplay`. Deliverable: artifact `scene_list`, the single file `scene_list.md`.
 Workspace content policy (nudity): {workspace.contentPolicy.nudity} (absent or empty = forbidden).
 Nudity `allowed`: load skill `workflow-calling-conventions` first and use the names of its section "Explicit acts and positions".
-Nudity `allowed`: every sexual act and climax of the screenplay is its own beat (or beats) whose `Action` names it in plain explicit words (never "an intimate act") and whose `Sex act` / `Sex position` are filled (a climax: `cumshot` or `orgasm`); keep each act's participants and position.
+Nudity `allowed`: every sexual act and climax of the screenplay is its own beat (or beats) whose `Action` names it in plain explicit words (never "an intimate act") and whose `Sex act` / `Sex position` are filled (a climax: `orgasm`; its fluid `cumshot`, `facial`, `creampie`, `squirting` or `cum swallowing` as the screenplay shows it); keep each act's participants and position.
 
 First step, before writing
 - Read every `character_<slug>.md`; list (a) the character stems and (b) each character's WARDROBE TRACKER look slugs.
