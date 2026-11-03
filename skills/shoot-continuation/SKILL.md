@@ -29,13 +29,13 @@ Required in the task prompt: prior clip `artifact://<artifactId>/<fileName>`, pr
 
 ## 3. Render
 
-First `load_skill('shoot-clip')` and follow its sections 3-6 (mode `continue`: measuring, start offset, no cut, prompt route) exactly - EXCEPT the render tool: this task is person-requested and not part of a clip plan (no `clip_ref`, no `picture_map`), so it renders with ONE `wf_*` call of the video-continuation workflow (`prior_clip`, `prior_clip_start_time`, the references below) instead of `shoot_clip`. The prompt continues `<Video 1>` in the same shot; never write "the target video cuts to …" or a new composition.
+First `load_skill('shoot-clip')` and follow its prompt route and sections 4-6 exactly - EXCEPT the continuation mechanics and the render tool: this task is person-requested and not part of a clip plan (no `clip_ref`, no `picture_map`, so `prepare_continuation` and `shoot_clip` do not apply), so it renders with ONE `wf_*` call of the video-continuation workflow (`prior_clip`, `prior_clip_start_time`, the references below). Measure the predecessor yourself with `get_video_info` (`path_or_url="artifact://<id>/<file>"`; never its planned length): `prior_clip_start_time` = the REAL duration minus 1-2 s, pass the same clip as `prior_clip_audio` when it is above 0, and state it in the summary. Pin no end frame. The prompt continues `<Video 1>` in the same shot; never write "the target video cuts to …" or a new composition.
 
 - Duration: the task's, if given, else the workflow's default (it is the `duration_seconds` of `shoot-clip` sections 5-6).
-- Here (the mechanics of `shoot-clip` sections 3-6 apply; the workflow, pictures and LoRAs are yours, not the server's):
+- Here (the prompt route and `shoot-clip` sections 4-6 apply; the workflow, pictures and LoRAs are yours, not the server's):
   - LoRAs: start from the prior clip's render LoRAs (its render provenance), else the storyboard shot's `LoRAs:` line; keep the workflow's family; rank for motion (the act LoRA first when the brief has a sex act, then motion LoRAs; no realism / skin / anatomy / style LoRAs), one per LoRA port;
   - the video-continuation workflow (video input port for the prior clip); none -> `task_failed` naming that;
-  - measured predecessor duration and `prior_clip_start_time`;
+  - measured predecessor duration and `prior_clip_start_time` (above);
   - references: none by default (the prior clip carries identity, outfit and place); add a design's `full_body_shot` (never a sheet, never the POV owner) only for what the prior clip does not show and the brief brings in - a person who enters, a place the camera turns to (its view whose description faces that way);
   - a required reference that is unavailable and not derivable from the prior clip: ask the person if your task has a chat (`llm+hitl`), else `task_failed` naming the missing references.
 - Prompt inputs: the brief; the prior clip's measured timing and start offset; reference images and their roles; the continuity requirements of section 2. Instructions go in `instruction` (verbatim only when short, explicit, concrete). Pass `image_inputs` and `verbatim_phrases` (a shot's `Sex act:` / `Sex position:`, dialogue).
