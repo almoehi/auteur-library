@@ -34,7 +34,7 @@ url: workflow.json
 workflow_type: ref2va
 # Declared MiniMax H3 camera/limits (camera spike 2026-11-02 + clip runs): read by the clip planner and shoot-clip from workflow_index
 camera:
-  reliable: [push in, pull out, arc, truck, rack focus, hold]  # zoom = push in (no lens zoom); pan reveal is subtle (~10% of the width: name the target); rack focus works when both ends are named
+  reliable: [push in, pull out, arc, truck, pan, tilt, rack focus, hold]  # zoom = push in (no lens zoom); pan reveal is subtle (~10% of the width: name the target); rack focus works when both ends are named
   max_arc_degrees: 45  # only an arc changes the side seen, 15-45 degrees per clip; pan / tilt never do
   unreliable: [crane, pedestal, whip pan, dolly zoom]  # pedestal / crane give only a small height change; dolly zoom is not performed
 limits:

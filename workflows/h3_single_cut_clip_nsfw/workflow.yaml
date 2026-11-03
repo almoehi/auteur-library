@@ -38,7 +38,7 @@ content: nsfw
 capabilities: [voice-sample]  # a short speaking clip from a start frame whose own soundtrack (output_audio) is a character's voice sample: the add-views job of a finished character design makes it and publishes the audio as voice.<ext> (normally voice.flac)
 # Declared MiniMax H3 camera/limits (camera spike 2026-11-02 + clip runs): read by the clip planner and shoot-clip from workflow_index
 camera:
-  reliable: [push in, pull out, arc, truck, rack focus, hold]  # zoom = push in (no lens zoom); pan reveal is subtle (~10% of the width: name the target); rack focus works when both ends are named
+  reliable: [push in, pull out, arc, truck, pan, tilt, rack focus, hold]  # zoom = push in (no lens zoom); pan reveal is subtle (~10% of the width: name the target); rack focus works when both ends are named
   max_arc_degrees: 45  # only an arc changes the side seen, 15-45 degrees per clip; pan / tilt never do
   unreliable: [crane, pedestal, whip pan, dolly zoom]  # pedestal / crane give only a small height change; dolly zoom is not performed
 limits:
