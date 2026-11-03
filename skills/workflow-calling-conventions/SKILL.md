@@ -139,6 +139,7 @@ what is visible, against what the take was asked to show — so plan and prompt 
 
 ## Reference plan
 
+- A clip task's `picture_map:` (single cut, continuation, bundle; `shoot_clip` / `shoot_bundle`) IS the reference plan, written and bound by the server: put it VERBATIM in the writer's `context` and write no plan of your own; its picture lines carry each person's look at the clip's start - take looks from there and the shot block only.
 - Before every `wf_*` call with reference images, one entry per bound image:
   `<port> = <design key> (full_body_shot) - <who/what>`, FIRST in the writer's `context` (no
   writer call: state them in your message before the call).
