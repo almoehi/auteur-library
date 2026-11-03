@@ -98,6 +98,12 @@ ports:
       reference_role: reference
       label: "Picture 8"
       required: false
+    - name: end_frame
+      kind: image
+      description: "Optional: the frame the new clip must END on, pinned as its LAST frame (H3KeyframeInject end_image, cover-cropped to the clip size). It is a pose anchor only - it is not shown to the text encoder, so never cite it as a <Picture N> and it does not shift the numbering of ref1..ref7. Supply it only when the shot's planned end is reachable from the prior clip's real end (the storyboard keyframe) or from a frame derived from that real end; when omitted the clip ends wherever the prompt leads."
+      binding: image@end_frame_img
+      reference_role: end_frame
+      required: false
     - name: prior_clip_audio
       kind: video
       description: "Optional: the same clip as prior_clip, passed a second time. It is read whole and only its soundtrack is used, as the voice reference (first 5 seconds), addressed as <Audio 1>. Supply it whenever prior_clip_start_time is above 0, because the trimmed read window is then too short to carry the voices. When omitted, the voice reference is the audio of the prior_clip read window."

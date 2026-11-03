@@ -1,11 +1,12 @@
 /**
  * WorkflowAgent E2E — h3_clip_continuation
  *
- * Covers the manifest contract (prior_clip required, ref1-ref7, prior_clip_audio and voice_ref_1 / voice_ref_2 optional, no
- * width/height params - the size comes from the prior clip, four opt-in lora ports) and two renders:
+ * Covers the manifest contract (prior_clip required, ref1-ref7, prior_clip_audio, end_frame and voice_ref_1 / voice_ref_2 optional, no
+ * width/height params - the size comes from the prior clip, four opt-in lora ports) and three renders:
  *   1. "clip-only"  - prior_clip alone (no pictures, no prior_clip_audio).
  *   2. "clip+refs"  - prior_clip, prior_clip_audio, ref1, ref2 and both voice references (stereo 32 kHz wav).
- * Both check the output is a video whose size is the prior clip's size snapped to a multiple of 32
+ *   3. "clip+end_frame" - prior_clip, ref1 and end_frame (the last-frame pin).
+ * Each checks the output is a video whose size is the prior clip's size snapped to a multiple of 32
  * (python round-half-even: 1280x720 -> 1280x704; 736 is also accepted and printed).
  *
  * NSFW bundles read their fixtures from the SFW sibling (workflows/h3_clip_continuation).
@@ -537,6 +538,17 @@ try {
     JSON.stringify(inputs.map((i) => i.name)),
   );
   check(
+    "end_frame is an optional image input with reference_role end_frame",
+    inputs.some(
+      (i) =>
+        i.name === "end_frame" &&
+        i.kind === "image" &&
+        !i.required &&
+        i.referenceRole === "end_frame",
+    ),
+    JSON.stringify(inputs.map((i) => [i.name, i.kind, i.required, i.referenceRole])),
+  );
+  check(
     "voice_ref_1 / voice_ref_2 are optional audio inputs",
     ["voice_ref_1", "voice_ref_2"].every((n) =>
       inputs.some((i) => i.name === n && i.kind === "audio" && !i.required),
@@ -702,6 +714,12 @@ try {
         ...voiceUrls,
       },
       lora: true,
+    },
+    // The last-frame pin: end_frame is wired into H3KeyframeInject.end_image (a picture of the clip's end).
+    {
+      label: "clip+end_frame",
+      inputs: { prior_clip: priorClipUrl, ref1: imageUrls[0], end_frame: imageUrls[1] },
+      lora: false,
     },
   ];
   const renderIds: string[] = [];
