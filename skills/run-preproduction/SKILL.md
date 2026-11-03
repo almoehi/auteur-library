@@ -73,7 +73,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - Step fails twice -> stop; report which tasks were created (ids from results) and which failed (error text). Never claim a task `create_task` did not confirm.
 - `can_create_tasks: true` ONLY on `plan_designs`; unset on the others.
 - Task prompts below are VERBATIM: copy each fenced block word for word (it is the worker's whole instruction; the worker cannot load this skill). `{workspace.*}` placeholders stay literal (the server substitutes them).
-- Never paraphrase, shorten, reorder or drop a line: a paraphrase once dropped every nudity-conditional rule. Before each 4b/4c call re-read the prompt: it starts with the block's `Inputs:` line, keeps `Workspace content policy (nudity): {workspace.contentPolicy.nudity}` literal (4a, 4b and 4c), and (4a) the explicit-content line and the `Production canvas` / `Portrait canvas` lines, and (4c) contains the `Frame` block, the `Contact` and `Sex act` / `Sex position` bullets and the LOOK RULE block, and the look-at-that-beat rule; anything missing → re-copy the block.
+- Never paraphrase, shorten, reorder or drop a line: a paraphrase once dropped every nudity-conditional rule. Before each 4a/4b/4c call re-read the prompt: (4b/4c) it starts with the block's `Inputs:` line; it keeps `Workspace content policy (nudity): {workspace.contentPolicy.nudity}` literal (4a, 4b and 4c), and (4a) the explicit-content line and the `Production canvas` / `Portrait canvas` lines, and (4c) contains the `Frame` block, the `Contact` and `Sex act` / `Sex position` bullets and the LOOK RULE block, and the look-at-that-beat rule; anything missing → re-copy the block.
 
 ### 4a. write_screenplay
 
