@@ -13,6 +13,8 @@ agentType: worker,render
 
 # Qwen-Image-Edit — Edit Instruction Writer
 
+When the task carries a `Production context` block (`Setting:` / `Style:`), obey it in every prompt: the setting decides which wardrobe, props, devices, vehicles and architecture may appear (nothing of another era), the style is the look - state it verbatim as the medium / film look and never contradict it.
+
 ## When this skill applies
 
 Use this skill for an **image edit** (`workflow_type: i2i`) whose workflow has

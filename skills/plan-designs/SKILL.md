@@ -24,6 +24,8 @@ Plain LLM planning worker: read text, write `design_plan.json` one entry per `wr
 
 Content policy = `{workspace.contentPolicy.nudity}` (absent or empty = `forbidden`). A minor (child, teen, anyone under 18) is ALWAYS planned as `forbidden`.
 
+Setting = `{workspace.story.setting}` (a given fact, never inferred from the plot): garments, accessories, props and architecture of every design belong in it, and a location's `era` states it unless the screenplay names another time for that place.
+
 - Outfits: exactly ONE outfit design per WARDROBE TRACKER row (look slug = the row's look slug); no exceptions (no "most worn", no "differs visibly" judgement). A tracker row that is nudity itself (no garments) is not an outfit.
 - Character design `wardrobe`, decided by AGE and POLICY only:
   - nudity `allowed` + human adult (18+ stated or clearly implied): `nude`, for EVERY such adult.

@@ -68,6 +68,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - `scene_list`: the scene row and its Beats (action, Location, Outfits, framing, camera move,
   Continuity `continuous` | `parallel` | `new moment`, Blocking / Contact, Sex act / Sex position).
   `screenplay` (if any): the scene's slice.
+- Setting = `{workspace.story.setting}` (a given fact): the props, devices, vehicles, wardrobe and architecture the shot lines name belong in it; style = `{workspace.story.style}` is the look the renderer applies, so shot lines never state a medium of their own.
 - Each linked design: its digest (identity cue, outfit garments and colours, published
   `full_body_shot` / `sheet` refs; an older design's `primary.<ext>` stands in for
   `full_body_shot`). Never restate design documents.
