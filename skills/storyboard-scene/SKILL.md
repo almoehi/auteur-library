@@ -336,6 +336,19 @@ check); they go to the clip prompt verbatim.
   Same for "push up, swing legs over": the picture lines show her lying, not already seated at the edge.
   A person without a first beat is not asked. Write the opening state in words of a still, never as the
   motion.
+- **Every shot ENDS on a held state** (rule R33, refused at the write: the server asks the decision model
+  whether each person's LAST beat ends settled or still moving, and - when the camera move ends `ending on` /
+  `to reveal` something - whether that is where a person only arrives after this shot). A video model carries
+  any movement still under way at the end on and performs the next action inside this clip (live: a last beat
+  "the bikini bottoms drop at her feet, her weight shifting toward the pool" with `Movement: slow pull-out,
+  ending on the pool surface` - the clip walked her on and into the pool, and the next shot's dive played
+  twice). The last beat FINISHES its action and settles: "...the bikini bottoms drop at her feet; she stands
+  still at the pool edge, her back to the viewer". A move toward the next action (shifting toward, reaching
+  for, about to, starting to, walking toward) is the FIRST beat of the next shot, also when the next shot
+  continues (`Transition: continue` starts from this clip's real last frame). A camera move ends on what the
+  frame holds when the last beat ends ("ending on her standing at the pool edge"), never on where the next
+  action will happen. The server also adds a final hold segment to every clip brief (from the last beat to
+  the end of the clip nobody moves), so never pad a beat to fill the clip.
 - Rule R26 (clip rule, refused at the write like R25, never part of the keyframe gate): a `Wardrobe:` or
   `State:` entry that differs between shot k and shot k+1 must be PERFORMED by a `Motion:` beat of shot k
   that names the garment (or state) and where it ends up; shot k+1's `Wardrobe:` / `State:` show the RESULT.
@@ -796,8 +809,10 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
       speaker key and a delivery and fits its time, and `Audio:` is the scene's, verbatim, on every shot
 - [ ] with `Timing: beats`: every beat names its mechanics and end state; every `Wardrobe:` / `State:`
       difference to the next shot is performed by a beat of THIS shot naming the garment and where it
-      ends up (R26), and this shot's own picture lines show each person at the instant before their
-      first beat (R27)
+      ends up (R26), this shot's own picture lines show each person at the instant before their
+      first beat (R27), and every shot ends on a held state: the last beat finishes the action and
+      settles, a move toward the next action starts the next shot, the camera move ends on what the
+      frame holds at the end, never on where the next action happens (R33)
 - [ ] every `POV:` line names a posture; every first-person shot's `Movement:` / `camera` beats only name
       what the viewer's posture allows (R29 table); a new framing for a seated, lying or attached
       viewer is a `cut`
