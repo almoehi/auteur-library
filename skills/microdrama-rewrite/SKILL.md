@@ -76,6 +76,8 @@ Never force-compress the source and never pad it. Work in this order:
 2. **Episodes**: each turning point becomes EXACTLY ONE episode (the episode climbs to it and
    ends on its cliffhanger). Never two turning points in one episode, never one turning point
    over two episodes, never an episode without one. The episode count IS the turning-point count.
+   Episodes are numbered across the whole series: episode N = turning point N (drama 2 continues
+   where drama 1 ended, e.g. episode 9), never restarting at 1 per drama.
 3. **Dramas**: cut the list into dramas (below).
 
 
@@ -118,7 +120,7 @@ Never force-compress the source and never pad it. Work in this order:
   neighbour).
 - **Phases of every episode** (relative to L):
   - HOOK, 0-3 s: open mid-tension on a touch, a line or a glance; never on setup or a calm
-    establishing shot. Episode 1 states the core dynamic in its hook or first escalation line.
+    establishing shot. The drama's first episode states the core dynamic in its hook or first escalation line.
   - ESCALATION, 3 s to 60% of L: build to the episode's turning point.
   - TURN (complication), 60% of L to L-5 s: a complication or a shift in power.
   - CLIFFHANGER, the last 5 s, one type: `interruption` (knock, call, footsteps), `being watched`
@@ -204,6 +206,7 @@ A write that breaks a rule is refused with the list of defects: fix every listed
 1. <one line> -> drama 1, episode 1 (source: "<3-8 words quoted from the source passage>")
 2. <one line> -> drama 1, episode 2 (source: "<...>")
 ...
+9. <one line> -> drama 2, episode 9 (source: "<...>")   (episode = turning point number)
 
 ## Dramas
 | Drama | File | Episodes | Source part | Central conflict resolved by |
@@ -248,7 +251,7 @@ Heard or mentioned only: <names, or none>
 |---|---|---|
 
 ## Episodes
-### Episode <n>: <title> (~<L> s)
+### Episode <n>: <title> (~<L> s)   (n = its turning point number in series.md)
 - Hook: ...
 - Escalation: ...
 - Turn: ...
@@ -270,6 +273,8 @@ Heard or mentioned only: <names, or none>
   name, age and look; (animals and toys included). Pre-production designs every
   row, so a character only heard or mentioned is NOT a row (a row whose role or look says voice,
   heard or off-screen is a defect): name them on the `Heard or mentioned only` line.
+- Episode numbers: the series numbering (= turning point numbers), so drama 2 starts at the episode
+  after drama 1's last; pre-production and the episode cuts keep these numbers.
 - `Scenes`: numbers `S1, S2, ...` run across the drama (each drama starts again at S1); an episode that goes on in the previous
   episode's place and moment REUSES the number. `Scenes total` counts the distinct numbers.
 - `Places`: on-screen places only.
@@ -281,7 +286,7 @@ Heard or mentioned only: <names, or none>
 
 Before each file's write, re-read it against sections 0, 2, 3, 5, 7 and 9: every turning point of the
 source is listed with its source quote and maps to exactly one episode (episode count =
-turning-point count), and no turning point is invented beyond the source's ending; every
+turning-point count; episode number = turning point number), and no turning point is invented beyond the source's ending; every
 drama ends where its central conflict is resolved; each drama is one arc with its own
 payoff and is self-contained; the mode; every directive obeyed and each drama's `Scenes total`
 within its cap; every Cast name occurs in the source (else a role word) and keeps the same age and

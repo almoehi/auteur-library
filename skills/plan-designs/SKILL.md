@@ -52,7 +52,7 @@ A SET = the locations of ONE property (a house with its terrace, garden and driv
 ## Phase 0 — Preflight
 
 1. `artifact_index`: `character_table` and `scene_list` must exist, be approved and readable. Note your own output artifact id.
-2. `read_artifact(artifactId="scene_list")`: scene table columns `Scene #`, `INT/EXT`, `Location`, `location_slug`, `Time of day`, `Lighting`, `Summary`, `Characters present`, `Outfits`; a Beats section (beat, action, framing, camera move, continuity, `Outfits`, `Location`) follows.
+2. `read_artifact(artifactId="scene_list")`: scene table columns `Scene #`, `Episode` (micro-drama briefs only), `INT/EXT`, `Location`, `location_slug`, `Time of day`, `Lighting`, `Summary`, `Characters present`, `Outfits`; a Beats section (beat, action, framing, camera move, continuity, `Outfits`, `Location`) follows.
    - A `## Places` table follows the scene table: `location_slug`, `set`, `space`, `connections`. Missing or incomplete -> `task_failed` naming it (`run-preproduction`'s `create_scenes` writes it).
    - Your `scene_list.md` copy stays verbatim, Places and Beats included.
    - A beat whose `Location` differs from its row's slug (`parallel`) is an extra location of the scene.
