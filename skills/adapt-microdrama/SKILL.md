@@ -36,11 +36,15 @@ produces ONE adopted drama.
 
 ## 2. Check
 
-ONE advisory text check, `microdrama-review` (grading `ShouldHave`: it reports, never rejects -
+ONE advisory text check, `microdrama_review` (grading `ShouldHave`: it reports, never rejects -
 the LLM judges measured in validation were not reliable enough to gate; the person reviews
-the files before pre-production). Missing from `policy_index` -> `create_policy` it first (text
-modality, `ShouldHave`, the model the other quality policies in `policy_index` use) with this
-`evalPrompt` VERBATIM (placeholders stay literal). Never edit an existing policy here.
+the files before pre-production). Missing from `policy_index` -> `create_policy` it first with
+`id: "microdrama_review"` (snake_case: the key of a policy created in chat), text modality,
+grading `ShouldHave`, and as `model` the exact `model` value the other quality policies in
+`policy_index` carry (e.g. `screenplay-quality`'s) - never a model name that is not listed in
+`policy_index`. The `evalPrompt` is the text below VERBATIM (placeholders stay literal). Never edit
+an existing policy here. `create_policy` returned an error -> fix only what the error names and
+call it again (at most twice); still refused -> create no task, go to 4.
 
 ````
 The input is the contents of the files "series.md" and "drama_<k>.md" (each under a "# <file name>" line): a micro-drama adaptation of the original story below, decomposed into one or more dramas. Workspace nudity policy: {workspace.contentPolicy.nudity} ("allowed", anything else = forbidden). Judge ONLY the words of the input; the original story is for comparison and is never itself a defect.
@@ -74,7 +78,7 @@ One `create_task` call, exactly:
 ```
 create_task({ id: "adapt_story", requires_tasks: [], requires_artifacts: [], title: "Micro-drama adaptation",
   description: "Decompose the story into vertical micro-dramas", agent: <writer>,
-  policies: ["microdrama-review"], prompt: <below>,
+  policies: ["microdrama_review"], prompt: <below>,
   output_artifact_name: "story_adaptation",
   output_artifact_description: "Micro-drama series: series.md + one drama_<k>.md per drama",
   output_files: [] })
@@ -100,7 +104,9 @@ Source story:
 
 Concise (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`):
 `Scheduled the micro-drama adaptation: task://<id>.` and "Review `series.md` and the dramas; then
-tell me which drama to produce here."
+tell me which drama to produce here." Only when `create_task` succeeded: when `create_policy` or
+`create_task` returned an error, nothing was scheduled - say "The micro-drama adaptation was NOT
+scheduled:" and quote the error.
 
 ## 5. Adopt (after the person approves)
 
