@@ -155,26 +155,29 @@ First step, before writing
 
 Output
 - Write `scene_list.md` as plain Markdown (never PDF or DOCX): ONE scene table, a Places table, then a Beats section.
+- Plan every scene's beats (their `Outfits`, who is visible) BEFORE the first write, so each scene row's `Characters present` and `Outfits` are right on the first write.
 - Write it in parts, never in one call (one long write breaks the tool call): first `sandbox_write_file` the scene table, the
   Places table and, per scene, its `### Scene <n>` heading followed by the single placeholder line `BEATS <n>`. The server
   refuses this first write as incomplete and keeps it as a draft - expected. Then, per scene, ONE `sandbox_edit_file`
-  replacing `BEATS <n>` with that scene's Beats table, until no placeholder is left and the write is accepted.
+  replacing `BEATS <n>` with that scene's Beats table (ONE scene's table per call: a longer reply is cut off and lost), until no placeholder is left and the write is accepted.
+- To fix a scene-table cell later, `sandbox_edit_file` only the changed cell: its old text plus one neighbouring cell as `old_string`, never the whole row.
 
 Frame
 - Production canvas: {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height} (width x height). Portrait = the height is larger than the width (e.g. 9:16); otherwise, or when empty, landscape.
 - Portrait: close-ups, medium close-ups and two-shots carry every scene; an extreme close-up is the insert for a sensation; the widest `Framing` is one person full length; never three or more people in one frame (split the beat by who is in frame).
 - Landscape: a wide establishes a new place, mediums play action, close-ups are for decisions and feelings.
+- A beat that holds a spoken line contains no breath / eyes / hand / skin wording: a sensation signal is its own beat (portrait: `extreme close-up on <body part>` / `close-up on <body part>`), never inside the line's beat and never merged with another action ("Seline gasps; Matthew speaks" = two beats). The server refuses the write otherwise.
 - A beat that holds an inner moment (a feeling, a want, a memory) names its visible or audible signal in `Action` (breath, hands, skin, eyes, mouth, voice: "her breath catches, her fingers stop short of his wrist") and a `Framing` that shows it; never an unfilmable state alone ("she feels guilty").
 - A beat whose `Action` is a sensation signal (breath, hands hesitating, skin, lips, eyes, voice) takes `extreme close-up on <body part>` (or `close-up on <body part>`) as its `Framing` ("extreme close-up on her hand").
 - One moment per beat (Beats section below) holds on every canvas: a portrait scene has MORE, shorter beats, never fewer - each sensation signal, each close-up and each change of contact is its own beat. A sensation beat is never merged with the action before or after it ("he lowers his pants; her breath catches" = two beats).
 
 Scene table columns
-- `Scene #` | `Episode` (ONLY when the screenplay has `EPISODE <n>` headings: the number of the episode the scene belongs to, copied from its heading - a whole number, never lower than the row above; a scene belongs to exactly ONE episode: a place the next episode continues in is a new scene row with a new number; otherwise leave the column out) | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Lighting` | `Summary` | `Characters present` | `Outfits` | `Audio`.
+- `Scene #` | `Episode` (ONLY when the screenplay has `EPISODE <n>` headings: the number of the episode the scene belongs to, copied from its heading - a whole number, never lower than the row above; a scene belongs to exactly ONE episode: a place the next episode continues in is a new scene row with a new number; otherwise leave the column out) | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place: take one name per place from the Places table or its first scene and repeat it identically in every row sharing that `location_slug`; never re-type each screenplay slugline - "Pool Terrace" / "Pool" is refused) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Lighting` | `Summary` | `Characters present` | `Outfits` | `Audio`.
 - `location_slug` names a SPACE a camera can stand in ("hallway", "backyard_pool_terrace"), never a surface or feature of one (a wall, door, window, table): those belong to the space's `connections` and to shot framing. Never a slug like `grey_house_wall`.
 - `Audio`: the scene's atmosphere in one line — room tone, the space (small and dry / large and echoing), distance of the sounds, mood ("small dry kitchen at night, fridge hum, rain on the window"). The ambient bed is ALWAYS audible at a natural level: 'quiet', 'distant', 'faint' or 'hushed' may describe the PLACE (its size, its sources), never the loudness of the sound; every clip carries an audible ambient bed. No dialogue and no events; the storyboard copies it verbatim onto every shot of the scene and the clip prompts carry it. Filled for EVERY scene.
 - `Lighting`: ONE short phrase naming the scene's single motivated light: a visible source, its direction, quality and colour / time ("window light from the left, soft, warm afternoon"). One setup per scene; the storyboard and clip briefs repeat it verbatim. Filled for EVERY scene.
 - `Summary`: one sentence "<who> wants <goal>; <obstacle>; ends with <changed situation>" (every scene turns something), plus any entrance, exit or spoken line that matters to the story.
-- `Characters present`: slugs equal the `character_<slug>.md` stems; every listed character appears in some beat's `Outfits` of that scene, else drop them from the row.
+- `Characters present`: slugs equal the `character_<slug>.md` stems; exactly the characters named in some beat's `Outfits` of that scene (a voice-over or off-frame character is not listed).
 - `Outfits`: `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `mira:raincoat; jonas:work_suit`.
   - A character who changes look inside the scene appears once per look: `mira:raincoat; mira:nightgown`.
   - The row's `Outfits` is exactly the UNION of its beats' `Outfits`: nothing missing, nothing extra.
