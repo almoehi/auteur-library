@@ -82,7 +82,7 @@ create_task({ id: "write_screenplay", requires_tasks: [], requires_artifacts: []
   agent: <writer>, policies: ["screenplay-quality"], prompt: <below>,
   output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"] })
 ```
-prompt: adapt `{workspace.story.plot}` into a film screenplay set in `{workspace.story.setting}` (its technology, props, wardrobe and places; INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX.
+prompt: adapt `{workspace.story.plot}` into a film screenplay set in `{workspace.story.setting}` (its technology, props, wardrobe and places; INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX. When the story starts with an `## Adaptation` section (an adopted micro-drama brief), keep its Mode, Format, Directives kept, Source sex acts and scene cap, and write the screenplay episode by episode in its order (an `EPISODE <n>` heading each), keeping its Cast, Places, hooks, cliffhangers and key lines.
 
 ### 4b. character_table
 
