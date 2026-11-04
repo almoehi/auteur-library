@@ -83,11 +83,15 @@ Never force-compress the source and never pad it. Work in this order:
 
 
 - **Drama** = one self-contained arc: ONE core dynamic, ONE obstacle, ONE payoff (section 4). A
-  drama ends ONLY at a turning point where its central conflict is RESOLVED - the pair commits or
-  splits for good, the secret is out, the case is solved, the threat is beaten. A climax, a sex
-  scene or a near miss inside a conflict that still goes on is NOT an end. The next drama starts
-  with a new conflict (often after a time jump, or with a new central pair). A source with one
-  central conflict is ONE drama - never split it to make more.
+  drama ends ONLY at a turning point where its central conflict is RESOLVED - the pair commits to
+  each other (a decision, not sex) or splits for good, the secret is out, the case is solved, the
+  threat is beaten. A first kiss, a sex act, consummation or a climax is NEVER a resolution: the
+  conflict around it (the marriage, the secret, the risk of being caught) goes on. Someone walking
+  in, almost or really, on the same day in the same place is the payoff episode's consequence, not
+  a new drama. A source that plays in one continuous afternoon, evening or encounter is ONE drama.
+  The next drama starts with a new conflict (often after a time jump, or with a new central pair).
+  A source with one central conflict is ONE drama - never split it to make more. Unsure whether
+  there are one or two central conflicts -> ONE drama.
 - **Decide the dramas first**: before cutting, name each central conflict of the source and the
   turning point that resolves it - one drama per conflict. Then test every boundary: does drama
   k+1 open on a NEW conflict (a new pair, a time jump, a new threat)? If its first episode goes on
@@ -96,8 +100,11 @@ Never force-compress the source and never pad it. Work in this order:
 - **Length directives**: a length of at most 120 s for one episode ("a 90 s episode") is L. Any
   length over 120 s is the TOTAL of the production, even when the text calls it an episode ("a
   3-5 min short video episode", "about 2:55", "a 3-5 min video"): it is spread over the first
-  drama's turning points, L = total / its turning points, kept within 45-120 s. When its turning
-  points x 45 s exceed the total, L = 45 s and the total grows - the `Changes from the source` line
+  drama's turning points, L = total / its turning points, kept within 45-120 s - e.g. "about 2:55"
+  over 11 turning points: 175 s / 11 = 16 s -> L = 45 s, total ~8:15. A stated total ALWAYS sets L
+  this way; the 75 s default (section 5) applies ONLY when neither the source nor a user wish states
+  any length. When its turning points x 45 s exceed the total, L = 45 s and the total grows - the
+  `Changes from the source` line
   says so ("source total ~2:55 -> ~6:45: one episode per turning point"). Clip or shot lengths
   ("10-15 s clips") are not L. Neither ever cuts a turning point or moves a drama boundary. Only a
   `User wishes` line may ask for fewer dramas or a hard total length.
@@ -125,8 +132,8 @@ Never force-compress the source and never pad it. Work in this order:
 
 ## 5. Shape each drama
 
-- **Episodes**: length L = 75 s by default; a length directive or user wish sets it within 45-120 s
-  (section 3); count =
+- **Episodes**: length L = 75 s ONLY when no length is stated anywhere; a stated length or total
+  (directive or user wish) sets it within 45-120 s (section 3); count =
   the drama's turning points (section 3), at least 2 (a drama with one turning point joins its
   neighbour).
 - **Phases of every episode** (relative to L):
