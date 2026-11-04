@@ -142,7 +142,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide (`Format: portrait`: one vertical establishing frame instead, see below).
 - Shot size follows intensity: wide -> medium -> close as it rises; never the same size three shots in a row; an insert only for an object the story needs.
 - Keep each person's screen side from the scene's `Blocking` (left / right of frame) for the whole scene; over-the-shoulder shots keep the same shoulder; never mirror a person between shots unless they move.
-- A `continue` shot changes framing clearly: at least one size step or a visible angle change (more than about 30 degrees), performed by its `Movement:` (R25); a change no move performs is a `cut`.
+- A `continue` shot changes framing clearly: at least one size step or a visible angle change (more than about 30 degrees), performed by its `Movement:` (R25); a change no move performs is a `cut`. The one exception is a first-person `continue` (below): it may keep the framing (R16).
 - `Frame:` states the composition at t=0 (the keyframe is the opening frame): which third the subject sits in, foreground / midground / background, room in the direction they face; and it repeats the scene's `Lighting` phrase from the scene table (never contradicts it).
 - `Duration:` guide (3-10 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
 - `Format: portrait` (a vertical frame shows little side to side; these override the size and establishing-wide rules of this skill):
@@ -285,7 +285,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     | `standing` | turn + `step in` / `step back` | turn only |
     | `walking` | turn + `walk`, `walk after <key>` (never `follow` in a POV shot) | turn only |
 
-    Never arc, crane / pedestal, truck, push in / pull out or zoom for a first-person shot: the viewer's head does not travel (a pull back from a lying viewer leaves the viewer's head, shows the face, breaks the contact or turns the subject). So a NEW framing for a seated, lying or attached viewer is a `cut`: write `Transition: cut — <reason>` and give the next shot its own framing; keep a `continue` first-person shot to a look or turn, or to the lean / step / walk its row allows.
+    Never arc, crane / pedestal, truck, push in / pull out or zoom for a first-person shot: the viewer's head does not travel (a pull back from a lying viewer leaves the viewer's head, shows the face, breaks the contact or turns the subject). So a NEW framing for a seated, lying or attached viewer is a `cut`: write `Transition: cut — <reason>` and give the next shot its own framing. **A continuous moment of a first-person scene is a `continue` that KEEPS the framing** (R16 allows it for the same `POV:` owner in the same posture): the same `Camera:` line, `Movement: hold` (or a look / turn, or the lean / step / walk its row allows, when the workflow declares that move reliable), and the change is in the people - the `Pose:` or `Contact:` line differs from the previous shot's (an unchanged pair is refused, R16), driven by the shot's `Motion:` beats. Reach for it whenever the scene list's beat is `continuous` and only the people move - a held first-person take is how a POV scene flows; cut only for a new framing, a posture change or a new moment.
   - Keyframe prompts (`plan_shot` prompt, image writers) NEVER carry movement words: a keyframe is one instant.
   - Read the clip workflow's declared `camera:` (reliable moves, `max_arc_degrees`, unreliable moves) and `limits:` from `workflow_index` BEFORE writing `Movement:` / `Motion:`: a move the workflow cannot perform reliably makes a `continue` a cut (write `cut`), and a beat that matches a limit class is designed around it (see "Shot design for video models").
 
@@ -815,7 +815,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
       frame holds at the end, never on where the next action happens (R33)
 - [ ] every `POV:` line names a posture; every first-person shot's `Movement:` / `camera` beats only name
       what the viewer's posture allows (R29 table); a new framing for a seated, lying or attached
-      viewer is a `cut`
+      viewer is a `cut`; a `continuous` beat where only the people move is a `continue` that keeps the
+      framing with a changed `Pose:` / `Contact:`
 - [ ] the POV owner is only "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` and the
       prompt (no name, key, placeholder or figure); no prompt copies another shot's people
 - [ ] every POV owner's `Visible:` extent covers each part of their own body that `Pose:` /
