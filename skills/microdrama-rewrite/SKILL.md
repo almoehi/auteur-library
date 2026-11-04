@@ -14,7 +14,8 @@ agentType: worker
 # Micro-drama Rewrite
 
 Plain writing task. Tools: `load_skill` (mode `explicit` only: `workflow-calling-conventions`),
-`sandbox_write_file` (one call per file: `series.md`, then each `drama_<k>.md`), `task_complete`,
+`sandbox_write_file` (one call per file: `series.md`, then each `drama_<k>.md`, plus the rewrites
+section 9 allows), `task_complete`,
 `task_failed`. No renders, no other files. Replies: see "Concise replies and task/artifact URIs"
 in `workflow-calling-conventions`.
 
@@ -44,8 +45,8 @@ girlfriend) are not incest.
   acts", language, look). Keep and obey every directive; it beats every default below, never
   section 7 or the nudity policy. Length directives: section 3.
 - **User wishes** (a `User wishes:` line of the task prompt): override the drama / episode counts,
-  lengths and the directives (e.g. "one drama only", "10 episodes"); never section 7 or the
-  nudity policy.
+  lengths and the directives (e.g. "one drama only", "10 episodes"); never section 7, the nudity
+  policy or the episode length range (L stays 45-120 s).
 - **Workspace look**: the `Workspace style` / `Workspace setting` lines of the task prompt, when
   not empty, are the look and setting.
 - **Story**: everything else - its events, cast, places and dialogue are your material.
@@ -124,7 +125,8 @@ Never force-compress the source and never pad it. Work in this order:
 
 ## 5. Shape each drama
 
-- **Episodes**: length L = 75 s unless a directive or user wish says otherwise (60-90 s); count =
+- **Episodes**: length L = 75 s by default; a length directive or user wish sets it within 45-120 s
+  (section 3); count =
   the drama's turning points (section 3), at least 2 (a drama with one turning point joins its
   neighbour).
 - **Phases of every episode** (relative to L):
@@ -198,6 +200,8 @@ dramas (section 3), every turning point, each drama's episode numbers, L and tot
 files never contradict each other. A drama file refused because it contradicts `series.md`: when
 the plan was wrong, write `series.md` again with the corrected plan (a changed file is checked
 again), then the drama file; never change a drama's episode count without changing `series.md`.
+Such a refusal allows ONE rewrite of the files already written (the refusal names them): get the
+plan right in that rewrite.
 A write that breaks a rule is refused with the list of defects: fix every listed item and write the file again.
 
 `series.md` - the overview, exactly:
