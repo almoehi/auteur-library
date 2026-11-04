@@ -68,7 +68,7 @@ You choose NO reference pictures and pass none (`create_clip_tasks` has no `refe
 ```
 create_clip_tasks({
   storyboard: "storyboard_scene_<n>",
-  key_prefix: "shoot_scene<N>",          // a new shoot of the same scene: shoot_scene<N>_v2, _v3 ...
+  key_prefix: "shoot_scene<N>",          // <N> = the storyboard's scene id exactly (3, 3a); a new shoot: shoot_scene<N>_v2, _v3 ... (any other prefix is refused)
   negative_prompt: "<as Step 2>",        // optional
   agent: "<id>"                          // optional: default `generic`; else an agent from available_agents with the wf_* tools and the sandbox, never a planner, coordinator or director
 })
