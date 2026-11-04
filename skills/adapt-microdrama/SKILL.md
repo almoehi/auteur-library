@@ -50,7 +50,7 @@ call it again (at most twice); still refused -> create no task, go to 4.
 The input is the contents of the files "series.md" and "drama_<k>.md" (each under a "# <file name>" line): a micro-drama adaptation of the original story below, decomposed into one or more dramas. Workspace nudity policy: {workspace.contentPolicy.nudity} ("allowed", anything else = forbidden). Judge ONLY the words of the input; the original story is for comparison and is never itself a defect.
 
 Check each item against the input and quote the exact words of the input that break it:
-(1) Files and headings: "series.md" has "## Adaptation", "## Cast", "## Turning points", "## Dramas", its Dramas table names every drama file and the number of turning points equals the number of episodes; every "drama_<k>.md" has "## Adaptation", "## Logline", "## Spine", "## Cast", "## Places", "## Episodes", "## Drama arc" in this order, an Adaptation section with a "Mode:" line and a "Format:" line naming vertical 9:16, and at least 2 episodes.
+(1) Files and headings: "series.md" has "## Adaptation", "## Cast", "## Turning points", "## Dramas"; EVERY file its Dramas table names is present in the input (a named file missing from the input is a defect); its "Dramas:" line states the table's number of dramas and the number of turning points; the number of turning points equals the number of episodes; every "drama_<k>.md" has "## Adaptation", "## Logline", "## Spine", "## Cast", "## Places", "## Episodes", "## Drama arc" in this order, an Adaptation section with a "Mode:" line and a "Format:" line naming vertical 9:16, and at least 2 episodes.
 (2) Mode: "drama" when the original story has no sexual content; else "steamy" when the nudity policy is forbidden, "explicit" when it is allowed.
 (3) Cast rows: a Cast table row whose role or look says heard, voice, mentioned or off-screen is a defect (such characters belong on the "Heard or mentioned only" line).
 (4) Names: every Cast name occurs in the original story or is a role word ("Sister", "Husband", "Neighbour"); a first name found nowhere in the original story is a defect.
@@ -58,9 +58,11 @@ Check each item against the input and quote the exact words of the input that br
 (6) Children: no romance, nude or sexual content involves a child or happens in a scene a child is in.
 (7) Heat: mode "steamy" shows nothing nude, no sex act and has no "Sex act:" line; mode "drama" has no sexual or nude content; mode "explicit" has a "Sex act:" line for every entry of its "Source sex acts" line.
 (8) Nothing dropped: every major event of the original story appears in some episode of some drama; a character keeps the same name and age in every file.
+(9) Drama boundaries: each drama ends at the turning point that resolves its central conflict; a drama whose first episode goes on in the previous drama's scene, act or moment (the same encounter continued, the climax of the same act, its aftermath) is a defect - it belongs to the previous drama.
+(10) Length: every "Format:" line states the episode length L and the total; L is 45-120 s (a length over 120 s per episode is a defect); when the total is longer than a total the original story asks for, a "Changes from the source" line says so.
 For (5) and (6), unsure = not satisfied.
 
-Satisfied only if (1) to (8) all hold. Otherwise not satisfied and, in the reason, list EVERY failing item: its number, the quoted words of the input and a one-line fix. Never list anything not covered by an item.
+Satisfied only if (1) to (10) all hold. Otherwise not satisfied and, in the reason, list EVERY failing item: its number, the quoted words of the input and a one-line fix. Never list anything not covered by an item.
 
 # Adaptation:
 

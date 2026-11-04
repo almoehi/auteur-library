@@ -87,10 +87,19 @@ Never force-compress the source and never pad it. Work in this order:
   scene or a near miss inside a conflict that still goes on is NOT an end. The next drama starts
   with a new conflict (often after a time jump, or with a new central pair). A source with one
   central conflict is ONE drama - never split it to make more.
-- **Length directives**: an episode length ("a 90 s episode") is L. A total length ("a 3-5 min
-  video", "about 2:55") is spread over the first drama's turning points: L = total / its turning
-  points, kept within 45-120 s. Neither ever cuts a turning point or moves a drama boundary. Only
-  a `User wishes` line may ask for fewer dramas or a hard total length.
+- **Decide the dramas first**: before cutting, name each central conflict of the source and the
+  turning point that resolves it - one drama per conflict. Then test every boundary: does drama
+  k+1 open on a NEW conflict (a new pair, a time jump, a new threat)? If its first episode goes on
+  in drama k's scene, act or moment (the same encounter continued, the climax of the same act, its
+  aftermath), it is not a new drama - join it to drama k.
+- **Length directives**: a length of at most 120 s for one episode ("a 90 s episode") is L. Any
+  length over 120 s is the TOTAL of the production, even when the text calls it an episode ("a
+  3-5 min short video episode", "about 2:55", "a 3-5 min video"): it is spread over the first
+  drama's turning points, L = total / its turning points, kept within 45-120 s. When its turning
+  points x 45 s exceed the total, L = 45 s and the total grows - the `Changes from the source` line
+  says so ("source total ~2:55 -> ~6:45: one episode per turning point"). Clip or shot lengths
+  ("10-15 s clips") are not L. Neither ever cuts a turning point or moves a drama boundary. Only a
+  `User wishes` line may ask for fewer dramas or a hard total length.
 - **Size**: a drama has at most 12 episodes. A longer run of turning points with ONE central
   conflict stays one drama only if the source gives it no resolution point; otherwise end the
   drama at the turning point that resolves the most and continue with the next drama.
@@ -183,8 +192,12 @@ Never force-compress the source and never pad it. Work in this order:
 ## 9. Write the files
 
 Plain Markdown, never PDF or DOCX, each file at most 16000 characters (keep every episode block
-short: one or two sentences per line). Write `series.md` first (turning points and drama table
-fixed), then each `drama_<k>.md` after checking it against its table row.
+short: one or two sentences per line). Plan everything BEFORE the first write: the conflicts and
+dramas (section 3), every turning point, each drama's episode numbers, L and total. Then write
+`series.md` from that plan, then each `drama_<k>.md` with exactly its table row's episodes - the
+files never contradict each other. A drama file refused because it contradicts `series.md`: when
+the plan was wrong, write `series.md` again with the corrected plan (a changed file is checked
+again), then the drama file; never change a drama's episode count without changing `series.md`.
 A write that breaks a rule is refused with the list of defects: fix every listed item and write the file again.
 
 `series.md` - the overview, exactly:
@@ -251,7 +264,7 @@ Heard or mentioned only: <names, or none>
 |---|---|---|
 
 ## Episodes
-### Episode <n>: <title> (~<L> s)   (n = its turning point number in series.md)
+### Episode <n>: <title>   (n = its turning point number in series.md)
 - Hook: ...
 - Escalation: ...
 - Turn: ...
@@ -293,5 +306,9 @@ within its cap; every Cast name occurs in the source (else a role word) and keep
 look in every file; every episode has the four phases, a cliffhanger that is its type and a hook
 that picks up the previous one; the obstacle acts in every episode of its drama; each drama's
 payoff is its last episode and still ends on a cliffhanger; at most 12 episodes per drama; mode `steamy` shows nothing nude or sexual;
-mode `explicit` has a `Sex act:` line for every `Source sex acts` entry; NO word breaks section 7.
-Fix, then write; after the last file call `task_complete`.
+mode `explicit` has a `Sex act:` line for every `Source sex acts` entry; NO word breaks section 7;
+the `Dramas:` line of `series.md` states the Dramas table's drama count and the turning-point count;
+each drama's title line is `# <Series title>, drama <k> of <number of dramas>: <drama title>` and its
+`Format:` line is `vertical 9:16 (portrait), <N> episodes x ~<L> s, total ~<T>` with N = its episode
+count and L within 45-120 s. Fix, then write. Call `task_complete` only when EVERY file the Dramas
+table names is written; a file still missing -> write it first.
