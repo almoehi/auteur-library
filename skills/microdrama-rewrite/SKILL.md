@@ -14,9 +14,9 @@ agentType: worker
 # Micro-drama Rewrite
 
 Plain writing task. Tools: `load_skill` (mode `explicit` only: `workflow-calling-conventions`),
-`sandbox_write_file` (one call per file: `series.md`, then each `drama_<k>.md`, plus the rewrites
-section 9 allows), `task_complete`,
-`task_failed`. No renders, no other files. Replies: see "Concise replies and task/artifact URIs"
+`sandbox_write_file` (`series.md`, and each drama file's parts - section 9), `sandbox_exec` (only
+to join a drama file's parts), `add_artifact_file` (registers each joined `drama_<k>.md`),
+`sandbox_edit_file` (fixes), `task_complete`, `task_failed`. No renders, no other files. Replies: see "Concise replies and task/artifact URIs"
 in `workflow-calling-conventions`.
 
 Nudity policy = the `Workspace content policy (nudity)` line of your task prompt: `allowed`, or
@@ -211,6 +211,24 @@ Such a refusal allows ONE rewrite of the files already written (the refusal name
 plan right in that rewrite.
 A write that breaks a rule is refused with the list of defects: fix every listed item and write the file again.
 
+**Write each drama file in parts, then join them** (a whole drama file in one call is too long to
+write reliably). `series.md` is short: write it into the artifact directory as one file. For each
+`drama_<k>.md`:
+
+1. One `sandbox_write_file` per part into `/workspace/tmp/drama_<k>/`, each part at most ~3000
+   characters, named so they sort in order:
+   - `01_head.md`: the title line and the sections `## Adaptation` to `## Places`, ending with the
+     `## Episodes` heading;
+   - `02_episodes.md`, `03_episodes.md`, ...: at most 3 `### Episode` blocks each, in order;
+   - `99_arc.md`: the `## Drama arc` section.
+2. Join them with ONE `sandbox_exec`:
+   `cd /workspace/tmp/drama_<k> && for f in $(ls *.md | sort); do cat "$f"; echo; done > /workspace/tmp/drama_<k>.md`
+3. Register the joined file: `add_artifact_file({ filename: "drama_<k>.md", path: "/workspace/tmp/drama_<k>.md" })`.
+   This is where the file is checked. Never write `drama_<k>.md` into the artifact directory
+   yourself. Refused -> fix the listed defects in the part(s) with `sandbox_edit_file`, run the
+   join again, then `add_artifact_file` again. A call refused as outside your tools: call it once
+   more (it is then offered).
+
 `series.md` - the overview, exactly:
 
 ```
@@ -322,4 +340,5 @@ the `Dramas:` line of `series.md` states the Dramas table's drama count and the 
 each drama's title line is `# <Series title>, drama <k> of <number of dramas>: <drama title>` and its
 `Format:` line is `vertical 9:16 (portrait), <N> episodes x ~<L> s, total ~<T>` with N = its episode
 count and L within 45-120 s. Fix, then write. Call `task_complete` only when EVERY file the Dramas
-table names is written; a file still missing -> write it first.
+table names is in the artifact (`series.md` written, each `drama_<k>.md` registered with
+`add_artifact_file`); a file still missing -> write it first.
