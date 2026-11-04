@@ -455,6 +455,16 @@ check); they go to the clip prompt verbatim.
   never as a figure. Another person shown by `lower body` IS a figure: they are counted, pictured
   (design picture and outfit) and placed in `Blocking:`.
 - `Pose:` per person in frame (body position); for a `:none` look also its garments.
+- `Body pose: <pose>: <key>[, <key>]; <pose>: <key>` (any workspace) whenever a person's body position
+  is one of the catalog poses (`workflow-calling-conventions`, "Body poses"): sitting, kneeling,
+  leaning, walking - and ALWAYS when two people kiss, embrace, carry or dance. Keys are `Characters:`
+  keys in the pose's role order (two-person poses: the one who acts first - `carried kiss: <carrier>,
+  <carried>`), one entry per pose, each person in at most ONE entry, ONE `Body pose:` line per shot.
+  Prefer the closest catalog name over `other (<words>)` (only a catalog name is stated limb by limb):
+  a lift is `carried kiss` / `bridal carry` / `piggyback` by how the legs are held. Never beside
+  `Sex position:` (the explicit position already poses its people). Each person's `Pose:` line must
+  agree with the named pose (the same support, facing and limbs: `tiptoe kiss` = she is on tiptoe,
+  arms around his neck); a pose changes = a new shot.
 - A character with a `true size (not human-sized)` line in the Referenced designs block (a doll, a pet, a
   giant) is NOT drawn at a person's size: its `Pose:` says how it is held and how big it is ("a small doll
   in her arms at her chest"), and a `Contact:` entry states the hold; a held small character is pictured
@@ -605,7 +615,10 @@ check); they go to the clip prompt verbatim.
   hidden. A shot with a `Sex act:` always has a `Contact:` line naming the contact points.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
   depicted are adults: copy the beat's columns (names: "Explicit acts and positions"); both
-  `none` or both set. Otherwise omit both. A split beat's act goes on every shot whose frame shows
+  `none` or both set. ONE position per shot; when the beat's position does not match the staging
+  (a lift against the vanity coded `standing face to face`), use the position whose support matches
+  (`standing carry`, `edge of surface`, ...) - the server states it limb by limb in every shot of the
+  act, so the `Pose:` lines must agree with it (who stands, who is lifted, what each faces). Otherwise omit both. A split beat's act goes on every shot whose frame shows
   the act being performed; its lead-up or aftermath shots carry `none` — never drop the act: at
   least one shot of the beat carries every act name of the beat (checked at the write: `beat 1.9:
   Sex act \`blowjob\` is on no shot of the beat`), with its `Contact:` points.
@@ -833,6 +846,9 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] no plan prompt states a people count (the server's frame requirements state it)
 - [ ] every beat's `Sex act` / `Sex position` is carried by the shot(s) that show it (nudity
       `allowed` only)
+- [ ] every kiss / embrace / carry / dance - and every catalog sitting, kneeling, leaning or walking
+      pose - is on a `Body pose:` line (catalog name, keys in role order); `Pose:` agrees with it and
+      with the `Sex position:`
 - [ ] `draft_storyboard` was accepted; `design.json` untouched
 - `task_complete(summary="Storyboard scene <n>: <N> shots handed to the server; open: …")` (1–3
   lines). The takes land afterwards; this hands the design to the person, it does not finish it.
