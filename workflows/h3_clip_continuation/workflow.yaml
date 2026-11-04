@@ -32,6 +32,7 @@ description: >
   a new shot after a cut - use h3_single_cut_clip.
 url: workflow.json
 workflow_type: ref2va
+capabilities: [video-continuation]  # continues the prior clip from its exact last frame: the clip planner keeps a `continue` and shoot_clip renders it here (server: continuationClipWorkflowOf)
 # Declared MiniMax H3 camera/limits (camera spike 2026-11-02 + clip runs): read by the clip planner and shoot-clip from workflow_index
 camera:
   reliable: [push in, pull out, arc, truck, pan, tilt, rack focus, hold]  # zoom = push in (no lens zoom); pan reveal is subtle (~10% of the width: name the target); rack focus works when both ends are named
