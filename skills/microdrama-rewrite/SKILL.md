@@ -15,8 +15,8 @@ agentType: worker
 
 Plain writing task. Tools: `load_skill` (mode `explicit` only: `workflow-calling-conventions`),
 `sandbox_write_file` (`series.md`, and each drama file's parts - section 9), `sandbox_exec` (only
-to join a drama file's parts), `add_artifact_file` (registers each joined `drama_<k>.md`),
-`sandbox_edit_file` (fixes), `task_complete`, `task_failed`. No renders, no other files. Replies: see "Concise replies and task/artifact URIs"
+to join a drama file's parts into the artifact directory), `sandbox_edit_file` (fixes),
+`task_complete`, `task_failed`. No renders, no other files. Replies: see "Concise replies and task/artifact URIs"
 in `workflow-calling-conventions`.
 
 Nudity policy = the `Workspace content policy (nudity)` line of your task prompt: `allowed`, or
@@ -89,6 +89,9 @@ Never force-compress the source and never pad it. Work in this order:
   conflict around it (the marriage, the secret, the risk of being caught) goes on. Someone walking
   in, almost or really, on the same day in the same place is the payoff episode's consequence, not
   a new drama. A source that plays in one continuous afternoon, evening or encounter is ONE drama.
+  Example: she follows him into the bathroom, they have sex, both come, she slips back to the
+  table -> ONE drama (the climax and the aftermath are the same encounter); "the act completes and
+  both come" is never what resolves a drama.
   The next drama starts with a new conflict (often after a time jump, or with a new central pair).
   A source with one central conflict is ONE drama - never split it to make more. Unsure whether
   there are one or two central conflicts -> ONE drama.
@@ -211,9 +214,9 @@ Such a refusal allows ONE rewrite of the files already written (the refusal name
 plan right in that rewrite.
 A write that breaks a rule is refused with the list of defects: fix every listed item and write the file again.
 
-**Write each drama file in parts, then join them** (a whole drama file in one call is too long to
-write reliably). `series.md` is short: write it into the artifact directory as one file. For each
-`drama_<k>.md`:
+**Write each drama file in parts, then join them** - ALWAYS, never a drama file in one
+`sandbox_write_file` (a whole drama file in one call is too long to write reliably). `series.md`
+is short: write it into the artifact directory as one file. For each `drama_<k>.md`:
 
 1. One `sandbox_write_file` per part into `/workspace/tmp/drama_<k>/`, each part at most ~3000
    characters, named so they sort in order:
@@ -221,13 +224,14 @@ write reliably). `series.md` is short: write it into the artifact directory as o
      `## Episodes` heading;
    - `02_episodes.md`, `03_episodes.md`, ...: at most 3 `### Episode` blocks each, in order;
    - `99_arc.md`: the `## Drama arc` section.
-2. Join them with ONE `sandbox_exec`:
-   `cd /workspace/tmp/drama_<k> && for f in $(ls *.md | sort); do cat "$f"; echo; done > /workspace/tmp/drama_<k>.md`
-3. Register the joined file: `add_artifact_file({ filename: "drama_<k>.md", path: "/workspace/tmp/drama_<k>.md" })`.
-   This is where the file is checked. Never write `drama_<k>.md` into the artifact directory
-   yourself. Refused -> fix the listed defects in the part(s) with `sandbox_edit_file`, run the
-   join again, then `add_artifact_file` again. A call refused as outside your tools: call it once
-   more (it is then offered).
+2. Join them with ONE `sandbox_exec` straight into the artifact directory (the directory you
+   wrote `series.md` to, `<dir>` below):
+   `cd /workspace/tmp/drama_<k> && for f in $(ls *.md | sort); do cat "$f"; echo; done > <dir>/drama_<k>.md`
+3. The joined files are checked when you call `task_complete`: every file as it is then, and the
+   set as a whole (every drama the Dramas table names is there; the `Dramas:` total is the sum of
+   the drama files' totals). A refusal lists each file's defects -> fix the part(s) with
+   `sandbox_edit_file` (a `series.md` defect: edit `series.md`), join again, call `task_complete`
+   again.
 
 `series.md` - the overview, exactly:
 
@@ -339,6 +343,7 @@ mode `explicit` has a `Sex act:` line for every `Source sex acts` entry; NO word
 the `Dramas:` line of `series.md` states the Dramas table's drama count and the turning-point count;
 each drama's title line is `# <Series title>, drama <k> of <number of dramas>: <drama title>` and its
 `Format:` line is `vertical 9:16 (portrait), <N> episodes x ~<L> s, total ~<T>` with N = its episode
-count and L within 45-120 s. Fix, then write. Call `task_complete` only when EVERY file the Dramas
-table names is in the artifact (`series.md` written, each `drama_<k>.md` registered with
-`add_artifact_file`); a file still missing -> write it first.
+count and L within 45-120 s, T = N x L; the `Dramas:` total of `series.md` is the sum of the drama
+files' totals; no drama ends on a climax or a sex act. Fix, then write. Call `task_complete` only
+when EVERY file the Dramas table names is in the artifact directory (`series.md` written, each
+`drama_<k>.md` joined there); a file still missing -> write it first.
