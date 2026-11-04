@@ -143,6 +143,8 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - Shot size follows intensity: wide -> medium -> close as it rises; never the same size three shots in a row; an insert only for an object the story needs.
 - Keep each person's screen side from the scene's `Blocking` (left / right of frame) for the whole scene; over-the-shoulder shots keep the same shoulder; never mirror a person between shots unless they move.
 - A `continue` shot changes framing clearly: at least one size step or a visible angle change (more than about 30 degrees), performed by its `Movement:` (R25); a change no move performs is a `cut`. The one exception is a first-person `continue` (below): it may keep the framing (R16).
+- A continuous moment (its beat is `continuous`) is covered as `continue` shots, not as cuts: plan its framings so each step is one the clip workflow can perform - a size step (`push in` / `pull out`) or an `arc` within the workflow's `max_arc_degrees` (read `camera:` from `workflow_index`; 45 for MiniMax H3) - instead of jumping to the other side of the people. A jump of more than that (left side -> right side, front -> behind) is a `cut` and starts a new keyframe; keep such jumps for a new beat, a reaction or a real change of view. Write `cut — … on the same moment` only when no performable framing tells the moment.
+- Both `Camera:` lines of a `continue` pair name the same angle words: camera height (`eye level` / `high angle` / `low angle`) AND direction (`from the front` / `three-quarter angle from her left side` / `from behind`), each in both lines, even when unchanged. The clip planner compares only what both lines state; a height in one line and a direction in the other cannot be measured, and the clip is then shot as a cut.
 - `Frame:` states the composition at t=0 (the keyframe is the opening frame): which third the subject sits in, foreground / midground / background, room in the direction they face; and it repeats the scene's `Lighting` phrase from the scene table (never contradicts it).
 - `Duration:` guide (3-10 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
 - `Format: portrait` (a vertical frame shows little side to side; these override the size and establishing-wide rules of this skill):
@@ -575,10 +577,12 @@ check); they go to the clip prompt verbatim.
   character_sister (wet hair, wet skin)`; shot k itself, which starts before she climbs out, does not) and
   in EVERY later shot of the scene that shows the person while it lasts — a `continue` shot must restate
   it (rule R18); a `cut` shot later in the same moment should repeat it too (not checked — your job).
-  A distinctive marking in the character's digest (tattoo, scar, birthmark) is placed in every shot
-  whose extent shows that body area: a `State:` entry with side + body part and whether it shows or is
-  covered (`tattoo left forearm, visible`; `tattoo left shoulder, under sleeve` - each state at most 40 characters) - otherwise it
-  drifts onto clothing, the wrong arm or another person. A marking of a `limbs` / POV person goes in words in `Pose:`.
+  A distinctive marking in the character's digest (tattoo, scar, birthmark) is permanent, but it is written
+  as a `State:` entry ONLY in a shot that shows that body area BARE: side + body part (`tattoo left upper arm`,
+  at most 40 characters), so it lands on the right arm and the right person. Where clothing covers it, or the
+  framing leaves that area out, write NOTHING about it - never `under sleeve` / `covered` / `hidden`: the image
+  model draws every marking it reads, so a covered tattoo is painted onto the sleeve or the forearm. A marking
+  of a `limbs` / POV person goes in words in `Pose:` under the same rule (only when that area is bare in frame).
   A visible body fluid is a `State:` entry of the person it is on (`semen on her face`,
   `saliva on her lips and chin`, `sweaty`, `wet glistening vulva`), from the shot that first shows it until it
   is cleaned or covered. A `cumshot` shot's `Contact:` names where it lands
@@ -799,6 +803,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
       action, never rephrased)
 - [ ] every `Transition:` describes the step FROM the previous shot INTO this one (shot 1 `cut`; no
       "end of scene"; the first shot of a `new moment` / `parallel` beat is a `cut`)
+- [ ] a continuous moment is `continue` shots with performable steps (size step or an arc within `max_arc_degrees`), and both `Camera:` lines of each pair state height AND direction
+- [ ] a marking (tattoo, scar) appears in `State:` only where its body area is bare in frame - never "under sleeve" / "covered"
 - [ ] every `Transition: continue` shot has a `Movement:` (and, with `Timing: beats`, `camera` beats) that
       performs its framing change (push in / pull out for size; arc for the side; crane /
       pedestal for the height; never pan / tilt / truck / follow / handheld / hold); otherwise
