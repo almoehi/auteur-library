@@ -79,11 +79,15 @@ Never pad the source and never drop an event of it. Work in this order:
    (a range uses its upper end: "3-5 min" -> 300 s -> at most 6; "about 2:55" -> 175 s -> at most
    3). With more events than that, MERGE neighbouring events into one turning point until the
    count fits - but ONE turning point merges at most 3 source events. **Dense source**: when the
-   cap would need more than 3 events in a turning point, the length rises instead: the first
-   drama gets `ceil(its events / 3)` turning points (merge to at most 3 each), L = 45 s, and the
-   total grows past the stated length (e.g. "about 2:55" with 15 events -> 5 turning points x 45 s,
-   ~3:45); the `Changes from the source` line says so ("15 source events, at most 3 per episode ->
-   5 episodes x 45 s, ~3:45 instead of ~2:55"). A merge is ONE numbered line with ONE episode:
+   cap would need more than 3 events in a turning point, the TOTAL rises instead (L stays 45 s):
+   the first drama gets `ceil(its source events / 3)` turning points (merge to at most 3 each; count
+   only the events of drama 1 - decide the dramas first, see "Decide the dramas first" below), and
+   its total grows past the stated length, even by a few seconds (e.g. "about 2:55" with 15 events
+   -> 5 turning points x 45 s, ~3:45). If the no-merge rules below block merging down to that
+   count, use more turning points (still 45 s each) rather than break them. Dense wins over the
+   under-90 s exception. The `Changes from the source` line says so ("15 source events, at most 3
+   per episode -> 5 episodes x 45 s, ~3:45 instead of ~2:55"). A merge is ONE numbered line with
+   ONE episode:
    `4. She unties her top and jumps in; she crawls over him on the lounger -> drama 1, episode 4
    (source: "unties her bikini top"; "crawls over him")` - never two numbered lines for one
    episode, never an unnumbered event. Never drop an event (a merged event becomes a beat of that
@@ -120,7 +124,7 @@ Never pad the source and never drop an event of it. Work in this order:
 - **Length directives**: a length of at most 120 s for one episode ("a 90 s episode") is L. Any
   length over 120 s is the TOTAL of the production, even when the text calls it an episode ("a
   3-5 min short video episode", "about 2:55", "a 3-5 min video"): it is spread over the first
-  drama's turning points (step 1 caps their count): L = floor(total / its turning points) whole
+  drama's turning points (step 1 caps their count, or the dense rule sets it): L = floor(total / its turning points) whole
   seconds (a range: its upper end), clamped to 45-120 s, and its total T = N x L exactly. E.g.
   "about 2:55" with 9 source events: at most 175 / 45 = 3 turning points (merge 3 each, step 1) ->
   L = 58 s, total ~2:54; "about 2:55" with 11 events: 3 turning points would need 4 events in one,
@@ -359,9 +363,10 @@ Before each file's write, re-read it against sections 0, 2, 3, 5, 7 and 9: every
 source is in a turning point (merged ones named in its line) with its source quote, and each turning
 point maps to exactly one episode (episode count = turning-point count; episode number = turning
 point number; a merge is one numbered line); with a stated total, the first drama has at most
-max(2, floor(total / 45 s)) turning points and its total is within the stated length (or the
-exceptions of section 3 are named in `Changes from the source`); no turning point merges more than
-3 source events (a dense source gets ceil(events / 3) episodes of 45 s instead); no turning point is invented beyond the source's ending; every
+max(2, floor(total / 45 s)) turning points and its total is within the stated length - unless
+the dense-source rule gives it ceil(its source events / 3) turning points x 45 s, or another
+exception of section 3 applies, named in `Changes from the source`; with a stated total, no
+turning point merges more than 3 source events; no turning point is invented beyond the source's ending; every
 drama ends where its central conflict is resolved; each drama is one arc with its own
 payoff and is self-contained; the mode; every directive obeyed and each drama's `Scenes total`
 within its cap; every Cast name occurs in the source (else a role word) and keeps the same age and
