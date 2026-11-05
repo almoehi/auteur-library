@@ -284,7 +284,7 @@ is short: write it into the artifact directory as one file. For each `drama_<k>.
 
 ## Central conflicts
 1. <the conflict in one line> -> resolved by turning point <t> (drama 1)
-2. <the conflict in one line> -> resolved by turning point <t> (drama 2)   (only for a drama that opens on a NEW conflict - say which)
+2. <a NEW conflict (new pair, time jump or new threat) in one line> -> resolved by turning point <t> (drama 2)
 Time span: <how long the source's story takes, e.g. "one afternoon", "one evening", "three weeks">
 
 ## Turning points

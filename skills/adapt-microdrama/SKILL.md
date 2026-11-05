@@ -100,7 +100,7 @@ Workspace content policy (nudity): {workspace.contentPolicy.nudity} (allowed, an
 Workspace style: {workspace.story.style}
 Workspace setting: {workspace.story.setting}
 User wishes: none
-Deliverable: artifact `story_adaptation` (open: files are registered as you write them): `series.md` and one `drama_<k>.md` per drama (k = 1, 2, ...), plain Markdown, never PDF or DOCX. Do not force the story into one drama.
+Deliverable: artifact `story_adaptation` (open: files are registered as you write them): `series.md` and one `drama_<k>.md` per drama (k = 1, 2, ...), plain Markdown, never PDF or DOCX. One drama per central conflict of the source; a source that plays in one continuous afternoon, evening or encounter is ONE drama.
 
 Source story:
 {workspace.story.plot}
