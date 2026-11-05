@@ -129,7 +129,7 @@ jacket collar"). Never put the edit itself into the negative prompt.
 ## Output
 
 Return only the finished instruction text (the caller's output contract — e.g. a JSON field —
-takes precedence over any formatting here). Seeds are not part of the prompt: to get
+takes precedence over any formatting here). Negative terms go in the answer's separate `negative` field, never into the instruction. Seeds are not part of the prompt: to get
 alternative takes of the same edit, re-render with a different `seed`, not a reworded prompt.
 
 ## Short prompts per workflow kind

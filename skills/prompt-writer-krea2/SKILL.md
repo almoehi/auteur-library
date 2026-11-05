@@ -1,8 +1,8 @@
 ---
 name: prompt-writer-krea2
 description: >
-  Trigger when asked to write, enhance, or improve a prompt for KREA-2 or any
-  text-to-image task — e.g. "write a KREA-2 prompt for this character",
+  Trigger when asked to write, enhance, or improve a prompt for KREA-2 (text-to-image or a
+  KREA-2 image edit) or any text-to-image task — e.g. "write a KREA-2 prompt for this character",
   "enhance this image prompt", "create a t2i prompt for the storyboard frame".
   Produces an enhanced, model-optimised still-image prompt ready to pass to a KREA-2 workflow.
   Do NOT invoke for video models (WAN, FLUX, MiniMax), animation, or any task
@@ -19,6 +19,12 @@ When the task carries a `Production context` block (`Setting:` / `Style:`), obey
 Use this skill when asked to write or enhance a prompt targeting:
 - KREA-2 (Medium or Large tier)
 - Any text-to-image (t2i) still-image generation task
+- A KREA-2 image EDIT workflow (`i2i`, e.g. Krea 2 Identity Edit)
+
+**The workflow's mode decides the prompt's form** (the `# Mode` heading and the `Rule:` lines of the task):
+- **t2i**: a scene description - Steps 1-6 below.
+- **i2i (edit)**: an imperative edit instruction, NOT a scene description: the change first ("Change her pose: …", "Turn him so his back faces the camera"), then at most 2 short keep locks naming only what must stay. Never restate the subject's description (face, hair, skin, build, setting, style): the edit model reads a description that already matches Picture 1 as "nothing to change" and returns it unchanged. Details: "Short prompts per workflow kind" below.
+- **ref2i**: a scene description of the NEW image naming each picture by what it contributes.
 
 ---
 
@@ -235,17 +241,13 @@ Priority order when compressing: Subject → Lighting → Style → Composition 
 
 ## Step 7 — Output
 
-```
-ENHANCED PROMPT:
-[Complete enhanced prompt — plain text, natural language prose, ready to paste]
+The answer has three parts, each in its own field of the caller's answer format - never an "ENHANCED PROMPT:" / "NEGATIVE PROMPT:" layout, and never the negative terms inside the prompt (they would be rendered as part of the request):
 
-NEGATIVE PROMPT:
-[quality defects, e.g. blurry, distorted, text, watermark, logo, extra fingers, deformed hands, noise, JPEG artifacts, cropped head — plus the brief's explicit exclusions]
-[append per use case as needed: face asymmetry, crossed eyes — portraits / dust, scratches — product / tilted horizon — architecture]
+- **prompt**: the complete prompt - plain text, ready to paste into the workflow.
+- **negative**: quality defects, e.g. blurry, distorted, text, watermark, logo, extra fingers, deformed hands, noise, JPEG artifacts, cropped head - plus the brief's explicit exclusions (portraits may add face asymmetry, crossed eyes). Used only where the workflow has a negative prompt.
+- **changes**: your notes (may be empty).
 
 **Negative prompt rule:** Negative prompt = quality defects (blur, artifacts, deformed anatomy, text/watermark) plus what the brief explicitly excludes. NEVER negate the medium or style the brief asks for (an illustrated, comic, anime, painted or stylised brief must not get CGI/anime/cartoon/illustration/digital-art negatives). If the brief states no exclusions, keep it to the quality defects. Skip the negative entirely for models that take none.
-
-```
 
 The prompt is the whole output: exactly the text the generation model receives, nothing else. No change notes or summary in it - any notes about what you changed or why go in the answer's separate `changes` field (it may be empty), never into the prompt - and no headings, titles or labels copied from your inputs (story brief, workspace facts, shot lines).
 
@@ -265,7 +267,7 @@ The prompt is the whole output: exactly the text the generation model receives, 
 
 ## Short prompts per workflow kind
 
-- This family has text-to-image workflows only: keep the prompt as short as the element stack allows. If it is used for an edit, put the change first with at most 2 short keep locks naming only what must stay (never "keep everything else" or the composition when the camera / angle / viewpoint / framing changes: lock appearance only, and prefer a ref2i / t2i render for a new view), no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
+- Keep the prompt as short as the element stack allows. For an edit (i2i), put the change first with at most 2 short keep locks naming only what must stay (never "keep everything else" or the composition when the camera / angle / viewpoint / framing changes: lock appearance only, and prefer a ref2i / t2i render for a new view), no restated character or location descriptions, and one image-naming sentence ("Picture 1 is ...").
 - **REFERENCE-TO-IMAGE workflows** (ref2i, if one uses this family): describe the NEW image (subject, setting, composition, camera, light) as a scene; name each picture by its label for what it contributes ("Picture 1 is the place, Picture 2 is the character's outfit"). No edit wording, no keep locks.
 
 ## Staging draft (two-stage keyframe, stage A)

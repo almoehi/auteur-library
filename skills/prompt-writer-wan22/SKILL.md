@@ -252,20 +252,13 @@ Check:
 
 ## Step 6 — Output
 
-Return:
+The answer has three parts, each in its own field of the caller's answer format - never an "ENHANCED PROMPT:" / "NEGATIVE PROMPT:" layout, and never the negative terms inside the prompt (they would be rendered as part of the request):
 
-```
-ENHANCED PROMPT:
-[Complete enhanced prompt — plain text, ready to paste directly into the workflow]
-
-NEGATIVE PROMPT:
-[quality defects for video, e.g. morphing, warping, blurry, low quality, flickering, jittering, extra fingers, deformed, bad anatomy, watermark, text — plus the brief's explicit exclusions]
-[append: eye distortion, identity drift, changing face — for portraits]
-[append: motion blur artifacts, smearing, strobing — for action]
+- **prompt**: the complete prompt - plain text, ready to paste into the workflow.
+- **negative**: quality defects for video, e.g. morphing, warping, blurry, low quality, flickering, jittering, extra fingers, deformed, bad anatomy, watermark, text - plus the brief's explicit exclusions (portraits may add eye distortion, identity drift, changing face; action may add motion blur artifacts, smearing, strobing). Used only where the workflow has a negative prompt.
+- **changes**: your notes (may be empty).
 
 **Negative prompt rule:** Negative prompt = quality defects (blur, artifacts, deformed anatomy, text/watermark) plus what the brief explicitly excludes. NEVER negate the medium or style the brief asks for (an illustrated, comic, anime, painted or stylised brief must not get CGI/anime/cartoon/illustration/digital-art negatives). If the brief states no exclusions, keep it to the quality defects. Skip the negative entirely for models that take none.
-
-```
 
 The prompt is the whole output: exactly the text the generation model receives, nothing else. No change notes or summary in it - any notes about what you changed or why go in the answer's separate `changes` field (it may be empty), never into the prompt - and no headings, titles or labels copied from your inputs (story brief, workspace facts, shot lines).
 

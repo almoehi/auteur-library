@@ -186,11 +186,12 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
 - EDIT: the image being edited is Picture 1, references follow.
 - COMPOSE (new scene): the environment is Picture 1, then people / objects by priority; never an
   outfit or character image. A reference-to-image prompt describes the scene and names the
-  pictures by label.
+  pictures by label. The one exception is a character / outfit design's own pose or other-side view
+  (`design-asset` Phase 3b): there is no environment, so the person's draft is Picture 1.
 - Workflow choice follows the intent: an in-place editor (`i2i`, e.g. `qwen_image_multi_edit`) changes
-  things INSIDE Picture 1's frame (colour, material, object, garment, expression, lighting, small pose)
-  and keeps its geometry. A new angle, viewpoint, re-framing or "show another part of the place" is a
-  new composition: use a reference-compose (`ref2i`) or text-to-image workflow, never an editor.
+  things INSIDE Picture 1's frame (colour, material, object, garment, expression, lighting)
+  and keeps its geometry and its people's poses. A new angle, viewpoint, re-framing, a changed pose
+  or limb position, or "show another part of the place" is a new composition: use a reference-compose (`ref2i`) or text-to-image workflow, never an editor.
 - Turning the camera around a place (a new direction, "facing the pool") is a new composition,
   never a plain image edit (edits keep the camera):
   - A known turn of at most 90° ("turn left 90°", "facing the pool" when the pool lies a quarter

@@ -129,7 +129,7 @@ Composition vocabulary (t2i and ref2i): shot size (`extreme close-up` … `wide`
 ## Output
 
 Return only the finished prompt text (the caller's output contract — e.g. a JSON field — takes
-precedence over any formatting here). Alternative takes of the same edit come from a different
+precedence over any formatting here). Negative terms go in the answer's separate `negative` field, never into the prompt. Alternative takes of the same edit come from a different
 `seed`, not from rewording.
 
 ## Short prompts per workflow kind
