@@ -111,6 +111,11 @@ Identity (decided here, once)
 - `<character_slug>` = NAME lowercased snake_case `[a-z0-9]+(_[a-z0-9]+)*`; it is the file stem.
 - Every later step uses this slug exactly (scene list, `design_plan.json`, design keys). No later step may introduce a character or name.
 
+Order of work (each extra round re-reads the whole screenplay)
+1. Read the screenplay ONCE, then in your next message list the FULL cast: every NAME with its slug. Count them.
+2. Write ALL the character files in ONE message: one `sandbox_write_file` call per character, all calls in the same message.
+3. Only then `run_checks`. A check finding names what to fix: change only the files it names (a missing character = write that file; never rewrite files the finding does not mention).
+
 Files
 - Write ONE plain Markdown file per character (never PDF or DOCX) with `sandbox_write_file`, named `character_<slug>.md`.
 - Each file has exactly these five `##` headings, in this order: `NAME`, `ROLE`, `PERSONALITY`, `VISUAL PROFILE`, `WARDROBE TRACKER`. A file missing any is incomplete and must not be submitted.
@@ -157,7 +162,8 @@ Output
 - The server writes `scene_list.md` (scene table, Places table, Beats section) from what you send - never `sandbox_write_file` or `sandbox_edit_file` it (refused).
 - Plan every scene's beats (their `Outfits`, who is visible) BEFORE the first write, so each scene row's `Characters present` and `Outfits` are right on the first write.
 - First `write_places` with every Places row (section "Places table" below).
-- Then ONE `write_scene` per scene, in scene order: `scene` (its number), `row` (the scene-table cells) and `beats` (every beat of the scene, in order). Each scene is checked alone: a refusal lists only that scene's problems and saves nothing - fix them and send the WHOLE scene again; an accepted scene replaces any earlier version of it, other scenes are never touched. To change a scene later, send it again whole.
+- Then ONE `write_scene` per scene, in scene order: `scene` (its number), `row` (the scene-table cells) and `beats` (every beat of the scene, in order). Each scene is checked alone: a refusal lists only that scene's problems and saves nothing; an accepted scene replaces any earlier version of it, other scenes are never touched.
+- FIXES go through `write_beats({ scene, beats, remove? })`: send ONLY the beats you change (with their `beat` ids; a new id inserts a beat), never the whole scene again - a refusal or a check finding names the beats to fix. `write_scene` again only to rewrite a scene from scratch.
 - Argument fields = the column names below in snake_case: row `episode`, `int_ext`, `location`, `location_slug`, `time_of_day`, `lighting`, `summary`, `characters_present`, `outfits`, `audio`; beat `beat`, `action`, `location`, `outfits`, `framing`, `camera_move`, `continuity`, `blocking`, `contact`, `sex_act`, `sex_position`; place `location_slug`, `set`, `space`, `connections`. Cell values are plain text on one line (no `|`); write a spoken line in 'single quotes' (or typographic quotes), never straight double quotes - they break the call's JSON.
 
 Frame
@@ -203,7 +209,7 @@ Beats (sent with each scene's `write_scene`)
     storyboard's shots name their beat by it (`Beat: 1.2`).
   - `Action`: what visibly happens. Name the characters' visible emotion where it matters ("Mira, smiling nervously, …"). A sensation signal (a breath, a hesitating hand, skin, lips, eyes, a voice) is a beat of its own: its `Action` holds only that signal, never the action before or after it.
   - `Location`: a `location_slug`. For every non-`parallel` beat EXACTLY the scene row's own slug; only a `parallel` beat names another place.
-  - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `jonas:work_suit; mira:raincoat`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty.
+  - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `jonas:work_suit; mira:raincoat`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty. EVERY person your `Blocking` places in frame gets a pair, also the one not in focus: a Blocking "Mira left of frame, Jonas right of frame" needs both pairs, even on a close-up framed on Mira. A person the beat's words call naked has the look `nude`, never an outfit look.
   - `Framing`: ONE opening shot size and angle (never "close-up then wide": a change of framing is a
     `Camera move` or a new beat). A sensation beat: `extreme close-up on <body part>` (or `close-up on <body part>`).
     Portrait canvas: only `extreme close-up`, `close-up`, `medium close-up` or a two-shot; `medium` or `full shot` only
@@ -223,6 +229,7 @@ Beats (sent with each scene's `write_scene`)
     - Value: `none`, or `<name>[ + <name>]*[: <detail>]`. `Sex act` may combine acts with ` + `; `Sex position` names exactly ONE position (a position change is a new beat).
     - `<detail>` = who does what to whom and the contact points, plain explicit words, no euphemisms (e.g. `Sex act: vaginal penetration: Jonas enters Lena from behind`, `Sex position: doggy style: Lena on hands and knees on the bed, Jonas kneeling behind her`).
     - `Sex act` is `none` exactly when `Sex position` is `none`.
+    - The `Action` shows the act the cell names, in the act's own plain words ("strokes his cock" for a `handjob`, never only "cups the bulge through his trousers"); an `Action` that shows penetration or another act has that act in `Sex act`, never `none`.
     - Nudity alone, undressing, posing nude, kissing, hugging, caressing and touching are NOT a sex act (both `none`; nudity is the `Outfits` look, touch is `Contact`).
     - Never an act for a depicted minor.
 - A beat is ONE moment: one beat per distinct action or happening; each entrance, exit and picture-changing dialogue line is its own beat. Two successive verbs ("sits down and opens the laptop") = two beats, unless they are ONE continuous action the storyboard will time as consecutive motion beats of a single shot ("rises and crosses to the window" without a pause or a cut): then one beat may hold them; simultaneous actions ("as" / "while") share one. The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows never appear in a beat's `Action` or `Framing` — the storyboard refuses them in its shots, so a beat holding one is split here, in order. One beat = one place and one opening framing; split a beat that packs two places or two framings.
