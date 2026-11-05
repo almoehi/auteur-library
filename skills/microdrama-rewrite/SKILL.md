@@ -68,22 +68,26 @@ girlfriend) are not incest.
 
 Never pad the source and never drop an event of it. Work in this order:
 
-1. **Turning points**: list every turning point of the source, in order - an event that changes
-   the situation: a decision, a reveal, an arrival, a confrontation, a first touch, an act, a
+1. **Turning points**: list every event of the source in order, then fit a stated total (below);
+   the numbered list in `series.md` is the fitted list. An event is what changes the situation: a decision, a reveal, an arrival, a confrontation, a first touch, an act, a
    betrayal, a rescue. One line each. Descriptions, moods and repeated beats are not turning
    points. Turning points come ONLY from the source: never invent events after the source's
    ending (no sequel, no "the rest of the week", no new confrontation) - the open question of
    the last episode is a closing image or line, not new episodes.
    **Fit a stated total**: when a length directive or user wish states a TOTAL (see "Length
-   directives" below), the first drama has at most `floor(total / 45 s)` turning points (the
-   upper end of a range: "3-5 min" -> 300 s -> at most 6; "about 2:55" -> 175 s -> at most 3).
-   With more source events than that, MERGE neighbouring events into one turning point (its line
-   names both: "She unties her top and jumps in; she crawls over him on the lounger") until the
-   count fits - never drop an event (a merged event becomes a beat of that episode), never merge
-   across a drama boundary. Merge the quietest neighbours first; keep the payoff its own turning
-   point.
+   directives" below), the FIRST drama has at most `max(2, floor(total / 45 s))` turning points
+   (a range uses its upper end: "3-5 min" -> 300 s -> at most 6; "about 2:55" -> 175 s -> at most
+   3). With more events than that, MERGE neighbouring events into one turning point until the
+   count fits. A merge is ONE numbered line with ONE episode:
+   `4. She unties her top and jumps in; she crawls over him on the lounger -> drama 1, episode 4
+   (source: "unties her bikini top"; "crawls over him")` - never two numbered lines for one
+   episode, never an unnumbered event. Never drop an event (a merged event becomes a beat of that
+   episode), never merge across a drama boundary, never merge two events that each show a
+   different sex act (merge non-act neighbours first), and the drama's resolving turning point
+   stays its LAST episode. Later dramas are not capped and not merged for length. A stated total
+   never reduces the number of dramas.
 2. **Episodes**: each turning point becomes EXACTLY ONE episode (the episode climbs to it and
-   ends on its cliffhanger). Never two turning points in one episode, never one turning point
+   ends on its cliffhanger). Never two numbered turning points in one episode, never one turning point
    over two episodes, never an episode without one. The episode count IS the turning-point count.
    Episodes are numbered across the whole series: episode N = turning point N (drama 2 continues
    where drama 1 ended, e.g. episode 9), never restarting at 1 per drama.
@@ -111,15 +115,19 @@ Never pad the source and never drop an event of it. Work in this order:
 - **Length directives**: a length of at most 120 s for one episode ("a 90 s episode") is L. Any
   length over 120 s is the TOTAL of the production, even when the text calls it an episode ("a
   3-5 min short video episode", "about 2:55", "a 3-5 min video"): it is spread over the first
-  drama's turning points, L = total / its turning points, kept within 45-120 s - e.g. "about 2:55"
-  with 11 source events: at most 175 / 45 = 3 turning points (merge the events, step 1 above) ->
-  L = 175 s / 3 = 58 s, total ~2:55; "3-5 min" with 12 events: at most 6 turning points -> L = 50 s,
-  total ~5:00. A stated total ALWAYS sets the turning-point count and L this way, so the total stays
-  within the stated length (never above its upper end); the 75 s default (section 5) applies ONLY
-  when neither the source nor a user wish states any length. The `Changes from the source` line
-  names the merges ("12 source events merged into 6 episodes to keep ~5:00"). Clip or shot lengths
-  ("10-15 s clips") are not L. A length never moves a drama boundary. Only a `User wishes` line may
-  ask for fewer dramas.
+  drama's turning points (step 1 caps their count): L = floor(total / its turning points) whole
+  seconds (a range: its upper end), clamped to 45-120 s, and its total T = N x L exactly. E.g.
+  "about 2:55" with 11 source events: at most 175 / 45 = 3 turning points (merge, step 1) ->
+  L = 58 s, total ~2:54; "3-5 min" with 12 events: at most 6 -> L = 50 s, total ~5:00; "3-5 min"
+  with 4 events: L = 75 s, total ~5:00. So the first drama's total stays within the stated length
+  (never above its upper end), with two exceptions the `Changes from the source` line names: a
+  total under 90 s still gets 2 episodes of 45 s (~1:30), and when total / N > 120 s (too few
+  events) L = 120 s and the total is shorter (never add events to reach it). Later dramas use the
+  same L with all their turning points, so the series total (`Dramas:` line) is longer by their
+  episodes. The 75 s default (section 5) applies ONLY when neither the source nor a user wish
+  states any length. The `Changes from the source` line names the merges ("12 source events merged
+  into 6 episodes to keep ~5:00"). Clip or shot lengths ("10-15 s clips") are not L. A length never
+  moves a drama boundary. Only a `User wishes` line may ask for fewer dramas.
 - **Size**: a drama has at most 12 episodes. A longer run of turning points with ONE central
   conflict stays one drama only if the source gives it no resolution point; otherwise end the
   drama at the turning point that resolves the most and continue with the next drama.
@@ -145,7 +153,7 @@ Never pad the source and never drop an event of it. Work in this order:
 ## 5. Shape each drama
 
 - **Episodes**: length L = 75 s ONLY when no length is stated anywhere; a stated length or total
-  (directive or user wish) sets it within 45-120 s (section 3); count =
+  (directive or user wish) sets it within 45-120 s (section 3, the same L for every drama); count =
   the drama's turning points (section 3), at least 2 (a drama with one turning point joins its
   neighbour).
 - **Phases of every episode** (relative to L):
@@ -214,7 +222,7 @@ Never pad the source and never drop an event of it. Work in this order:
 
 Plain Markdown, never PDF or DOCX, each file at most 16000 characters (keep every episode block
 short: one or two sentences per line). Plan everything BEFORE the first write: the conflicts and
-dramas (section 3), every turning point, each drama's episode numbers, L and total. Then write
+dramas (section 3), every turning point and the merges, each drama's episode numbers, L and total. Then write
 `series.md` from that plan, then each `drama_<k>.md` with exactly its table row's episodes - the
 files never contradict each other. A drama file refused because it contradicts `series.md`: when
 the plan was wrong, write `series.md` again with the corrected plan (a changed file is checked
@@ -258,7 +266,7 @@ is short: write it into the artifact directory as one file. For each `drama_<k>.
 <the Cast table and "Heard or mentioned only" line of the drama layout below, for the whole series>
 
 ## Turning points
-1. <one line> -> drama 1, episode 1 (source: "<3-8 words quoted from the source passage>")
+1. <one line> -> drama 1, episode 1 (source: "<3-8 words quoted from the source passage>"[; "<...>" per merged event])
 2. <one line> -> drama 1, episode 2 (source: "<...>")
 ...
 9. <one line> -> drama 2, episode 9 (source: "<...>")   (episode = turning point number)
@@ -342,8 +350,9 @@ Heard or mentioned only: <names, or none>
 Before each file's write, re-read it against sections 0, 2, 3, 5, 7 and 9: every event of the
 source is in a turning point (merged ones named in its line) with its source quote, and each turning
 point maps to exactly one episode (episode count = turning-point count; episode number = turning
-point number); with a stated total, the first drama's total is within it (turning points <=
-floor(total / 45 s)); no turning point is invented beyond the source's ending; every
+point number; a merge is one numbered line); with a stated total, the first drama has at most
+max(2, floor(total / 45 s)) turning points and its total is within the stated length (or the
+exceptions of section 3 are named in `Changes from the source`); no turning point is invented beyond the source's ending; every
 drama ends where its central conflict is resolved; each drama is one arc with its own
 payoff and is self-contained; the mode; every directive obeyed and each drama's `Scenes total`
 within its cap; every Cast name occurs in the source (else a role word) and keeps the same age and
