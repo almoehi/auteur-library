@@ -72,18 +72,17 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - Use ids / keys from each result (`key: <key>`) in later `requires_*`; never assume or derive keys. On an `error:` result pick the right key from the listed known ones and correct the call; never retry an identical call.
 - Step fails twice -> stop; report which tasks were created (ids from results) and which failed (error text). Never claim a task `create_task` did not confirm.
 - `can_create_tasks: true` ONLY on `plan_designs`; unset on the others.
-- Task prompts below are VERBATIM: copy each fenced block word for word (it is the worker's whole instruction; the worker cannot load this skill). `{workspace.*}` placeholders stay literal (the server substitutes them).
-- Never paraphrase, shorten, reorder or drop a line: a paraphrase once dropped every nudity-conditional rule. Before each 4a/4b/4c call re-read the prompt: (4b/4c) it starts with the block's `Inputs:` line; it keeps `Workspace content policy (nudity): {workspace.contentPolicy.nudity}` literal (4a, 4b and 4c), and (4a) the explicit-content line and the `Production canvas` / `Portrait canvas` lines, and (4c) contains the `Frame` block, the `Contact` and `Sex act` / `Sex position` bullets and the LOOK RULE block, and the look-at-that-beat rule; anything missing → re-copy the block.
+- Each task's prompt is the NAMED PROMPT BLOCK below its call (the fence `prompt <task id>`; it is the worker's whole instruction, the worker cannot load this skill). Pass it as `prompt_block: "run-preproduction/<task id>"` exactly as in the call templates, and NO `prompt`: the server copies the block word for word. Never copy, paraphrase or edit a block into `prompt` (a copied prompt once carried the wrong task's block; a paraphrase once dropped every nudity-conditional rule). An `error:` naming the block lists the blocks that exist - fix the name, never fall back to `prompt`.
 
 ### 4a. write_screenplay
 
 ```
 create_task({ id: "write_screenplay", requires_tasks: [], requires_artifacts: [], title: "Write screenplay", description: "Adapt the story plot into a screenplay",
-  agent: <writer>, policies: ["screenplay-quality"], prompt: <below>,
+  agent: <writer>, policies: ["screenplay-quality"], prompt_block: "run-preproduction/write_screenplay",
   output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"] })
 ```
-prompt:
-```
+Prompt block (passed by `prompt_block`, never copied):
+```prompt write_screenplay
 Adapt {workspace.story.plot} into a film screenplay set in {workspace.story.setting} (its technology, props, wardrobe and places; INT./EXT. headings, action, dialogue); write `screenplay.md` (the only output file) as plain Markdown, never PDF or DOCX. When the story starts with an `## Adaptation` section (an adopted micro-drama brief), keep its Mode, Format, Directives kept, Source sex acts and scene cap, and write the screenplay episode by episode in its order (an `EPISODE <n>` heading each, n = the brief's own episode number, which may start above 1), keeping its Cast, Places, hooks, cliffhangers and key lines.
 Production canvas: {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height} (width x height). Portrait = the height is larger than the width (e.g. 9:16); otherwise, or when empty, landscape.
 Portrait canvas: write scenes that play in close-ups and two-shots. Two characters who share a moment are within arm's reach; an entrance comes into a tight frame (a hand on the door frame, a face into frame), never across a room; avoid action that needs a wide frame (a crowd, three or more people at once, crossing a large space); at most one establishing image per new place, framed vertically.
@@ -95,11 +94,11 @@ Nudity `allowed`: every sexual act, every moment of nudity and every climax the 
 
 ```
 create_task({ id: "character_table", requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"], title: "Character table", description: "One profile file per cast role",
-  agent: <cast writer>, policies: ["cast-quality"], prompt: <below>,
+  agent: <cast writer>, policies: ["cast-quality"], prompt_block: "run-preproduction/character_table",
   output_artifact_name: "character_table", output_artifact_description: "Character Breakdown Table", output_files: [] })
 ```
-prompt:
-````
+Prompt block (passed by `prompt_block`, never copied):
+````prompt character_table
 Inputs: artifact `screenplay` (screenplay.md). Deliverable: artifact `character_table`, files `character_<slug>.md`.
 Workspace content policy (nudity): {workspace.contentPolicy.nudity} (absent or empty = forbidden).
 
@@ -140,11 +139,11 @@ Pre-completion audit: before `task_complete`, re-open every file; confirm all fi
 
 ```
 create_task({ id: "create_scenes", requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"], title: "Scene list", description: "Scene table with outfits and beats",
-  agent: <director>, policies: ["scenes-quality","scenes-complete"], prompt: <below>,
+  agent: <director>, policies: ["scenes-quality","scenes-complete"], prompt_block: "run-preproduction/create_scenes",
   output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"] })
 ```
-prompt:
-````
+Prompt block (passed by `prompt_block`, never copied):
+````prompt create_scenes
 Inputs: artifact `character_table` (all character_*.md files), artifact `screenplay`. Deliverable: artifact `scene_list`, the single file `scene_list.md`.
 Workspace content policy (nudity): {workspace.contentPolicy.nudity} (absent or empty = forbidden).
 Nudity `allowed`: load skill `workflow-calling-conventions` first and use the names of its section "Explicit acts and positions".
@@ -253,12 +252,12 @@ Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm o
 ```
 create_task({ id: "plan_designs", requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list","screenplay"], title: "Plan and create designs", description: "Create the designs of the pre-production",
   agent: <design planner>, policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
-  difficulty: "hard", can_create_tasks: true, prompt: <below>,
+  difficulty: "hard", can_create_tasks: true, prompt_block: "run-preproduction/plan_designs",
   output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
   output_files: ["scene_list.md","design_plan.json"] })
 ```
-Both output files are declared (`scene_list.md` is a verbatim copy so the checks see both). The first prompt line is exact (the worker keys on it). prompt:
-```
+Both output files are declared (`scene_list.md` is a verbatim copy so the checks see both). The first prompt line is exact (the worker keys on it). Prompt block (passed by `prompt_block`, never copied):
+```prompt plan_designs
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md, with its Places table), artifact `screenplay` (screenplay.md).
