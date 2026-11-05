@@ -14,9 +14,9 @@ agentType: worker
 
 Plain LLM planning worker: read text, write `design_plan.json` one entry per `write_design` call, call `create_design`.
 
-- Tools: `artifact_index`, `task_index`, `read_artifact`, `sandbox_write_file` (only `scene_list.md`), `write_design`, `create_design`, `task_complete`, `task_failed`.
+- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `create_design`, `task_complete`, `task_failed`.
 - `create_design` needs `can_create_tasks: true` on your task; use it only for the plan's designs. Never pass `policies` to it.
-- Output files (plain text only, never PDF / DOCX): `scene_list.md` and `design_plan.json`.
+- Output file: `design_plan.json` only, written with `write_design` (the checks read the scene list from your `scene_list` input; never copy it).
 - Never render, draft or write any design file (`design.json` included); design workers (`design-asset`, `storyboard-scene`) continue each design.
 - Replies: see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
 
@@ -54,7 +54,6 @@ A SET = the locations of ONE property (a house with its terrace, garden and driv
 1. `artifact_index`: `character_table` and `scene_list` must exist, be approved and readable. Note your own output artifact id.
 2. `read_artifact(artifactId="scene_list")`: scene table columns `Scene #`, `Episode` (micro-drama briefs only), `INT/EXT`, `Location`, `location_slug`, `Time of day`, `Lighting`, `Summary`, `Characters present`, `Outfits`; a Beats section (beat, action, framing, camera move, continuity, `Outfits`, `Location`) follows.
    - A `## Places` table follows the scene table: `location_slug`, `set`, `space`, `connections`. Missing or incomplete -> `task_failed` naming it (`run-preproduction`'s `create_scenes` writes it).
-   - Your `scene_list.md` copy stays verbatim, Places and Beats included.
    - A beat whose `Location` differs from its row's slug (`parallel`) is an extra location of the scene.
 3. Read the `character_<slug>.md` files (`artifact_file`): `VISUAL PROFILE`, `WARDROBE TRACKER`.
    - Reconcile before planning: collect scene-list character slugs and look slugs vs the table's file stems and tracker looks (`nude` / `none` are always valid).
@@ -109,7 +108,7 @@ Build every entry with its FINAL key; nothing is decided later.
    - `format` `portrait` | `landscape`: from the production canvas `{workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}` ("Workspace facts"): `portrait` when the height is larger than the width (e.g. 9:16), else `landscape` (also when empty); never ask; the SAME value for every scene.
    - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished). Check before creating it: every look worn in ANY beat of the scene — every `<c>:<look>` pair of the row's AND the beats' `Outfits` (not `nude` / `none`), the earlier look of a character who undresses mid-scene included — has its outfit link — links are fixed at creation, and a missing one leaves the storyboard without that outfit's picture. `create_design` refuses a storyboard missing any of the scene's place / character / outfit links and lists the missing ones as `{ role, key }`: copy them into `links` and retry.
 6. `sets` and `designs` (THE work list: every key in creation order - characters, set anchors and standalone places, set members, outfits, storyboards by scene) are filled in by `write_design`; never write them yourself.
-7. Write into `/workspace/<your artifact id>/`: `scene_list.md` FIRST with `sandbox_write_file` (character-for-character copy of the `scene_list` artifact; the `design-plan-covers-scenes` check judges all output files), then `design_plan.json` ONLY with `write_design` - ONE entry per call, a few calls per reply, in creation order (a link must name an entry already written). Never write `design_plan.json` with `sandbox_write_file`.
+7. Write `design_plan.json` ONLY with `write_design` - ONE entry per call, a few calls per reply, in creation order (a link must name an entry already written). Never write it with `sandbox_write_file`, and never copy `scene_list.md` (the checks read the `scene_list` input).
    - An entry = the design's `create_design` arguments (`kind`, `display_name`, `key_slug`, `character_type`, `attributes`, `links`, `distinct_place`; no `start`, no `loras`) plus `scenes` and, for an outfit, `character_slug` and `look_slug`.
    - A set member may omit `set` / `set_style`: they are copied from its anchor (one text per set).
    - A refusal (`design <key> was NOT saved ...`) lists that entry's problems and their fix: fix exactly those and send that entry again; other entries stay. A wrong entry already written: send it again (same `kind` + `key_slug` replaces it) or `remove: true`.
@@ -139,7 +138,7 @@ Example calls (one production; a few per reply):
 ]
 ```
 
-- The file names are canonical: write exactly these two into the `design_plan` artifact; if the declared files differ, still write them and add `file mismatch: <declared> vs scene_list.md, design_plan.json` to the summary.
+- The file name is canonical: `design_plan.json` in the `design_plan` artifact; if the declared files differ, still write it and add `file mismatch: <declared> vs design_plan.json` to the summary.
 - Writing files is NOT completion: Phase 2 must follow. If `task_complete` is refused because nothing was created, go to Phase 2; never loop on `task_complete`.
 
 ## Phase 2 — Create the designs
@@ -167,7 +166,7 @@ Refusals:
    - Before creating a missing one, check for a rename: a design of the SAME kind created this run under another key is that entry -> record `renamed: <planned> -> <actual>`; never create a second design.
    - Create each remaining missing one (Phase 2 rules), re-audit.
 2. `task_complete` is forbidden while any key is missing unless listed under `failed:` with its error. Zero `create_design` calls so far = Phase 2 never ran.
-3. `design_plan.json` and `scene_list.md` exist in your artifact directory and equal what you used.
+3. `design_plan.json` exists in your artifact directory and equals what you used.
 4. Plan not coverable at all -> `task_failed`.
 5. `task_complete` summary, exactly this format (counts from the audit and your own calls; the check sees only the first ~200 characters, so skipped / renamed come first as FULL keys, never counts):
 

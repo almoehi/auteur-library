@@ -54,7 +54,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 | `write_screenplay` | writer | `screenplay` | `["screenplay.md"]` | none | `screenplay-quality` |
 | `character_table` | cast writer | `character_table` | `[]` (open: `character_<slug>.md` per character) | tasks `write_screenplay`; artifacts `screenplay` | `cast-quality` |
 | `create_scenes` | director | `scene_list` | `["scene_list.md"]` | tasks `write_screenplay`, `character_table`; artifacts `screenplay`, `character_table` | `scenes-quality`, `scenes-complete` |
-| `plan_designs` | design planner | `design_plan` | `["scene_list.md","design_plan.json"]` (both, always) | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list`, `screenplay` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
+| `plan_designs` | design planner | `design_plan` | `["design_plan.json"]` | tasks `create_scenes`, `character_table`; artifacts `character_table`, `scene_list`, `screenplay` | `design-plan-covers-scenes`, `designs-cover-plan`, `storyboards-cover-scenes` |
 
 - Output files are Markdown or JSON only; never PDF, DOCX or other binary formats.
 - Embed the exact output file names in each task prompt.
@@ -154,19 +154,17 @@ First step, before writing
 - From then on copy those slugs EXACTLY. Never invent a name, a character or a look slug (a character the story names only by role keeps the role slug, e.g. `sister`).
 
 Output
-- Write `scene_list.md` as plain Markdown (never PDF or DOCX): ONE scene table, a Places table, then a Beats section.
+- The server writes `scene_list.md` (scene table, Places table, Beats section) from what you send - never `sandbox_write_file` or `sandbox_edit_file` it (refused).
 - Plan every scene's beats (their `Outfits`, who is visible) BEFORE the first write, so each scene row's `Characters present` and `Outfits` are right on the first write.
-- Write it in parts, never in one call (one long write breaks the tool call): first `sandbox_write_file` the scene table, the
-  Places table and, per scene, its `### Scene <n>` heading followed by the single placeholder line `BEATS <n>`. The server
-  refuses this first write as incomplete and keeps it as a draft - expected. Then, per scene, ONE `sandbox_edit_file`
-  replacing `BEATS <n>` with that scene's Beats table (ONE scene's table per call: a longer reply is cut off and lost), until no placeholder is left and the write is accepted.
-- To fix a scene-table cell later, `sandbox_edit_file` only the changed cell: its old text plus one neighbouring cell as `old_string`, never the whole row.
+- First `write_places` with every Places row (section "Places table" below).
+- Then ONE `write_scene` per scene, in scene order: `scene` (its number), `row` (the scene-table cells) and `beats` (every beat of the scene, in order). Each scene is checked alone: a refusal lists only that scene's problems and saves nothing - fix them and send the WHOLE scene again; an accepted scene replaces any earlier version of it, other scenes are never touched. To change a scene later, send it again whole.
+- Argument fields = the column names below in snake_case: row `episode`, `int_ext`, `location`, `location_slug`, `time_of_day`, `lighting`, `summary`, `characters_present`, `outfits`, `audio`; beat `beat`, `action`, `location`, `outfits`, `framing`, `camera_move`, `continuity`, `blocking`, `contact`, `sex_act`, `sex_position`; place `location_slug`, `set`, `space`, `connections`. Cell values are plain text on one line (no `|`).
 
 Frame
 - Production canvas: {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height} (width x height). Portrait = the height is larger than the width (e.g. 9:16); otherwise, or when empty, landscape.
 - Portrait: close-ups, medium close-ups and two-shots carry every scene; an extreme close-up is the insert for a sensation; the widest `Framing` is one person full length; never three or more people in one frame (split the beat by who is in frame).
 - Landscape: a wide establishes a new place, mediums play action, close-ups are for decisions and feelings.
-- A beat that holds a spoken line contains no breath / eyes / hand / skin wording: a sensation signal is its own beat (portrait: `extreme close-up on <body part>` / `close-up on <body part>`), never inside the line's beat and never merged with another action ("Seline gasps; Matthew speaks" = two beats). The server refuses the write otherwise.
+- A beat that holds a spoken line contains no breath / eyes / hand / skin wording: a sensation signal is its own beat (portrait: `extreme close-up on <body part>` / `close-up on <body part>`), never inside the line's beat and never merged with another action ("Seline gasps; Matthew speaks" = two beats). The server refuses the scene otherwise.
 - A beat that holds an inner moment (a feeling, a want, a memory) names its visible or audible signal in `Action` (breath, hands, skin, eyes, mouth, voice: "her breath catches, her fingers stop short of his wrist") and a `Framing` that shows it; never an unfilmable state alone ("she feels guilty").
 - A beat whose `Action` is a sensation signal (breath, hands hesitating, skin, lips, eyes, voice) takes `extreme close-up on <body part>` (or `close-up on <body part>`) as its `Framing` ("extreme close-up on her hand").
 - One moment per beat (Beats section below) holds on every canvas: a portrait scene has MORE, shorter beats, never fewer - each sensation signal, each close-up and each change of contact is its own beat. A sensation beat is never merged with the action before or after it ("he lowers his pants; her breath catches" = two beats).
@@ -192,14 +190,14 @@ Looks
 - A character with ANY body part in frame in a beat (a POV character's hands or knees included) is visible: list them in that beat's `Outfits`. An off-frame character is not listed.
 - A character appearing only in a `parallel` cutaway at another place need not be in the row's `Characters present`, but is listed in that beat's `Outfits` and in the row's `Outfits` union.
 
-Places table (same file, between the scene table and the Beats section, heading `## Places`)
+Places table (sent with `write_places`; the server places it between the scene table and the Beats section)
 - ONE row per distinct `location_slug` of the scene table and of the beats (`parallel` places included), columns `location_slug` | `set` | `space` | `connections`.
 - `set`: the display name of the property the space belongs to ("Grey House"); spaces of the same house, garden or compound share it exactly; a standalone place is its own set.
 - `space`: exactly `interior` or `exterior`.
 - `connections`: what each door, window or opening of the space opens onto and where the neighbouring features lie, as the screenplay states or implies it, naming other rows by `location_slug` ("glass doors in the back wall open onto `backyard_pool_terrace`, pool beyond them; the front door opens onto `driveway`"). `none` only for a space with no neighbour in the story. Invent a plausible layout the screenplay does not contradict rather than leave it open; keep it consistent between rows (A opens onto B means B shows A).
 
-Beats section (same file, below the Places table)
-- Per scene: a `### Scene <n>` heading and a table with one row per beat. Every scene has at least one beat (typically 2-6).
+Beats (sent with each scene's `write_scene`)
+- One beat per row of the scene's `beats`. Every scene has at least one beat (typically 2-6).
 - Columns, ALL filled in EVERY beat (an empty cell fails the `scenes-complete` check):
   - `Beat #`: `<scene>.<n>` (`1.1`, `1.2`, …), unique and never renumbered on a rewrite — the
     storyboard's shots name their beat by it (`Beat: 1.2`).
@@ -244,7 +242,7 @@ Beats section (same file, below the Places table)
 - Garment state: when a beat's action needs a body part the current look covers, the beat's `Action` / `Blocking` names the garment state ("cardigan slipped off her shoulders"); the beat keeps the outfit look (LOOK RULE) and never gets a tracker row or look slug of its own for that state.
 - Downstream use: the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the clip prompts are taken from the beats (`continuous` -> `continue` transition; `parallel` -> cutaway shot at its named place with that place's location design; extra location designs come from the beat `Location` slugs, outfit designs from the rows' `Outfits` union).
 
-Pre-completion audit: before `task_complete`, re-open `scene_list.md`; confirm on a portrait canvas no beat's `Framing` holds three or more people or is wider than one person full length, every beat with an inner moment names its visible / audible signal in `Action`, every sexual act / climax of the screenplay has its beat with `Sex act` filled, every sensation beat holds only its signal and is framed `extreme close-up on` / `close-up on` that body part (the server refuses the write otherwise, one line per beat - fix exactly those beats with `sandbox_edit_file`), every `location_slug` has exactly one Places row with `set`, `space` and `connections` filled, no slug names a surface, every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs unless one continuous action, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, a character keeps the earlier look in every beat before the beat that changes it (the change never their first beat in the scene), `nude` only where nothing is worn, and it stays until a beat puts a garment on; a partly worn outfit keeps its look, and `none` is used only for a character who wears nothing by nature (never for a person whose beat names garments).
+Pre-completion audit: before `task_complete`, confirm every scene of the screenplay was accepted by `write_scene` and on a portrait canvas no beat's `Framing` holds three or more people or is wider than one person full length, every beat with an inner moment names its visible / audible signal in `Action`, every sexual act / climax of the screenplay has its beat with `Sex act` filled, every sensation beat holds only its signal and is framed `extreme close-up on` / `close-up on` that body part (the server refuses the scene otherwise, one line per beat - fix exactly those beats and send the scene again with `write_scene`), every `location_slug` has exactly one Places row with `set`, `space` and `connections` filled, no slug names a surface, every Beats table has `Outfits`, `Camera move`, `Continuity`, `Blocking`, `Contact` (plus `Sex act` / `Sex position` when nudity is allowed: each `none` or listed names / `other (...)`, `none` in both or neither), no empty cell, every beat's `Action` and `Framing` is ONE moment (no two successive verbs unless one continuous action, no `then` / `after` / `before` / `followed by` / `cut to` / arrows: split it), a beat with a `Sex act` holds only that act, every row's `Outfits` equals the union of its beats' looks, a character keeps the earlier look in every beat before the beat that changes it (the change never their first beat in the scene), `nude` only where nothing is worn, and it stays until a beat puts a garment on; a partly worn outfit keeps its look, and `none` is used only for a character who wears nothing by nature (never for a person whose beat names garments).
 ````
 
 ### 4d. plan_designs
@@ -254,16 +252,16 @@ create_task({ id: "plan_designs", requires_tasks: ["create_scenes","character_ta
   agent: <design planner>, policies: ["design-plan-covers-scenes","designs-cover-plan","storyboards-cover-scenes"],
   difficulty: "hard", can_create_tasks: true, prompt_block: "run-preproduction/plan_designs",
   output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
-  output_files: ["scene_list.md","design_plan.json"] })
+  output_files: ["design_plan.json"] })
 ```
-Both output files are declared (`scene_list.md` is a verbatim copy so the checks see both). The first prompt line is exact (the worker keys on it). Prompt block (passed by `prompt_block`, never copied):
+The only output file is `design_plan.json` (the checks read the scene list from the `scene_list` input). The first prompt line is exact (the worker keys on it). Prompt block (passed by `prompt_block`, never copied):
 ```prompt plan_designs
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md, with its Places table), artifact `screenplay` (screenplay.md).
 Deliverable: the designs. Create one design per key of the plan's `designs` list with `create_design`, in order (characters, set anchors, other locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` from the production canvas {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}: `portrait` when the height is larger than the width, else `landscape`; see the skill). Story: {workspace.story.plot}
 Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design was created with `create_design` and the `artifact_index` audit passed; if `task_complete` is refused because no tasks were created, continue creating designs, and report only counts the tool results show.
-Along the way, write the plan record as output artifact `design_plan` (canonical names, write exactly these, plain text only, never PDF or DOCX): `scene_list.md` (Markdown, verbatim copy of the scene list: never retype it - download it in place with `get_artifact_url("scene_list", "scene_list.md")` then `sandbox_fetch` of the returned ref to `scene_list.md` in this task's `design_plan` output directory, `/workspace/<artifact id>/`) and `design_plan.json` (one entry per `write_design` call, never one whole-file write).
+Along the way, write the plan record as output artifact `design_plan`: `design_plan.json` only (one entry per `write_design` call, never one whole-file write; never copy `scene_list.md` - the checks read it from the `scene_list` input).
 ```
 
 ## 5. Verify and reply
