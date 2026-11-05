@@ -14,8 +14,9 @@ agentType: workspace
 # Adapt the Story as a Micro-drama
 
 Coordinator skill: creates ONE task. It writes no content; the worker does, with skill
-`microdrama-rewrite`. Optional; run it BEFORE `run-preproduction`. The story is never
-force-compressed: it may become several dramas (`drama_1.md`, `drama_2.md`, ...); one workspace
+`microdrama-rewrite`. Optional; run it BEFORE `run-preproduction`. No event of the story is
+dropped: a stated total length merges neighbouring events into fewer episodes, and a story with
+several central conflicts becomes several dramas (`drama_1.md`, `drama_2.md`, ...); one workspace
 produces ONE adopted drama.
 
 ## 1. Preflight

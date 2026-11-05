@@ -66,7 +66,7 @@ girlfriend) are not incest.
 
 ## 3. Decompose: series -> dramas -> episodes
 
-Never force-compress the source and never pad it. Work in this order:
+Never pad the source and never drop an event of it. Work in this order:
 
 1. **Turning points**: list every turning point of the source, in order - an event that changes
    the situation: a decision, a reveal, an arrival, a confrontation, a first touch, an act, a
@@ -74,6 +74,14 @@ Never force-compress the source and never pad it. Work in this order:
    points. Turning points come ONLY from the source: never invent events after the source's
    ending (no sequel, no "the rest of the week", no new confrontation) - the open question of
    the last episode is a closing image or line, not new episodes.
+   **Fit a stated total**: when a length directive or user wish states a TOTAL (see "Length
+   directives" below), the first drama has at most `floor(total / 45 s)` turning points (the
+   upper end of a range: "3-5 min" -> 300 s -> at most 6; "about 2:55" -> 175 s -> at most 3).
+   With more source events than that, MERGE neighbouring events into one turning point (its line
+   names both: "She unties her top and jumps in; she crawls over him on the lounger") until the
+   count fits - never drop an event (a merged event becomes a beat of that episode), never merge
+   across a drama boundary. Merge the quietest neighbours first; keep the payoff its own turning
+   point.
 2. **Episodes**: each turning point becomes EXACTLY ONE episode (the episode climbs to it and
    ends on its cliffhanger). Never two turning points in one episode, never one turning point
    over two episodes, never an episode without one. The episode count IS the turning-point count.
@@ -104,13 +112,14 @@ Never force-compress the source and never pad it. Work in this order:
   length over 120 s is the TOTAL of the production, even when the text calls it an episode ("a
   3-5 min short video episode", "about 2:55", "a 3-5 min video"): it is spread over the first
   drama's turning points, L = total / its turning points, kept within 45-120 s - e.g. "about 2:55"
-  over 11 turning points: 175 s / 11 = 16 s -> L = 45 s, total ~8:15. A stated total ALWAYS sets L
-  this way; the 75 s default (section 5) applies ONLY when neither the source nor a user wish states
-  any length. When its turning points x 45 s exceed the total, L = 45 s and the total grows - the
-  `Changes from the source` line
-  says so ("source total ~2:55 -> ~6:45: one episode per turning point"). Clip or shot lengths
-  ("10-15 s clips") are not L. Neither ever cuts a turning point or moves a drama boundary. Only a
-  `User wishes` line may ask for fewer dramas or a hard total length.
+  with 11 source events: at most 175 / 45 = 3 turning points (merge the events, step 1 above) ->
+  L = 175 s / 3 = 58 s, total ~2:55; "3-5 min" with 12 events: at most 6 turning points -> L = 50 s,
+  total ~5:00. A stated total ALWAYS sets the turning-point count and L this way, so the total stays
+  within the stated length (never above its upper end); the 75 s default (section 5) applies ONLY
+  when neither the source nor a user wish states any length. The `Changes from the source` line
+  names the merges ("12 source events merged into 6 episodes to keep ~5:00"). Clip or shot lengths
+  ("10-15 s clips") are not L. A length never moves a drama boundary. Only a `User wishes` line may
+  ask for fewer dramas.
 - **Size**: a drama has at most 12 episodes. A longer run of turning points with ONE central
   conflict stays one drama only if the source gives it no resolution point; otherwise end the
   drama at the turning point that resolves the most and continue with the next drama.
@@ -330,9 +339,11 @@ Heard or mentioned only: <names, or none>
 
 ## Pre-completion audit
 
-Before each file's write, re-read it against sections 0, 2, 3, 5, 7 and 9: every turning point of the
-source is listed with its source quote and maps to exactly one episode (episode count =
-turning-point count; episode number = turning point number), and no turning point is invented beyond the source's ending; every
+Before each file's write, re-read it against sections 0, 2, 3, 5, 7 and 9: every event of the
+source is in a turning point (merged ones named in its line) with its source quote, and each turning
+point maps to exactly one episode (episode count = turning-point count; episode number = turning
+point number); with a stated total, the first drama's total is within it (turning points <=
+floor(total / 45 s)); no turning point is invented beyond the source's ending; every
 drama ends where its central conflict is resolved; each drama is one arc with its own
 payoff and is self-contained; the mode; every directive obeyed and each drama's `Scenes total`
 within its cap; every Cast name occurs in the source (else a role word) and keeps the same age and
