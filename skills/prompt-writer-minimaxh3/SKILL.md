@@ -45,10 +45,10 @@ Identify from context (attached inputs, workflow config, or explicit statement):
 
 | Mode | Model weights | Inputs | Template |
 |---|---|---|---|
-| t2va | default | Text only | Template A — no preamble |
-| i2va | default | 1 image + text | Template A — i2va preamble |
-| fl2va | `fl2va` | 2 images + text | Template A — fl2va dual preamble |
-| l2va | default | 1 end-frame image + text | Template A — l2va preamble |
+| t2va | default | Text only | Template A — no instruction line |
+| i2va | default | 1 image + text | Template A — i2va instruction line |
+| fl2va | `fl2va` | 2 images + text | Template A — fl2va instruction line |
+| l2va | default | 1 end-frame image + text | Template A — l2va instruction line |
 | Keyframe completion | default | Up to 6 timestamped images + text | Template B |
 | ref2va | `ref2va` | Reference media + text | Template B |
 
@@ -67,13 +67,15 @@ Identify from context (attached inputs, workflow config, or explicit statement):
 
 ---
 
-## Step 2 — Select Template and Write Preamble (if applicable)
+## Step 2 — Select Template and Write the Instruction Line (if applicable)
 
 ### Template A: T2VA Brief
 
-Three fields in this order — **do NOT include the label `integrated_multimodal_description:` in the output; start the timeline body directly with the preamble line (for i2va/fl2va/l2va) or `[Shot 1]` (for t2va)**:
+Three fields in this order, each starting with its label. For i2va / fl2va / l2va the instruction line comes first, then ONE blank line, then the fields (this is MiniMax's own format: MiniMax H3's Video Prompt Writing Guide, `docs/VIDEO_PROMPT_WRITING_GUIDE_base_en.md` in the MiniMaxAI/MiniMax-H3 model repo):
 ```
-[preamble if i2va/fl2va/l2va, then main timeline body starting with [Shot 1]]
+[instruction line if i2va/fl2va/l2va]
+
+integrated_multimodal_description: [Shot 1] ...
 
 overall_soundscape:
 [1–4 sentences: ambient + physical action sounds only]
@@ -82,26 +84,29 @@ non_diegetic_music:
 [1–3 sentences: instrumentation, tempo, rhythm, dynamics — no mood words]
 ```
 
-**Preamble syntax by mode:**
+**Instruction line by mode — copy it exactly, filling only `N` and `S.SS`:**
 
-i2va (single first-frame anchor):
+t2va: no instruction line; the prompt starts with `integrated_multimodal_description: [Shot 1]`.
+
+i2va (first frame):
 ```
-For the target video, at 0.00 seconds, <Picture 1> is fully referenced.
+For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.
 ```
 
 fl2va (first + last frame):
 ```
-For the target video, at 0.00 seconds, <Picture 1> is fully referenced. At [N] seconds, <Picture 2> is fully referenced.
+How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot N) aligns with the S.SS-second mark of the target video.
 ```
 
-l2va (last-frame anchor):
+l2va (last frame):
 ```
-For the target video, at [N] seconds, <Picture 1> is fully referenced.
+How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the S.SS-second mark of the target video.
 ```
 
-Where `[N]` = the target clip duration in seconds.
-
-After the preamble, begin the timeline body immediately with `[Shot 1]`.
+- `N` = the number of the clip's LAST shot (1 for a single-shot clip).
+- `S.SS` = the target clip duration with exactly two decimals (`8.00`, `5.50`).
+- Keep each line's own spelling: the fl2va line writes `Picture 1` / `Shot 1` without brackets, the i2va and l2va lines write `<Picture 1>` / `[Shot N]` with them.
+- fl2va prefers ONE shot (the model interpolates from the first frame to the last); use several only when the brief asks for cuts, and the last frame is reached at the end of the final shot.
 
 ---
 
@@ -381,7 +386,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 ## Step 10 — Validate Before Output
 
 - [ ] Mode identified; correct template selected
-- [ ] Preamble line(s) present for i2va / fl2va / l2va
+- [ ] i2va / fl2va / l2va: the instruction line is the first line, copied exactly (shot number `N`, duration `S.SS` with two decimals), then one blank line; the body starts with `integrated_multimodal_description: [Shot 1]`
 - [ ] Camera specified in every shot OR explicit static lock with refusal list stated (no push in, no zoom, no pan, no tilt, no reframing, no focus change)
 - [ ] A brief with `camera_body:` gets the locked-head sentence and only the moves that line allows (never a translation); POV is never written as a move
 - [ ] Every camera move states what the frame shows when it ends; a new side of the subject only by Arc, a new camera height only by Pedestal / crane; a rack focus names where focus starts and ends
