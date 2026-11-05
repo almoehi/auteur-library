@@ -146,7 +146,7 @@ Prompt block (passed by `prompt_block`, never copied):
 ````prompt create_scenes
 Inputs: artifact `character_table` (all character_*.md files), artifact `screenplay`. Deliverable: artifact `scene_list`, the single file `scene_list.md`.
 Workspace content policy (nudity): {workspace.contentPolicy.nudity} (absent or empty = forbidden).
-Nudity `allowed`: load skill `workflow-calling-conventions` first and use the names of its section "Explicit acts and positions".
+Nudity `allowed`: `load_skill explicit-acts` first and use its names for `Sex act` / `Sex position`.
 Nudity `allowed`: every sexual act and climax of the screenplay is its own beat (or beats) whose `Action` names it in plain explicit words (never "an intimate act") and whose `Sex act` / `Sex position` are filled (a climax: `orgasm`; its finish `cumshot`, `cum on face`, `cum on breasts`, `cum on feet`, `creampie`, `squirting` or `cum swallowing` as the screenplay shows it); keep each act's participants, and its `Sex position` matches how the screenplay stages the bodies, read by which way they FACE: standing and facing each other is `standing face to face` (also when he lifts her with her legs around his waist, or presses her back against a wall, vanity or counter); standing with one behind the other (her back to his front, she faces the wall) is `standing from behind`; `doggy style` is ONLY on all fours (hands and knees); lying bodies take a lying position (`missionary`, `prone bone`, `lying on side`); never a position the screenplay does not stage. A hand that strokes or rubs genitals is a sex act (`handjob`, `fingering`), never `none`.
 
 First step, before writing
@@ -219,7 +219,7 @@ Beats (sent with each scene's `write_scene`)
     (hands, mouth, shoulders, waist, lap, groin, …): the storyboard turns it into the shot's
     structured `Contact:` line; `none` when nothing does.
   - `Sex act` and `Sex position` (nudity `allowed` ONLY, after `Contact`; under `forbidden` or absent leave both columns out):
-    - Names exactly as listed in "Explicit acts and positions" of `workflow-calling-conventions`, or `other (<plain words>)`.
+    - Names exactly as listed in skill `explicit-acts`, or `other (<plain words>)`.
     - Value: `none`, or `<name>[ + <name>]*[: <detail>]`. `Sex act` may combine acts with ` + `; `Sex position` names exactly ONE position (a position change is a new beat).
     - `<detail>` = who does what to whom and the contact points, plain explicit words, no euphemisms (e.g. `Sex act: vaginal penetration: Jonas enters Lena from behind`, `Sex position: doggy style: Lena on hands and knees on the bed, Jonas kneeling behind her`).
     - `Sex act` is `none` exactly when `Sex position` is `none`.

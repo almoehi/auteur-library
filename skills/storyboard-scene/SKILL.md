@@ -18,7 +18,7 @@ Analyze once, write `shotlist.md` shot by shot with `write_shot`, plan each shot
 `draft_storyboard()`, complete. The server
 renders several candidates per shot, checks them, repairs what it can and records the best takes;
 you render nothing. Prompt and reference conventions for the entity lines: `workflow-calling-conventions`
-("References by extent", `load_skill` it).
+("References by extent", `load_skill` it). Nudity `allowed`: `load_skill explicit-acts` too (names of `Sex act` / `Sex position`).
 
 ## Hard rules
 
@@ -614,7 +614,7 @@ check); they go to the clip prompt verbatim.
   from behind; `full figure` everything — widen the extent (or reframe) when a touched part is
   hidden. A shot with a `Sex act:` always has a `Contact:` line naming the contact points.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
-  depicted are adults: copy the beat's columns (names: "Explicit acts and positions"); both
+  depicted are adults: copy the beat's columns (names: skill `explicit-acts`, `load_skill` it first); both
   `none` or both set. ONE position per shot; when the beat's position does not match the staging
   (a lift against the vanity coded `standing face to face`), use the position whose support matches
   (`standing carry`, `edge of surface`, ...) - the server states it limb by limb in every shot of the
@@ -637,7 +637,7 @@ check); they go to the clip prompt verbatim.
   serve the act; rank them high; see "Act shots" in "Curated LoRAs" for the order; a third-person act shot
   also gets the krea2 act LoRAs on that line - the staging drafts render on krea2 and load them, the real
   keyframe renders ignore a LoRA of another family) and name the act and position exactly from the vocabulary in
-  `workflow-calling-conventions` ("Explicit acts and positions"). If the catalog tags LoRAs with `sexActs` /
+  skill `explicit-acts`. If the catalog tags LoRAs with `sexActs` /
   `sexPositions`, the server adds a matching tagged LoRA when none of your listed ones covers the shot's act.
 
 ### Writing rules per shot
@@ -799,7 +799,7 @@ of your own can only disagree with it.
 - Wear state in the prompt is positive: what each person wears now ("wears only the navy bikini
   bottom"), never "without the cardigan" or "the cardigan is off".
 - Explicit acts and positions: copy the shot's `Sex act:` / `Sex position:` words (names in
-  `workflow-calling-conventions`, "Explicit acts and positions"), only under the nudity policy.
+  skill `explicit-acts`), only under the nudity policy.
 
 `plan_shot` returns `shot <id> planned` or an `error:` for that shot. `draft_storyboard()` returns
 `accepted: …` or an `error:` listing every problem; nothing was started in the error case. Fix the

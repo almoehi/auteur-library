@@ -1,6 +1,6 @@
 ---
 name: workflow-calling-conventions
-description: "Producing output files with wf_xxx workflow tools — call sequence, prompt route (pass the person's own words through or draft with the prompt writer and pass prompt_ids), LoRAs, references, take checks, NSFW workflows and the explicit acts vocabulary."
+description: "Producing output files with wf_xxx workflow tools — call sequence, prompt route (pass the person's own words through or draft with the prompt writer and pass prompt_ids), LoRAs, references, take checks, NSFW workflows."
 agentType: all
 ---
 
@@ -230,28 +230,7 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
 
 ## Explicit acts and positions
 
-The single source of the names used by every skill, scene list, shot list and check. Applies ONLY when `{workspace.contentPolicy.nudity}` is `allowed` and no depicted character is a minor; otherwise there is no such field.
-
-- **Fields**: the scene list Beats columns `Sex act` and `Sex position`; the shot list lines `Sex act:` and `Sex position:`.
-- **Value**: `none` (no sexual act), or `<name>[ + <name>]*[: <detail>]`. `<name>` is lower case, exactly as listed below, or `other (<plain words>)` for an act / position the list lacks. `Sex act` may combine acts with ` + ` (`blowjob + fingering`); `Sex position` names exactly ONE position (a position change is a new beat / shot). `<detail>` (optional) = who does what to whom and the contact points, in plain explicit words (`Sex position: doggy style: Lena on hands and knees on the bed, Jonas kneeling behind her`).
-- **Pairing**: `Sex act` is `none` exactly when `Sex position` is `none`.
-- **Not a sex act**: nudity alone, undressing, posing nude, kissing, hugging, caressing, touching. Nudity is the look (`<character>:nude` in Outfits), touch is `Contact` / `Blocking`; such beats and shots have `none`.
-- **Sex acts**: vaginal penetration, anal penetration, double penetration, blowjob, deepthroat, cunnilingus, 69, rimming, handjob, fingering, titjob, footjob, masturbation, cumshot, orgasm, squirting, creampie, cum on face, cum on breasts, cum on feet, cum swallowing. Climax and finish - exactly ONE name per finish:
-  - `orgasm`: a climax without visible fluid (any partner).
-  - `squirting`: female ejaculation.
-  - `creampie`: ejaculation inside, shown as it leaks out.
-  - `cum swallowing`: ejaculation in the mouth, swallowed.
-  - `cum on face` / `cum on breasts` / `cum on feet`: ejaculation landing on that part.
-  - `cumshot`: visible ejaculation on any other part of the body (its `Contact:` names where it lands). There is no `facial` and no `cum on body`: those are `cum on face` and `cumshot`.
-- **Roles of a position**: the server reads who does what from the shot's FIRST intimate `Contact:` entry (one touching the groin, buttocks or breasts): its toucher is the position's first role - the carrier of `standing carry`, the one on top in `missionary`, the one behind in `doggy style`, the mouth of an oral act - and the touched person the second (a penetration written the other way round is corrected from the designs' sexes). So write that contact toucher first (`<carrier> (hands) on <carried> (buttocks)`); without an intimate contact in frame the roles come from the people's sexes only, and when those cannot decide them the position's limbs are not stated.
-- **Sex positions** (pick by how the bodies are held - who carries the weight, what touches the floor or furniture, which way each faces):
-  - lying: `missionary` (she on her back, he on top between her thighs), `legs on shoulders` (missionary, her calves on his shoulders, he kneels upright), `prone bone` (she flat on her belly, he on top from behind), `spooning` (both on their sides, he behind), `lying on back` / `lying on side` (one person's posture only), `69` (head to groin).
-  - kneeling / on all fours: `doggy style` (she on hands and knees, he kneeling behind - never for standing), `kneeling upright from behind` (both kneel upright, her back against his chest), `kneeling` (one kneels in front of the other, oral), `kneeling between legs` (one sits on the edge of a seat or surface, the other kneels on the floor between the knees, oral).
-  - astride / sitting: `cowgirl` (he on his back, she astride facing him), `reverse cowgirl` (astride facing away), `squatting` (she squats over him, feet flat), `face sitting` (she kneels astride his head), `lotus` (he sits, she in his lap facing him, legs around his waist), `lap sitting` (she sits in his lap), `chair facing` (he sits on a chair, she straddles him face to face), `reverse chair` (he sits on a chair, she sits on his lap facing away), `scissoring` (two women, legs interlocked, hips together).
-  - standing: `standing face to face` (both stand on the floor, facing), `standing carry` (he stands and holds her up: her feet off the floor, her thighs around his waist, his hands under her buttocks), `against the wall` (her back pressed to a wall, one leg lifted, he faces her), `standing one leg raised` (she stands on one foot, he holds her raised leg), `edge of surface` (she sits on the edge of a table, vanity or bed, he stands between her open thighs), `bent over surface` (she bends forward over furniture, he stands behind), `standing from behind` (she stands bent forward at the hips, he stands behind - no furniture under her).
-  - Every position is stated to the renderer limb by limb (the server's pose catalog), in every shot of the act - choose the one whose support matches the staging; a lift against a vanity is `standing carry` (lifted) or `edge of surface` (sitting on it), never `standing face to face`.
-- **Act / position LoRAs**: curate them like any LoRA ("Curated LoRAs": infer from name and description which ones serve the act and position, rank them high) and name the act and position EXACTLY from the lists above. If the catalog tags LoRAs with `sexActs` / `sexPositions`, the server adds a matching tagged LoRA to storyboard takes when your `LoRAs:` line has none that covers the shot.
-- An older shot list may carry `Act: <free text>`: read it as the sex act, with no position; never write it.
+Act and position names (`Sex act` / `Sex position`) live in skill `explicit-acts`: `load_skill explicit-acts` when `{workspace.contentPolicy.nudity}` is `allowed`.
 
 ## Body poses
 
