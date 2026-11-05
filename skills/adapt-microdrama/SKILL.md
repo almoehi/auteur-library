@@ -15,7 +15,8 @@ agentType: workspace
 
 Coordinator skill: creates ONE task. It writes no content; the worker does, with skill
 `microdrama-rewrite`. Optional; run it BEFORE `run-preproduction`. No event of the story is
-dropped: a stated total length merges neighbouring events into fewer episodes, and a story with
+dropped: a stated total length merges neighbouring events into fewer episodes (at most 3 per
+episode; a denser story gets more 45 s episodes and a longer total), and a story with
 several central conflicts becomes several dramas (`drama_1.md`, `drama_2.md`, ...); one workspace
 produces ONE adopted drama.
 
@@ -61,7 +62,7 @@ Check each item against the input and quote the exact words of the input that br
 (7) Heat: mode "steamy" shows nothing nude, no sex act and has no "Sex act:" line; mode "drama" has no sexual or nude content; mode "explicit" has a "Sex act:" line for every entry of its "Source sex acts" line.
 (8) Nothing dropped: every major event of the original story appears in some episode of some drama; a character keeps the same name and age in every file.
 (9) Drama boundaries: each drama ends at the turning point that resolves its central conflict (a drama of 12 episodes may instead end at the turning point that resolves the most); a drama whose first episode goes on in the previous drama's scene, act or moment (the same encounter continued, the climax of the same act, its aftermath) is a defect - it belongs to the previous drama.
-(10) Length: every "Format:" line states the episode length L and the total; L is 45-120 s (a length over 120 s per episode is a defect); when the original story or a user wish states a total, drama 1's total is not above its upper end (unless 2 episodes of 45 s or the 120 s cap force it, which a "Changes from the source" line says), and events merged to fit it are named in a "Changes from the source" line.
+(10) Length: every "Format:" line states the episode length L and the total; L is 45-120 s (a length over 120 s per episode is a defect); when the original story or a user wish states a total, drama 1's total is not above its upper end (unless 2 episodes of 45 s, the 120 s cap, or a dense source force it, which a "Changes from the source" line says), no turning point merges more than 3 source events (a dense source gets ceil(events / 3) episodes of 45 s and a longer total instead), and events merged to fit it are named in a "Changes from the source" line.
 For (5) and (6), unsure = not satisfied.
 
 Satisfied only if (1) to (10) all hold. Otherwise not satisfied and, in the reason, list EVERY failing item: its number, the quoted words of the input and a one-line fix. Never list anything not covered by an item.
