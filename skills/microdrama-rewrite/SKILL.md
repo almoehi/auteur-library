@@ -13,11 +13,11 @@ agentType: worker
 
 # Micro-drama Rewrite
 
-Plain writing task. Tools: `load_skill` (mode `explicit` only: `workflow-calling-conventions`),
+Plain writing task. Tools: `load_skill` (mode `explicit` only: `explicit-acts`),
 `sandbox_write_file` (`series.md`, and each drama file's parts - section 9), `sandbox_exec` (only
 to join a drama file's parts into the artifact directory), `sandbox_edit_file` (fixes),
-`task_complete`, `task_failed`. No renders, no other files. Replies: see "Concise replies and task/artifact URIs"
-in `workflow-calling-conventions`.
+`task_complete`, `task_failed`. No renders, no other files. Replies and `task_complete` summaries:
+1-4 short lines; name an artifact as `artifact://<id>/<file>` with the runtime id.
 
 Nudity policy = the `Workspace content policy (nudity)` line of your task prompt: `allowed`, or
 anything else = `forbidden`.
@@ -116,8 +116,13 @@ Never pad the source and never drop an event of it. Work in this order:
   The next drama starts with a new conflict (often after a time jump, or with a new central pair).
   A source with one central conflict is ONE drama - never split it to make more. Unsure whether
   there are one or two central conflicts -> ONE drama.
-- **Decide the dramas first**: before cutting, name each central conflict of the source and the
-  turning point that resolves it - one drama per conflict. Then test every boundary: does drama
+- **Decide the dramas first, in writing**: before you number turning points into dramas, write
+  `## Central conflicts` in `series.md` (layout in section 9): each central conflict of the source
+  and the turning point that resolves it - one drama per conflict, one line per drama, in drama
+  order, `<t>` = the LAST turning point of that drama - and the source's `Time span:`. When the
+  time span is one continuous afternoon / evening / night / encounter, the list has exactly ONE
+  conflict. A second line is allowed only if its drama opens on a NEW conflict (a new pair, a
+  time jump, a new threat), and the line says which. Then test every boundary: does drama
   k+1 open on a NEW conflict (a new pair, a time jump, a new threat)? If its first episode goes on
   in drama k's scene, act or moment (the same encounter continued, the climax of the same act, its
   aftermath), it is not a new drama - join it to drama k.
@@ -227,8 +232,8 @@ Never pad the source and never drop an event of it. Work in this order:
   sex acts" makes dropping one a defect). Each act shown carries plot - a confession mid-scene, a
   power reversal, a name slipping out - and ends on the interruption or revelation; in the payoff
   episode the act may complete, but its last 5 s are still a cliffhanger (usually `reveal` or
-  `question`). Name acts and positions exactly as in "Explicit acts and positions" of
-  `workflow-calling-conventions` (load it), on the episode's `Sex act:` / `Sex position:` lines.
+  `question`). `load_skill explicit-acts` first; name acts and positions exactly as it lists them, on the
+  episode's `Sex act:` / `Sex position:` lines.
 
 ## 9. Write the files
 
@@ -276,6 +281,11 @@ is short: write it into the artifact directory as one file. For each `drama_<k>.
 
 ## Cast
 <the Cast table and "Heard or mentioned only" line of the drama layout below, for the whole series>
+
+## Central conflicts
+1. <the conflict in one line> -> resolved by turning point <t> (drama 1)
+2. <the conflict in one line> -> resolved by turning point <t> (drama 2)   (only for a drama that opens on a NEW conflict - say which)
+Time span: <how long the source's story takes, e.g. "one afternoon", "one evening", "three weeks">
 
 ## Turning points
 1. <one line> -> drama 1, episode 1 (source: "<3-8 words quoted from the source passage>"[; "<...>" per merged event])
@@ -359,7 +369,10 @@ Heard or mentioned only: <names, or none>
 
 ## Pre-completion audit
 
-Before each file's write, re-read it against sections 0, 2, 3, 5, 7 and 9: every event of the
+Before each file's write, re-read it against sections 0, 2, 3, 5, 7 and 9: `series.md` has
+`## Central conflicts` between `## Cast` and `## Turning points`, with exactly one line per drama
+(the line count = the number of dramas), each line's turning point is that drama's LAST one, and
+a source with a one-afternoon / evening / encounter time span has ONE conflict; every event of the
 source is in a turning point (merged ones named in its line) with its source quote, and each turning
 point maps to exactly one episode (episode count = turning-point count; episode number = turning
 point number; a merge is one numbered line); with a stated total, the first drama has at most
