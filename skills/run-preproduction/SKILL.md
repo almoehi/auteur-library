@@ -129,7 +129,7 @@ Files
   ```
   - One row per OUTFIT, not per garment state: undressed, open or lowered garments are states of the outfit's row, never extra rows. The garments column lists every garment the story shows, including what it reveals underneath (underwear, stockings). A garment state gets its own row ONLY when (1) the character wears a garment that belongs to no outfit of theirs (a towel, a bathrobe, a borrowed shirt, lingerie put on separately), or (2) the state is carried into a later scene (a scene starts with the character already in it). Name such a row by what is worn (`towel`, `lace_underwear`).
   - Nudity is not a row (it is the `nude` pair in the scene list): never a `nude` / `naked` / "no garments" row.
-  - A row lists what IS worn. Never a row for an outfit with pieces removed, lowered or open (`partial_undress`, `undressed_state`: "shirt removed; shorts lowered") - that is the outfit's own row, and the scene list names the state in the beat's Action. The `cast-quality` check refuses such rows (STATE ROW / ROW NAMED BY STATE / NUDE ROW).
+  - A row lists what IS worn. Never a row for an outfit with pieces removed, lowered or open (`partial_undress`, `undressed_state`: "shirt removed; shorts lowered") - that is the outfit's own row, and the scene list names the state in the beat's Action. Undressing never needs a row of its own; the `cast-quality` check refuses such rows (NUDE ROW).
   - A creature / animal wearing nothing has NO rows.
   - Look slugs: lowercase `[a-z0-9]+(_[a-z0-9]+)*`, e.g. `raincoat`, `evening_dress`.
 
