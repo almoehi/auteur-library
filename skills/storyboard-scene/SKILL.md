@@ -522,8 +522,13 @@ check); they go to the clip prompt verbatim.
   - A state of the place a shot sets or relies on (door closed / locked, lights on, curtain drawn) is
     restated in the `Action:` or `Frame:` of EVERY later shot at that place that shows the fixture - the
     location picture shows its own state and wins over a shot that stays silent.
-  - A mirror in frame: `Frame:` / `Action:` says whose reflection it shows (one person, never the other
-    one inside it) or that the angle shows no reflection; people at a mirror otherwise render without one.
+  - A reflective surface in frame (mirror, window, screen, water, glossy surface): a reflection is wanted only
+    in a medium or wider shot and only when the story needs it; a close-up never asks for one beside the face.
+    The `Reflection: <character key> in <surface>` line (one entry, a person in `Visible:`) states it: the real
+    person stands in front of the surface and the surface holds only that person's own reflection, never a
+    second person. A shot "from the surface's side" is a direct shot with the surface out of frame
+    (`Out of frame: <surface>`); never write "the camera in the <surface>" or a person "in the glass" in
+    `Frame:` / `Action:` / `Pose:`. Without a `Reflection:` line the angle shows no reflection.
   - A `continue` shot keeps everyone's spot and posture, the viewer's included, from the previous shot
     — copy the previous `Blocking:` positions and change only what the new `Action:` moves, and say
     so in `Action:` ("the sister has risen"). A person who moved in the story but not in the lines
