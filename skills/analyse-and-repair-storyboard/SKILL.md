@@ -42,29 +42,33 @@ the other takes (`artifact://<storyboard artifactId>/<main file>`), `hstack` the
 `/workspace/<your artifactId>/inspect_<shot>.png`, and ask `describe_image` yes/no questions + why,
 naming the panels. Per shot ask:
 
-- **Framing**: the size and what fills the frame ("Is this an extreme close-up of only her eyes?"),
+- **Framing**: the size and what fills the frame ("Is this an extreme close-up of only <the named detail>?"),
   camera height, from behind / front / side.
-- **Extent and POV**: "Is any part of the viewer other than his forearms and hands visible (lap, legs,
-  belly, a face or forehead)? Is a second face or an extra torso in frame?"
+- **Extent and POV**: "Is any part of <the viewer> visible beyond what the shot line allows (for example only
+  forearms and hands; not legs, torso, a face or forehead)? Is a second face or an extra torso in frame?"
 - **Wardrobe as the shot's `Wardrobe:` line says**, not as the outfit design shows: every `removed:`
   garment absent (straps too)? every `partly:` garment where the line puts it?
 - **Pose, position, contact**: standing / seated / kneeling / lying as stated? what exactly each hand
-  touches? which hand (hers left or right)?
+  touches? which hand (<A>'s left or right)?
 - **The act** (`Sex act:` / `Sex position:`): shown, in that position, with the stated detail?
-- **Place**: the set the `Location:` line names, not another wall / the pool / a hedge?
+- **Place**: the set the `Location:` line names, not another surface or a place the `Out of frame:` line excludes?
 - **Identity, anatomy, artefacts**: same person as the reference? extra or merged fingers, hands,
   limbs? text or watermark?
 - **Continuity** with the previous shot: hair, wardrobe state, set, light.
 
 Note per shot: verdict `good` (usable as is) / `minor` (usable after a small fix) / `wrong` (does not
-show the shot); each defect as one concrete sentence ("shows her from the front, the shot asks from
+show the shot); each defect as one concrete sentence ("shows <A> from the front, the shot asks from
 behind"); the better unpicked take, if any.
 
-**The check results are evidence, not the verdict** (known limits as of 2026-11; tell the person they
-are platform limits): the outfit check may demand outfit-design garments the shot removed or never
-shows, and its suggested fix may then say "add the top" - ignore such fixes; a framing miss counts
-less than any outfit finding, so a too-wide take often wins the auto-pick; a take is picked even when
-every take failed; a second face in a POV close-up is not checked.
+**The check results are evidence, not the verdict.** Dated platform limits (re-measure; the list
+is a table, not a rule):
+
+| Limit seen (2026-11) | Status |
+|---|---|
+| The outfit check demanded outfit-design garments the shot removed, and its suggested fix said "add <garment>" | believed addressed in a later release (re-measure) (one wardrobe rule + look plates); if still seen, report it - until then ignore such fixes |
+| A framing miss counted less than any outfit finding, so a too-wide take won the auto-pick | believed addressed in a later release (re-measure) (measured ranking); if still seen, report |
+| A take was picked even when every take failed | believed addressed in a later release (re-measure) (all-failed flag); if still seen, report |
+| A second face in a POV close-up was not checked | believed addressed in a later release (re-measure) (absent-viewer check); if still seen, report |
 
 ## 3. Choose the fix per defect
 
@@ -72,21 +76,22 @@ If the shot LINES cause the defect (they contradict each other, a close-up's `Po
 seated body, the chosen location picture shows what `Out of frame:` excludes), the fix is in the lines
 (step 4) - a new take cannot fix them. Otherwise pick from the table. "Describe" = the studio's
 "Describe what's wrong" on the picked take; the server re-renders the shot with the note. Outcome
-rates were measured on 32 repairs (2026-11); re-evaluate them when the take renderer changes.
+rates were measured on 32 repairs of one production (2026-11); re-measure them when the take
+renderer changes.
 
 | Defect | Studio fix | Outcome |
 |---|---|---|
 | An unpicked take shows the shot better | switch the pick | always check this first |
-| Extreme close-up / close-up of the face or eyes comes out medium or wider | Describe: "Framed far too wide: this must be an extreme close-up of <what> filling the frame." | works |
-| Close-up of one detail (a hand, fingers) comes out wide | Describe naming the detail that fills the frame | works |
-| Wrong background (another surface / the pool / a hedge instead of the set) | Describe: "<Subject> faces <the set surface>, which fills the background; no <excluded thing>." | works |
-| POV shot shows a second face / the viewer's face | Describe: "This is the viewer's point of view: his face must never show." | works |
-| An explicit detail of the act is missing | Describe naming exactly what must be visible | works |
-| Wrong body position (seated / on a ledge or lap instead of standing) | Describe: "<Subject> must stand with <hands> on <surface>, not sit or lean on <wrong support>." | mostly |
+| Extreme close-up / close-up of a small detail (a face, an eye, an object) comes out medium or wider | Describe: "Framed far too wide: this must be <the stated size> of <what> filling the frame." | works |
+| Close-up of one detail (a hand, a prop, a label) comes out wide | Describe naming the detail that fills the frame | works |
+| Wrong background (another surface or place instead of the stated set) | Describe: "<Subject> is at <the set surface>, which fills the background; no <excluded thing>." | works |
+| POV shot shows a second face / the viewer's face | Describe: "This is <the viewer>'s point of view: <the viewer>'s face must never show." | works |
+| A detail the shot line requires is missing (a prop, an action, a contact) | Describe naming exactly what must be visible | works |
+| Wrong body posture or support (observed posture/support differs from the stated one) | Describe: "<Subject> must be <stated posture> on/at <stated support>, not <observed posture/support>." | mostly |
 | Overlapping hands malformed | Describe: "Each hand needs five fingers and a clear owner." | partly |
 | Gaze into the lens missing | Describe | partly |
-| Medium close-up / close-up of a BODY region (back, shoulders, hips) comes out wide | - | rarely: platform limit, keep the best take, report |
-| A garment the shot removed is still worn (top, straps, cardigan) | - | rarely: platform limit (the outfit picture stays bound), report |
+| Medium close-up / close-up of a BODY region (back, shoulders, hips) comes out wide | - | rarely as of 2026-11; close-up crop + reframe in a later release (re-measure) - if still seen, report, keep the best take |
+| A garment the shot removed is still worn | - | rarely as of 2026-11; wardrobe rule + look plates in a later release (re-measure) - if still seen, report |
 | A `partly:` garment in the wrong place | - | does not work: report |
 | Which hand / where a hand rests / what it holds | - | does not work: report, or simplify the shot line |
 | A `wrong` shot with no usable take | regenerate x2 (after fixing the lines if they caused it) | - |

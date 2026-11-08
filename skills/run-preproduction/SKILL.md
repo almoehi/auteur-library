@@ -107,7 +107,7 @@ Cast
 - Animals and creatures with a story role (named, acting or plot-driving, in the title or premise, recurring) ARE cast roles.
 
 Identity (decided here, once)
-- NAME = the story's proper name; if the story gives none, the role in Title Case ("Sister", "Husband"). Never invent a name.
+- NAME = the story's proper name; if the story gives none, the role in Title Case ("Guard", "Neighbour"). Never invent a name.
 - `<character_slug>` = NAME lowercased snake_case `[a-z0-9]+(_[a-z0-9]+)*`; it is the file stem.
 - Every later step uses this slug exactly (scene list, `design_plan.json`, design keys). No later step may introduce a character or name.
 
@@ -156,7 +156,7 @@ Nudity `allowed`: every sexual act and climax of the screenplay is its own beat 
 
 First step, before writing
 - Read every `character_<slug>.md`; list (a) the character stems and (b) each character's WARDROBE TRACKER look slugs.
-- From then on copy those slugs EXACTLY. Never invent a name, a character or a look slug (a character the story names only by role keeps the role slug, e.g. `sister`).
+- From then on copy those slugs EXACTLY. Never invent a name, a character or a look slug (a character the story names only by role keeps the role slug, e.g. `<role>`).
 
 Output
 - The server writes `scene_list.md` (scene table, Places table, Beats section) from what you send - never `sandbox_write_file` or `sandbox_edit_file` it (refused).
@@ -173,17 +173,17 @@ Frame
 - A beat that holds a spoken line contains no breath / eyes / hand / skin wording: a sensation signal is its own beat (portrait: `extreme close-up on <body part>` / `close-up on <body part>`), never inside the line's beat and never merged with another action ("Seline gasps; Matthew speaks" = two beats). The server refuses the scene otherwise.
 - A beat that holds an inner moment (a feeling, a want, a memory) names its visible or audible signal in `Action` (breath, hands, skin, eyes, mouth, voice: "her breath catches, her fingers stop short of his wrist") and a `Framing` that shows it; never an unfilmable state alone ("she feels guilty").
 - A beat whose `Action` is a sensation signal (breath, hands hesitating, skin, lips, eyes, voice) takes `extreme close-up on <body part>` (or `close-up on <body part>`) as its `Framing` ("extreme close-up on her hand").
-- One moment per beat (Beats section below) holds on every canvas: a portrait scene has MORE, shorter beats, never fewer - each sensation signal, each close-up and each change of contact is its own beat. A sensation beat is never merged with the action before or after it ("he lowers his pants; her breath catches" = two beats).
+- One moment per beat (Beats section below) holds on every canvas: a portrait scene has MORE, shorter beats, never fewer - each sensation signal, each close-up and each change of contact is its own beat. A sensation beat is never merged with the action before or after it ("<A> sits down; <B> gasps" = two beats).
 
 Scene table columns
-- `Scene #` | `Episode` (ONLY when the screenplay has `EPISODE <n>` headings: the number of the episode the scene belongs to, copied from its heading - a whole number, never lower than the row above; a scene belongs to exactly ONE episode: a place the next episode continues in is a new scene row with a new number; otherwise leave the column out) | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place: take one name per place from the Places table or its first scene and repeat it identically in every row sharing that `location_slug`; never re-type each screenplay slugline - "Pool Terrace" / "Pool" is refused) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Lighting` | `Summary` | `Characters present` | `Outfits` | `Audio`.
-- `location_slug` names a SPACE a camera can stand in ("hallway", "backyard_pool_terrace"), never a surface or feature of one (a wall, door, window, table): those belong to the space's `connections` and to shot framing. Never a slug like `grey_house_wall`.
+- `Scene #` | `Episode` (ONLY when the screenplay has `EPISODE <n>` headings: the number of the episode the scene belongs to, copied from its heading - a whole number, never lower than the row above; a scene belongs to exactly ONE episode: a place the next episode continues in is a new scene row with a new number; otherwise leave the column out) | `INT/EXT` (exactly `INT` or `EXT`; never `INT/EXT` / `EXT/INT`) | `Location` (display name of the ONE place: take one name per place from the Places table or its first scene and repeat it identically in every row sharing that `location_slug`; never re-type each screenplay slugline - "<Place> Terrace" / "<Place>" is refused) | `location_slug` (lowercase slug; the same place has the same slug in every scene) | `Time of day` | `Lighting` | `Summary` | `Characters present` | `Outfits` | `Audio`.
+- `location_slug` names a SPACE a camera can stand in ("hallway", "backyard_terrace"), never a surface or feature of one (a wall, door, window, table): those belong to the space's `connections` and to shot framing. Never a slug like `grey_house_wall`.
 - `Audio`: the scene's atmosphere in one line — room tone, the space (small and dry / large and echoing), distance of the sounds, mood ("small dry kitchen at night, fridge hum, rain on the window"). The ambient bed is ALWAYS audible at a natural level: 'quiet', 'distant', 'faint' or 'hushed' may describe the PLACE (its size, its sources), never the loudness of the sound; every clip carries an audible ambient bed. No dialogue and no events; the storyboard copies it verbatim onto every shot of the scene and the clip prompts carry it. Filled for EVERY scene.
 - `Lighting`: ONE short phrase naming the scene's single motivated light: a visible source, its direction, quality and colour / time ("window light from the left, soft, warm afternoon"). One setup per scene; the storyboard and clip briefs repeat it verbatim. Filled for EVERY scene.
 - `Summary`: one sentence "<who> wants <goal>; <obstacle>; ends with <changed situation>" (every scene turns something), plus any entrance, exit or spoken line that matters to the story.
 - `Characters present`: slugs equal the `character_<slug>.md` stems; exactly the characters named in some beat's `Outfits` of that scene (a voice-over or off-frame character is not listed).
-- `Outfits`: `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `mira:raincoat; jonas:work_suit`.
-  - A character who changes look inside the scene appears once per look: `mira:raincoat; mira:nightgown`.
+- `Outfits`: `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `<a>:raincoat; <b>:work_suit`.
+  - A character who changes look inside the scene appears once per look: `<a>:raincoat; <a>:nightgown`.
   - The row's `Outfits` is exactly the UNION of its beats' `Outfits`: nothing missing, nothing extra.
 - A scene row = ONE place and ONE continuous time. A change of place starts a new scene; never merge places into one row ("Backyard terrace / Hallway" is two scenes). Runtime budget: use the runtime the story states (an episode brief: its episodes' total, scene numbers running on across episodes - never restarting per episode); otherwise plan 3-5 scenes for a 1-5 minute film, one new turn per scene, and scene 1's first beat is the hook (an action or a question). The budget never overrides this: add scenes rather than merge places.
 
@@ -200,16 +200,16 @@ Places table (sent with `write_places`; the server places it between the scene t
 - ONE row per distinct `location_slug` of the scene table and of the beats (`parallel` places included), columns `location_slug` | `set` | `space` | `connections`.
 - `set`: the display name of the property the space belongs to ("Grey House"); spaces of the same house, garden or compound share it exactly; a standalone place is its own set.
 - `space`: exactly `interior` or `exterior`.
-- `connections`: what each door, window or opening of the space opens onto and where the neighbouring features lie, as the screenplay states or implies it, naming other rows by `location_slug` ("glass doors in the back wall open onto `backyard_pool_terrace`, pool beyond them; the front door opens onto `driveway`"). `none` only for a space with no neighbour in the story. Invent a plausible layout the screenplay does not contradict rather than leave it open; keep it consistent between rows (A opens onto B means B shows A).
+- `connections`: what each door, window or opening of the space opens onto and where the neighbouring features lie, as the screenplay states or implies it, naming other rows by `location_slug` ("glass doors in the back wall open onto `backyard_terrace`, the garden beyond them; the front door opens onto `driveway`"). `none` only for a space with no neighbour in the story. Invent a plausible layout the screenplay does not contradict rather than leave it open; keep it consistent between rows (A opens onto B means B shows A).
 
 Beats (sent with each scene's `write_scene`)
 - One beat per row of the scene's `beats`. Every scene has at least one beat (typically 2-6).
 - Columns, ALL filled in EVERY beat (an empty cell fails the `scenes-complete` check):
   - `Beat #`: `<scene>.<n>` (`1.1`, `1.2`, …), unique and never renumbered on a rewrite — the
     storyboard's shots name their beat by it (`Beat: 1.2`).
-  - `Action`: what visibly happens. Name the characters' visible emotion where it matters ("Mira, smiling nervously, …"). A sensation signal (a breath, a hesitating hand, skin, lips, eyes, a voice) is a beat of its own: its `Action` holds only that signal, never the action before or after it.
+  - `Action`: what visibly happens. Name the characters' visible emotion where it matters ("<A>, smiling nervously, …"). A sensation signal (a breath, a hesitating hand, skin, lips, eyes, a voice) is a beat of its own: its `Action` holds only that signal, never the action before or after it.
   - `Location`: a `location_slug`. For every non-`parallel` beat EXACTLY the scene row's own slug; only a `parallel` beat names another place.
-  - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `jonas:work_suit; mira:raincoat`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty. EVERY person your `Blocking` places in frame gets a pair, also the one not in focus: a Blocking "Mira left of frame, Jonas right of frame" needs both pairs, even on a close-up framed on Mira. A person the beat's words call naked has the look `nude`, never an outfit look.
+  - `Outfits` (right after `Location`): looks of the characters VISIBLE in the beat as `<character_slug>:<look_slug>` pairs separated by `; `, e.g. `<b>:work_suit; <a>:raincoat`; `none` when nobody is visible. Written out for EVERY beat, never "same as above" or empty. EVERY person your `Blocking` places in frame gets a pair, also the one not in focus: a Blocking "<A> left of frame, Jonas right of frame" needs both pairs, even on a close-up framed on <A>. A person the beat's words call naked has the look `nude`, never an outfit look.
   - `Framing`: ONE opening shot size and angle (never "close-up then wide": a change of framing is a
     `Camera move` or a new beat). A sensation beat: `extreme close-up on <body part>` (or `close-up on <body part>`).
     Portrait canvas: only `extreme close-up`, `close-up`, `medium close-up` or a two-shot; `medium` or `full shot` only
@@ -220,7 +220,7 @@ Beats (sent with each scene's `write_scene`)
     - `continuous` = the action carries straight on: same place, same moment, same people, even when the framing changes. A `continuous` beat whose framing differs from the previous beat's needs a `Camera move` that PERFORMS the change (push in / pull out for a size change; arc for a new side of the subject, never front <-> behind; crane / pedestal for a new camera height); with `hold`, a pan, tilt, truck or follow it is `new moment` instead (the storyboard turns it into a `cut`, since those cannot reach the new framing).
     - `parallel` = happens at the same time somewhere ELSE; MUST give its place in `Location` (reuse a table slug or define a new stable slug of lowercase a-z0-9 words joined by `_`, e.g. `driveway`; inventing a place slug is allowed).
     - `new moment` = a jump in time, place or subject, or an insert. The first beat of a scene is `new moment`, UNLESS the screenplay marks the scene CONTINUOUS at the same place as the previous scene: then it is `continuous` and the scene's first beats carry on the state the previous scene ended in (positions, contacts, a joined act).
-  - `Contact` and a joined act PERSIST: a contact (and, while the bodies stay joined, the `Sex act` + `Sex position`) is stated in every beat until a beat's `Action` ends it (hands drop off, pulls out, steps away); After the climax beat with the bodies still joined, keep the act and position as a motionless pause (`Sex act: vaginal penetration: the husband stays inside the sister, motionless`, `Sex position: standing from behind: ...`) until the beat that separates them.
+  - `Contact` PERSISTS: a contact is stated in every beat until a beat's `Action` ends it. Example (any genre): <A>'s hand on <B>'s shoulder in beat 3 stays in `Contact` for beats 4, 5, ... until a beat says <A> lets go or steps away; a beat that silently drops it is wrong, and so is one that keeps it after the release. Under nudity `allowed` the same holds for a joined act: while the bodies stay joined, `Sex act` + `Sex position` are stated in every beat until the beat that separates them, also as a motionless pause after a climax beat (`Sex act: <act>: <A> stays <joined to> <B>, motionless`).
   - `Blocking`: who is where, facing which way; in a conversation name each person's screen side (left / right of frame), kept for the whole scene.
   - `Contact`: who touches whom or what, and where on the body or object, in plain body-part words
     (hands, mouth, shoulders, waist, lap, groin, …): the storyboard turns it into the shot's
@@ -228,9 +228,9 @@ Beats (sent with each scene's `write_scene`)
   - `Sex act` and `Sex position` (nudity `allowed` ONLY, after `Contact`; under `forbidden` or absent leave both columns out):
     - Names exactly as listed in skill `explicit-acts`, or `other (<plain words>)`.
     - Value: `none`, or `<name>[ + <name>]*[: <detail>]`. `Sex act` may combine acts with ` + `; `Sex position` names exactly ONE position (a position change is a new beat).
-    - `<detail>` = who does what to whom and the contact points, plain explicit words, no euphemisms (e.g. `Sex act: vaginal penetration: Jonas enters Lena from behind`, `Sex position: doggy style: Lena on hands and knees on the bed, Jonas kneeling behind her`).
+    - `<detail>` = who does what to whom and the contact points, plain explicit words, no euphemisms (e.g. `Sex act: <act>: <A> <does what> to <B>, <contact points>`, `Sex position: <position name>: <B's posture and support>, <A's posture and support>`).
     - `Sex act` is `none` exactly when `Sex position` is `none`.
-    - The `Action` shows the act the cell names, in the act's own plain words ("strokes his cock" for a `handjob`, never only "cups the bulge through his trousers"); an `Action` that shows penetration or another act has that act in `Sex act`, never `none`.
+    - The `Action` shows the act the cell names, in the act's own plain words ("<A> strokes <B>'s <body part>" for a `<act>`, never only a covered or implied version); an `Action` that shows penetration or another act has that act in `Sex act`, never `none`.
     - Nudity alone, undressing, posing nude, kissing, hugging, caressing and touching are NOT a sex act (both `none`; nudity is the `Outfits` look, touch is `Contact`).
     - Never an act for a depicted minor.
 - A beat is ONE moment: one beat per distinct action or happening; each entrance, exit and picture-changing dialogue line is its own beat. Two successive verbs ("sits down and opens the laptop") = two beats, unless they are ONE continuous action the storyboard will time as consecutive motion beats of a single shot ("rises and crosses to the window" without a pause or a cut): then one beat may hold them; simultaneous actions ("as" / "while") share one. The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows never appear in a beat's `Action` or `Framing` — the storyboard refuses them in its shots, so a beat holding one is split here, in order. One beat = one place and one opening framing; split a beat that packs two places or two framings.
@@ -240,12 +240,12 @@ Beats (sent with each scene's `write_scene`)
 
   | Beat # | Action | Outfits |
   |---|---|---|
-  | 1.1 | Mira stands at the door in her raincoat | `mira:raincoat` |
-  | 1.2 | Mira lets the raincoat fall to the floor | `mira:nude` |
-  | 1.3 | Mira steps into the shower | `mira:nude` |
+  | 1.1 | <A> stands at the door in her raincoat | `<a>:raincoat` |
+  | 1.2 | <A> lets the raincoat fall to the floor | `<a>:nude` |
+  | 1.3 | <A> steps into the shower | `<a>:nude` |
 
-  Row `Outfits`: `mira:raincoat; mira:nude`. Wrong: `mira:nude` in 1.1 (she still wears the raincoat), or a scene whose first beat is already the undressing.
-- The beat whose look turns `nude` NAMES the last garment coming off in its `Action` ("she steps out of the bikini bottom and slips into the pool"). A top untied or off while the bottom is on is still the bikini look; a beat that only shows the result ("jumps into the pool", "stands naked") without the last garment coming off is refused by the `scenes-complete` check.
+  Row `Outfits`: `<a>:raincoat; <a>:nude`. Wrong: `<a>:nude` in 1.1 (she still wears the raincoat), or a scene whose first beat is already the undressing.
+- The beat whose look turns `nude` NAMES the last garment coming off in its `Action` ("<A> steps out of the last garment and into the water"). A top untied or off while the bottom is on is still the same look; a beat that only shows the result ("jumps in", "stands naked") without the last garment coming off is refused by the `scenes-complete` check.
 - Self-check before writing: for each character, read that scene's beats in order — the look changes only at the beat whose `Action` changes it, every beat before it keeps the earlier look, and no beat pairs `nude` while its `Action` / `Blocking` still has them wearing ANY garment (underwear included), nor an outfit look while it says they wear nothing; a partly worn outfit keeps its look; a person whose beat names garments has a WARDROBE TRACKER look, never `none`.
 - Garment state: when a beat's action needs a body part the current look covers, the beat's `Action` / `Blocking` names the garment state ("cardigan slipped off her shoulders"); the beat keeps the outfit look (LOOK RULE) and never gets a tracker row or look slug of its own for that state.
 - Downstream use: the storyboard's `Movement:`, `Transition:` and `Outfits:` lines and the clip prompts are taken from the beats (`continuous` -> `continue` transition; `parallel` -> cutaway shot at its named place with that place's location design; extra location designs come from the beat `Location` slugs, outfit designs from the rows' `Outfits` union).

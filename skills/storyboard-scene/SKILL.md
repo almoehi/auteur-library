@@ -76,13 +76,13 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   picture in camera terms (where the camera stands and faces; what is ahead / left / right /
   in the foreground; where water, doors, furniture and paths are). The renderer binds that
   picture as the place, so every shot at the location must agree with it: place subjects and
-  the viewer in the layout's terms (the pool is on the right, the doors are ahead), never
+  the viewer in the layout's terms (the window is on the right, the doors are ahead), never
   mirror or reverse it, and keep `Blocking` / `Pose` / `Frame` / `Action` free of geometry the
   layout contradicts. A shot that needs a viewpoint the layout does not give (behind the camera)
   is not renderable at this location - reframe it, or name the gap in the summary. A location
   without a `layout:` line (published earlier): plan from its description and say so in the summary.
 - Set map: a location of a set (`set:` / `connections:` lines in its digest) comes with a "Set map" listing every workspace location of the same set (key, space, `connections`, one-line layout, linked or not). Use it as the geometry of the property:
-  - A shot through an opening (door, glass doors, window, gate) shows the CONNECTED space as the map states it (the pool beyond the glass doors), and its `Location:` is the space the camera stands in.
+  - A shot through an opening (door, glass doors, window, gate) shows the CONNECTED space as the map states it (the garden beyond the glass doors), and its `Location:` is the space the camera stands in.
   - Pick the location (and the view `(view <id>)`) whose picture holds what the shot shows; a shot that looks at a neighbouring space which is a linked location uses that location's own picture for it.
   - A direction that is no listed view and no linked location (typically the reverse, 180° from the main picture) is a different set location or a gap: reframe the shot, or name the gap in the summary. Never invent the missing side or its connections.
 - Note: the POV owner, `continuous` chains, beats holding several actions, shots with many people
@@ -164,7 +164,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `full shot` (head to feet) | `wide` (people small in the setting) — e.g. `Camera: close-up on
   the wife's face, eye level`. The server states that size in every render prompt, measures it on
   every take and reframes a subject that came out too small; a `Camera:` line opening with
-  anything else ("lounger POV …") gets no framing check.
+  anything else ("<seat> POV …") gets no framing check.
 - After the framing size, the angle, in these words only: `from behind` | `from the front` |
   `from her left side` / `from his right side` | `three-quarter` (e.g. `three-quarter angle from
   her left side`) | `over the shoulder` | `low angle` (also `slightly low`) | `high angle` (also
@@ -207,12 +207,12 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   location, and name the gap in the summary.
 - Named views: `Location: <key> (view <id>)`, an `Outfits:` pair `<characterKey>:<outfitKey> (view <id>)` and a `Characters:` entry `<characterKey> (view <id>)` pick a VIEW of that design (a location's camera direction, a person's pose or expression) as its picture instead of the main one. An `Outfits:` view selects the OUTFIT's view; a `Characters:` view is the character's own, used when no outfit stands in for them. The "Referenced designs" block of the task prompt lists each linked design's views: id, kind, label, the exact line to write and its description (a location's description is its camera layout).
   A location with views: pick, PER SHOT, the view whose camera direction matches the shot's `Camera:` (a reverse or side shot takes the view facing that way); the main picture only for shots that look the same way it does. Reusing one picture for every direction renders the room mirrored or rebuilt. A place state no picture shows (a door closed that every picture shows open) is written in words in `Action:` - the picture otherwise wins.
-  - Choose a view only when it fits the shot: a location view whose layout matches the shot's `Blocking:` / `Frame:` (e.g. facing the pool when the shot looks at the pool); a person view whose pose / expression is the one the shot's `Action:` / `Pose:` needs. Otherwise write the plain key and the main picture is used, and the shot stays consistent with the main layout.
+  - Choose a view only when it fits the shot: a location view whose layout matches the shot's `Blocking:` / `Frame:` (e.g. facing the window wall when the shot looks at the window); a person view whose pose / expression is the one the shot's `Action:` / `Pose:` needs. Otherwise write the plain key and the main picture is used, and the shot stays consistent with the main layout.
   - Match by the DESCRIPTION, never by the view's number: a location view fits when its `Ahead:` (and `Left:` / `Right:`) is what the shot's `Frame:` puts ahead and beside; a view of a person fits when its angle / pose is the one the shot needs. A view listed without a description has an unknown direction: never pick it. When no listed picture (main or view) shows the direction the shot looks in, do not take the nearest one: name the gap in the summary (the design's "Add views" can make that view) and write the shot for the closest picture you do have.
   - The server states the chosen picture's layout in the render prompt (a `Place (as in Picture N, the location picture): ahead ...; left ...; right ...` requirement) - so when the camera faces a different way than the location's main picture, pick the view whose `Ahead:` / `Left:` / `Right:` matches that direction, and never write `Blocking:` / `Frame:` side facts about the PLACE (which wall, which door is on the left) that contradict the chosen picture's layout; `Blocking:` / `Frame:` say where the PEOPLE are.
   - `Blocking:` / `Frame:` follow the CHOSEN picture's layout, not the main one's.
-  - A view whose layout shows a thing the shot's `Out of frame:` line excludes (the pool, the hedge) is the WRONG view for that shot: read each listed view's `Ahead:` / `Left:` / `Right:` and take the one that matches the shot's `Frame:` and shows none of the `Out of frame:` things (live nsfw-miniseries s8-06: `(view 3)` showed the pool and chairs the shot excluded). When no listed picture satisfies both, name the gap in the summary instead of taking the nearest one.
-  - Scenes at one place: the task prompt ends with a **Previous scene** block naming the previous scene's last shot and its exact `Location:` line (view included). A scene that CONTINUES at that place reuses that line for its first shot (same location key, same `(view <id>)`) and changes the view only when the shot's `Frame:` looks another way (live scene 9 bound the main picture after scene 8 ended at `(view 3)`). A scene at another place ignores the block.
+  - A view whose layout shows a thing the shot's `Out of frame:` line excludes (<excluded thing>) is the WRONG view for that shot: read each listed view's `Ahead:` / `Left:` / `Right:` and take the one that matches the shot's `Frame:` and shows none of the `Out of frame:` things (for example a view that shows the stairwell a shot excludes). When no listed picture satisfies both, name the gap in the summary instead of taking the nearest one.
+  - Scenes at one place: the task prompt ends with a **Previous scene** block naming the previous scene's last shot and its exact `Location:` line (view included). A scene that CONTINUES at that place reuses that line for its first shot (same location key, same `(view <id>)`) and changes the view only when the shot's `Frame:` looks another way (binding the main picture after the previous scene ended at `(view 3)` jumps the layout). A scene at another place ignores the block.
   - A person's STANDARD views `(view back)` / `(view profile)` / `(view front)` suit shots from behind / in profile / facing the camera (`face` a head-and-shoulders close-up); an older design may list numbered views (`view_1`..) and a `portrait` instead, matched by their description.
   - Never invent a view id: only listed ones are valid (the write is refused for another). A `continue` shot keeps the previous shot's location KEY; its view may change with the framing.
 - `Movement:` = the beat's camera move in the canonical grammar of "Camera moves" below (`hold` only when the beat asks for stillness); the `from` / `to` frames follow the `Transition:` rule there.
@@ -224,7 +224,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
   state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
 - A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. A `partly:` garment must be restated wherever this shot's extent shows it — the viewer's own too (the waistband of their own shorts still lowered in a `lower body` shot); where the extent does not show it (a close-up above the waist, a `limbs` viewer) leave it out — it is not in frame, and R19 refuses it there.
-- A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the pool).
+- A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the water).
 - `Transition:` says how THIS shot follows the PREVIOUS one (the cut or continuation INTO this shot) —
   never how it leads to the next. Shot 1 is always `cut — first shot of the scene`; the last shot's line
   is about the shot before it (never "end of scene"). Write it from THIS shot's first beat's Continuity:
@@ -234,7 +234,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `continuous` → `continue — <reason>` (same place, moment, people; the framing may change; the
   SAME `Location:` as the previous shot — a frame of one place never seeds another, so a
   `continue` at another place renders without the previous frame: make it a `cut`), e.g.
-  `Transition: continue — same moment, closer on the sister` (`closer` needs a TIGHTER framing
+  `Transition: continue — same moment, closer on <B>` (`closer` needs a TIGHTER framing
   size in `Camera:` than the previous shot — the same size with "closer" is not closer);
   `parallel` / `new moment` →
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
@@ -334,24 +334,24 @@ check); they go to the clip prompt verbatim.
   the decision model whether `Action:` / `Pose:` / `Blocking:` / `Wardrobe:` / `State:` show each person
   before, partway through or after their first beat). The keyframe is the START frame of the clip, so it
   shows each person as they are when their first beat begins; the beat performs the change; the result is
-  the NEXT shot's picture. Counter-example (live): a beat "0-2 s climbs out of the pool" with picture lines
-  "stands at the pool's edge, dripping" - the clip never shows her climbing out. Right: the picture lines say
-  she stands IN the water at the ladder, hands on the rail, and the beat "0-2 s pulls herself up the ladder
-  and steps out onto the deck" performs it; the next shot's lines show her on the deck, `State: wet hair`.
-  Same for "push up, swing legs over": the picture lines show her lying, not already seated at the edge.
+  the NEXT shot's picture. Counter-example: a beat "0-2 s <A> climbs out of the water" with picture lines
+  "<A> stands at the edge, dripping" - the clip never shows <A> climbing out. Right: the picture lines say
+  <A> stands IN the water at the ladder, hands on the rail, and the beat "0-2 s pulls up the ladder
+  and steps out onto the deck" performs it; the next shot's lines show <A> on the deck, `State: wet hair`.
+  Same for "<B> stands up from the chair": the picture lines show <B> seated, not already standing.
   A person without a first beat is not asked. Write the opening state in words of a still, never as the
   motion.
 - **Every shot ENDS on a held state** (rule R33, refused at the write: the server asks the decision model
   whether each person's LAST beat ends settled or still moving, and - when the camera move ends `ending on` /
   `to reveal` something - whether that is where a person only arrives after this shot). A video model carries
-  any movement still under way at the end on and performs the next action inside this clip (live: a last beat
-  "the bikini bottoms drop at her feet, her weight shifting toward the pool" with `Movement: slow pull-out,
-  ending on the pool surface` - the clip walked her on and into the pool, and the next shot's dive played
-  twice). The last beat FINISHES its action and settles: "...the bikini bottoms drop at her feet; she stands
-  still at the pool edge, her back to the viewer". A move toward the next action (shifting toward, reaching
+  any movement still under way at the end on and performs the next action inside this clip (for example a last beat
+  "<A> sets the cup down, weight shifting toward the door" with `Movement: slow pull-out,
+  ending on the doorway` - the clip walked <A> on through the door, and the next shot's exit played
+  twice). The last beat FINISHES its action and settles: "...<A> sets the cup down and stands
+  still at the table, back to the viewer". A move toward the next action (shifting toward, reaching
   for, about to, starting to, walking toward) is the FIRST beat of the next shot, also when the next shot
   continues (`Transition: continue` starts from this clip's real last frame). A camera move ends on what the
-  frame holds when the last beat ends ("ending on her standing at the pool edge"), never on where the next
+  frame holds when the last beat ends ("ending on <A> standing at the table"), never on where the next
   action will happen. The server also adds a final hold segment to every clip brief (from the last beat to
   the end of the clip nobody moves), so never pad a beat to fill the clip.
 - Rule R26 (clip rule, refused at the write like R25, never part of the keyframe gate): a `Wardrobe:` or
@@ -397,11 +397,11 @@ check); they go to the clip prompt verbatim.
   frame: `Characters: none`, `Outfits: none`, `Visible: nobody`.
 - The exclusion clause states a count (`nobody else`, `no other hands`), never names people to
   exclude: negated names are weak in image models and tend to summon the people they name.
-- Things of the place the frame must NOT show (the pool behind the viewer, the doors) go only on
+- Things of the place the frame must NOT show (<excluded thing> behind the viewer, the doors) go only on
   `Out of frame: <thing>, <thing>` (at most 6 things, each a few words) — never a person: a linked
   character's key or display name there is refused (people are `Visible:` and its count), and any
   other person belongs in the exclusion clause, not here.
-  Nowhere else: no "no pool visible", "the doors behind the camera" or "out of frame" in `Action:`,
+  Nowhere else: no "no <thing> visible", "the doors behind the camera" or "out of frame" in `Action:`,
   `Blocking:`, `Pose:`, `Frame:` or the plan prompt — a named thing is painted in. Those lines name
   only what IS in frame (pick a location view whose picture lacks the thing, and say what fills
   that part of the frame).
@@ -427,8 +427,8 @@ check); they go to the clip prompt verbatim.
   `nude`; `:nude` starts at the first shot where nothing is worn.
 - A beat whose ACTION changes a look (undresses, unties, takes off, puts on) starts in the EARLIER
   look, whatever its Outfits column says: the shot(s) before the change wear it, and the change itself
-  is a `Motion:` beat of the shot that ends where the new look shows ("4-6 s character_sister: unties her
-  bikini top and lets it fall"); the NEXT shot's `Wardrobe:` shows the top removed. When the
+  is a `Motion:` beat of the shot that ends where the new look shows ("4-6 s <A's key>: unties her
+  scarf and lets it fall"); the NEXT shot's `Wardrobe:` shows the scarf removed. When the
   scene list gives only the later look for such a beat, take the earlier one from the character's
   previous beat in this scene (or its wardrobe-tracker row) and name the mismatch in the hand-over
   summary - never drop the change.
@@ -448,12 +448,12 @@ check); they go to the clip prompt verbatim.
   never describe their face. Their key appears ONLY in
   `POV:`, `Visible:`, `Characters:` and `Outfits:`. In `Action:`, `Blocking:`, `Pose:` and `Frame:`
   they are only "the viewer" ("the viewer's forearms and hands enter the lower frame") — never
-  their name, key or a figure ("as the husband watches", "husband seated centre frame as POV"):
+  their name, key or a figure ("as <the owner's name> watches", "<owner's name> seated centre frame as POV"):
   the server copies these lines verbatim into the prompt, and a name there summons the whole
-  person. The write is refused (rule R8: "Blocking names the POV owner (`Husband`) …") when one of
-  these lines holds the owner's key, the key's name words (`character_husband` → "husband") or
-  their display name — also as an owner of something ("her husband's hand", "sister and husband
-  remain"): write "the viewer's hand", "the sister remains in front of the viewer". Anyone else
+  person. The write is refused (rule R8: "Blocking names the POV owner (`<Name>`) …") when one of
+  these lines holds the owner's key, the key's name words (`character_<name>` → "<name>") or
+  their display name — also as an owner of something ("<B>'s partner's hand", "<A> and <owner>
+  remain"): write "the viewer's hand", "<A> remains in front of the viewer". Anyone else
   seen only by `limbs` (hands / feet at the edge) is likewise named by role in words ("a man's hands"),
   never as a figure. Another person shown by `lower body` IS a figure: they are counted, pictured
   (design picture and outfit) and placed in `Blocking:`.
@@ -485,16 +485,16 @@ check); they go to the clip prompt verbatim.
 - **Geometry — one physical setup per shot** (the keyframe model draws exactly what the lines say; it cannot
   repair a contradiction, it follows the loudest line):
   - `Blocking:` places EVERY person in frame (not the viewer, who is "the viewer") by name: a spot or
-    piece of furniture in the place (`on the left lounger`, `at the pool edge`) AND their position relative
+    piece of furniture in the place (`on the left sofa`, `at the counter`) AND their position relative
     to the other people and the viewer (`facing the viewer, an arm's length in front of him`, `on the
-    lounger next to the viewer's`). Where the viewer is and their posture are stated too ("the viewer
-    sits on the right lounger"). Two people never share a seat or a spot unless the shot says so
+    sofa next to the viewer's`). Where the viewer is and their posture are stated too ("the viewer
+    sits on the right sofa"). Two people never share a seat or a spot unless the shot says so
     (`on the viewer's lap`); a person without a stated seat gets put wherever the model likes. The write
     is refused when a person of `Characters:` is not named in `Blocking:` (rule R13; the viewer and
     anyone shown only by `limbs` are exempt; a non-viewer `lower body` person must be named).
   - The camera IS the viewer's eyes: its height and direction follow the POV owner's posture and
     spot — a seated or lying viewer has an eye-level of a seated / lying person, never "water level" or
-    "from the floor" unless they are there, never "at hip height", "from the side of the lounger" or
+    "from the floor" unless they are there, never "at hip height", "from the side of the sofa" or
     any position offset from the viewer's head (for that view write a third-person shot with the owner
     as a figure). State `Camera:` and `Blocking:` from the same position. Angles by posture (rule R20,
     the write is refused): a lying viewer looks up or along their own body — never `high angle` or
@@ -511,11 +511,11 @@ check); they go to the clip prompt verbatim.
     (`lower body` for "hands on the viewer's own thighs", `limbs: forearms and hands` when only the
     hands are in frame): the render and the judge read the viewer's body from `Visible:` alone.
   - What the shot shows must be visible from that camera position in the place: before combining two
-    things in one view (a hedge and a pool, a door and a window) check the place design — if they lie on
+    things in one view (a staircase and a fountain, a door and a window) check the place design — if they lie on
     opposite sides of the viewer, they are two shots, not one frame.
   - Contact must be physically possible from the stated positions: whoever touches whom is within
-    reach from their seats / postures (`kneeling between his thighs` needs him seated with open knees,
-    not lying flat on a lounger). If the Blocking cannot reach the Contact, change the Blocking.
+    reach from their seats / postures (`kneeling in front of <B>` needs <B> seated with room in front,
+    not lying flat on a bench). If the Blocking cannot reach the Contact, change the Blocking.
     Each `Pose:` is physically possible for the stated posture: weight rests on supported feet, knees or
     hips, and a limb reaches only what it touches ("standing" with "her heels on his lower back" is
     impossible - make her lifted / seated, or drop the contact).
@@ -526,9 +526,9 @@ check); they go to the clip prompt verbatim.
     one inside it) or that the angle shows no reflection; people at a mirror otherwise render without one.
   - A `continue` shot keeps everyone's spot and posture, the viewer's included, from the previous shot
     — copy the previous `Blocking:` positions and change only what the new `Action:` moves, and say
-    so in `Action:` ("the sister has risen"). A person who moved in the story but not in the lines
+    so in `Action:` ("<B> has risen"). A person who moved in the story but not in the lines
     teleports in the render. A change of the viewer's posture is stated in `Action:` too ("the viewer
-    now lies back on the lounger") with the new `POV:` posture: the renderer then drops the previous
+    now lies back on the bench") with the new `POV:` posture: the renderer then drops the previous
     frame (its viewpoint is the old eyes) and carries the state in words.
   - `Visible:` extents must fit `Camera:`'s framing size: `full figure` needs `full` / `wide`,
     `upper body` needs `medium close-up` or wider; a `close-up` is `face` (or hands / feet as `limbs`).
@@ -563,27 +563,27 @@ check); they go to the clip prompt verbatim.
   shorts need `lower body` or wider, a partly top `upper body`. For the POV viewer, `lower body` shows
   their own shorts and waistband (not their shirt); a `limbs` viewer has no `Wardrobe:` at all (R14).
   Examples:
-  - POV, the viewer's own shorts lowered: `POV: character_husband (seated)`, `Visible: …;
-    character_husband (lower body); nobody else`, `Wardrobe: character_husband (wearing: white linen
-    shirt; partly: grey shorts (lowered to mid-thigh))`.
-  - Top off, cardigan slipped down: `Outfits: character_sister:outfit_sister_bikini` + `Wardrobe:
-    character_sister (wearing: bikini bottom; partly: cardigan (off both shoulders, at the elbows);
-    removed: bikini top)`.
+  - POV, the viewer's own shorts lowered: `POV: <owner's key> (seated)`, `Visible: …;
+    <owner's key> (lower body); nobody else`, `Wardrobe: <owner's key> (wearing: linen
+    shirt; partly: shorts (lowered to mid-thigh))`.
+  - Top off, cardigan slipped down: `Outfits: <A's key>:<outfit_a_look>` + `Wardrobe:
+    <A's key> (wearing: skirt; partly: cardigan (off both shoulders, at the elbows);
+    removed: blouse)`.
   - Jacket open: `Wardrobe: character_officer (wearing: uniform trousers, boots; partly: uniform jacket
     (unbuttoned, open))`.
   A keyframe is a still, so a garment state is written as the state of the still, never as the motion:
   "back bare, both hands at her waist", not "untying the strings, top slipping down" (the model paints
   the tied top). The shot whose Motion performs the undress shows the BEFORE state in its picture lines
   (R27); the following shot shows this removed state. In `Action:` / `Pose:` / `Frame:` and the prompt, a REMOVED garment is not
-  mentioned at all — "bikini top held in her hands" or "cardigan slipped off her shoulders" summons
-  it back on (live s3-02: 10 of 10 takes kept the held top on); a garment that is still on her arms
+  mentioned at all — "blouse held in her hands" or "cardigan slipped off her shoulders" summons
+  it back on (measured on one production, 2026-11: nearly every take kept the held garment on; re-measure); a garment that is still on her arms
   is `partly: cardigan (off both shoulders, at the elbows)` instead.
 - `Expression:` = the face at t=0 of the keyframe, `<characterKey> (<expression>, <expression>, …)`, `;` between characters
-  (e.g. `Expression: character_sister (seductive smile, flushed cheeks, eyes on the lens); character_husband (shocked)`):
-  at most 4 short phrases per person, each at most 40 characters — seductive, flirtatious, shocked, blushing, aroused, nervous,
-  smug, ecstatic, tearful, determined. Every shot with a visible face has one entry per person whose face shows (extent
+  (e.g. `Expression: <A's key> (tired smile, eyes on the lens); <B's key> (surprised)`):
+  at most 4 short phrases per person, each at most 40 characters — shocked, blushing, nervous,
+  smug, tearful, determined, amused (under nudity `allowed` also seductive, aroused, ecstatic). Every shot with a visible face has one entry per person whose face shows (extent
   `full figure` / `upper body` / `face`); never for the POV owner or a `back` / `limbs` / `lower body` person. It is the face,
-  `State:` is the body (wet hair, semen); keep it consistent with the beat's emotion. An expression that CHANGES during
+  `State:` is the body (wet hair, mud); keep it consistent with the beat's emotion. An expression that CHANGES during
   the clip is a `Motion:` beat, not a second `Expression:`. Crying is an expression (`teary eyes`,
   `glistening eyes`), never fluid on the skin: "tear tracks" / "tear-streaked" render as thick streaks;
   name no body fluid a shot does not explicitly need.
@@ -591,8 +591,8 @@ check); they go to the clip prompt verbatim.
   `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
   `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
   the POV owner or a `limbs` person — they are words only). Write it in the first shot AFTER the action
-  that changes such a state (her beat "climbs out of the pool" is in shot k → shot k+1 has `State:
-  character_sister (wet hair, wet skin)`; shot k itself, which starts before she climbs out, does not) and
+  that changes such a state (<A>'s beat "climbs out of the water" is in shot k → shot k+1 has `State:
+  <A's key> (wet hair, wet skin)`; shot k itself, which starts before <A> climbs out, does not) and
   in EVERY later shot of the scene that shows the person while it lasts — a `continue` shot must restate
   it (rule R18); a `cut` shot later in the same moment should repeat it too (not checked — your job).
   A distinctive marking in the character's digest (tattoo, scar, birthmark) is permanent, but it is written
@@ -601,14 +601,15 @@ check); they go to the clip prompt verbatim.
   framing leaves that area out, write NOTHING about it - never `under sleeve` / `covered` / `hidden`: the image
   model draws every marking it reads, so a covered tattoo is painted onto the sleeve or the forearm. A marking
   of a `limbs` / POV person goes in words in `Pose:` under the same rule (only when that area is bare in frame).
-  A visible body fluid is a `State:` entry of the person it is on (`semen on her face`,
-  `saliva on her lips and chin`, `sweaty`, `wet glistening vulva`), from the shot that first shows it until it
-  is cleaned or covered. A `cumshot` shot's `Contact:` names where it lands
-  (`character_husband (groin) on character_sister (face)`).
+  A visible fluid or residue is a `State:` entry of the person it is on (`sweaty`, `rain on face`,
+  `flour on hands`, `blood on knuckles`), from the shot that first shows it until it is cleaned or
+  covered. Under nudity `allowed` the same holds for explicit fluids (`semen on <her/his> face`,
+  `saliva on lips and chin`); a `cumshot` shot's `Contact:` then names where it lands
+  (`<A's key> (groin) on <B's key> (face)`).
   When it ends, say so, preferably as the explicit new state (`dry hair`, `dry skin`): the judge checks
   a named state best. `(none)` means back to the design's own look (the server then states "no longer:
   <the previous shot's states>"); write it alone, never mixed with states. The server states each state
-  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale lace panties; removed: yellow sundress)`); a `continue` shot restates it (R17).
+  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale shorts; removed: yellow sundress)`); a `continue` shot restates it (R17).
 - `Contact:` = every touch the frame shows at ONE instant (never a motion path of successive contacts - that is
   `Motion:`), `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). A thing is
@@ -641,10 +642,10 @@ check); they go to the clip prompt verbatim.
   The server shows the act ("must show") only when a `Contact:` entry touches an intimate part
   (groin, buttocks, breasts). A close-up whose contacts are hands on shoulders or fingers on a thigh
   keeps the `Sex act:` / `Sex position:` lines for the record, but the server then says NOTHING about
-  the act to the renderer and loads NO act LoRA (live s7-17: fingers on a thigh, the blowjob out of frame above - the act words and
-  the act LoRA drew it into the frame). So curate NO act / position LoRA on such a shot's `LoRAs:` line
+  the act to the renderer and loads NO act LoRA (the act words and
+  the act LoRA draw an out-of-frame act into the frame). So curate NO act / position LoRA on such a shot's `LoRAs:` line
   (the write notes "act LoRAs not loaded (the act is out of frame)"): only the LoRAs for what the shot SHOWS
-  (style, skin, the thigh, the place).
+  (style, skin, the touched body part, the place).
 - Act / position LoRAs: only for a shot whose act is SHOWN (an intimate `Contact:` entry in frame). Then curate them on the `LoRAs:` line like any other (infer from name and description which
   serve the act; rank them high; see "Act shots" in "Curated LoRAs" for the order; a third-person act shot
   also gets the krea2 act LoRAs on that line - the staging drafts render on krea2 and load them, the real
@@ -664,7 +665,7 @@ send that shot again:
   - a garment still worn hides what it covers from this side: "bare back" seen from behind with an
     open cardigan on is impossible — take the cardigan off (`Wardrobe:`) or show the bare part from
     a side it is visible from;
-  - the viewer's own seat, chair or lounger is never an object in the frame (the camera sits in it):
+  - the viewer's own seat, chair or bench is never an object in the frame (the camera sits in it):
     only their limbs per `Visible:`; never "the wicker chair in front of the camera";
   - a garment `removed:` in `Wardrobe:` is not mentioned anywhere in the shot (not held, not nearby);
   - nothing that must stay out of frame is named in `Action:` / `Blocking:` / `Pose:` / `Frame:` (not
@@ -699,7 +700,7 @@ send that shot again:
 - `(view <id>)` on `Location:` / `Outfits:` / `Characters:` only with a listed view id; the shot's `Blocking:` /
   `Frame:` match the chosen picture's layout;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
-  key, name word or as a figure, not even as an owner ("husband's glass"); limbs-only people
+  key, name word or as a figure, not even as an owner ("<owner>'s glass"); limbs-only people
   likewise only as their limbs in words;
 - every beat's `Sex act` / `Sex position` is on the shot(s) that show it (nudity `allowed` only).
 
@@ -728,7 +729,7 @@ of `plan_shot` (the example shot s3-01 above):
   "entities": [
     { "key": "character_wife", "kind": "person", "region": { "third": "centre", "depth": "background" },
       "facing": "camera", "posture": "seated", "support": "chair", "contact_with": ["laptop"] },
-    { "key": "character_husband", "kind": "person", "region": { "third": "centre", "depth": "frame-edge" },
+    { "key": "character_b", "kind": "person", "region": { "third": "centre", "depth": "frame-edge" },
       "facing": "away", "limbs": "forearms and hands" },
     { "kind": "object", "count": 1, "region": { "third": "centre", "depth": "midground" }, "facing": "camera" } ],
   "prompt": "Medium shot, eye level, first-person view from a seat at the kitchen table:
@@ -761,7 +762,7 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   Set it for every person shown as a figure: the framing check judges a frame too wide by the cut-off
   body (ankles in a medium full shot) only for standing people.
 - `support` = what they sit, stand or lie on, or are in, when it matters — name the container:
-  "in the pool basin", "on the white sun lounger" (the take check holds every figure to it). A close-up
+  "in the bathtub", "on the grey sofa" (the take check holds every figure to it). A close-up
   states `support` only when the support is in frame.
   A THIRD-PERSON act shot (a `Sex act:` and no `POV:`) ALWAYS names the anchor furniture the act uses
   in `support` ("on the bed", "against the kitchen counter", "on the sofa"): the two-stage keyframe
@@ -793,13 +794,13 @@ of your own can only disagree with it.
 - Write each shot's prompt from ITS OWN lines: never copy another shot's people, placeholders or
   who-is-where wording.
 - Name every figure as `[[<design key>]]` (the entity keys, except words-only people), with their look and outfit
-  in words and their place in the frame — no count. Never exclude anybody by name ("no husband"
+  in words and their place in the frame — no count. Never exclude anybody by name ("no <B>"
   summons him; the server's count excludes everyone else). Never write "Picture N" or number
   images; the server does.
 - Add the shot's camera and framing, the place in words and the style line of the production
   (the medium / style of the story is kept verbatim).
 - No speech bubbles, captions, signs or lettering unless the shot asks for them.
-- Never name what must not be in the picture — not negated ("no pool"), not "behind the camera",
+- Never name what must not be in the picture — not negated ("no <thing>"), not "behind the camera",
   not "out of frame": the shot's `Out of frame:` line is the only place, and the server keeps it out
   of the prompt. Describe what fills that part of the frame instead.
 - Words-only people — the POV owner and anyone seen only by `limbs` — are never a
@@ -809,8 +810,8 @@ of your own can only disagree with it.
   and nothing else; never name the viewer's garments above what the extent shows ("beige shirt
   open at the waist" in a `lower body` shot draws the shirt and chest). A garment of the viewer
   is always "the viewer's own"; never place it near another person's body.
-- Wear state in the prompt is positive: what each person wears now ("wears only the navy bikini
-  bottom"), never "without the cardigan" or "the cardigan is off".
+- Wear state in the prompt is positive: what each person wears now ("wears only the navy
+  trousers"), never "without the cardigan" or "the cardigan is off".
 - Explicit acts and positions: copy the shot's `Sex act:` / `Sex position:` words (names in
   skill `explicit-acts`), only under the nudity policy.
 
