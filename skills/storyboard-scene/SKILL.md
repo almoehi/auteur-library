@@ -537,6 +537,7 @@ check); they go to the clip prompt verbatim.
     second person. A shot "from the surface's side" is a direct shot with the surface out of frame
     (`Out of frame: <surface>`); never write "the camera in the <surface>" or a person "in the glass" in
     `Frame:` / `Action:` / `Pose:`. Without a `Reflection:` line the angle shows no reflection.
+    The location's mention lines list its `reflective surfaces` per picture (the main picture and each view; a mirror, window, glass, screen, water, polished metal with where it is): write a `Reflection:` only in a surface of the picture the shot's `Location:` line binds - another view that lists the surface, or another location, when the bound picture lists none (`none` = the picture shows no reflective surface). A `Reflection:` in a surface the bound picture does not list is answered with an advisory note (the keyframe would invent the surface); a picture whose line is absent states nothing, so check by the layout text.
   - A `continue` shot keeps everyone's spot and posture, the viewer's included, from the previous shot
     — copy the previous `Blocking:` positions and change only what the new `Action:` moves, and say
     so in `Action:` ("<B> has risen"). A person who moved in the story but not in the lines
