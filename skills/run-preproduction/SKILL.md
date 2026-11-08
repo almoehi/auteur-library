@@ -41,7 +41,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
   - `scenes-quality`: scene list covers all beats, numbered, INT/EXT, location, time of day, lighting, one-line summary.
   - `scenes-complete`: location slug, INT/EXT, a `Lighting` phrase per scene, looks per character, beats with camera move / continuity / `Outfits` (+ sex columns when nudity allowed), a `## Places` row per location slug (set, space, connections), no location that is a surface.
   - `design-plan-covers-scenes`: plan has every character, location and (character, look) outfit of the scene list; locations of one property are sets (`set_anchor` links, one `set_style` per set).
-  - `storyboards-cover-scenes`: the plan has a storyboard entry for every scene (that every plan entry gets a design is the server's `create_designs` gate).
+  - `storyboards-cover-scenes`: the plan has a storyboard entry for every scene (that every plan entry gets a design is the server's `create_designs_from_plan` gate).
   - `shotlist-consistent` (attached to every storyboard by the spec): no shot of a `shotlist.md` contradicts itself (camera geometry, garments hiding what is said to be bare, the viewer's own seat drawn in frame, removed garments worn, identical continue framings).
 - A named check missing from `policy_index` -> `create_policy` it first (text modality, `Binary` grading, the model the other quality policies in `policy_index` use). Write each `evalPrompt` with `{input}` (the task's output files) and `{workspace.story.plot}`; `design-plan-covers-scenes` / `storyboards-cover-scenes` also use `{inputs.scene_list}`. Never edit an existing policy here (`modify-policy`).
 - An unknown key in `policies` is refused with the list of known keys and nothing is created: fix the key from the listed known keys (or create the missing policy) and call again.
@@ -59,7 +59,7 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 - Embed the exact output file names in each task prompt.
 - Agent choice: pick from `available_agents` by `role` / `objective`, never by guessed id (stock: `screenwriter`, `casting_director`, `director`, `design_planner`).
   - Production tasks (`write_screenplay`, `character_table`, `create_scenes`): the role's agent, else the general-purpose worker; never a planner.
-  - `plan_designs`: the planner agent that plans designs (tool-capable LLM with `create_designs`, e.g. `design_planner`); never the generic `planner`, never a general-purpose worker.
+  - `plan_designs`: the planner agent that plans designs (tool-capable LLM with `create_designs_from_plan`, e.g. `design_planner`); never the generic `planner`, never a general-purpose worker.
 
 ## 4. Create the tasks
 
@@ -266,13 +266,13 @@ The only output file is `design_plan.json` (the checks read the scene list from 
 Load and use skill: plan-designs
 
 Inputs: artifact `character_table` (files character_<slug>.md), artifact `scene_list` (scene_list.md, with its Places table), artifact `screenplay` (screenplay.md).
-Deliverable: the designs. Write the plan, then create every design of its `designs` list with ONE `create_designs` call (characters, set anchors, other locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` from the production canvas {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}: `portrait` when the height is larger than the width, else `landscape`; see the skill). Story: {workspace.story.plot}
-Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design exists (the last `create_designs` result has no `refused` / `blocked` row); if `task_complete` is refused because designs are missing, fix the named entries and call `create_designs` again, and report only counts the tool results show.
+Deliverable: the designs. Write the plan, then create every design of its `designs` list with ONE `create_designs_from_plan` call (characters, set anchors, other locations, outfits, then one storyboard per scene, each with a `format` attribute `portrait` | `landscape` from the production canvas {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}: `portrait` when the height is larger than the width, else `landscape`; see the skill). Story: {workspace.story.plot}
+Writing files (or a tool message about files written or a file count) is NOT completion: call `task_complete` only after every planned design exists (the last `create_designs_from_plan` result has no `refused` / `blocked` row); if `task_complete` is refused because designs are missing, fix the named entries and call `create_designs_from_plan` again, and report only counts the tool results show.
 Along the way, write the plan record as output artifact `design_plan`: `design_plan.json` only (one entry per `write_design` call, never one whole-file write; never copy `scene_list.md` - the checks read it from the `scene_list` input).
 ```
 
 ## 4e. Repair: designs not all created
-If `plan_designs` ended (or was stopped) with designs of its plan missing, call `create_designs({ plan_task: "plan_designs" })` once: it creates every missing design of that task's `design_plan.json` for the planner (idempotent; rows `created` / `existing` / `refused` / `blocked`). Report any `refused` / `blocked` rows to the user; do not fix the plan yourself. `create_design` stays for one-off designs only.
+If `plan_designs` ended (or was stopped) with designs of its plan missing, call `create_designs_from_plan({ plan_task: "plan_designs" })` once: it creates every missing design of that task's `design_plan.json` for the planner (idempotent; rows `created` / `existing` / `refused` / `blocked`). Report any `refused` / `blocked` rows to the user; do not fix the plan yourself. `create_design` stays for one-off designs only.
 
 ## 5. Verify and reply
 
@@ -286,5 +286,5 @@ If `plan_designs` ended (or was stopped) with designs of its plan missing, call 
 
 ## Never
 
-- Read artifacts or run `create_design` / `create_designs` yourself, except the repair in 4e.
+- Read artifacts or run `create_design` / `create_designs_from_plan` yourself, except the repair in 4e.
 - Create a task out of order, duplicate an existing one, or paraphrase a worker prompt.

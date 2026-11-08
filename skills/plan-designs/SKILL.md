@@ -3,7 +3,7 @@ name: plan-designs
 description: >
   Use when your task prompt says "Load and use skill: plan-designs" — turn the character
   table and the scene list into a design plan and create one studio design (character,
-  outfit, location) for every entry with a single create_designs call, then one storyboard
+  outfit, location) for every entry with a single create_designs_from_plan call, then one storyboard
   design per scene. Produces design_plan.json and the scheduled design tasks. Do NOT invoke for drafting or
   rendering design images (design-asset) or storyboard keyframes (storyboard-scene), writing
   screenplays or scene lists, or creating a single design on request.
@@ -12,10 +12,10 @@ agentType: worker
 
 # Plan Designs
 
-Plain LLM planning worker: read text, write `design_plan.json` one entry per `write_design` call, then ONE `create_designs` call creates every design of the plan.
+Plain LLM planning worker: read text, write `design_plan.json` one entry per `write_design` call, then ONE `create_designs_from_plan` call creates every design of the plan.
 
-- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `create_designs`, `task_complete`, `task_failed`.
-- `create_designs` takes no input: it reads your own `design_plan.json` and creates every entry that has no design yet, in the file's order. It needs `can_create_tasks: true` on your task. Never create designs one by one, and never pass `policies`.
+- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `create_designs_from_plan`, `task_complete`, `task_failed`.
+- `create_designs_from_plan` takes no input: it reads your own `design_plan.json` and creates every entry that has no design yet, in the file's order. It needs `can_create_tasks: true` on your task. Never create designs one by one, and never pass `policies`.
 - Output file: `design_plan.json` only, written with `write_design` (the checks read the scene list from your `scene_list` input; never copy it).
 - Never render, draft or write any design file (`design.json` included); design workers (`design-asset`, `storyboard-scene`) continue each design.
 - Replies: see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
@@ -59,7 +59,7 @@ A SET = the locations of ONE property (a house with its terrace, garden and driv
    - Reconcile before planning: collect scene-list character slugs and look slugs vs the table's file stems and tracker looks (`nude` / `none` are always valid).
    - Any unknown slug or look -> `task_failed` naming BOTH sets. Never map names by guesswork.
 4. `read_artifact(artifactId="screenplay")`: use it to confirm the Places `connections` (doors, windows, what lies beyond) and the property's look for `set_style`; never to add characters, places or looks.
-5. Re-run: if your `design_plan.json` already holds entries, `read_artifact` it and keep them (send an entry again with `write_design` only to fix it); `create_designs` skips designs that already exist, so there is nothing to inspect first.
+5. Re-run: if your `design_plan.json` already holds entries, `read_artifact` it and keep them (send an entry again with `write_design` only to fix it); `create_designs_from_plan` skips designs that already exist, so there is nothing to inspect first.
 6. Missing or unparseable input -> `task_failed(reason)` naming it; write nothing.
 
 ## Phase 1 — Plan -> design_plan.json
@@ -109,7 +109,7 @@ Build every entry with its FINAL key; nothing is decided later.
 5. Storyboards: per scene key `storyboard_scene_<n>` (`display_name` "Scene <n>", `key_slug` `scene_<n>`) with attributes `scene` = `<n>`, `notes`, `format`:
    - `notes` = the Summary.
    - `format` `portrait` | `landscape`: from the production canvas `{workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}` ("Workspace facts"): `portrait` when the height is larger than the width (e.g. 9:16), else `landscape` (also when empty); never ask; the SAME value for every scene.
-   - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished). Check before creating it: every look worn in ANY beat of the scene — every `<c>:<look>` pair of the row's AND the beats' `Outfits` (not `nude` / `none`), the earlier look of a character who undresses mid-scene included — has its outfit link — links are fixed at creation, and a missing one leaves the storyboard without that outfit's picture. `create_designs` reports a storyboard missing any of the scene's place / character / outfit links as a `refused` row listing the missing ones as `{ role, key }`: add them to that entry's `links` with `write_design` and call `create_designs` again.
+   - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished). Check before creating it: every look worn in ANY beat of the scene — every `<c>:<look>` pair of the row's AND the beats' `Outfits` (not `nude` / `none`), the earlier look of a character who undresses mid-scene included — has its outfit link — links are fixed at creation, and a missing one leaves the storyboard without that outfit's picture. `create_designs_from_plan` reports a storyboard missing any of the scene's place / character / outfit links as a `refused` row listing the missing ones as `{ role, key }`: add them to that entry's `links` with `write_design` and call `create_designs_from_plan` again.
 6. `sets` and `designs` (THE work list: every key in creation order - characters, set anchors and standalone places, set members, outfits, storyboards by scene) are filled in by `write_design`; never write them yourself.
 7. Write `design_plan.json` ONLY with `write_design` - ONE entry per call, a few calls per reply, in creation order (a link must name an entry already written). Never write it with `sandbox_write_file`, and never copy `scene_list.md` (the checks read the `scene_list` input).
    - An entry = the design's creation arguments (`kind`, `display_name`, `key_slug`, `character_type`, `attributes`, `links`, `distinct_place`; no `start`, no `loras`) plus `scenes` and, for an outfit, `character_slug` and `look_slug`.
@@ -144,9 +144,9 @@ Example calls (one production; a few per reply):
 - The file name is canonical: `design_plan.json` in the `design_plan` artifact; if the declared files differ, still write it and add `file mismatch: <declared> vs design_plan.json` to the summary.
 - Writing files is NOT completion: Phase 2 must follow. If `task_complete` is refused because nothing was created or plan entries have no design, go to Phase 2; never loop on `task_complete`.
 
-## Phase 2 — Create the designs with `create_designs`
+## Phase 2 — Create the designs with `create_designs_from_plan`
 
-Once every entry is written, call `create_designs` ONCE (no input). It creates every entry without a design in the file's order and returns a count line, then one row per key (`- <key>: created|existing - task id <id>` or `- <key>: REFUSED|BLOCKED - <reason>`):
+Once every entry is written, call `create_designs_from_plan` ONCE (no input). It creates every entry without a design in the file's order and returns a count line, then one row per key (`- <key>: created|existing - task id <id>` or `- <key>: REFUSED|BLOCKED - <reason>`):
 
 - `created`: the design now exists (key, `@name`, task id).
 - `existing`: a design with that key already exists (a failed one counts); nothing was created.
@@ -156,16 +156,16 @@ Once every entry is written, call `create_designs` ONCE (no input). It creates e
 Repeat until no row is `refused` or `blocked`:
 
 1. Fix each `refused` entry with `write_design` (same `kind` + `key_slug` replaces it), as the row says: e.g. add the missing `{ role, key }` links, a different `key_slug` when the name clashes (`design name "<n>" is already used by "<key>"`: the name derives from `key_slug`, so a new display name alone never helps; append the kind: `harbor` -> `harbor_location`, and fix every link to the old key), or a `set` identical to the anchor's. A `set_anchor` must be an anchor itself (star topology): fix the plan, do not drop the link. `blocked` rows need no change of their own; they clear once the key they wait for is created.
-2. Call `create_designs` again (idempotent: rows already created come back `existing`).
+2. Call `create_designs_from_plan` again (idempotent: rows already created come back `existing`).
 3. A row you cannot fix (the same problem after a fix, or one that needs input you do not have) -> `task_failed(reason)` naming the key and the problem.
 
 Never re-judge, skip, merge or add entries beyond these fixes (an odd-looking entry is created and noted).
 
 ## Phase 3 — Audit and complete
 
-1. The last `create_designs` result has only `created` / `existing` rows. `task_complete` is refused while any plan key has no design (the refusal names the missing keys): call `create_designs` again.
+1. The last `create_designs_from_plan` result has only `created` / `existing` rows. `task_complete` is refused while any plan key has no design (the refusal names the missing keys): call `create_designs_from_plan` again.
 2. `design_plan.json` exists in your artifact directory and equals what you used.
-3. `task_complete` summary, exactly this format (counts from the last `create_designs` result: created = its `created` rows, planned = all its rows):
+3. `task_complete` summary, exactly this format (counts from the last `create_designs_from_plan` result: created = its `created` rows, planned = all its rows):
 
 ```
 designs: <created>/<planned> created, the rest existing - characters <n>, locations <n>, outfits <n>, storyboards <n>
