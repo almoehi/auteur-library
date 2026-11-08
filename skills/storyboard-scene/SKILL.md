@@ -729,7 +729,7 @@ of `plan_shot` (the example shot s3-01 above):
 { "shot": "s3-01",
   "entities": [
     { "key": "character_wife", "kind": "person", "region": { "third": "centre", "depth": "background" },
-      "facing": "camera", "posture": "seated", "support": "chair", "contact_with": ["laptop"] },
+      "facing": "camera", "gaze": "laptop", "posture": "seated", "support": "chair", "contact_with": ["laptop"] },
     { "key": "character_husband", "kind": "person", "region": { "third": "centre", "depth": "frame-edge" },
       "facing": "away", "limbs": "forearms and hands" },
     { "kind": "object", "count": 1, "region": { "third": "centre", "depth": "midground" }, "facing": "camera" } ],
