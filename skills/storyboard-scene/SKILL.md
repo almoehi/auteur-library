@@ -529,7 +529,7 @@ check); they go to the clip prompt verbatim.
     location picture shows its own state and wins over a shot that stays silent.
   - A reflective surface in frame (mirror, window, screen, water, glossy surface): a reflection is wanted only
     in a medium or wider shot and only when the story needs it; a close-up never asks for one beside the face.
-    The `Reflection: <character key> in <surface>` line (one entry, a person in `Visible:`) states it: the real
+    The `Reflection: <character key> in <surface>` line (one entry, a person pictured as themselves in `Visible:` - never the POV owner or a `limbs`-only person) states it: the real
     person stands in front of the surface and the surface holds only that person's own reflection, never a
     second person. A shot "from the surface's side" is a direct shot with the surface out of frame
     (`Out of frame: <surface>`); never write "the camera in the <surface>" or a person "in the glass" in
