@@ -3,8 +3,8 @@ name: plan-designs
 description: >
   Use when your task prompt says "Load and use skill: plan-designs" — turn the character
   table and the scene list into a design plan and create one studio design (character,
-  outfit, location) for every entry with create_design, then one storyboard design per scene.
-  Produces design_plan.json and the scheduled design tasks. Do NOT invoke for drafting or
+  outfit, location) for every entry with a single create_designs call, then one storyboard
+  design per scene. Produces design_plan.json and the scheduled design tasks. Do NOT invoke for drafting or
   rendering design images (design-asset) or storyboard keyframes (storyboard-scene), writing
   screenplays or scene lists, or creating a single design on request.
 agentType: worker
@@ -12,10 +12,10 @@ agentType: worker
 
 # Plan Designs
 
-Plain LLM planning worker: read text, write `design_plan.json` one entry per `write_design` call, call `create_design`.
+Plain LLM planning worker: read text, write `design_plan.json` one entry per `write_design` call, then ONE `create_designs` call creates every design of the plan.
 
-- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `create_design`, `task_complete`, `task_failed`.
-- `create_design` needs `can_create_tasks: true` on your task; use it only for the plan's designs. Never pass `policies` to it.
+- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `create_designs`, `task_complete`, `task_failed`.
+- `create_designs` takes no input: it reads your own `design_plan.json` and creates every entry that has no design yet, in the file's order. It needs `can_create_tasks: true` on your task. Never create designs one by one, and never pass `policies`.
 - Output file: `design_plan.json` only, written with `write_design` (the checks read the scene list from your `scene_list` input; never copy it).
 - Never render, draft or write any design file (`design.json` included); design workers (`design-asset`, `storyboard-scene`) continue each design.
 - Replies: see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`.
@@ -59,7 +59,7 @@ A SET = the locations of ONE property (a house with its terrace, garden and driv
    - Reconcile before planning: collect scene-list character slugs and look slugs vs the table's file stems and tracker looks (`nude` / `none` are always valid).
    - Any unknown slug or look -> `task_failed` naming BOTH sets. Never map names by guesswork.
 4. `read_artifact(artifactId="screenplay")`: use it to confirm the Places `connections` (doors, windows, what lies beyond) and the property's look for `set_style`; never to add characters, places or looks.
-5. Idempotency (always run; never assume nothing exists): `artifact_index` keys starting `character_`, `outfit_`, `location_`, `storyboard_`, plus `task_index` -> `existing`.
+5. Re-run: if your `design_plan.json` already holds entries, `read_artifact` it and keep them (send an entry again with `write_design` only to fix it); `create_designs` skips designs that already exist, so there is nothing to inspect first.
 6. Missing or unparseable input -> `task_failed(reason)` naming it; write nothing.
 
 ## Phase 1 — Plan -> design_plan.json
@@ -89,7 +89,7 @@ Build every entry with its FINAL key; nothing is decided later.
 
 | kind | keys |
 |---|---|
-| character | `character_type` (own `create_design` argument, not an attribute: woman, man, non-binary person, child, elderly person, animal, creature, robot, fantasy being, or free text); attributes `age`, `ethnicity`, `hair`, `eyes`, `build`, `wardrobe`, `features`, `voice` |
+| character | `character_type` (own entry field, not an attribute: woman, man, non-binary person, child, elderly person, animal, creature, robot, fantasy being, or free text); attributes `age`, `ethnicity`, `hair`, `eyes`, `build`, `wardrobe`, `features`, `voice` |
 | outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` (from the tracker row); `garments` in construction terms, one comma-joined entry per garment: type and cut, then defining details ("cropped double-breasted wool blazer with gold buttons, high-waisted wide-leg trousers, pointed-toe leather pumps"), never vague tags ("nice outfit", "sparkly dress"), never details the sources do not state; `accessories` never restate, replace or contradict a mark of the character's own `features` (jewellery, tattoos, piercings, scars): precedence: the character's identity attributes (face, marks, jewellery) beat the outfit's accessories everywhere (outfit generation, binding, outfit check); the outfit lists only other accessories |
 | location | `place`, `space` (`interior` \| `exterior`, from the Places row), `era`, `time_of_day`, `weather`, `lighting`, `mood`, `set`, `set_style`, `connections`, `views` |
 
@@ -105,14 +105,14 @@ Build every entry with its FINAL key; nothing is decided later.
        - Put each view on the design whose LOOK the beats that need it show, read from those beats' `Outfits` cell: a beat with the character's base look (`<character>:nude`, `:none`, or the character's plain look) -> the CHARACTER design; a beat with an outfit look (`<character>:<look slug>`) -> that OUTFIT design. A pose the beats need in both looks goes on both. Never put a view on the character design for beats that only ever show the person in an outfit: the character design is nude or neutral, so the view would show the wrong look.
        - Never a view of the main picture's own pose: standing, facing the camera, arms at the sides (in any wording) IS the main picture, so it adds nothing. Every entry must differ from it, and from the standard `front` / `profile` / `back` / `face`, in posture, facing, arms / head or expression.
        - Two-person beats (an act, a carry, an embrace): the act itself is not a view (the storyboard renders it), but the person's OWN body in it is - read each such beat for what this person's head, back, hips, arms and face do, alone: "head thrown back with eyes closed", "back arched with the chest lifted", "bent forward at the waist", "arms raised and crossed behind the head", "biting the lower lip". A character whose base-look beats are mostly acts gets 2-4 such views on the character design, never one placeholder; a character design with no view at all is right only when no base-look beat shows a pose or expression other than the main picture's.
-4. LoRAs: assign none. Never write `loras` or tag-based LoRA lists into the plan or `create_design` calls; the design's agent and the storyboard's shot curation pick LoRAs from the catalog's names and descriptions ("Curated LoRAs" in `workflow-calling-conventions`).
+4. LoRAs: assign none. Never write `loras` or tag-based LoRA lists into the plan; the design's agent and the storyboard's shot curation pick LoRAs from the catalog's names and descriptions ("Curated LoRAs" in `workflow-calling-conventions`).
 5. Storyboards: per scene key `storyboard_scene_<n>` (`display_name` "Scene <n>", `key_slug` `scene_<n>`) with attributes `scene` = `<n>`, `notes`, `format`:
    - `notes` = the Summary.
    - `format` `portrait` | `landscape`: from the production canvas `{workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}` ("Workspace facts"): `portrait` when the height is larger than the width (e.g. 9:16), else `landscape` (also when empty); never ask; the SAME value for every scene.
-   - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished). Check before creating it: every look worn in ANY beat of the scene — every `<c>:<look>` pair of the row's AND the beats' `Outfits` (not `nude` / `none`), the earlier look of a character who undresses mid-scene included — has its outfit link — links are fixed at creation, and a missing one leaves the storyboard without that outfit's picture. `create_design` refuses a storyboard missing any of the scene's place / character / outfit links and lists the missing ones as `{ role, key }`: copy them into `links` and retry.
+   - `links` (only settable at creation; `storyboard-scene` places shots only at linked locations): one `location` link per place the scene uses (row slug design FIRST, then parallel-beat places); one `character` link per `Characters present`; one `outfit` link per `Outfits` pair that has an outfit entry. Every given link is required (the storyboard task waits until those designs are finished). Check before creating it: every look worn in ANY beat of the scene — every `<c>:<look>` pair of the row's AND the beats' `Outfits` (not `nude` / `none`), the earlier look of a character who undresses mid-scene included — has its outfit link — links are fixed at creation, and a missing one leaves the storyboard without that outfit's picture. `create_designs` reports a storyboard missing any of the scene's place / character / outfit links as a `refused` row listing the missing ones as `{ role, key }`: add them to that entry's `links` with `write_design` and call `create_designs` again.
 6. `sets` and `designs` (THE work list: every key in creation order - characters, set anchors and standalone places, set members, outfits, storyboards by scene) are filled in by `write_design`; never write them yourself.
 7. Write `design_plan.json` ONLY with `write_design` - ONE entry per call, a few calls per reply, in creation order (a link must name an entry already written). Never write it with `sandbox_write_file`, and never copy `scene_list.md` (the checks read the `scene_list` input).
-   - An entry = the design's `create_design` arguments (`kind`, `display_name`, `key_slug`, `character_type`, `attributes`, `links`, `distinct_place`; no `start`, no `loras`) plus `scenes` and, for an outfit, `character_slug` and `look_slug`.
+   - An entry = the design's creation arguments (`kind`, `display_name`, `key_slug`, `character_type`, `attributes`, `links`, `distinct_place`; no `start`, no `loras`) plus `scenes` and, for an outfit, `character_slug` and `look_slug`.
    - A set member may omit `set` / `set_style`: they are copied from its anchor (one text per set).
    - A refusal (`design <key> was NOT saved ...`) lists that entry's problems and their fix: fix exactly those and send that entry again; other entries stay. A wrong entry already written: send it again (same `kind` + `key_slug` replaces it) or `remove: true`.
    - Success reads `design <key> written (<counts> in design_plan.json)`.
@@ -142,42 +142,33 @@ Example calls (one production; a few per reply):
 ```
 
 - The file name is canonical: `design_plan.json` in the `design_plan` artifact; if the declared files differ, still write it and add `file mismatch: <declared> vs design_plan.json` to the summary.
-- Writing files is NOT completion: Phase 2 must follow. If `task_complete` is refused because nothing was created, go to Phase 2; never loop on `task_complete`.
+- Writing files is NOT completion: Phase 2 must follow. If `task_complete` is refused because nothing was created or plan entries have no design, go to Phase 2; never loop on `task_complete`.
 
-## Phase 2 — Create the designs
+## Phase 2 — Create the designs with `create_designs`
 
-Walk the creation order (the file's `designs` array = your step-0 key list), one `create_design` per key; arguments = the entry as written WITHOUT the plan-only facts `key`, `scenes`, `character_slug`, `look_slug`, plus `start` / `initial_drafts` below. Never re-judge, skip, merge or add entries (an odd-looking entry is created and noted). Skip only keys in `existing` (record them). ONE `create_design` per response, issued after the previous result; NEVER several in one response: later outfits / storyboards link the ACTUAL keys earlier results report (renames, reuses), and an outfit is refused until its character exists. Keep each result's key, `@name` and task id.
+Once every entry is written, call `create_designs` ONCE (no input). It creates every entry without a design in the file's order and returns a count line, then one row per key (`- <key>: created|existing - task id <id>` or `- <key>: REFUSED|BLOCKED - <reason>`):
 
-- Common: `start: "attributes"`, `initial_drafts: 1`, `display_name`, `key_slug`, `attributes`.
-- character: `{ kind: "character", character_type }` (`character_type` REQUIRED; custom text allowed).
-- location: `{ kind: "location" }` + `distinct_place: true` when the entry has it; a set member also `links: [{ "role": "set_anchor", "key": <anchor's ACTUAL key from the registry> }]`. `create_design` refuses a `set_anchor` that itself has a `set_anchor`, and a `set` differing from the anchor's: fix the plan (star topology, identical `set`), do not drop the link.
-- outfit: `{ kind: "outfit", links: [{ "role": "character", "key": "character_<character_slug>" }] }` (always pass the link; the outfit is drafted as edits of that character's full-body shot).
-- storyboard: `{ kind: "storyboard", display_name: "Scene <n>", key_slug: "scene_<n>", links }` with the entry's attributes `scene`, `notes`, `format`.
-- `start: "attributes"` needs a non-sheet text-to-image workflow in the workspace (outfits: an image-to-image one).
-- Success reads `Design created: key <key>, @<name>, task id <id>, status <status>`; anything else (`error:` ...) is NOT created. Check the created key equals the entry's key.
-- Keep a registry `planned key -> actual key` (from results, reused existing keys, renamed keys). Later links use actual keys; never re-derive a key from a slug.
-- A link key refused as unknown: re-check the registry and `artifact_index`, retry once, then drop only that link and note it.
+- `created`: the design now exists (key, `@name`, task id).
+- `existing`: a design with that key already exists (a failed one counts); nothing was created.
+- `refused`: the entry was not created; the row names the problem.
+- `blocked`: not attempted because a link names a `refused` or `blocked` key.
 
-Refusals:
-- `design name "<n>" is already used by "<key>"`: same kind -> reuse it (skipped, noted); different kind -> retry once with a DIFFERENT `key_slug` (the name derives from `key_slug`, so a new display name alone never helps; append the kind: `harbor` -> `harbor_location`) and record `renamed: <planned key> -> <created key>`.
-- Outfit refused for a missing character: create the character first, retry.
-- Any other error: retry once; if it fails again record it as failed and continue.
+Repeat until no row is `refused` or `blocked`:
+
+1. Fix each `refused` entry with `write_design` (same `kind` + `key_slug` replaces it), as the row says: e.g. add the missing `{ role, key }` links, a different `key_slug` when the name clashes (`design name "<n>" is already used by "<key>"`: the name derives from `key_slug`, so a new display name alone never helps; append the kind: `harbor` -> `harbor_location`, and fix every link to the old key), or a `set` identical to the anchor's. A `set_anchor` must be an anchor itself (star topology): fix the plan, do not drop the link. `blocked` rows need no change of their own; they clear once the key they wait for is created.
+2. Call `create_designs` again (idempotent: rows already created come back `existing`).
+3. A row you cannot fix (the same problem after a fix, or one that needs input you do not have) -> `task_failed(reason)` naming the key and the problem.
+
+Never re-judge, skip, merge or add entries beyond these fixes (an odd-looking entry is created and noted).
 
 ## Phase 3 — Audit and complete
 
-1. Re-run `artifact_index` (mandatory). Missing = every key of `designs` (after renames / skips) not in the index.
-   - Before creating a missing one, check for a rename: a design of the SAME kind created this run under another key is that entry -> record `renamed: <planned> -> <actual>`; never create a second design.
-   - Create each remaining missing one (Phase 2 rules), re-audit.
-2. `task_complete` is forbidden while any key is missing unless listed under `failed:` with its error. Zero `create_design` calls so far = Phase 2 never ran.
-3. `design_plan.json` exists in your artifact directory and equals what you used.
-4. Plan not coverable at all -> `task_failed`.
-5. `task_complete` summary, exactly this format (counts from the audit and your own calls; the check sees only the first ~200 characters, so skipped / renamed come first as FULL keys, never counts):
+1. The last `create_designs` result has only `created` / `existing` rows. `task_complete` is refused while any plan key has no design (the refusal names the missing keys): call `create_designs` again.
+2. `design_plan.json` exists in your artifact directory and equals what you used.
+3. `task_complete` summary, exactly this format (counts from the last `create_designs` result: created = its `created` rows, planned = all its rows):
 
 ```
-skipped (existing): <full keys> or none
-renamed: <old key> -> <new key> (only if any)
-designs: <created>/<planned> - characters a/b, locations a/b, outfits a/b, storyboards a/b
-failed: <key: error> or none
+designs: <created>/<planned> created, the rest existing - characters <n>, locations <n>, outfits <n>, storyboards <n>
 ```
 
 - Add `file mismatch:` and `flagged:` lines only when they occurred.
