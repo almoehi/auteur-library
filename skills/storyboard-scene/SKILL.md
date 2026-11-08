@@ -587,11 +587,11 @@ check); they go to the clip prompt verbatim.
     <garment> (off both shoulders, at the elbows); removed: <top>)`.
   A keyframe is a still, so a garment state is written as the state of the still, never as the motion:
   "coat open, both hands at her collar", not "unbuttoning the coat, sleeve slipping down" (the model paints
-  the tied top). The shot whose Motion performs the undress shows the BEFORE state in its picture lines
+  the coat still buttoned). The shot whose Motion performs the garment change shows the BEFORE state in its picture lines
   (R27); the following shot shows this removed state. In `Action:` / `Pose:` / `Frame:` and the prompt, a REMOVED garment is not
-  mentioned at all — "scarf held in her hands" or "scarf slipped off her shoulders" summons
+  mentioned at all — "scarf held in her hands" or "jacket slipped off her shoulders" summons
   it back on (measured on one production, 2026-11: nearly every take kept the held garment on; re-measure); a garment that is still on her arms
-  is `partly: scarf (off both shoulders, at the elbows)` instead.
+  is `partly: jacket (off both shoulders, at the elbows)` instead.
 - `Expression:` = the face at t=0 of the keyframe, `<characterKey> (<expression>, <expression>, …)`, `;` between characters
   (e.g. `Expression: <A's key> (tired smile, eyes on the lens); <B's key> (surprised)`):
   at most 4 short phrases per person, each at most 40 characters — shocked, blushing, nervous,
