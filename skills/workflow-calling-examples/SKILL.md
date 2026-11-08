@@ -63,22 +63,22 @@ task_complete(summary="Rendered 3 shots for Scene 2")
 
 ## One call, multiple same-kind outputs
 
-A character-sheet workflow (`krea2_character_sheet` / `_nsfw`: input `character_image`; params `gender` female|male|other, `white_background`, `identity_prompt`, ...) returns the sheet (including two first-person POV tiles of the character's own body, a right column of the sheet only) plus three full-body views and a portrait. Declared files: `character_sheet.png`, `view_1.png`, `view_2.png`, `view_3.png`, `portrait.png`. One call returns all these image ports; the names do not all follow the port names 1:1 in every task, so bind explicitly:
+A location-sheet workflow (`krea2_location_sheet` / `_nsfw`: optional input `reference_image`; params `prompt_location`, `space` interior|exterior, ...) returns the sheet plus individual view frames and the anchor. Declared files: `location_sheet.png`, `anchor_preview.png`, `view_1.png`, `view_2.png`, ... One call returns all these image ports; the names do not all follow the port names 1:1 in every task, so bind explicitly:
 
 ```
 wf_xxx(
-  character_image="artifact://<artifactId>/<file>",
-  gender="female",
+  prompt_location="a sunlit courtyard with a tiled fountain, late afternoon",
+  space="exterior",
   output_ports={
-    "character_sheet": "/workspace/<artifact_uuid>/character_sheet.png",
+    "location_sheet": "/workspace/<artifact_uuid>/location_sheet.png",
+    "anchor_preview": "/workspace/<artifact_uuid>/anchor_preview.png",
     "view_1": "/workspace/<artifact_uuid>/view_1.png",
     "view_2": "/workspace/<artifact_uuid>/view_2.png",
-    "view_3": "/workspace/<artifact_uuid>/view_3.png",
-    "portrait": "/workspace/<artifact_uuid>/portrait.png"
+    "view_3": "/workspace/<artifact_uuid>/view_3.png"
   }
 )
 → all 5 slots filled, correctly bound by name
-task_complete(summary="Rendered character sheet")
+task_complete(summary="Rendered location sheet")
 ```
 
 ## Negative examples — do NOT do these
