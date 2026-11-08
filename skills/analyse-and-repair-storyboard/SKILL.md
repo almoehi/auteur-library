@@ -65,10 +65,10 @@ is a table, not a rule):
 
 | Limit seen (2026-11) | Status |
 |---|---|
-| The outfit check demanded outfit-design garments the shot removed, and its suggested fix said "add <garment>" | addressed in the platform since the next release (one wardrobe rule + look plates); if still seen, report it - until then ignore such fixes |
-| A framing miss counted less than any outfit finding, so a too-wide take won the auto-pick | addressed since the next release (measured ranking); if still seen, report |
-| A take was picked even when every take failed | addressed since the next release (all-failed flag); if still seen, report |
-| A second face in a POV close-up was not checked | addressed since the next release (absent-viewer check); if still seen, report |
+| The outfit check demanded outfit-design garments the shot removed, and its suggested fix said "add <garment>" | believed addressed in a later release (re-measure) (one wardrobe rule + look plates); if still seen, report it - until then ignore such fixes |
+| A framing miss counted less than any outfit finding, so a too-wide take won the auto-pick | believed addressed in a later release (re-measure) (measured ranking); if still seen, report |
+| A take was picked even when every take failed | believed addressed in a later release (re-measure) (all-failed flag); if still seen, report |
+| A second face in a POV close-up was not checked | believed addressed in a later release (re-measure) (absent-viewer check); if still seen, report |
 
 ## 3. Choose the fix per defect
 
@@ -90,8 +90,8 @@ renderer changes.
 | Wrong body posture or support (observed posture/support differs from the stated one) | Describe: "<Subject> must be <stated posture> on/at <stated support>, not <observed posture/support>." | mostly |
 | Overlapping hands malformed | Describe: "Each hand needs five fingers and a clear owner." | partly |
 | Gaze into the lens missing | Describe | partly |
-| Medium close-up / close-up of a BODY region (back, shoulders, hips) comes out wide | - | rarely as of 2026-11; close-up crop + reframe since the next release - if still seen, report, keep the best take |
-| A garment the shot removed is still worn | - | rarely as of 2026-11; wardrobe rule + look plates since the next release - if still seen, report |
+| Medium close-up / close-up of a BODY region (back, shoulders, hips) comes out wide | - | rarely as of 2026-11; close-up crop + reframe in a later release (re-measure) - if still seen, report, keep the best take |
+| A garment the shot removed is still worn | - | rarely as of 2026-11; wardrobe rule + look plates in a later release (re-measure) - if still seen, report |
 | A `partly:` garment in the wrong place | - | does not work: report |
 | Which hand / where a hand rests / what it holds | - | does not work: report, or simplify the shot line |
 | A `wrong` shot with no usable take | regenerate x2 (after fixing the lines if they caused it) | - |
