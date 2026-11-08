@@ -5,7 +5,7 @@ description: >
   seems stuck - "the top disappears between shots", "she never jumps", "the doll is life-size", "the
   gown is the wrong colour", "the act is not shown", "the clip is square", "the storyboard agent said
   it fixed it but nothing changed", "the frame replacement is stuck", "why did this shot fail" - and
-  asks to find the cause and fix it in this workspace. Produces a root cause (which layer is wrong)
+  asks to find the cause and fix it in this workspace. A review of ALL takes of a storyboard ("check the takes", "which keyframes are wrong") is analyse-and-repair-storyboard. Produces a root cause (which layer is wrong)
   and the smallest fix applied at that layer, verified. Do NOT invoke for writing a new storyboard or
   shot list from scratch, shooting a scene, designing a character, or prompt writing.
 agentType: worker
