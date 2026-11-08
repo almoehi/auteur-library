@@ -41,9 +41,9 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
   - `scenes-quality`: scene list covers all beats, numbered, INT/EXT, location, time of day, lighting, one-line summary.
   - `scenes-complete`: location slug, INT/EXT, a `Lighting` phrase per scene, looks per character, beats with camera move / continuity / `Outfits` (+ sex columns when nudity allowed), a `## Places` row per location slug (set, space, connections), no location that is a surface.
   - `design-plan-covers-scenes`: plan has every character, location and (character, look) outfit of the scene list; locations of one property are sets (`set_anchor` links, one `set_style` per set).
-  - `storyboards-cover-scenes`: a storyboard exists for every scene.
+  - `storyboards-cover-scenes`: the plan has a storyboard entry for every scene (that every plan entry gets a design is the server's `create_designs` gate).
   - `shotlist-consistent` (attached to every storyboard by the spec): no shot of a `shotlist.md` contradicts itself (camera geometry, garments hiding what is said to be bare, the viewer's own seat drawn in frame, removed garments worn, identical continue framings).
-- A named check missing from `policy_index` -> `create_policy` it first (text modality, `Binary` grading, the model the other quality policies in `policy_index` use). Write each `evalPrompt` with `{input}` (the task's output files) and `{workspace.story.plot}`; `storyboards-cover-scenes` also uses `{toolCalls}`. Never edit an existing policy here (`modify-policy`).
+- A named check missing from `policy_index` -> `create_policy` it first (text modality, `Binary` grading, the model the other quality policies in `policy_index` use). Write each `evalPrompt` with `{input}` (the task's output files) and `{workspace.story.plot}`; `design-plan-covers-scenes` / `storyboards-cover-scenes` also use `{inputs.scene_list}`. Never edit an existing policy here (`modify-policy`).
 - An unknown key in `policies` is refused with the list of known keys and nothing is created: fix the key from the listed known keys (or create the missing policy) and call again.
 
 ## 3. Plan (canonical names, set once, never renamed)
@@ -286,5 +286,5 @@ If `plan_designs` ended (or was stopped) with designs of its plan missing, call 
 
 ## Never
 
-- Read artifacts or run `create_design` / `create_designs` yourself, except the repair below.
+- Read artifacts or run `create_design` / `create_designs` yourself, except the repair in 4e.
 - Create a task out of order, duplicate an existing one, or paraphrase a worker prompt.

@@ -142,11 +142,11 @@ Example calls (one production; a few per reply):
 ```
 
 - The file name is canonical: `design_plan.json` in the `design_plan` artifact; if the declared files differ, still write it and add `file mismatch: <declared> vs design_plan.json` to the summary.
-- Writing files is NOT completion: Phase 2 must follow. If `task_complete` is refused because nothing was created, go to Phase 2; never loop on `task_complete`.
+- Writing files is NOT completion: Phase 2 must follow. If `task_complete` is refused because nothing was created or plan entries have no design, go to Phase 2; never loop on `task_complete`.
 
 ## Phase 2 — Create the designs with `create_designs`
 
-Once every entry is written, call `create_designs` ONCE (no input). It creates every entry without a design in the file's order and returns one row per key:
+Once every entry is written, call `create_designs` ONCE (no input). It creates every entry without a design in the file's order and returns a count line, then one row per key (`- <key>: created|existing - task id <id>` or `- <key>: REFUSED|BLOCKED - <reason>`):
 
 - `created`: the design now exists (key, `@name`, task id).
 - `existing`: a design with that key already exists (a failed one counts); nothing was created.
@@ -165,13 +165,10 @@ Never re-judge, skip, merge or add entries beyond these fixes (an odd-looking en
 
 1. The last `create_designs` result has only `created` / `existing` rows. `task_complete` is refused while any plan key has no design (the refusal names the missing keys): call `create_designs` again.
 2. `design_plan.json` exists in your artifact directory and equals what you used.
-3. `task_complete` summary, exactly this format (counts from the last `create_designs` rows; the check sees only the first ~200 characters, so existing / renamed come first as FULL keys, never counts):
+3. `task_complete` summary, exactly this format (counts from the last `create_designs` result: created = its `created` rows, planned = all its rows):
 
 ```
-skipped (existing): <full keys> or none
-renamed: <old key> -> <new key> (only if any)
-designs: <created+existing>/<planned> - characters a/b, locations a/b, outfits a/b, storyboards a/b
-failed: none
+designs: <created>/<planned> created, the rest existing - characters <n>, locations <n>, outfits <n>, storyboards <n>
 ```
 
-- Add `file mismatch:` and `flagged:` lines only when they occurred. A `renamed:` line is a `key_slug` change you made in the plan after a name clash.
+- Add `file mismatch:` and `flagged:` lines only when they occurred.
