@@ -395,7 +395,11 @@ check); they go to the clip prompt verbatim.
   → `upper body`); nudity is not an extent, it goes in `Outfits:` (`<characterKey>:nude`), so
   `full figure, nude` → `(full figure)` + `<characterKey>:nude`; a change during the shot
   (`back then upper body`) is two moments → split it into two shots. Detail states counts
-  (`limbs: one pair of hands`); the last segment is the exclusion clause (`nobody else`).
+  (`limbs: one pair of hands`) and, when it matters, a hand's side in the fixed vocabulary: `left` /
+  `right` right before the arm or hand word (`limbs: right hand and forearm`), `both hands`, or no side
+  word when the side does not matter (`limbs: one hand and forearm`); never `near` / `far` / `other` /
+  `free` / `dominant` hand (refused: the side would depend on the camera). The last segment is the
+  exclusion clause (`nobody else`).
 - `Characters:` = exactly the keys in `Visible:`; `Outfits:` = one valid pair per character
   (below), `; `-separated. Nobody in
   frame: `Characters: none`, `Outfits: none`, `Visible: nobody`.
@@ -740,7 +744,7 @@ of `plan_shot` (the example shot s3-01 above):
 { "shot": "s3-01",
   "entities": [
     { "key": "character_wife", "kind": "person", "region": { "third": "centre", "depth": "background" },
-      "facing": "camera", "gaze": "laptop", "posture": "seated", "support": "chair", "contact_with": ["laptop"] },
+      "facing": "camera", "gaze": "laptop", "posture": "seated", "support": "chair", "contact_with": ["laptop keyboard"] },
     { "key": "character_b", "kind": "person", "region": { "third": "centre", "depth": "frame-edge" },
       "facing": "away", "limbs": "forearms and hands" },
     { "kind": "object", "count": 1, "region": { "third": "centre", "depth": "midground" }, "facing": "camera" } ],
@@ -789,7 +793,9 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   A THIRD-PERSON act shot (a `Sex act:` and no `POV:`) ALWAYS names the anchor furniture the act uses
   in `support` ("on the bed", "against the kitchen counter", "on the sofa"): the two-stage keyframe
   route stages the act on it before the real people are composed in.
-  `contact_with` = who or what they touch (from `Blocking:`), only when there is contact.
+  `contact_with` = who or what they touch, ONLY contacts the shot's `Contact:` line states (a person by
+  key, a thing in the line's own words, e.g. `laptop keyboard`); a contact the line lacks is refused -
+  add it to `Contact:` with `write_shot` first, or leave it out.
 - The POV owner (`POV:`) is the camera. When their limbs are in frame (they are in `Characters:`):
   an entity with `region.depth: "frame-edge"` and `limbs` (matching their `Visible:` detail) — never
   a full person. With nothing of them in frame they are not in `Characters:` and get no entity.
