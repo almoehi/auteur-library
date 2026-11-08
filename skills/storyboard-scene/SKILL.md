@@ -583,7 +583,9 @@ check); they go to the clip prompt verbatim.
   at most 4 short phrases per person, each at most 40 characters — seductive, flirtatious, shocked, blushing, aroused, nervous,
   smug, ecstatic, tearful, determined. Every shot with a visible face has one entry per person whose face shows (extent
   `full figure` / `upper body` / `face`); never for the POV owner or a `back` / `limbs` / `lower body` person. It is the face,
-  `State:` is the body (wet hair, semen); keep it consistent with the beat's emotion. An expression that CHANGES during
+  `State:` is the body (wet hair, semen); where the head or eyes point belongs in `Pose:` with a TARGET
+  ("eyes level on <Other>", "head turned toward <thing>"), never a bare direction ("chin lifted",
+  "face raised") — a head direction without a target is rendered toward the nearest default (the ceiling); keep it consistent with the beat's emotion. An expression that CHANGES during
   the clip is a `Motion:` beat, not a second `Expression:`. Crying is an expression (`teary eyes`,
   `glistening eyes`), never fluid on the skin: "tear tracks" / "tear-streaked" render as thick streaks;
   name no body fluid a shot does not explicitly need.
@@ -755,6 +757,16 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   `facing` is where the TORSO and hips point, never the head: a figure with its back to the lens
   who looks back over the shoulder is `away` (the head turn goes in `Pose:` and the prompt); only a
   figure whose chest is turned to the lens is `camera`.
+  `facing`, `posture`, `support` and `region` describe the OPENING frame (0 s), never the end state of
+  `Motion:`: a turn or move that happens during the shot is a `Motion:` beat, not the plan entity.
+  The facing must fit the same person's `Pose:` / `support` (a person bent toward a feature faces it,
+  not the opposite way).
+- `gaze` = where the eyes are directed in the opening frame — REQUIRED for every person whose face is
+  shown (facing `camera` | `left` | `right`, head in frame): `camera` (the lens), another person's key from
+  `Characters:`, `off-frame left|right|up|down`, or a thing in words (`<thing>`). The server states it
+  ("<Name> looks at <Other>, eyes level") and the take check asks it. In a shot / reverse shot (A looks
+  at B, then B at A, same place) the two gazing bodies face opposite frame sides (`left` vs `right`) so
+  the eyelines meet; the plan is refused otherwise.
 - `motion` = where a moving figure is heading in this instant ("walking toward the doors"); omit
   for a still figure. The server adds it to the figure's facing line.
 - `posture` = a person's body posture from `Pose:`: `standing` | `seated` | `kneeling` | `lying`.
