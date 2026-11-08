@@ -810,10 +810,9 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   ("<Name> is in front of <support>, on the camera's side of it, nothing of it between <Name> and the
   camera") and the take check asks what the side looks like (body hidden or cut by the support /
   the support between figure and camera / within arm's reach). Leave it out when the side does not
-  matter (a figure on an open floor, a chair that is not in the way). `at-front` facing the camera
-  with `camera_side: far` is refused as self-contradicting — a figure at the front of a support that
-  faces the lens is on the camera's side (`near`); if the support lies between them and the lens use
-  `behind`. For `against`, the facing says the rest: `away` = front to the support, `camera` = back to it.
+  matter (a figure on an open floor, a chair that is not in the way). `camera_side` says where the
+  lens is, the facing says where the figure looks: `at-front` facing the camera with `camera_side: far`
+  is valid (the camera at a mirror or across the counter, the figure facing it over the support). For `against`, the facing says the rest: `away` = front to the support, `camera` = back to it.
   `contact_with` = who or what they touch, ONLY contacts the shot's `Contact:` line states (a person by
   key, a thing in the line's own words, e.g. `laptop keyboard`); a contact the line lacks is refused -
   add it to `Contact:` with `write_shot` first, or leave it out.
