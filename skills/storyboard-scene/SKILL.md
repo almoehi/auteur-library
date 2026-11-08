@@ -580,10 +580,10 @@ check); they go to the clip prompt verbatim.
   is `partly: cardigan (off both shoulders, at the elbows)` instead.
 - `Expression:` = the face at t=0 of the keyframe, `<characterKey> (<expression>, <expression>, …)`, `;` between characters
   (e.g. `Expression: <A's key> (tired smile, eyes on the lens); <B's key> (surprised)`):
-  at most 4 short phrases per person, each at most 40 characters — seductive, flirtatious, shocked, blushing, aroused, nervous,
-  smug, ecstatic, tearful, determined. Every shot with a visible face has one entry per person whose face shows (extent
+  at most 4 short phrases per person, each at most 40 characters — shocked, blushing, nervous,
+  smug, tearful, determined, amused (under nudity `allowed` also seductive, aroused, ecstatic). Every shot with a visible face has one entry per person whose face shows (extent
   `full figure` / `upper body` / `face`); never for the POV owner or a `back` / `limbs` / `lower body` person. It is the face,
-  `State:` is the body (wet hair, semen); keep it consistent with the beat's emotion. An expression that CHANGES during
+  `State:` is the body (wet hair, mud); keep it consistent with the beat's emotion. An expression that CHANGES during
   the clip is a `Motion:` beat, not a second `Expression:`. Crying is an expression (`teary eyes`,
   `glistening eyes`), never fluid on the skin: "tear tracks" / "tear-streaked" render as thick streaks;
   name no body fluid a shot does not explicitly need.
@@ -601,14 +601,15 @@ check); they go to the clip prompt verbatim.
   framing leaves that area out, write NOTHING about it - never `under sleeve` / `covered` / `hidden`: the image
   model draws every marking it reads, so a covered tattoo is painted onto the sleeve or the forearm. A marking
   of a `limbs` / POV person goes in words in `Pose:` under the same rule (only when that area is bare in frame).
-  A visible body fluid is a `State:` entry of the person it is on (`semen on her face`,
-  `saliva on her lips and chin`, `sweaty`, `wet glistening vulva`), from the shot that first shows it until it
-  is cleaned or covered. A `cumshot` shot's `Contact:` names where it lands
+  A visible fluid or residue is a `State:` entry of the person it is on (`sweaty`, `rain on face`,
+  `flour on hands`, `blood on knuckles`), from the shot that first shows it until it is cleaned or
+  covered. Under nudity `allowed` the same holds for explicit fluids (`semen on <her/his> face`,
+  `saliva on lips and chin`); a `cumshot` shot's `Contact:` then names where it lands
   (`<A's key> (groin) on <B's key> (face)`).
   When it ends, say so, preferably as the explicit new state (`dry hair`, `dry skin`): the judge checks
   a named state best. `(none)` means back to the design's own look (the server then states "no longer:
   <the previous shot's states>"); write it alone, never mixed with states. The server states each state
-  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale lace panties; removed: yellow sundress)`); a `continue` shot restates it (R17).
+  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale shorts; removed: yellow sundress)`); a `continue` shot restates it (R17).
 - `Contact:` = every touch the frame shows at ONE instant (never a motion path of successive contacts - that is
   `Motion:`), `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). A thing is
