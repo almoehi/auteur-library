@@ -506,6 +506,11 @@ check); they go to the clip prompt verbatim.
     as a figure). State `Camera:` and `Blocking:` from the same position. Angles by posture (rule R20,
     the write is refused): a lying viewer looks up or along their own body — never `high angle` or
     `top-down`; seated or kneeling never `top-down`; a slight high or low angle from a seat is fine.
+    A lying viewer looked down on by a partner who is ABOVE them in the shot's pose (the pose catalog
+    marks which role is above: on top, astride, sitting over, standing over a lower person) writes
+    `Camera: low angle, …`, never `eye level` or no angle — at eye level the picture shows a raised, reclined
+    viewpoint and the partner level with the viewer (refused at write; the people's `Body pose:` /
+    `Sex position:` roles decide who is above).
   - A first-person act at the viewer's own groin (`Contact:` names the POV owner's `groin`) must have
     the contact point IN the frame. A standing or kneeling viewer looks DOWN at the joined hips:
     `Camera: high angle, medium shot` (or closer), the partner's extent `back`, `upper body` or
@@ -793,6 +798,21 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   A THIRD-PERSON act shot (a `Sex act:` and no `POV:`) ALWAYS names the anchor furniture the act uses
   in `support` ("on the bed", "against the kitchen counter", "on the sofa"): the two-stage keyframe
   route stages the act on it before the real people are composed in.
+  `support_relation` = `{ "relation": …, "camera_side": … }` — HOW they stand to that `support`, when the
+  SIDE of it matters (a counter, desk, bar, bed, wall, fence, gate, sill: anything a figure can be put
+  on the wrong side of, behind or inside). Needs `support` (it is a relation TO it). `relation`: `on` |
+  `in` | `at-front` (on its usable front) | `behind` | `beside` | `against` (touching it) | `under`.
+  `camera_side`: `near` = the camera is on the figure's side of the support (nothing of the support
+  between them and the lens), `far` = the support lies between the figure and the camera (the figure
+  is seen over or across it). Read both off `Camera:` + `Blocking:`: where the camera stands relative
+  to the support, and where the figure stands relative to it. The server states it in the prompt
+  ("<Name> is in front of <support>, on the camera's side of it, nothing of it between <Name> and the
+  camera") and the take check asks what the side looks like (body hidden or cut by the support /
+  the support between figure and camera / within arm's reach). Leave it out when the side does not
+  matter (a figure on an open floor, a chair that is not in the way). `at-front` facing the camera
+  with `camera_side: far` is refused as self-contradicting — a figure at the front of a support that
+  faces the lens is on the camera's side (`near`); if the support lies between them and the lens use
+  `behind`. For `against`, the facing says the rest: `away` = front to the support, `camera` = back to it.
   `contact_with` = who or what they touch, ONLY contacts the shot's `Contact:` line states (a person by
   key, a thing in the line's own words, e.g. `laptop keyboard`); a contact the line lacks is refused -
   add it to `Contact:` with `write_shot` first, or leave it out.
