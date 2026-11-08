@@ -145,7 +145,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - A `continue` shot changes framing clearly: at least one size step or a visible angle change (more than about 30 degrees), performed by its `Movement:` (R25); a change no move performs is a `cut`. The one exception is a first-person `continue` (below): it may keep the framing (R16).
 - A continuous moment (its beat is `continuous`) is covered as `continue` shots, not as cuts: plan its framings so each step is one the clip workflow can perform - a size step (`push in` / `pull out`) or an `arc` within the workflow's `max_arc_degrees` (read `camera:` from `workflow_index`; 45 for MiniMax H3) - instead of jumping to the other side of the people. A jump of more than that (left side -> right side, front -> behind) is a `cut` and starts a new keyframe; keep such jumps for a new beat, a reaction or a real change of view. Write `cut — … on the same moment` only when no performable framing tells the moment.
 - Both `Camera:` lines of a `continue` pair name the same angle words: camera height (`eye level` / `high angle` / `low angle`) AND direction (`from the front` / `three-quarter angle from her left side` / `from behind`), each in both lines, even when unchanged. The clip planner compares only what both lines state; a height in one line and a direction in the other cannot be measured, and the clip is then shot as a cut.
-- Keep each beat's `Framing` size and `Contact` on the shot that shows it: a beat none of whose shots opens `Camera:` with the beat's size is refused (R36; extra coverage shots of the beat may use other sizes). The scene list's `Camera move` column is the beat's intended camera move: it goes in `Movement:` (or a `camera` Motion beat) only, never into `Action:`, `Pose:` or a person's Motion. Every `Contact:` body part of a whole-body person (`full figure` / `back` / `upper body`) must lie inside the `Camera:` size (R34): the chest `medium close-up` or wider, the waist, belly and hips `medium` or wider, the thighs `medium full` or wider, legs and feet `full`; <A>'s hand on <B>'s waist in a `medium close-up` is refused - open wider, show <B> as `lower body`, or drop the contact.
+- Keep each beat's `Framing` size and `Contact` on the shot that shows it: a beat none of whose shots opens `Camera:` with the beat's size is refused (R36; extra coverage shots of the beat may use other sizes). The scene list's `Camera move` column is the beat's intended camera move: it goes in `Movement:` (or a `camera` Motion beat) only, never into `Action:`, `Pose:` or a person's Motion. Every `Contact:` body part of a whole-body person (`full figure` / `back` / `upper body`) must lie inside the `Camera:` size (R34, refused at write time): the chest `medium close-up` or wider, the waist, belly and hips `medium` or wider, the thighs `medium full` or wider, legs and feet `full`; <A>'s hand on <B>'s waist in a `medium close-up` is refused when you write it - open wider, show <B> as `lower body`, or drop the contact.
 - `Frame:` states the composition at t=0 (the keyframe is the opening frame): which third the subject sits in, foreground / midground / background, room in the direction they face; and it agrees with the light of the shot (its `Lighting:` line, else the scene's `Lighting` phrase from the scene table; never contradicts it).
 - `Duration:` guide (3-10 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
 - `Format: portrait` (a vertical frame shows little side to side; these override the size and establishing-wide rules of this skill):
@@ -225,7 +225,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   refused (rule R16): the renderer copies the previous frame, so it would be the same picture.
   Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
   state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
-- A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. A `partly:` garment must be restated wherever this shot's extent shows it — the viewer's own too (the waistband of their own shorts still lowered in a `lower body` shot); where the extent does not show it (a close-up above the waist, a `limbs` viewer) leave it out — it is not in frame, and R19 refuses it there.
+- A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. A `partly:` garment must be restated wherever this shot's extent shows it — the viewer's own too (the hem of their own jacket still open in a `lower body` shot); where the extent does not show it (a close-up above the waist, a `limbs` viewer) leave it out — it is not in frame, and R19 refuses it there.
 - A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the water).
 - `Transition:` says how THIS shot follows the PREVIOUS one (the cut or continuation INTO this shot) —
   never how it leads to the next. Shot 1 is always `cut — first shot of the scene`; the last shot's line
@@ -330,7 +330,7 @@ check); they go to the clip prompt verbatim.
 - A beat carries its MECHANICS, stated as the action in progress: which hand, which fastening or
   motion ("left hand pulls the cord loose", not "undresses"), where a garment or prop goes ("the top
   drops to the floor by her feet"; "the cup is set on the table's near edge") and the end state it
-  leaves ("the cardigan hangs open off one shoulder"). Every garment or prop a beat touches gets an
+  leaves ("the coat hangs open off one shoulder"). Every garment or prop a beat touches gets an
   end state in that beat or a later beat of the shot; none is left unresolved.
 - **The picture lines show the instant BEFORE Motion beat 1** (rule R27, refused at the write: the server asks
   the decision model whether `Action:` / `Pose:` / `Blocking:` / `Wardrobe:` / `State:` show each person
@@ -397,8 +397,7 @@ check); they go to the clip prompt verbatim.
   (`back then upper body`) is two moments → split it into two shots. Detail states counts
   (`limbs: one pair of hands`) and, when it matters, a hand's side in the fixed vocabulary: `left` /
   `right` right before the arm or hand word (`limbs: right hand and forearm`), `both hands`, or no side
-  word when the side does not matter (`limbs: one hand and forearm`); never `near` / `far` / `other` /
-  `free` / `dominant` hand (refused: the side would depend on the camera). The last segment is the
+  word when the side does not matter (`limbs: one hand and forearm`). Use `left` / `right` (seen from the person) or `both hands` whenever the side matters. This is advisory (R38), not a refusal: a side-open qualifier (`near` / `far` / `other` / `free` / `dominant` hand) is accepted, but the shot then gets no hand-side check and the `write_shot` answer carries a non-blocking note - so avoid them, the side would depend on the camera. The last segment is the
   exclusion clause (`nobody else`).
 - `Characters:` = exactly the keys in `Visible:`; `Outfits:` = one valid pair per character
   (below), `; `-separated. Nobody in
@@ -515,7 +514,7 @@ check); they go to the clip prompt verbatim.
     distance where the bodies cannot be joined - the write is refused). A seated or lying viewer's
     partner is in front of / on them, so their usual angles hold. A beat that needs the whole place
     or the whole body is a third-person shot, or a shot before the bodies join.
-  - A partner <B> who touches the viewer is pictured at least to the `upper body`, <B>'s arm reaching from their shoulder (a dance partner taking the viewer's hand): a lone `limbs` hand entering from the camera side reads as the viewer's own hand and <B> vanishes (R37: a person whose hand, fingers, forearm or arm is in a contact with the viewer - touching the viewer or touched by them - is never `limbs`-only). <B>'s hands reaching DOWN to a lying viewer's torso (a physio's hands on the viewer's chest) need a `medium` frame or wider to be in frame (R35, an advisory note at the write for a tighter one). When a close framing would include a part of the viewer's body that no line states yet (the lap under a partner leaning over them), either state it (`lower body`, `Wardrobe: partly:` for a garment state; under nudity `allowed` also the state of the parts) or compose it out (a face or hands insert) - never leave it open.
+  - A partner <B> who touches the viewer is pictured at least to the `upper body`, <B>'s arm reaching from their shoulder (a dance partner taking the viewer's hand): a lone `limbs` hand entering from the camera side reads as the viewer's own hand and <B> vanishes (R37, refused at write time: a person whose hand, fingers, forearm or arm is in a contact with the viewer - touching the viewer or touched by them - is never `limbs`-only). <B>'s hands reaching DOWN to a lying viewer's torso (a physio's hands on the viewer's chest) need a `medium` frame or wider to be in frame (R35, an advisory note at the write for a tighter one). When a close framing would include a part of the viewer's body that no line states yet (the lap under a partner leaning over them), either state it (`lower body`, `Wardrobe: partly:` for a garment state; under nudity `allowed` also the state of the parts) or compose it out (a face or hands insert) - never leave it open.
   - The viewer's `Visible:` detail states exactly what `Blocking:` / `Pose:` show of them
     (`lower body` for "hands on the viewer's own thighs", `limbs: forearms and hands` when only the
     hands are in frame): the render and the judge read the viewer's body from `Visible:` alone.
@@ -533,7 +532,7 @@ check); they go to the clip prompt verbatim.
     location picture shows its own state and wins over a shot that stays silent.
   - A reflective surface in frame (mirror, window, screen, water, glossy surface): a reflection is wanted only
     in a medium or wider shot and only when the story needs it; a close-up never asks for one beside the face.
-    The `Reflection: <character key> in <surface>` line (one entry, a person pictured as themselves in `Visible:` - never the POV owner or a `limbs`-only person) states it: the real
+    The `Reflection: <character key> in <surface>` line (one entry, a person pictured as themselves in `Visible:` - never the POV owner or a `limbs`-only person; a violation is refused at write time) states it: the real
     person stands in front of the surface and the surface holds only that person's own reflection, never a
     second person. A shot "from the surface's side" is a direct shot with the surface out of frame
     (`Out of frame: <surface>`); never write "the camera in the <surface>" or a person "in the glass" in
@@ -552,7 +551,7 @@ check); they go to the clip prompt verbatim.
     waist-up two-shot contradicts its `Camera:`; write `upper body` there.
   - Describe only what the extent shows. A person shown by `limbs` (the viewer's hands) has no
     `Wardrobe:` entry (rule R14) and no garment, torso or lap wording anywhere in `Pose:` / `Frame:`:
-    "grey shorts lowered" next to `limbs: hands` makes every take show the abdomen and lap. If the
+    "coat hanging open" next to `limbs: hands` makes every take show the torso. If the
     garment state matters, widen the extent (`lower body`) so the frame shows it.
 - `Wardrobe:` = partial undress of an OUTFIT look, `<characterKey> (wearing: <garment>, …; partly:
   <garment> (<end state>), …; removed: <garment>, …)`, `;` between characters: the `Outfits:` pair keeps
@@ -563,35 +562,36 @@ check); they go to the clip prompt verbatim.
     never "held", never "in her hands", never "lying beside her": a named garment is painted back on.
   - `partly:` — still ON the body but displaced or open: lowered, pulled up, pushed up, unbuttoned,
     unzipped, a strap off one shoulder. Write the plain garment noun, then its END state in parentheses:
-    `partly: grey shorts (lowered to mid-thigh)`. The state is where the garment is NOW (a still), never
+    `partly: <garment> (<end state>)`, e.g. `partly: scarf (loosened, hanging low)`. The state is where the garment is NOW (a still), never
     the motion ("being pulled down", "then kicked off"), at most 60 characters; do not repeat it in
-    `Pose:`. A partly garment counts as worn: the server says "wears only … grey shorts (lowered to
-    mid-thigh)" and the judge checks that exact state.
+    `Pose:`. A partly garment counts as worn: the server says "wears only … scarf (loosened, hanging
+    low)" and the judge checks that exact state.
   - a NEW OUTFIT LOOK in the scene list instead, when the state is the designed look for several beats
     or scenes (an open shirt worn all evening) or a garment is added or swapped.
   `wearing:` lists what is worn as designed. Items are separated by commas outside the parentheses (a
-  comma inside a state is fine); each item is a garment, never a state: `removed: grey shorts, lowered
-  to mid-thigh` is refused — that is `partly: grey shorts (lowered to mid-thigh)`. `State:` is the BODY
+  comma inside a state is fine); each item is a garment, never a state: `removed: scarf, loosened
+  and hanging low` is refused — that is `partly: scarf (loosened, hanging low)`. `State:` is the BODY
   (wet hair, sweaty), never garments.
-  Extent: the person's `Visible:` extent must show where a `partly:` garment is worn (rule R19): partly
-  shorts need `lower body` or wider, a partly top `upper body`. For the POV viewer, `lower body` shows
-  their own shorts and waistband (not their shirt); a `limbs` viewer has no `Wardrobe:` at all (R14).
+  Extent: the person's `Visible:` extent must show where a `partly:` garment is worn (rule R19): a partly
+  garment on the legs needs `lower body` or wider, a partly top `upper body`. For the POV viewer, `lower body` shows
+  their own lower garments (not their top); a `limbs` viewer has no `Wardrobe:` at all (R14).
   Examples:
-  - POV, the viewer's own shorts lowered: `POV: <owner's key> (seated)`, `Visible: …;
-    <owner's key> (lower body); nobody else`, `Wardrobe: <owner's key> (wearing: linen
-    shirt; partly: shorts (lowered to mid-thigh))`.
-  - Top off, cardigan slipped down: `Outfits: <A's key>:<outfit_a_look>` + `Wardrobe:
-    <A's key> (wearing: skirt; partly: cardigan (off both shoulders, at the elbows);
-    removed: blouse)`.
   - Jacket open: `Wardrobe: character_officer (wearing: uniform trousers, boots; partly: uniform jacket
     (unbuttoned, open))`.
+  - Coat off one shoulder: `Outfits: <A's key>:<outfit_a_look>` + `Wardrobe: <A's key> (wearing: dress;
+    partly: coat (off one shoulder); removed: scarf)`.
+  - Only when the workspace's nudity policy is `allowed`: undress states use the same grammar, e.g. a
+    POV viewer's own garment lowered: `POV: <owner's key> (seated)`, `Visible: …; <owner's key> (lower
+    body); nobody else`, `Wardrobe: <owner's key> (wearing: <top>; partly: <garment> (lowered to
+    mid-thigh))`; or a top off with another slipped down: `Wardrobe: <A's key> (wearing: skirt; partly:
+    <garment> (off both shoulders, at the elbows); removed: <top>)`.
   A keyframe is a still, so a garment state is written as the state of the still, never as the motion:
-  "back bare, both hands at her waist", not "untying the strings, top slipping down" (the model paints
+  "coat open, both hands at her collar", not "unbuttoning the coat, sleeve slipping down" (the model paints
   the tied top). The shot whose Motion performs the undress shows the BEFORE state in its picture lines
   (R27); the following shot shows this removed state. In `Action:` / `Pose:` / `Frame:` and the prompt, a REMOVED garment is not
-  mentioned at all — "blouse held in her hands" or "cardigan slipped off her shoulders" summons
+  mentioned at all — "scarf held in her hands" or "scarf slipped off her shoulders" summons
   it back on (measured on one production, 2026-11: nearly every take kept the held garment on; re-measure); a garment that is still on her arms
-  is `partly: cardigan (off both shoulders, at the elbows)` instead.
+  is `partly: scarf (off both shoulders, at the elbows)` instead.
 - `Expression:` = the face at t=0 of the keyframe, `<characterKey> (<expression>, <expression>, …)`, `;` between characters
   (e.g. `Expression: <A's key> (tired smile, eyes on the lens); <B's key> (surprised)`):
   at most 4 short phrases per person, each at most 40 characters — shocked, blushing, nervous,
@@ -625,7 +625,7 @@ check); they go to the clip prompt verbatim.
   When it ends, say so, preferably as the explicit new state (`dry hair`, `dry skin`): the judge checks
   a named state best. `(none)` means back to the design's own look (the server then states "no longer:
   <the previous shot's states>"); write it alone, never mixed with states. The server states each state
-  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale shorts; removed: yellow sundress)`); a `continue` shot restates it (R17).
+  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale trousers; removed: yellow jacket)`); a `continue` shot restates it (R17).
 - `Contact:` = every touch the frame shows at ONE instant (never a motion path of successive contacts - that is
   `Motion:`), `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). A thing is
@@ -679,7 +679,7 @@ send that shot again:
   - everything `Frame:` puts in the background lies IN FRONT of the camera; a thing the viewer sits
     beside or has their back to (the doors behind their chair) cannot be in the background;
   - a garment still worn hides what it covers from this side: "bare back" seen from behind with an
-    open cardigan on is impossible — take the cardigan off (`Wardrobe:`) or show the bare part from
+    open coat on is impossible — take the coat off (`Wardrobe:`) or show the bare part from
     a side it is visible from;
   - the viewer's own seat, chair or bench is never an object in the frame (the camera sits in it):
     only their limbs per `Visible:`; never "the wicker chair in front of the camera";
@@ -839,7 +839,7 @@ of your own can only disagree with it.
   open at the waist" in a `lower body` shot draws the shirt and chest). A garment of the viewer
   is always "the viewer's own"; never place it near another person's body.
 - Wear state in the prompt is positive: what each person wears now ("wears only the navy
-  trousers"), never "without the cardigan" or "the cardigan is off".
+  trousers"), never "without the coat" or "the coat is off".
 - Explicit acts and positions: copy the shot's `Sex act:` / `Sex position:` words (names in
   skill `explicit-acts`), only under the nudity policy.
 
