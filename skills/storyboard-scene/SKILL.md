@@ -455,7 +455,12 @@ check); they go to the clip prompt verbatim.
   seen only by `limbs` (hands / feet at the edge) is likewise named by role in words ("a man's hands"),
   never as a figure. Another person shown by `lower body` IS a figure: they are counted, pictured
   (design picture and outfit) and placed in `Blocking:`.
-- `Pose:` per person in frame (body position); for a `:none` look also its garments.
+- `Pose:` per person in frame (body position); for a `:none` look also its garments. For an extreme
+  close-up, close-up or medium close-up, `Blocking:` / `Pose:` (and the plan entities' `posture` /
+  `support`) describe only what the frame HOLDS: an eyes or face shot names the head, gaze and
+  expression - no seat, knees, hands or support below the frame (the server crops the place to the
+  shot's size, and a seat or knees in the prompt pulls the camera back to show them); the body belongs
+  to the wider shot beside it.
 - `Body pose: <pose>: <key>[, <key>]; <pose>: <key>` (any workspace) whenever a person's body position
   is one of the catalog poses (`workflow-calling-conventions`, "Body poses"): sitting, kneeling,
   leaning, walking - and ALWAYS when two people kiss, embrace, carry or dance. Keys are `Characters:`
@@ -750,7 +755,8 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
   Set it for every person shown as a figure: the framing check judges a frame too wide by the cut-off
   body (ankles in a medium full shot) only for standing people.
 - `support` = what they sit, stand or lie on, or are in, when it matters — name the container:
-  "in the pool basin", "on the white sun lounger" (the take check holds every figure to it).
+  "in the pool basin", "on the white sun lounger" (the take check holds every figure to it). A close-up
+  states `support` only when the support is in frame.
   A THIRD-PERSON act shot (a `Sex act:` and no `POV:`) ALWAYS names the anchor furniture the act uses
   in `support` ("on the bed", "against the kitchen counter", "on the sofa"): the two-stage keyframe
   route stages the act on it before the real people are composed in.
