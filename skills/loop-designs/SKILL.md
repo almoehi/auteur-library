@@ -46,12 +46,15 @@ design studio; never render them yourself):
    from the avatar). If it is not clean, say so in `designs.md` so the person adds a clean take
    before finishing. `create_design({ kind: "character", display_name: "Goonette Vesper Vex",
    key_slug: "vesper", start: "references", character_type: <the tool's adult-woman type or
-   "adult woman">, reference_images: ["artifact://<inputs>/character.png"], attributes: [{ key:
-   "marks", value: "jewellery | neck | unsided | black velvet choker; jewellery | neck | unsided |
-   small silver key pendant on a thin chain; other | fingers | both | violet nail polish" }] })`.
-   The brand details are the character's MARKS (`kind | part | side | description`, separated by
-   `;`): a person's own marks are trusted, every outfit edit keeps them unchanged, and an outfit
-   accessory of the same kind on the same body part is never added over them.
+   "adult woman">, reference_images: ["artifact://<inputs>/character.png"] })` (a reference-started
+   design takes no attributes).
+   The brand details are the character's MARKS: the finish's describe step reads them from the
+   picture and verifies each one, every outfit edit then keeps them unchanged, and an outfit
+   accessory of the same kind on the same body part is never added over them. In `designs.md`
+   list them for the person to check after the finish, as the `marks` attribute value to add in
+   the studio if one is missing: `jewellery | neck | unsided | black velvet choker; jewellery |
+   neck | unsided | small silver key pendant on a thin chain; other | fingers | both | violet nail
+   polish`.
 2. **Sets** - one location design per set in `visual_plan.json` (`sets[]`):
    `create_design({ kind: "location", display_name: "<set name>", key_slug: "<set id>",
    start: "attributes", initial_drafts: 2, attributes: [...] })` with `space` (interior /
