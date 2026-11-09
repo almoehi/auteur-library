@@ -3,6 +3,5 @@ bucket: auteur-model-cache-20260905193718168400000001
 region: us-east-1
 # Public-read prefix of the bucket; the public base URL points at it.
 public_prefix: public/
-# Everything of the recommender lives below this key root (relative to public_prefix).
-key_root: library/refs/
+# Everything of a catalog lives below library/<key>/ (relative to public_prefix); the key is in catalog.yaml.
 base_url: https://auteur-model-cache-20260905193718168400000001.s3.us-east-1.amazonaws.com/public/

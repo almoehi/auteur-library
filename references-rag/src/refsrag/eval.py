@@ -22,10 +22,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Final
 
+from refsrag.descriptor import Catalog
 from refsrag.jobs import BatchItem, item_sha, load_results
 from refsrag.labels import EvalGrades
 from refsrag.lake import clean_text, split_of
-from refsrag.query import KINDS, Index, Kind, Recommender
+from refsrag.query import Index, Recommender
 from refsrag.settings import PROJECT_ROOT
 from refsrag.text import is_age_coded, is_english
 
@@ -157,8 +158,9 @@ def strip_used_for(doc: str) -> str:
     return _USED_FOR.sub("", doc)
 
 
-def ranking(rec: Recommender, context: str, kind: Kind, depth: int) -> list[str]:
-    return [p.id for p in getattr(rec.recommend(context, k=depth, kinds=[kind]), f"{kind}s")]
+def ranking(rec: Recommender, context: str, kind: str, depth: int) -> list[str]:
+    # pools go deeper than the catalog's max_k, so the unbounded variant
+    return [p.id for p in rec._recommend(context, depth, [kind]).picks[kind]]
 
 
 EXTRA_SEP: Final = "+extra"  # id suffix of an incremental grading item (new pool members only)
@@ -177,7 +179,7 @@ def grade_items(
     def pool_of(ctx: EvalContext) -> dict[str, None]:
         pooled: dict[str, None] = {}
         for rec in recommenders.values():
-            for kind in KINDS:
+            for kind in index.catalog.kinds:
                 pooled.update(dict.fromkeys(ranking(rec, ctx.text, kind, POOL_DEPTH)))
         return pooled
 
@@ -215,14 +217,13 @@ def ndcg_at_3(ranked: Sequence[str], grades: Mapping[str, int], kind_ids: Iterab
 
 @dataclass(frozen=True)
 class Score:
-    outfit: float
-    pose: float
+    kinds: dict[str, float]  # mean nDCG@3 per kind, in catalog order
     contexts: int  # contexts actually scored: graded, and with something relevant for at least one kind
     unjudged: float  # share of the top-3 picks that no grader saw (they count as 0)
 
     @property
     def mean(self) -> float:
-        return (self.outfit + self.pose) / 2
+        return sum(self.kinds.values()) / len(self.kinds) if self.kinds else 0.0
 
 
 @dataclass(frozen=True)
@@ -239,10 +240,11 @@ def score(
 ) -> Score:
     """Mean nDCG@3 per kind over the graded contexts. Grades of items missing from ``kind_of`` (no longer
     in the index) are ignored."""
-    jobs = [(ctx, kind) for ctx in contexts if ctx.id in grades for kind in KINDS]
+    kinds = list(rec.index.catalog.kinds)
+    jobs = [(ctx, kind) for ctx in contexts if ctx.id in grades for kind in kinds]
     with ThreadPoolExecutor(POOL_WORKERS) as ex:  # remote rerank calls dominate; results are cached
         ranked = list(ex.map(lambda job: ranking(rec, job[0].text, job[1], 3), jobs))
-    per_kind: dict[str, list[float]] = {"outfit": [], "pose": []}
+    per_kind: dict[str, list[float]] = {kind: [] for kind in kinds}
     scored: set[str] = set()
     picks = unjudged = 0
     for (ctx, kind), top in zip(jobs, ranked, strict=True):
@@ -253,10 +255,8 @@ def score(
         if value is not None:
             per_kind[kind].append(value)
             scored.add(ctx.id)
-    mean = {k: sum(v) / len(v) if v else 0.0 for k, v in per_kind.items()}
     return Score(
-        round(mean["outfit"], 4),
-        round(mean["pose"], 4),
+        {k: round(sum(v) / len(v), 4) if v else 0.0 for k, v in per_kind.items()},
         len(scored),
         round(unjudged / picks, 4) if picks else 0.0,
     )
@@ -285,11 +285,14 @@ def _pct(share: float) -> str:
 
 
 def write_report(
+    catalog: Catalog,
     variant_scores: Mapping[str, SplitScore],
     best: Mapping[str, tuple[dict[str, Any], SplitScore]],
     tune_contexts: int,
     test_contexts: int,
 ) -> Path:
+    test_cols = " | ".join(f"Test {spec.label.lower()}" for spec in catalog.kinds.values())
+    rule = "|---" * (5 + len(catalog.kinds))
     lines = [
         "# Calibration report (P5)",
         "",
@@ -300,14 +303,14 @@ def write_report(
         "",
         "## Variants (index defaults)",
         "",
-        "| Variant | Tune mean | Test outfits | Test poses | Test mean | Unjudged | Contexts |",
-        "|---|---|---|---|---|---|---|",
+        f"| Variant | Tune mean | {test_cols} | Test mean | Unjudged | Contexts |",
+        rule + "|",
         *[_row(n, s) for n, s in variant_scores.items()],
         "",
         "## Best parameters per variant (grid search on the tune half; test half is the honest number)",
         "",
-        "| Variant | Tune mean | Test outfits | Test poses | Test mean | Unjudged | Contexts | Params |",
-        "|---|---|---|---|---|---|---|---|",
+        f"| Variant | Tune mean | {test_cols} | Test mean | Unjudged | Contexts | Params |",
+        rule + "|---|",
     ]
     for n, (params, s) in best.items():
         shown = {k: params[k] for k in GRID}
@@ -317,7 +320,8 @@ def write_report(
 
 
 def _row(name: str, s: SplitScore) -> str:
+    per_kind = " | ".join(f"{v:.3f}" for v in s.test.kinds.values())
     return (
-        f"| {name} | {s.tune.mean:.3f} | {s.test.outfit:.3f} | {s.test.pose:.3f} | {s.test.mean:.3f} "
+        f"| {name} | {s.tune.mean:.3f} | {per_kind} | {s.test.mean:.3f} "
         f"| {_pct(s.tune.unjudged)} / {_pct(s.test.unjudged)} | {s.tune.contexts} / {s.test.contexts} |"
     )

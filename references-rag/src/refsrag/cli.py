@@ -11,13 +11,22 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 from refsrag.jobs import JOB_SPECS, JobName
-from refsrag.settings import PROJECT_ROOT, get_settings
+from refsrag.settings import CATALOG_FILE, PROJECT_ROOT, get_settings, load_catalog
 
 if TYPE_CHECKING:
     from refsrag.labels import ConceptGrouping
     from refsrag.query import Recommender
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+CATALOG_OPT = Annotated[
+    Path, typer.Option("--catalog", help="the catalog descriptor yaml", exists=True, dir_okay=False)
+]
+ITEMS_OPT = Annotated[
+    Path | None,
+    typer.Option(
+        help="schema-2 items jsonl of the catalog (default: the refs builder)", exists=True, dir_okay=False
+    ),
+]
 jobs_app = typer.Typer(no_args_is_help=True, help="Agent jobs: make batches, collect outputs.")
 app.add_typer(jobs_app, name="jobs")
 
@@ -47,11 +56,26 @@ def catalog() -> None:
 def upload_assets(
     dry_run: Annotated[bool, typer.Option(help="only report what would be uploaded")] = False,
     workers: Annotated[int, typer.Option(min=1, max=64)] = 16,
+    catalog_file: CATALOG_OPT = CATALOG_FILE,
+    items: ITEMS_OPT = None,
+    root: Annotated[
+        Path | None, typer.Option(help="folder of the files the items refer to (default: REFS_LIBRARY_ROOT)")
+    ] = None,
 ) -> None:
-    """Publish the library files to the public bucket prefix (skips unchanged files by sha256)."""
+    """Publish a catalog's files to library/<catalog>/assets/ (skips unchanged files by sha256): the
+    files the --items media refer to, else the refs library's."""
+    from refsrag.assets import item_library_paths
     from refsrag.assets import upload_assets as run
+    from refsrag.index_build import check_items, read_items
 
-    _echo(asdict(run(get_settings(), dry_run=dry_run, workers=workers)))
+    settings, catalog = get_settings(), load_catalog(catalog_file)
+    paths = None
+    if items is not None:
+        rows = read_items(items)
+        check_items(catalog, rows)
+        paths = item_library_paths(catalog.key, rows)
+    report = run(settings, catalog.key, dry_run=dry_run, workers=workers, root=root, paths=paths)
+    _echo(asdict(report))
 
 
 @app.command("export-lake")
@@ -175,38 +199,71 @@ index_app = typer.Typer(no_args_is_help=True, help="Build and publish index vers
 app.add_typer(index_app, name="index")
 
 
+CASES_OPT = Annotated[
+    Path | None,
+    typer.Option(help="golden cases yaml: queries, filters, invalid (default: the refs cases)", exists=True),
+]
+
+
 @index_app.command("build")
 def index_build(
     version: Annotated[str, typer.Argument(help="e.g. v1 (immutable once published)")],
+    catalog_file: CATALOG_OPT = CATALOG_FILE,
+    items: ITEMS_OPT = None,
+    lexicon: Annotated[
+        Path | None, typer.Option(help="lexicon json (default: lexicon.json for the refs builder, else none)")
+    ] = None,
+    vocab: Annotated[
+        Path | None,
+        typer.Option(help="concept vocab yaml (default: vocab.yaml for the refs builder, else none)"),
+    ] = None,
     vector_set: Annotated[
         list[str] | None, typer.Option(help="only these vector sets (default: all)")
     ] = None,
+    no_vectors: Annotated[
+        bool, typer.Option("--no-vectors", help="no vector sets: stage 1 only, offline")
+    ] = False,
+    cases: CASES_OPT = None,
 ) -> None:
-    """Build data/index/<version> from the labels, lexicon and concept affinities."""
-    from refsrag.index_build import build
+    """Build data/index/<version> of a catalog descriptor: from --items, or for refs from the labels,
+    lexicon and concept affinities."""
+    from refsrag.index_build import build, load_golden_cases
 
-    _echo({"built": str(build(get_settings(), version, vector_sets=vector_set))})
+    out = build(
+        get_settings(),
+        load_catalog(catalog_file),
+        version,
+        items_file=items,
+        lexicon_file=lexicon,
+        vocab_file=vocab,
+        vector_sets=[] if no_vectors else vector_set,
+        cases=load_golden_cases(cases),
+    )
+    _echo({"built": str(out)})
 
 
 @index_app.command("golden")
-def index_golden(version: Annotated[str, typer.Argument(help="e.g. v2 (an already built index)")]) -> None:
+def index_golden(
+    version: Annotated[str, typer.Argument(help="e.g. v2 (an already built index)")], cases: CASES_OPT = None
+) -> None:
     """(Re)write the TypeScript parity fixtures of data/index/<version>: golden.json (stage 1) and
     selection-golden.json (whole recommendations). Copy them into video-harness with:
 
         gzip -9 -n -c data/index/<v>/index.json > <vh>/src/references/__tests__/fixtures/<v>/index.json.gz
         cp data/index/<v>/{golden,selection-golden}.json <vh>/src/references/__tests__/fixtures/<v>/
     """
-    from refsrag.index_build import write_golden
+    from refsrag.index_build import load_golden_cases, write_golden
 
-    _echo({"written": [str(p) for p in write_golden(version)]})
+    _echo({"written": [str(p) for p in write_golden(version, load_golden_cases(cases))]})
 
 
 @index_app.command("publish")
 def index_publish(version: str) -> None:
-    """Upload data/index/<version> and point rag/latest.json at it."""
+    """Upload data/index/<version> and point rag/latest.s<schema>.json at it; rag/latest.json (the
+    deployed schema-1 readers' pointer) only for a schema-1 index."""
     from refsrag.index_build import publish
 
-    _echo({"latest": publish(get_settings(), version)})
+    _echo({"pointers": publish(get_settings(), version)})
 
 
 eval_app = typer.Typer(no_args_is_help=True, help="Calibration: sample contexts, pool + grade, score.")
@@ -278,8 +335,8 @@ def eval_score(
     )
 
     recs = _recommenders(version, variant)
-    items = next(iter(recs.values())).index.items
-    kind_of = {i["id"]: i["kind"] for i in items}
+    index = next(iter(recs.values())).index
+    kind_of = {i["id"]: i["kind"] for i in index.items}
     grades = load_grades(kind_of.keys())
     tune, test = split_contexts(read_contexts())
     variant_scores = {
@@ -292,7 +349,7 @@ def eval_score(
             trials = [(p, score(r.with_params(p), tune, grades, kind_of)) for p in grid(r)]
             params, tuned = max(trials, key=lambda t: t[1].mean)
             best[n] = (params, SplitScore(tuned, score(r.with_params(params), test, grades, kind_of)))
-    report = write_report(variant_scores, best, len(tune), len(test))
+    report = write_report(index.catalog, variant_scores, best, len(tune), len(test))
     _echo(
         {
             "report": str(report),

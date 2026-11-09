@@ -1,5 +1,5 @@
-"""The query interface on a tiny hand-made index: ranking, best view, filters, URLs, and that the bundled
-single-file recommend.py gives the same answer as the package."""
+"""The query interface on a tiny hand-made index: ranking, best view, filters, URLs, the result shape,
+and that the bundled single-file recommend.py gives the same answer as the package."""
 
 from __future__ import annotations
 
@@ -11,57 +11,10 @@ from typing import Any
 
 import numpy as np
 import pytest
+from conftest import BASE, ITEMS
 
 from refsrag.index_build import bundle_recommend_py
-from refsrag.query import SCHEMA_VERSION, Filters, Index, Recommender
-
-BASE = "https://cdn.test/public/"
-
-
-def _view(angle: str, focus: dict[str, float]) -> dict[str, Any]:
-    return {
-        "angle": angle,
-        "image": f"library/refs/assets/pose_pngs/{angle}.png",
-        "depth": f"library/refs/assets/pose_depth/{angle}.png",
-        "focus": focus,
-        "view": f"{angle} view",
-    }
-
-
-ITEMS: list[dict[str, Any]] = [
-    {"id": "LNG-1", "kind": "outfit", "title": "Black lace garter set", "category": "lingerie", "exposure": 3,
-     "doc": "black lace bra garter belt stockings heels. Used for: pantyhose stockings, nylons",
-     "concepts": {"pantyhose_stockings": 0.9}, "image": "library/refs/assets/outfits/lingerie/LNG-1.png"},
-    {"id": "SPR-1", "kind": "outfit", "title": "Pleated skirt and blouse", "category": "spring", "exposure": 1,
-     "doc": "white blouse ribbon pleated mini skirt knee socks. Used for: schoolgirl roleplay",
-     "concepts": {"schoolgirl": 0.8}, "image": "library/refs/assets/outfits/spring/SPR-1.png"},
-    {"id": "solo/P1", "kind": "pose", "title": "Prone, feet up", "series": "full_body_sexy", "category": "lying",
-     "solo": True, "sex_positions": [], "doc": "prone on forearms feet raised soles. Used for: foot fetish, soles",
-     "concepts": {"foot_fetish": 0.9},
-     "views": [_view("front", {"chest": 0.8}), _view("low", {"feet_soles": 0.9})]},
-    {"id": "duo/P2", "kind": "pose", "title": "Doggy style", "series": "duo", "category": "from_behind",
-     "solo": False, "sex_positions": ["doggy style"], "doc": "all fours partner kneeling behind. Positions: doggy style",
-     "concepts": {"doggy": 0.9}, "views": [_view("side", {"butt": 0.9})]},
-]  # fmt: skip
-
-
-@pytest.fixture
-def index_dir(tmp_path: Path) -> Path:
-    index = {
-        "schema_version": SCHEMA_VERSION,
-        "index_version": "vtest",
-        "default_base_url": BASE,
-        "params": {"bm25_k1": 1.2, "bm25_b": 0.75, "rrf_k": 60, "w_bm25": 1.0, "w_concept": 1.0, "w_dense": 1.0,
-                   "w_rerank": 1.0, "candidates": 30, "mmr_lambda": 0.7, "reranker": None},
-        "lexicon": {"soles": {"foot_fetish": 1.0}, "stockings": {"pantyhose_stockings": 1.0},
-                    "school girl": {"schoolgirl": 1.0}, "doggy style": {"doggy": 1.0}},
-        "concepts": {"foot_fetish": {"type": "kink", "description": "feet", "focus": {"feet_soles": 1.0}}},
-        "items": ITEMS,
-        "vector_sets": {},
-        "files": [],
-    }  # fmt: skip
-    (tmp_path / "index.json").write_text(json.dumps(index))
-    return tmp_path
+from refsrag.query import SCHEMA_VERSION, Index, Recommender
 
 
 def test_concepts_drive_ranking_and_the_best_view(index_dir: Path) -> None:
@@ -69,20 +22,82 @@ def test_concepts_drive_ranking_and_the_best_view(index_dir: Path) -> None:
     out = rec.recommend("show me your soles in stockings", k=1)
     assert out.concepts == {"foot_fetish": 1.0, "pantyhose_stockings": 1.0}
     assert out.dense.startswith("unavailable")
-    (outfit,) = out.outfits
-    (pose,) = out.poses
+    assert list(out.picks) == ["outfit", "pose"]  # catalog order
+    (outfit,) = out.picks["outfit"]
+    (pose,) = out.picks["pose"]
     assert (outfit.id, outfit.image) == ("LNG-1", BASE + "library/refs/assets/outfits/lingerie/LNG-1.png")
+    assert outfit.attrs == {"category": "lingerie"}  # result_fields only: no exposure
     assert (pose.id, pose.best_angle) == ("solo/P1", "low")  # the view showing the soles, not the first one
     assert pose.depth == BASE + "library/refs/assets/pose_depth/low.png"
-    assert [v.angle for v in pose.views] == ["front", "low"]
+    assert pose.views is not None and [v.angle for v in pose.views] == ["front", "low"]
+    assert pose.why[-1] == "best view: low (low view)"
+    assert pose.attrs == {"series": "full_body_sexy", "category": "lying", "sex_positions": []}
 
 
-def test_filters_and_k(index_dir: Path) -> None:
+def test_json_shape_omits_unset_optional_fields(index_dir: Path) -> None:
+    out = Recommender(Index(index_dir)).recommend("show me your soles in stockings", k=1).to_dict()
+    assert set(out) == {"catalog", "index_version", "context", "concepts", "dense", "picks"}  # no decider
+    assert out["catalog"] == "refs"
+    outfit, pose = out["picks"]["outfit"][0], out["picks"]["pose"][0]
+    assert set(outfit) == {"id", "kind", "title", "score", "why", "image", "attrs"}
+    assert set(pose) == set(outfit) | {"depth", "best_angle", "views"}
+
+
+def test_filters_kinds_and_k(index_dir: Path) -> None:
     rec = Recommender(Index(index_dir))
-    duo_only = rec.recommend("doggy style", k=3, kinds=["pose"], filters=Filters(solo=False))
-    assert [p.id for p in duo_only.poses] == ["duo/P2"] and duo_only.outfits == []
-    covered = rec.recommend("school girl", k=3, kinds=["outfit"], filters=Filters(max_exposure=1))
-    assert [p.id for p in covered.outfits] == ["SPR-1"]
+    duo_only = rec.recommend("doggy style", k=3, kinds=["pose"], filters={"solo": False})
+    assert list(duo_only.picks) == ["pose"] and [p.id for p in duo_only.picks["pose"]] == ["duo/P2"]
+    covered = rec.recommend("school girl", k=3, kinds=["outfit"], filters={"max_exposure": 1})
+    assert [p.id for p in covered.picks["outfit"]] == ["SPR-1"]
+    lingerie = rec.recommend("school girl", k=3, filters={"outfit_category": ["lingerie"]})
+    assert [p.id for p in lingerie.picks["outfit"]] == ["LNG-1"]
+    assert len(lingerie.picks["pose"]) == 2  # a filter leaves the other kinds alone
+
+
+@pytest.mark.parametrize(
+    ("request_", "message"),
+    [
+        (
+            {"filters": {"exposure": 1}},
+            "unknown filter 'exposure'; allowed: max_exposure, solo, outfit_category, pose_series",
+        ),
+        ({"filters": {"max_exposure": "1"}}, "takes integer values"),
+        ({"filters": {"max_exposure": True}}, "takes integer values"),
+        ({"filters": {"max_exposure": 4}}, "outside 0..3"),
+        ({"filters": {"solo": 1}}, "takes boolean values"),
+        ({"filters": {"outfit_category": "lingerie"}}, "non-empty list"),
+        ({"kinds": ["face"]}, "unknown kind 'face'; allowed: outfit, pose"),
+    ],
+)
+def test_invalid_requests_are_rejected(index_dir: Path, request_: dict[str, Any], message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        Recommender(Index(index_dir)).recommend("x", **request_)
+
+
+def test_a_new_catalog_needs_no_code(tmp_path: Path) -> None:
+    """A catalog with other kinds, media and filters: only the index changes."""
+    catalog = {
+        "key": "faces", "title": "Faces", "description": "Face references.", "nudity": False,
+        "kinds": {"face": {"label": "Faces", "description": "a face", "media": "image"}},
+        "filters": [{"name": "min_age", "kind": "face", "field": "age", "type": "integer", "op": "gte",
+                     "description": "apparent age"}],
+        "result_fields": {"face": ["age"]}, "decider_context": "a portrait", "decider_guidance": {}, "max_k": 2,
+    }  # fmt: skip
+    items = [
+        {"id": f"F{age}", "kind": "face", "title": f"face {age}", "doc": f"smiling face freckles {age}",
+         "concepts": {}, "attrs": {"age": age}, "media": {"image": f"library/faces/assets/{age}.png"}}
+        for age in (20, 40)
+    ]  # fmt: skip
+    index = {"schema_version": SCHEMA_VERSION, "index_version": "f1", "catalog": catalog, "default_base_url": BASE,
+             "params": {"bm25_k1": 1.2, "bm25_b": 0.75, "rrf_k": 60, "w_bm25": 1.0, "w_concept": 1.0,
+                        "w_dense": 1.0, "candidates": 30, "mmr_lambda": 0.7, "reranker": None},
+             "lexicon": {}, "concepts": {}, "items": items, "vector_sets": {}, "files": []}  # fmt: skip
+    (tmp_path / "index.json").write_text(json.dumps(index))
+    out = Recommender(Index(tmp_path)).recommend("smiling freckles", k=2, filters={"min_age": 30})
+    assert out.to_dict()["picks"] == {
+        "face": [{"id": "F40", "kind": "face", "title": "face 40", "score": out.picks["face"][0].score,
+                  "why": [], "image": BASE + "library/faces/assets/40.png", "attrs": {"age": 40}}]
+    }  # fmt: skip
 
 
 def test_base_url_override_and_dense_vectors(index_dir: Path) -> None:
@@ -90,7 +105,7 @@ def test_base_url_override_and_dense_vectors(index_dir: Path) -> None:
     assert (
         Recommender(index, base_url="https://other.test/x")
         .recommend("soles", k=1)
-        .poses[0]
+        .picks["pose"][0]
         .image.startswith("https://other.test/x/library/refs/")
     )
     vecs = np.eye(len(ITEMS), 4, dtype="<f4")
@@ -126,6 +141,124 @@ def test_bundled_script_matches_the_package(index_dir: Path, tmp_path: Path) -> 
     assert "refsrag" not in script.read_text().replace("refs-recommender", "")
 
 
+def test_cli_filters_kinds_and_describe(
+    index_dir: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from refsrag.query import main
+
+    monkeypatch.delenv("FEATHERLESS_API_KEY", raising=False)
+    index = ["--index", str(index_dir)]
+    main(["doggy style", *index, "--json", "--kind", "pose", "--filter", "solo=false"])
+    assert [p["id"] for p in json.loads(capsys.readouterr().out)["picks"]["pose"]] == ["duo/P2"]
+    main(
+        [
+            "school girl",
+            *index,
+            "--json",
+            "--filter",
+            "outfit_category=spring,sexy",
+            "--filter",
+            "max_exposure=1",
+        ]
+    )
+    assert [p["id"] for p in json.loads(capsys.readouterr().out)["picks"]["outfit"]] == ["SPR-1"]
+    main(["--describe", *index])
+    assert json.loads(capsys.readouterr().out) == Index(index_dir).catalog.describe()
+    for bad in (["--filter", "nope=1"], ["--filter", "solo=maybe"], ["-k", "5"]):
+        with pytest.raises(SystemExit):
+            main(["x", *index, *bad])
+    assert "k must be between 1 and 4" in capsys.readouterr().err
+
+
+def test_describe_is_the_agent_facing_summary(index_dir: Path) -> None:
+    """The ``--describe`` output, field for field what the TypeScript port's describe mode returns: no
+    attr names (``field``), result fields or decider wording; min / max only when set."""
+    rec = Recommender(Index(index_dir))
+    assert rec.describe() == rec.index.catalog.describe() == {
+        "catalog": "refs",
+        "title": "Pose and outfit references",
+        "description": "Test catalog.",
+        "nudity": True,
+        "kinds": {
+            "outfit": {"label": "Outfits", "description": "an outfit image", "media": "image"},
+            "pose": {"label": "Poses", "description": "a pose in views", "media": "views"},
+        },
+        "filters": [
+            {"name": "max_exposure", "kind": "outfit", "type": "integer", "op": "lte", "min": 0, "max": 3,
+             "description": "skin"},
+            {"name": "solo", "kind": "pose", "type": "boolean", "op": "eq", "description": "solo"},
+            {"name": "outfit_category", "kind": "outfit", "type": "string", "op": "in",
+             "description": "categories"},
+            {"name": "pose_series", "kind": "pose", "type": "string", "op": "in", "description": "series"},
+        ],
+        "max_k": 4,
+    }  # fmt: skip
+
+
+def _faces_index(path: Path, n: int, max_k: int) -> Index:
+    catalog = {
+        "key": "faces", "title": "Faces", "description": "Face references.", "nudity": False,
+        "kinds": {"face": {"label": "Faces", "description": "a face", "media": "image"}},
+        "filters": [], "result_fields": {}, "decider_context": "a portrait", "decider_guidance": {},
+        "max_k": max_k,
+    }  # fmt: skip
+    items = [
+        {"id": f"F{n}", "kind": "face", "title": f"face {n}", "doc": f"smiling face {n}", "concepts": {},
+         "attrs": {}, "media": {"image": f"library/faces/assets/{n}.png"}}
+        for n in range(n)
+    ]  # fmt: skip
+    index = {"schema_version": SCHEMA_VERSION, "index_version": "f1", "catalog": catalog, "default_base_url": BASE,
+             "params": {"bm25_k1": 1.2, "bm25_b": 0.75, "rrf_k": 60, "w_bm25": 1.0, "w_concept": 1.0,
+                        "w_dense": 1.0, "candidates": 30, "mmr_lambda": 0.7, "reranker": None},
+             "lexicon": {}, "concepts": {}, "items": items, "vector_sets": {}, "files": []}  # fmt: skip
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "index.json").write_text(json.dumps(index))
+    return Index(path)
+
+
+@pytest.mark.parametrize(("max_k", "default"), [(4, 3), (2, 2), (1, 1)])
+def test_default_k_is_three_capped_by_max_k(tmp_path: Path, max_k: int, default: int) -> None:
+    rec = Recommender(_faces_index(tmp_path, 6, max_k))
+    assert len(rec.recommend("smiling face").picks["face"]) == default
+    for k in (0, max_k + 1):
+        with pytest.raises(ValueError, match=f"^k must be between 1 and {max_k}$"):
+            rec.recommend("smiling face", k=k)
+
+
+def test_cli_default_k_and_out_of_range_k(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from refsrag.query import main
+
+    monkeypatch.delenv("FEATHERLESS_API_KEY", raising=False)
+    _faces_index(tmp_path, 6, 2)
+    main(["smiling face", "--index", str(tmp_path), "--json"])
+    assert len(json.loads(capsys.readouterr().out)["picks"]["face"]) == 2
+    with pytest.raises(SystemExit):
+        main(["smiling face", "--index", str(tmp_path), "-k", "3"])
+    assert "k must be between 1 and 2" in capsys.readouterr().err
+
+
+def test_views_without_depth_or_view_text(index_dir: Path) -> None:
+    """``depth`` and ``view`` of a view may be absent or null: both are treated as absent."""
+    data = json.loads((index_dir / "index.json").read_text())
+    pose = data["items"][2]
+    front, low = pose["media"]["views"]
+    pose["media"]["views"] = [
+        {k: v for k, v in front.items() if k not in ("depth", "view")},
+        {**low, "depth": None, "view": None},
+    ]
+    (index_dir / "index.json").write_text(json.dumps(data))
+    out = Recommender(Index(index_dir)).recommend("show me your soles", k=1, kinds=["pose"]).to_dict()
+    (pick,) = out["picks"]["pose"]
+    assert pick["best_angle"] == "low" and pick["why"][-1] == "best view: low"
+    assert "depth" not in pick
+    assert pick["views"] == [
+        {"angle": "front", "image": BASE + "library/refs/assets/pose_pngs/front.png"},
+        {"angle": "low", "image": BASE + "library/refs/assets/pose_pngs/low.png"},
+    ]
+
+
 def test_decider_failures_keep_the_order_and_trip_the_breaker(
     index_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -142,13 +275,40 @@ def test_decider_failures_keep_the_order_and_trip_the_breaker(
     rec = Recommender(Index(index_dir), featherless_api_key="k", decider_rerank=True,
                       params={"decider": {"url": "http://x", "model": "m"}, "decider_depth": 4, "w_decider": 2.0})  # fmt: skip
     plain = Recommender(Index(index_dir)).recommend("soles in stockings", k=1)
-    assert rec.recommend("soles in stockings", k=1).poses[0].id == plain.poses[0].id
+    first = rec.recommend("soles in stockings", k=1)
+    assert first.picks["pose"][0].id == plain.picks["pose"][0].id
+    assert first.decider == "unavailable: the decision model failed (outfit, pose)"  # catalog kind order
     assert rec.decider is not None and rec.decider.failures >= 1
     for n in range(query.DECIDER_BREAKER + 2):
         rec.recommend(f"stockings {n}", k=1)
     tripped = len(calls)
     rec.recommend("stockings again", k=1)
     assert len(calls) == tripped  # breaker open: no more requests
+
+
+def test_decider_status_names_the_failed_kinds_or_is_absent(
+    index_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from refsrag import query
+
+    def pose_fails(self: object, context: str, kind: str, docs: list[str]) -> list[float]:
+        if kind == "pose":
+            raise ValueError("malformed payload")
+        return [1.0] * len(docs)
+
+    monkeypatch.setattr(query.DeciderReranker, "_score", pose_fails)
+    monkeypatch.setattr(query.time, "sleep", lambda s: None)
+    params = {"decider": {"url": "http://x", "model": "m"}, "decider_depth": 4, "w_decider": 2.0}
+    rec = Recommender(Index(index_dir), featherless_api_key="k", decider_rerank=True, params=params)
+    assert rec.recommend("soles", k=1, kinds=["pose", "outfit"]).decider == (
+        "unavailable: the decision model failed (pose)"
+    )
+    assert rec.recommend("stockings", k=1, kinds=["outfit"]).decider == "m"
+    # no decider runs: none configured (no key, or not asked for), or the index defines none
+    no_decider = Recommender(Index(index_dir), featherless_api_key="k", decider_rerank=True,
+                             params={"decider": None})  # fmt: skip
+    for r in (no_decider, Recommender(Index(index_dir), featherless_api_key="k", params=params)):
+        assert "decider" not in r.recommend("soles", k=1).to_dict()
 
 
 def test_decider_scores_reorder_the_top(index_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -162,7 +322,21 @@ def test_decider_scores_reorder_the_top(index_dir: Path, monkeypatch: pytest.Mon
     rec = Recommender(Index(index_dir), featherless_api_key="k", decider_rerank=True, params=params)
     plain = Recommender(Index(index_dir)).recommend("soles stockings school girl", k=2, kinds=["outfit"])
     decided = rec.recommend("soles stockings school girl", k=2, kinds=["outfit"])
-    assert [p.id for p in decided.outfits] == [p.id for p in plain.outfits][::-1]
+    assert [p.id for p in decided.picks["outfit"]] == [p.id for p in plain.picks["outfit"]][::-1]
+    assert decided.decider == "m" and plain.decider is None
+
+
+def test_decider_state_words_the_catalog_context_and_guidance(index_dir: Path) -> None:
+    from dataclasses import replace
+
+    from refsrag.query import decider_state
+
+    catalog = Index(index_dir).catalog
+    assert decider_state(catalog, "ctx", "pose", ["a", "b"]) == (
+        "Context of an adult clip: ctx\n\nCandidate pose references:\nCandidate 1: a\nCandidate 2: b"
+    )
+    guided = replace(catalog, decider_guidance={"pose": "Prefer full-body views."})
+    assert decider_state(guided, "ctx", "pose", ["a"]).endswith("Candidate 1: a\n\nPrefer full-body views.")
 
 
 def test_cache_dir_falls_back_when_home_is_not_writable(

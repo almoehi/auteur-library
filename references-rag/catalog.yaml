@@ -1,0 +1,53 @@
+# The catalog descriptor shipped in every index (index.json "catalog", schema 2): non-secret data the
+# query code reads instead of hard-coding the catalog. Validated by settings.load_catalog against
+# descriptor.Catalog; see descriptor.py for the item shape filters and result fields refer to.
+key: refs  # the S3 path segment: library/refs/{assets,rag}/
+title: Pose and outfit references
+description: >-
+  Curated outfit images and posed line-art mannequins (several camera angles, each with a depth map)
+  for adult clips. Ask with a scene, kink, roleplay or wardrobe context; each pick has public image URLs.
+nudity: true
+kinds:
+  outfit:
+    label: Outfits
+    description: A complete outfit shown as one image (flat-lay or worn), from casual to lingerie.
+    media: image
+  pose:
+    label: Poses
+    description: >-
+      A solo or duo body pose as faceless line art with a depth map, in several camera views; the best
+      view for the context comes first.
+    media: views
+filters:
+  - name: max_exposure
+    kind: outfit
+    field: exposure
+    type: integer
+    op: lte
+    min: 0
+    max: 3
+    description: "Outfits showing at most this much skin: 0 covered street wear, 1 some skin or sheer, 2 revealing (mini, cutouts, plunge), 3 lingerie or swimwear."
+  - name: solo
+    kind: pose
+    field: solo
+    type: boolean
+    op: eq
+    description: "Poses: true for one person, false for duo (two-person) poses."
+  - name: outfit_category
+    kind: outfit
+    field: category
+    type: string
+    op: in
+    description: "Outfits of these library categories: spring, summer, autumn, winter, party, swimwear, lingerie, sexy."
+  - name: pose_series
+    kind: pose
+    field: series
+    type: string
+    op: in
+    description: "Poses of these series: full_body_standard, full_body_sexy, upper_body, duo."
+result_fields:
+  outfit: [category]
+  pose: [series, category, sex_positions]
+decider_context: an adult clip
+decider_guidance: {}
+max_k: 4
