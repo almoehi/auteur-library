@@ -154,7 +154,7 @@ Example calls (one production; a few per reply):
 
 ## Garment references (catalog picks, optional)
 
-A catalog flat-lay of the garment makes the outfit's drafts far closer to the planned look than text alone. Only when `catalog_index` is offered AND lists a catalog whose `search_catalog {catalog, describe: true}` kinds include `outfit`; otherwise skip this section entirely (no catalog = text only, nothing to flag). Never for a minor's outfit.
+A catalog flat-lay of the garment makes the outfit's drafts far closer to the planned look than text alone. Run this section ONLY when `catalog_index` is offered AND lists the `outfit` kind for a catalog (a workspace may expose a catalog for poses only). Otherwise - and on any refusal, an unavailable tool or when nothing fits - the fallback is the pre-catalog method: describe the outfit by its text attributes only (garments, colours, fabric), no `garment_reference`, nothing to flag; never retry a refused kind or use another catalog. Never for a minor's outfit.
 
 For EACH outfit entry (one per WARDROBE TRACKER row), before its `write_design`:
 
