@@ -85,7 +85,7 @@ Build every entry with its FINAL key; nothing is decided later.
    - Design names are unique across ALL kinds: a location slug must not equal a character slug (suffix `_place`, display "Harbor Place").
    - Merge duplicate characters ("Mira", "MIRA", "young Mira" = `mira`; another costume is a tracker row).
    - Never add the story's medium / style as an attribute (`design-asset` carries it).
-   - Attributes describe ONLY what a camera sees in the reference picture: a character - face, hair, eyes, skin, build, body, marks; an outfit - garments and their look; a location - place, light, layout. Story role, point-of-view status, "never shown", behaviour, gestures, personality, voice (apart from the `voice` key) and a height in feet / inches stay OUT (they belong to the character table / screenplay); express height as relative build / proportions ("tall, long-limbed") instead. A point-of-view character still gets a normal full reference with the face.
+   - Attributes describe ONLY what a camera sees in the reference picture: a character - face, hair, eyes, skin, build, body, marks; an outfit - garments and their look; a location - place, light, layout. Story role, point-of-view status, "never shown", behaviour, gestures, personality and a height in feet / inches stay OUT (they belong to the character table / screenplay); express height as relative build / proportions ("tall, long-limbed") instead. The only non-visual attribute is the character `voice` (below). A point-of-view character still gets a normal full reference with the face.
 3. Attributes (short comma-joined descriptors, never sentences; only what the sources state; omit unknown keys except the character `wardrobe`):
 
 | kind | keys |
