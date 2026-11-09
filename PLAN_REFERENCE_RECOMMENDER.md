@@ -306,9 +306,16 @@ references-rag/                 uv project, Python 3.12
    - No cross-encoder: no gain, and it saves a 23 MB model download.
    - `recommend.py` prefers Qwen3-Embedding-4B; the TypeScript templates use 0.6B (7 MB instead of 17 MB per cold call, 0.711 vs 0.735).
    - Without a key: local bge-small, test mean 0.61.
-10. **Open items needing a deployed agent or sandbox:**
-    - `typeof WebAssembly` and `String.prototype.normalize` in QuickJS;
-    - Math parity of QuickJS vs V8;
-    - cold download + parse time per call (every call is a fresh ephemeral instance; the index is 2.6 MB plus 7 MB of vectors);
-    - executor memory;
-    - the chroot sandbox smoke run of `recommend.py` after the fat image is rebuilt with `onnxruntime` / `tokenizers` (worktree `vh-refs-sandbox`).
+10. **Runtime checks (2026-11-09; local stack redeployed with a state reset).** The image was built from the integration branch `229-refs-integration` = local `229-design-studio` + both P6 branches.
+    - **QuickJS:** `ReferenceIndexAgent.recommendDirect` gives the same output as Python (concepts, ids, scores, best views, `why`) on a lexical request with accented text, so `String.prototype.normalize` and the float maths match. `typeof WebAssembly` doesn't matter: the port uses none.
+    - **Cold call (fresh ephemeral instance, CLI round trip included):**
+      - lexical only: 7.3 s;
+      - 0.6B embedding + decider: 7.6 s;
+      - 4B embedding: 4.1 s.
+    - **Memory:** the container peaked about 170 MB above baseline. The result is about 9 KB.
+    - **Sandbox:** the fat image's sandbox venv has `onnxruntime` 1.31.1 and `tokenizers` 0.23.3. `recommend.py` downloaded from S3 runs there both without a key (local ONNX, 8.8 s cold) and with a key (4B + decider, 6.5 s). It was run with `/opt/venv/bin/python` in the container, not through the `sandbox_python` tool.
+    - **Build blocker found and fixed:** `golem build` aborted in Wizer pre-initialization ("fuel allocated for hostcalls has been exhausted").
+      - The JS bundle's memory snapshot (~135 MB) is read back as one `list<u8>` against wasmtime's default 128 MiB host-call fuel. The base branch was right at the limit; any growth fails.
+      - Fix: `wasm-rquickjs` 0.3.4 vendored in the golem fork with `store.set_hostcall_fuel(1 << 31)` (golem worktree `golem-wizer-fuel`, branch `wizer-hostcall-fuel`, not pushed).
+      - This must land in the golem fork before any production build of the recommender.
+    - **Release gate still failing:** the checked-in `api/raw-openapi.json` is stale (`deployment/lib/export-raw-openapi.sh --write`). It also covers base-branch changes (`apiWorkerRenderFile`), not only the new `embed` purpose.
