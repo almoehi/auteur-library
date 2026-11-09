@@ -59,10 +59,13 @@ design studio; never render them yourself):
    accessory of the same kind on the same body part is never added over them. The describe step
    words them loosely ("thin black choker", "pendant with a geometric design"), so `designs.md`
    gives the person the `marks` attribute to set after the finish. A person's mark replaces a
-   described one only at the same kind, part AND side, and the describe step files them as
-   jewellery on both sides: `jewellery | neck | both | wide black velvet choker; jewellery | neck |
-   both | small silver key pendant on a thin chain; jewellery | fingers | both | violet nail
-   polish`.
+   described one only at the same kind, part AND side, and the describe step picks the side
+   differently from run to run (`both` in one pilot finish, `unsided` in the next): read the
+   finished `design.json` `description.marks` and give each entry the stored side, e.g.
+   `jewellery | neck | unsided | wide black velvet choker; jewellery | neck | unsided | small silver
+   key pendant on a thin chain; jewellery | fingers | both | violet nail polish`. One attribute mark
+   at a place replaces every described mark of that kind there (also a spurious "silver choker
+   chain").
 2. **Sets** - one location design per set in `visual_plan.json` (`sets[]`):
    `create_design({ kind: "location", display_name: "<set name>", key_slug: "<set id>",
    start: "attributes", initial_drafts: 2, attributes: [...] })` with `space` (interior /
