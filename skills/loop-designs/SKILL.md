@@ -48,12 +48,20 @@ design studio; never render them yourself):
    key_slug: "vesper", start: "references", character_type: <the tool's adult-woman type or
    "adult woman">, reference_images: ["artifact://<inputs>/character.png"] })` (a reference-started
    design takes no attributes).
+   **Face view:** the inputs' `face.png` is her face reference. It must become the design's tagged
+   `face` view BEFORE the finish, so the finish publishes it instead of rendering one (a rendered
+   face view drifts: in the pilot it aged and widened her face, and every clip reads the face view
+   as her identity). Tell the person in `designs.md`: upload `face.png` as a take tagged `face`
+   (studio Views panel, "Use as view" > face, or `workspace/designs.py upload <design> face.png
+   --view face`), then finish with `character.png` as the primary.
    The brand details are the character's MARKS: the finish's describe step reads them from the
    picture and verifies each one, every outfit edit then keeps them unchanged, and an outfit
-   accessory of the same kind on the same body part is never added over them. In `designs.md`
-   list them for the person to check after the finish, as the `marks` attribute value to add in
-   the studio if one is missing: `jewellery | neck | unsided | black velvet choker; jewellery |
-   neck | unsided | small silver key pendant on a thin chain; other | fingers | both | violet nail
+   accessory of the same kind on the same body part is never added over them. The describe step
+   words them loosely ("thin black choker", "pendant with a geometric design"), so `designs.md`
+   gives the person the `marks` attribute to set after the finish. A person's mark replaces a
+   described one only at the same kind, part AND side, and the describe step files them as
+   jewellery on both sides: `jewellery | neck | both | wide black velvet choker; jewellery | neck |
+   both | small silver key pendant on a thin chain; jewellery | fingers | both | violet nail
    polish`.
 2. **Sets** - one location design per set in `visual_plan.json` (`sets[]`):
    `create_design({ kind: "location", display_name: "<set name>", key_slug: "<set id>",
