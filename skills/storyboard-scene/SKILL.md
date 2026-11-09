@@ -480,6 +480,21 @@ check); they go to the clip prompt verbatim.
   `Sex position:` (the explicit position already poses its people). Each person's `Pose:` line must
   agree with the named pose (the same support, facing and limbs: `tiptoe kiss` = she is on tiptoe,
   arms around his neck); a pose changes = a new shot.
+- `Pose reference: artifact://<key>` (optional; only when `catalog_index()` lists a catalog with a `pose` kind - skip
+  it otherwise): a library pose the server renders the shot's pose from. For a shot with a `Body pose:` or a
+  `Sex position:` (after you wrote its `Camera:` line):
+  1. `search_catalog({catalog, context: "<the shot's Action:, the act and position / pose name>", kinds: ["pose"],
+     filters: {solo: true}})` for ONE person in frame, `filters: {solo: false}` for TWO (a duo pose needs nudity
+     `allowed` and a third-person camera - no `POV:`; one woman and one man).
+  2. Pick the item whose `sex_positions` (the `explicit-acts` name of your `Sex position:`) or support (who stands,
+     kneels, lies, sits on what) matches the shot - none fits: no line (never a near miss).
+  3. `use_reference({catalog, id, camera: "<the shot's Camera: line>"})` - the server picks the view by the camera's
+     angle (front / side / diag / high / low); a camera from behind has no view (refused: no line).
+  4. Write `Pose reference: <the returned artifact>` (e.g. `artifact://ref-refs-duo-p041-side`).
+  A solo pose re-poses the person by the pose's line art when the take fails its pose check (or at once, per the
+  workspace's `keyframes.poseReference`); a duo pose renders the keyframe from the pose's depth map - its framing and
+  background follow the pose, the place is said in words, so keep `Camera:` and `Frame:` to that view. Re-import when
+  you change the shot's `Camera:` direction (the view must match it).
 - A character with a `true size (not human-sized)` line in the Referenced designs block (a doll, a pet, a
   giant) is NOT drawn at a person's size: its `Pose:` says how it is held and how big it is ("a small doll
   in her arms at her chest"), and a `Contact:` entry states the hold; a held small character is pictured
@@ -911,6 +926,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] every kiss / embrace / carry / dance - and every catalog sitting, kneeling, leaning or walking
       pose - is on a `Body pose:` line (catalog name, keys in role order); `Pose:` agrees with it and
       with the `Sex position:`
+- [ ] (a pose catalog exposed) every `Pose reference:` came from `use_reference` with the shot's CURRENT `Camera:` line, solo
+      for one person in frame, duo only for a third-person two-person pose / act shot
 - [ ] `draft_storyboard` was accepted; `design.json` untouched
 - `task_complete(summary="Storyboard scene <n>: <N> shots handed to the server; open: …")` (1–3
   lines). The takes land afterwards; this hands the design to the person, it does not finish it.

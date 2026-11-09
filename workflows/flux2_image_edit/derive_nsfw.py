@@ -53,6 +53,9 @@ _c1 = y.index("\n\n", _c0)  # the Use for / Not for block opens the context
 _alt = lambda s: re.sub(r"\b(flux2_image_edit|flux2_reference_compose|flux2_masked_inpaint|krea2_image_edit)\b(?!_nsfw)", r"\1_nsfw", s)
 y = y[:_d0] + _alt(y[_d0:_d1]) + y[_d1:_c0] + _alt(y[_c0:_c1]) + y[_c1:]
 y = must_replace(y, "\nmodel_family: flux2\n", "\nmodel_family: flux2\ncontent: nsfw\n")
+# the depth-pose keyframe of a duo library pose (P7.4b): the server binds the pose's depth view to subject_image
+# (Figure 1) and the person to the second image port, with its server-owned RefControl depth LoRA
+y = must_replace(y, "\ncontent: nsfw\n", "\ncontent: nsfw\ncapabilities: [depth-pose]\n")
 y = must_replace(y, "\nurl: workflow.json\n",
                  "\n  NSFW variant: edits that undress or restage people - nudity and sex between adults allowed (a general\n"
                  "  NSFW LoRA is baked in; catalog edit LoRAs such as the 0x7 'no face change' nudity LoRA go on the ports).\n"
@@ -64,6 +67,9 @@ y = must_replace(y, "  LoRAs: up to four flux2 catalog LoRAs on lora_1..lora_4",
                  "  while keeping identity, put a keep-identity edit LoRA from the catalog on a port\n"
                  "  (flux2_nsfw_edit_nudity, flux2_nsfw_edit_female_nudity). Explicit acts compose better from the place and\n"
                  "  the characters with flux2_reference_compose_nsfw. Call every person an adult.\n"
+                 "  depth-pose: the storyboard renderer itself may render a two-person keyframe here from a library pose's\n"
+                 "  DEPTH map as Figure 1 and the woman's picture as Figure 2 (the RefControl depth LoRA, prompt led by\n"
+                 "  'refcontrol.'); never call it that way yourself.\n"
                  "  LoRAs: up to four flux2 catalog LoRAs on lora_1..lora_4")
 y = must_replace(y, "\nmodels:\n", "\nmodels:\n" + MODEL.lstrip("\n") + "\n")
 (dst / "workflow.yaml").write_text(y)
