@@ -44,17 +44,19 @@ create_task({
   title: "Shoot loop clip <N>",
   description: "Render the <variants> loop variants (<variant_seconds> s each) of clip <N> from the anchor frame of storyboard_scene_<N> (h3_loop_clip_nsfw), per-variant checks, joined preview",
   agent: "generic",
-  requires_tasks: ["<the storyboard_scene_<N> design task key from task_index>"],
+  requires_artifacts: ["storyboard_scene_<N>"],
   prompt: "Load and use skill: iwc-loop-clip\nclip: <N>\nvariants: <variants>\nvariant_seconds: <variant_seconds>\nstoryboard: storyboard_scene_<N>\ncharacter: character_<slug>\noutfit: <outfit design key, or none for a nude clip>\nlocation: location_<room_id>\nplan: visual_plan\ninputs: episode_inputs"
 })
 create_artifact({ task_id: "shoot_loop_clip<N>", id: "loop_clip<N>", title: "Loop clip <N>",
   description: "clip<N>_v<k>.mp4, clip<N>_v<k>_audio.flac, clip<N>_v<k>_checks.txt per variant (+ clip<N>_v<k>-r2.* on a retry), clip<N>_variants_preview.mp4, clip<N>_summary.md" })
 ```
 
-- The dependency: the storyboard task finishes when a person finishes the storyboard design in
-  the studio, so the clip task waits until its frame exists. `requires_tasks` takes the task KEY
-  of the existing storyboard design task (the workspace resolves an existing key to its runtime
-  id when it takes the tasks over); copy it from `task_index`, never guess.
+- The dependency: `requires_artifacts` holds the clip task until the storyboard design
+  `storyboard_scene_<N>` is FINISHED (a person finishes it in the studio, which publishes the
+  artifact with its frames). Use the artifact key exactly as in `design_plan.json` / the artifact
+  index (a suffixed key: the one whose number matches); an unknown key is refused - fix the key,
+  never drop the dependency. Do not use `requires_tasks` for this (the task does not wait for the
+  finished design).
 - `<variants>`: the task's `variants` field, capped at the clip's `variants[]` count in the
   plan (a plan clip with fewer variants: its count; name the cap in the reply).
 - Never `can_create_tasks` on a clip task. Never one task for several clips, never one task per
