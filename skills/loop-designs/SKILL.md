@@ -10,6 +10,8 @@ description: >
 agentType: worker
 ---
 
+> **Superseded - no longer loaded by the workspace; use iwc-loop-cast + iwc-loop-scenes (designs and storyboards now come from the library plan-designs) instead.**
+
 # Loop designs: character, outfits, anchor keyframes
 
 ONE adult woman, the play's character, always the same identity, in ONE room. Every image is a

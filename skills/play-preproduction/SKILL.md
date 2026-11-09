@@ -10,6 +10,8 @@ description: >
 agentType: worker
 ---
 
+> **Superseded - no longer loaded by the workspace; use `iwc-play-preproduction` instead.**
+
 # Play pre-production: audio script → loop clip plan
 
 The episode is an AUDIO clip (her voice over the whole runtime). The visuals are a cam-girl

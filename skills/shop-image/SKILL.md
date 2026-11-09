@@ -9,6 +9,8 @@ description: >
 agentType: worker
 ---
 
+> **Superseded - no longer loaded by the workspace; use `iwc-shop-image` instead.**
+
 # Shop image: 3-4 candidate store thumbnails
 
 The candidates come from TWO renders each:

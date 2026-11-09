@@ -9,6 +9,8 @@ description: >
 agentType: worker
 ---
 
+> **Superseded - no longer loaded by the workspace; use `iwc-loop-clip` instead.**
+
 # Loop clip: render seamless cam-style loops
 
 One render per clip with `wf_h3_loop_clip_nsfw`: the workflow pins the start frame (`ref0`) as
