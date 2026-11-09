@@ -55,6 +55,12 @@ naming the panels. Per shot ask:
 - **Identity, anatomy, artefacts**: same person as the reference? extra or merged fingers, hands,
   limbs? text or watermark?
 - **Continuity** with the previous shot: hair, wardrobe state, set, light.
+- **Pose reference** (a shot with a `Pose reference:` line): read the route the take job / `plan_shot`
+  reported (pose transfer, depth-pose keyframe, or the skip reason) and look at whether the take
+  shows the imported pose. Common causes of a skip or a wrong pose: the imported view does not match the
+  `Camera:` angle (incl. a `from behind` camera with no `back` view), the person touches someone (the
+  viewer included), a duo shot framed closer than `medium full`, the `Sex position:` differs from the
+  pick's, or the import's picture does not match its label. Never call it good because a line exists.
 
 Note per shot: verdict `good` (usable as is) / `minor` (usable after a small fix) / `wrong` (does not
 show the shot); each defect as one concrete sentence ("shows <A> from the front, the shot asks from
@@ -94,6 +100,7 @@ renderer changes.
 | A garment the shot removed is still worn | - | rarely as of 2026-11; wardrobe rule + look plates in a later release (re-measure) - if still seen, report |
 | A `partly:` garment in the wrong place | - | does not work: report |
 | Which hand / where a hand rests / what it holds | - | does not work: report, or simplify the shot line |
+| Pose reference skipped or the pose is wrong (reason from the take job) | lines: re-import the view for the CURRENT `Camera:` (`use_reference`), or drop the `Pose reference:` line when the shot has contact, a close duo framing or a position the pick does not show; then `plan_shot` | a new take cannot fix it |
 | A `wrong` shot with no usable take | regenerate x2 (after fixing the lines if they caused it) | - |
 
 A Describe note names what is wrong AND what the frame must show instead, in the shot's own words;
