@@ -57,15 +57,12 @@ design studio; never render them yourself):
    The brand details are the character's MARKS: the finish's describe step reads them from the
    picture and verifies each one, every outfit edit then keeps them unchanged, and an outfit
    accessory of the same kind on the same body part is never added over them. The describe step
-   words them loosely ("thin black choker", "pendant with a geometric design"), so `designs.md`
-   gives the person the `marks` attribute to set after the finish. A person's mark replaces a
-   described one only at the same kind, part AND side, and the describe step picks the side
-   differently from run to run (`both` in one pilot finish, `unsided` in the next): read the
-   finished `design.json` `description.marks` and give each entry the stored side, e.g.
-   `jewellery | neck | unsided | wide black velvet choker; jewellery | neck | unsided | small silver
-   key pendant on a thin chain; jewellery | fingers | both | violet nail polish`. One attribute mark
-   at a place replaces every described mark of that kind there (also a spurious "silver choker
-   chain").
+   words them loosely ("black choker", "silver pendant necklace", once a spurious "silver choker
+   chain"), and a finished design's attributes cannot be edited (a reference-started design takes
+   none either), so the marks cannot be corrected on the character. Instead, in `designs.md` tell
+   the person to check every outfit draft for exactly these three - a WIDE black velvet choker, a
+   small silver KEY pendant (round bow and teeth) on a thin silver chain, violet nails - and no other
+   neck piece, and to brief each outfit's design agent with them (studio chat) before its drafts.
 2. **Sets** - one location design per set in `visual_plan.json` (`sets[]`):
    `create_design({ kind: "location", display_name: "<set name>", key_slug: "<set id>",
    start: "attributes", initial_drafts: 2, attributes: [...] })` with `space` (interior /
