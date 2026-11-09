@@ -1,6 +1,6 @@
 # Lexicon validation (held-out clips)
 
-Held-out clips: 2629. Concepts: 60. Aliases: 938. Mean recall: 0.646.
+Held-out clips: 2629. Concepts: 60. Aliases: 1009. Mean recall: 0.658.
 Gate (concepts with support >= 5): recall >= 0.6.
 
 Precision is a LOWER BOUND: a clip carries only 1-3 categories while its text names more
@@ -12,23 +12,23 @@ Predicted from title + description only; gold = the concepts of the clip's own c
 | Concept | Type | Support | Precision (lower bound) | Recall | Gate |
 |---|---|---|---|---|---|
 | edging_denial | kink | 683 | 0.57 | 0.69 | ok |
-| femdom | kink | 636 | 0.31 | 0.33 | below |
+| femdom | kink | 636 | 0.33 | 0.61 | ok |
 | joi_stroking | act | 339 | 0.25 | 0.65 | ok |
-| body_goddess_worship | kink | 155 | 0.16 | 0.48 | below |
+| body_goddess_worship | kink | 155 | 0.12 | 0.56 | below |
 | foot_fetish | kink | 118 | 0.44 | 0.88 | ok |
-| brat_mean_girl | roleplay | 74 | 0.07 | 0.46 | below |
+| brat_mean_girl | roleplay | 74 | 0.07 | 0.51 | below |
 | sissy_feminization | roleplay | 66 | 0.24 | 0.91 | ok |
 | breasts | body_focus | 62 | 0.11 | 0.77 | ok |
 | ass_worship | body_focus | 53 | 0.11 | 0.85 | ok |
-| general_roleplay | roleplay | 39 | 0.05 | 0.38 | below |
+| general_roleplay | roleplay | 39 | 0.05 | 0.49 | below |
 | mouth_face | body_focus | 38 | 0.09 | 0.79 | ok |
 | blowjob_oral | act | 32 | 0.09 | 0.66 | ok |
 | giantess_shrinking | roleplay | 25 | 0.13 | 0.84 | ok |
-| toys_solo_female | act | 25 | 0.14 | 0.44 | below |
+| toys_solo_female | act | 25 | 0.12 | 0.48 | below |
 | heels_shoes | garment | 24 | 0.16 | 0.71 | ok |
-| step_family_roleplay | roleplay | 24 | 0.10 | 0.58 | below |
+| step_family_roleplay | roleplay | 24 | 0.09 | 0.58 | below |
 | boots | garment | 20 | 0.17 | 0.85 | ok |
-| lesbian_pairing | act | 20 | 0.10 | 0.25 | below |
+| lesbian_pairing | act | 20 | 0.05 | 0.40 | below |
 | anal_play | act | 18 | 0.15 | 0.94 | ok |
 | latex_rubber_pvc | garment | 17 | 0.10 | 0.65 | ok |
 | strap_on_pegging | act | 17 | 0.14 | 0.88 | ok |
@@ -44,7 +44,7 @@ Predicted from title + description only; gold = the concepts of the clip's own c
 | wet_oily_messy | body_focus | 10 | 0.07 | 0.80 | ok |
 | smoking | kink | 10 | 0.53 | 1.00 | ok |
 | lingerie | garment | 9 | 0.03 | 0.78 | ok |
-| cosplay | roleplay | 9 | 0.12 | 0.33 | below |
+| cosplay | roleplay | 9 | 0.08 | 0.33 | below |
 | bondage_restraint | kink | 8 | 0.19 | 0.38 | below |
 | pussy_worship | body_focus | 7 | 0.02 | 1.00 | ok |
 | trampling_stomping | act | 6 | 0.05 | 0.67 | ok |
