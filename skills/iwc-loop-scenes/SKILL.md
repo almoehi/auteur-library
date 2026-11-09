@@ -2,9 +2,10 @@
 name: iwc-loop-scenes
 description: >
   Use when the task prompt says "Load and use skill: iwc-loop-scenes", or asks for the scene list
-  of an iWantClips loop episode: one scene per loop clip of the visual plan, each with ONE beat -
-  the clip's act-free anchor (catalog body pose, furniture contact, the clip's camera, hold) - and
-  a Places table with one location per room, written with write_places / write_scene so the
+  of an iWantClips loop episode: one scene per loop clip of the visual plan, each with the clip's
+  act-free ANCHOR beat (catalog body pose, furniture contact, the clip's camera, hold; marked in the
+  Summary as "Loop anchor: beat N.k"), preceded by an outfit-change beat only where the look
+  changes, and a Places table with one location per room, written with write_places / write_scene so the
   server checks it. Do NOT invoke for the visual plan (iwc-play-preproduction), the character
   table (iwc-loop-cast), a film's scene list from a screenplay (run-preproduction's create_scenes)
   or storyboards (storyboard-scene).
@@ -16,8 +17,18 @@ agentType: worker
 The scene list is the platform's bridge from the plan to the designs: `plan-designs` creates the
 location, outfit and storyboard designs from it, and every storyboard shot is drafted from its
 scene's beats. Here a scene is NOT a story scene: scene n = clip n of the visual plan, and its
-ONE beat is the clip's ANCHOR - the held rest state the loop starts and ends in. The storyboard
-of scene n then has exactly one shot, and that frame becomes the clip's first and last frame.
+ANCHOR beat is the held rest state every variant of the clip starts and ends in. The storyboard
+shot of the anchor beat becomes the first and last frame of every variant (`iwc-loop-clip` picks
+the frame of the shot whose `Beat:` is the anchor beat named in the Summary).
+
+The footage is 16:9 landscape (1920x1080) from a FIXED camera on a tripod. Lessons of the v1
+pilot, built into the rules below:
+- an anchor framed limbs-only (a first-person view of her lap) is useless as a loop anchor: the
+  anchor framing always shows her face and eyes;
+- a Blocking that named the camera, tripod or phone made the image model draw the equipment:
+  never name camera equipment, only where the viewpoint is;
+- a clip in a different outfit than the clip before needs a shown look change (the scene check
+  demands it), so the anchor beat is not always N.1: it is marked explicitly.
 
 ## 1. Preflight
 
@@ -59,28 +70,46 @@ Row:
   (`night`); `lighting` = ONE phrase: the set's key light as source, direction, quality, colour
   (`warm tungsten floor lamp from camera-left, soft, pink neon rim from the window behind`).
 - `summary` (copied by `plan-designs` into the storyboard's `notes`, so it carries the storyboard
-  directive) - exactly this form:
-  `Loop anchor: exactly ONE shot for beat N.1, no establishing shot, locked-off webcam, Camera = the beat's Framing, catalog Body pose <body_pose>, the furniture contact in Contact: <anchor_contact>. Corner: <set name> (<view: main picture | location view '<view phrase>'>). Clip N covers <start>-<end>: <one line what happens in the audio>.`
-- `characters_present` = the character slug; `outfits` = `<slug>:<outfit_id>` (the union of the
-  beat's looks: here the one beat's pair); `audio` = the room's atmosphere in one line (room tone,
+  directive) - exactly this form, STARTING with the anchor marker (`k` = 1, or 2 after an
+  outfit-change beat):
+  `Loop anchor: beat N.k. Exactly ONE shot for beat N.k (no second or tighter shot of it), no establishing shot, 16:9 landscape, fixed camera, Camera = the beat's Framing with her face and eyes in frame, catalog Body pose <body_pose>, the furniture contact in Contact: <anchor_contact>. Corner: <set name> (<view: main picture | location view '<view phrase>'>). Clip N covers <start>-<end>: <one line what happens in the audio>.`
+  With an outfit-change beat, append: `Beat N.1 is one short beat of the look change from <old look> into <new look> and is never the loop frame.`
+- `characters_present` = the character slug; `outfits` = the union of the beats' looks
+  (`<slug>:<outfit_id>`; with an outfit-change beat both pairs, `<slug>:<old>; <slug>:<new>`); `audio` = the room's atmosphere in one line (room tone,
   size, distance, mood; never "silent"; no dialogue, no events).
 
-Beat `N.1` (the ONLY beat; the anchor held rest state):
+**Outfit-change beat** (only when clip N's `outfit_id` differs from clip N-1's; never in scene 1):
+beat `N.1` in the OLD look shows the change at the anchor's place, ending one short moment
+before the anchor: `action` = body state with the garments mid-change (`Vesper sits on the edge
+of the mattress in the lace bralette and panties, the black silk slip gathered in both hands on
+her lap`), `outfits` = `<slug>:<old>`, `framing` = the anchor's camera line, `camera_move` `hold`,
+`continuity` `new moment`, `blocking` / `contact` as for the anchor (the garment in her hands is a
+contact), `sex_act` / `sex_position` `none`. The anchor beat is then `N.2` with `continuity`
+`continuous`. One change beat at most; never a second anchor-like beat.
+
+**Anchor beat** `N.k` (`N.1`, or `N.2` after an outfit-change beat; the held rest state):
 - `action` = BODY STATE ONLY: support, posture, limbs, the furniture contact, the garment state at
   the anchor (`Vesper kneels upright on the near edge of the mattress, sitting back on her heels,
   hands flat on her thighs, both slip straps on her shoulders`). Keep gaze, lips, breath, eyes,
   skin and voice words OUT of the action: a sensation signal must be its own beat and is refused
-  inside a body-state action, and the anchor has no second beat. No act, no motion verbs of the
-  loop (those live in the plan's `action` and reach the clip prompt there).
+  inside a body-state action, and the anchor gets no sensation beat. No act, no motion verbs of
+  the variants (those live in the plan's `variants` and reach the clip prompts there).
 - `location` = the row's `location_slug`.
 - `outfits` = `<slug>:<outfit_id>` (`<slug>:nude` for a nude clip).
 - `framing` = the clip's `camera.line` (`medium shot, eye level, from the front`): one standard
-  size first, then the height and direction words.
-- `camera_move` `hold` (locked-off webcam). `continuity` `new moment`.
-- `blocking` = where she is in frame and facing, where the camera stands (`camera locked off on a
-  tripod in front of the bed at her chest height`), and her gaze (`she looks into the lens`):
-  gaze belongs HERE, never in `action`. For a shared-room corner name the corner (`at the vanity
-  corner`).
+  size first, then the height and direction words. Framing words for the 16:9 landscape canvas:
+  the anchor shows her FACE and EYES - at least a `medium` shot (`medium`, `medium full`, `full
+  shot`), a `full shot` for full-body poses (lying, kneeling with the legs in view, feet toward
+  the lens); never a close-up on a body part, never limbs only, never a first-person view (her lap
+  seen from above as by the listener). A plan camera that breaks this: widen it to the nearest
+  allowed size and say so in the reply.
+- `camera_move` `hold` (fixed camera). `continuity` `new moment` (`continuous` after an
+  outfit-change beat).
+- `blocking` = where she is in frame and facing, where the VIEWPOINT is (`seen from the foot of
+  the bed at her eye level, about two metres away`), and her gaze (`she looks into the lens`):
+  gaze belongs HERE, never in `action`. NEVER name camera equipment (camera, webcam, tripod,
+  phone, lens stand, ring light): a named device is drawn into the picture. `the lens` for her
+  gaze is fine. For a shared-room corner name the corner (`at the vanity corner`).
 - `contact` = the clip's `anchor_contact` in plain body-part words, one entry per contact
   (`Vesper's knees and shins on the mattress; her hands on her thighs`); an item held at the
   anchor is a contact in words (`the silver key between her right thumb and fingers`).
@@ -106,9 +135,13 @@ Revisit if the platform gains one-person sex positions.
 ## 4. Pre-completion audit
 
 Every clip of the plan has its scene (scene n = clip n) and every scene was accepted; each scene
-has exactly one beat `N.1` with `new moment`, `hold`, the clip's camera line as `framing`, a
-body-state-only `action` (no gaze / lips / breath / eyes words), `contact` filled, and
-`sex_act` / `sex_position` both `none`; the row's `outfits` equals the beat's pair; every
+has exactly one anchor beat (`N.1`, or `N.2` after exactly one outfit-change beat `N.1` where the
+look changes from the clip before) with `hold`, the clip's camera line as `framing` (at least
+`medium`, her face and eyes in frame, never limbs only or first-person), a body-state-only
+`action` (no gaze / lips / breath / eyes words), `contact` filled, and `sex_act` /
+`sex_position` both `none`; no `blocking` names camera equipment; every summary STARTS with
+`Loop anchor: beat N.k.` naming the anchor beat; the row's `outfits` equals the union of the
+beats' pairs; every
 `location_slug` is a room id with exactly one Places row (`set`, `space` interior, `connections`
-filled); one `location` name per slug; every summary starts with the `Loop anchor:` directive.
+filled); one `location` name per slug.
 The policy `scenes-complete` judges each scene; fix what it names. Then `task_complete`.
