@@ -319,3 +319,15 @@ references-rag/                 uv project, Python 3.12
       - Fix: `wasm-rquickjs` 0.3.4 vendored in the golem fork with `store.set_hostcall_fuel(1 << 31)` (golem worktree `golem-wizer-fuel`, branch `wizer-hostcall-fuel`, not pushed).
       - This must land in the golem fork before any production build of the recommender.
     - **Release gate still failing:** the checked-in `api/raw-openapi.json` is stale (`deployment/lib/export-raw-openapi.sh --write`). It also covers base-branch changes (`apiWorkerRenderFile`), not only the new `embed` purpose.
+11. **Pose improvement experiments (2026-11-09), none adopted.** Measured with Qwen3-4B + decider on the same graded pool (nDCG@3 poses, tune / test).
+    - Baseline (v3): 0.704 / 0.703.
+    - No measurable gain:
+      - deeper decider rerank (top 24): test 0.699;
+      - a partner-on-screen gate (decision model yes/no → solo only): test 0.719 at depth 12, within noise; tune dropped;
+      - pose-only fusion params: overfit;
+      - option 1, a pose-specific affinity prompt (solo-performer kinks → solo poses): 0.691 / 0.703, and outfits test 0.731 → 0.695 from re-scored outfit affinities;
+      - option 2, per-kind decider guidance ("viewer is the off-screen partner") + a `Figures:` doc line, with option 1: 0.723 / 0.693.
+    - Finding: duo poses are over-picked (172 picks vs 99 among the best-graded), yet steering them away does not raise held-out nDCG. Remaining candidates:
+      - per-view indexing (option 3);
+      - a vision-model rerank of the top pose images (option 4);
+      - library content (more solo standing / seated poses for JOI / femdom contexts).
