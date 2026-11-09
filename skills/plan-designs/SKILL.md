@@ -29,6 +29,7 @@ Setting = `{workspace.story.setting}` (a given fact, never inferred from the plo
 - Outfits: exactly ONE outfit design per WARDROBE TRACKER row (look slug = the row's look slug); no exceptions (no "most worn", no "differs visibly" judgement). A tracker row that is nudity itself (no garments) is not an outfit.
 - Character design `wardrobe`, decided by AGE and POLICY only:
   - nudity `allowed` + human adult (18+ stated or clearly implied): `nude`, for EVERY such adult.
+    - A `nude` character's `features` end with the body the reference picture shows, in plain explicit words: breasts / genitals, pubic hair, and AT REST - flaccid, relaxed, never erect or aroused (arousal belongs to the shots that call for it) - in realistic adult proportions unless the character table states otherwise. Every pose and standard view repeats `features`, so the reference's resting state is the one every view keeps.
   - minor, nudity `forbidden`, or clothed non-human: plain neutral clothing in construction terms (e.g. "plain neutral clothing: fitted grey cotton crew-neck t-shirt, straight-leg charcoal trousers").
   - creature / animal wearing nothing: `none`; no tracker rows; scene pair `<c>:none`.
   - Never decided by nudity on screen or by character-table notes ("face never shown", "always clothed on screen"): the character design is the identity / anatomy reference.
