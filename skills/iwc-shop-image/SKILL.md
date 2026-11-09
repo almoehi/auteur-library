@@ -2,21 +2,23 @@
 name: iwc-shop-image
 description: >
   Use when the task prompt says "Load and use skill: iwc-shop-image", or asks for candidate store
-  thumbnails (shop images) of an episode: 3-4 candidates, each a picture composed from the
+  thumbnails (shop images) of an episode: 3 candidates, each a picture composed from the
   finished character / outfit / set designs (flux2_reference_compose_nsfw) plus its hook-word
-  typography (qwen_image_multi_edit), following the play's "7. Shop image" brief and rules.
+  lettering set in code in the sandbox (Pillow), following the play's "7. Shop image" brief and rules.
   Do NOT invoke for designs (plan-designs), storyboards (storyboard-scene) or loop clips
   (iwc-loop-clip), or the GIF teaser.
 agentType: worker
 ---
 
-# Shop image: 3-4 candidate store thumbnails
+# Shop image: 3 candidate store thumbnails
 
-The candidates come from TWO renders each:
+Each candidate is ONE render plus code:
 1. **Picture pass:** `wf_flux2_reference_compose_nsfw` builds the frame from the episode's finished designs (identity, outfit, set). This pass has no text.
-2. **Type pass:** `wf_qwen_image_multi_edit` (Qwen-Image Edit 2511, the library's best workflow at rendering lettering) sets the hook word onto that picture.
+2. **Lettering (sandbox, no render):** the hook word and the watermark are set in Python (Pillow) on the base - exact spelling, the picture untouched, no extra agent steps. (An AI type pass is only for a device graphic that code cannot draw.)
 
-A person picks the winner. Everything specific comes from the episode's play. Read `workflow-calling-conventions` (`load_skill`) and `get_workflow_instructions` for both workflows once. Prompts come from `draft_prompt`: `prompt-writer-flux2` for the picture pass and `prompt-writer-qwenimage` for the type pass. Pass `prompt_ids`, never typed text.
+**Step budget.** The agent loop has a hard step limit; in the first pilot four candidates with image checks and retries used it up before any lettering was set, so the task handed over with untyped bases. Keep to: one batched `draft_prompts_batch` for all picture passes, one render response, ONE `describe_image` per base, the lettering of ALL bases in ONE `sandbox_exec`, one `describe_image` on the contact sheet. Write `candidates.md` as you go (plan first, then append each result), so a hand-over always shows what exists.
+
+A person picks the winner. Everything specific comes from the episode's play. Read `workflow-calling-conventions` (`load_skill`) and `get_workflow_instructions` for the compose workflow once. Prompts come from `draft_prompt` / `draft_prompts_batch` with `prompt-writer-flux2`. Pass `prompt_ids`, never typed text.
 
 ## 1. Preflight
 
@@ -28,7 +30,7 @@ Fields:
 | `plan` | `visual_plan` | |
 | `character` | `character_vesper` | the character design (its `view_face`, `full_body_shot`) |
 | `design_plan` | `design_plan` | `design_plan.json`: the keys of the dynamic designs - `outfit_<slug>_<look>` per wardrobe row, `location_<room>` per room |
-| `candidates` | 4 | allowed range 3-4 |
+| `candidates` | 3 | allowed range 2-3 |
 | `persona` | `Vesper Vex` | the watermark text |
 
 Steps:
@@ -36,7 +38,7 @@ Steps:
 2. `read_artifact` the visual plan (`visual_plan.json`): its sets (with `room_id` and `view`), outfits and kink vocabulary; and `design_plan.json`: the design key of each outfit (`outfit_<slug>_<outfit id>`) and room (`location_<room_id>`). Use only designs that are finished (`artifact_index`: approved); a corner of a shared room is that location's published view named by the set's `view`.
 3. Call `task_failed(reason)` when:
    - section 7 is missing ("rebuild play.md with make_play.py --shop-only");
-   - either workflow tool is missing ("load workflows flux2_reference_compose_nsfw and qwen_image_multi_edit");
+   - the workflow tool is missing ("load workflow flux2_reference_compose_nsfw");
    - the character design has no published `full_body_shot`.
 
 ## 2. Plan the candidates (write `candidates.md` BEFORE rendering)
@@ -85,24 +87,21 @@ Check every candidate against the Thumbnail rules and record the result per rule
    - Is there any text or extra person?
    - Is the kink readable?
 
-   One retry is allowed on a miss (new `draft_prompt` with the finding in `context`, fresh seed). Never a third render.
+   Retry ONLY a hard miss (another person, text or a logo in the picture, a different face) - once, with the finding in `context` and a fresh seed. A soft miss (a busy text side, a weak kink cue) is noted in `candidates.md` and the base is lettered anyway; the person decides.
 
-## 4. Type pass (per candidate)
+## 4. Lettering (sandbox, all candidates in one call)
 
-1. `draft_prompt` for `wf_qwen_image_multi_edit`, with `reference_image_1` = the base. The `context` is the typography spec:
-   - **Text:** the exact hook word in quotes, ALL CAPS, at most two lines with the break given explicitly.
-   - **Style:** heavy condensed sans-serif. One script accent word is allowed only when the brief asks for it.
-   - **Colour:** the episode hue or white, with a clear dark stroke or drop shadow plus a soft glow in the palette's accent, so it reads at 200 px wide.
-   - **Size and position:** large, about a third of the frame width, in the planned free area, never touching her face or the focal point.
-   - **Watermark:** a small, thin `persona` watermark in the planned corner.
-   - **Device graphics:** when the device is a graphic (spiral, progress bar, HUD, warning sign, price tag), add it in this pass as a flat overlay graphic in the palette.
-   - **Lock:** keep everything else in Picture 1 unchanged: her face, body, pose, outfit, light and background.
-2. Render with `steps` 8 and `cfg` 1, and save the result as `candidate_<N>.png`. The output's longest edge is 1024 px, which is enough for the 400x225 store thumbnail.
-3. **Spelling and preservation check:** run `describe_image` on `candidate_<N>.png` and ask for:
-   - the visible text, letter by letter;
-   - whether her face, body or outfit changed compared with the base.
+One `sandbox_exec` (python3 with Pillow): fetch the font once -
+`curl -sL -o /workspace/Anton-Regular.ttf https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf`
+(Open Font License) - then for every base:
+- **Text:** the candidate's hook word, ALL CAPS, at most two lines (break given explicitly, e.g. `LOOP` / `WITH ME`).
+- **Fit:** the largest font size at which the block is at most 34 % of the frame width and 62 % of its height.
+- **Place:** on the planned text side (opposite her face), 5 % from the edge, block centred at 56 % of the height.
+- **Style:** white fill, a dark stroke (`#140a19`, width = size / 18), and a glow in the episode hue (the same text drawn with a stroke three times as wide in the hue, Gaussian-blurred by size / 7, composited twice under the fill).
+- **Watermark:** `persona` in the same font at 1/30 of the height, white at 65 % opacity with a thin dark stroke, in the planned corner.
+- **Save:** `candidate_<N>.png` (full size) and `candidate_<N>_400.png` (400x225).
 
-   If a letter is wrong or missing, run one more type pass with the misspelling named. If it still fails, or if Qwen altered her, build the type deterministically in the sandbox: Pillow or ImageMagick on the base, same spec, a condensed bold font (Anton, Oswald Bold or Bebas Neue; fetch from Google Fonts), stroke plus glow. Save that as `candidate_<N>.png` and note `type: sandbox overlay`.
+The reference implementation is `projects/iwantclips/workspace/letter_shop_image.py` (auteur-content-lake); the sandbox code does the same. Never call a lettering check "pass" before the lettered file exists.
 
 ## 5. Store-size previews and reply
 
@@ -113,13 +112,12 @@ In the sandbox:
 
 Append the results to `candidates.md`. Per candidate, record:
 - the hook word, framing, device and designs used;
-- the rules check;
-- the spelling check and the type method (Qwen or sandbox overlay);
-- retries;
+- the rules check, done on the FINISHED files (the plan section only says "planned");
+- the base check result and any retry;
 - files.
 
 End with a short recommendation of which candidate to pick and why. Copy the recommended candidate to `shop_image.png` and its 400x225 version to `shop_image_400.png`.
 
 ## 6. Hand-over (llm+hitl)
 
-This task ends with a person's review. They keep the recommendation or name another candidate, or ask for "redo N: <note>". On a redo, re-run steps 3-4 for that candidate only, at most 2 redos, and re-copy the pick. In the final reply, list each file with one line and every check that missed and what was retried; then `task_complete`.
+This task ends with a person's review. They keep the recommendation or name another candidate, or ask for "redo N: <note>". On a redo, re-run step 3 and the lettering for that candidate only, at most 2 redos, and re-copy the pick. In the final reply, list each file with one line and every check that missed and what was retried; then `task_complete`.
