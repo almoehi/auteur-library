@@ -14,8 +14,8 @@ agentType: worker
 
 # Loop clip: render the variants of one anchor
 
-A clip is a SET of short variants (the plan's `variants[]`, each `variant_seconds` long, default
-3 × 12 s). Each is one render of `wf_h3_loop_clip_nsfw`: the workflow pins the start frame (`ref0`)
+A clip is a SET of short variants (the plan's `variants[]`, each `variant_seconds` long on
+playback, default 3 × 11 s). Each is one render of `wf_h3_loop_clip_nsfw`: the workflow pins the start frame (`ref0`)
 as the LAST frame too, and every variant uses the same anchor frame, so they join seamlessly in
 any order and repeat over the clip's span of the audio. Read `workflow-calling-conventions`
 (`load_skill`) and `get_workflow_instructions` of `wf_h3_loop_clip_nsfw` once. Prompts come from
@@ -29,13 +29,21 @@ motion 5.4) and returned to the anchor (first / last mean abs diff 2.1). A hip r
 toward the lens failed (the camera pushed in; ended off the anchor, diff 11.5). The template in
 section 2 is that spike's prompt.
 
+**Slow motion** (cost test, 2026-11-09): every variant is rendered SHORT at a natural tempo and
+played 1.5× slower - `duration_seconds` = `variant_seconds` / 1.5 (one decimal: 11 → 7.3) with
+`fps` = 32 (the graph's RIFE 2× makes 48 frames per rendered second; 32 fps plays them 1.5×
+slower), so a 7.3 s render plays 10.9 s. Same look, calmer motion, a steadier room, about 0.54×
+the cost of a full-length render (with the workspace's 6 steps). The prompt's phase seconds are
+on the RENDER clock (0-7.3 s), and the tempo line asks for a calm natural tempo (the slow motion
+does the slowing; "slow, languid" on top of it turns sluggish).
+
 The footage is 16:9 landscape from a FIXED camera on a tripod: at most a very slow, subtle push
 in or out; never handheld-style movement, shake, pan, orbit, zoom jumps or reframing.
 
 ## 1. Preflight
 
 Fields: `clip` (the clip number N), `variants` (count; default the plan's), `variant_seconds`
-(default the plan's, 10-12), `storyboard` (default `storyboard_scene_<N>`), `character` (default
+(playback seconds; default the plan's, 10-12), `storyboard` (default `storyboard_scene_<N>`), `character` (default
 `character_vesper`), `outfit` (the outfit design key; `none` for a nude clip), `location` (the
 location design key), `plan` (default `visual_plan`), `inputs` (default `episode_inputs`).
 1. `task_failed(reason)` if the tool `wf_h3_loop_clip_nsfw` is missing ("load the
@@ -90,8 +98,8 @@ retention_analysis:
 A fixed camera on a tripod: no handheld movement, no shake, no pan, no zoom, no cut; at most a very slow, subtle push in or out. The framing of <Picture 1> is kept for the whole video. The background is the room of <Picture 4> the whole time: <the furniture and lights> stay where they are in <Picture 1>. She stays at the same distance from the camera. Her face, hair, outfit, the wide black velvet choker, the small silver key pendant on its thin silver chain and the violet nails stay as in <Picture 2> and <Picture 3>.
 
 detailed_description:
-Style: photorealistic 16:9 landscape footage, <the lighting line of the shot>, intimate and nocturnal. Every movement is slow, languid, smooth and unhurried, like a private cam show for one viewer; she lingers, holds eye contact and smiles playfully; nothing is fast, jerky or busy.
-[Shot 1] For the target video, at 0.00 seconds, <Picture 1> is fully referenced. <phase 1: "0-2 s: …">. <phase 2: "2-8 s: …">. <phase 3: "8-12 s: … exactly as in <Picture 1>, eyes on the lens.">
+Style: photorealistic 16:9 landscape footage, <the lighting line of the shot>, intimate and nocturnal. Every movement is smooth and continuous at a calm natural tempo, like a private cam show for one viewer; she holds eye contact and smiles playfully; nothing is jerky or busy.
+[Shot 1] For the target video, at 0.00 seconds, <Picture 1> is fully referenced. <phase 1: "0-1 s: …">. <phase 2: "1-5 s: …">. <phase 3: "5-7.3 s: … exactly as in <Picture 1>, eyes on the lens.">
 
 overall_soundscape:
 Quiet room tone, her soft slow breathing close to the microphone, no speech, no music.
@@ -100,17 +108,18 @@ non_diegetic_music:
 None.
 ```
 
-The `[Shot 1]` phases are the variant's `phases` with their seconds, each gesture in slow tempo
-words; the last phase ends in the exact anchor pose of Picture 1 (hands, head, gaze, straps).
+The `[Shot 1]` phases are the variant's `phases` with their seconds converted to the render clock
+(the plan's playback seconds ÷ 1.5, one decimal; the last phase ends at the render duration),
+each gesture in calm, natural tempo words; the last phase ends in the exact anchor pose of Picture 1 (hands, head, gaze, straps).
 
-**Drafting**: `draft_prompt` for `wf_h3_loop_clip_nsfw` with `duration_seconds` =
-`variant_seconds`, `image_inputs` as above, and `context` = the filled template (as the structure
+**Drafting**: `draft_prompt` for `wf_h3_loop_clip_nsfw` with `duration_seconds` = the render
+duration (`variant_seconds` / 1.5), `image_inputs` as above, and `context` = the filled template (as the structure
 to keep) plus the shot block verbatim, the frame's `edits` trail ("the frame was edited: <edits> -
 keep those changes") and these locks VERBATIM:
 - "a fixed camera on a tripod: no handheld movement, no shake, no pan, no zoom, no cut; at most a
   very slow, subtle push in or out"
 - "the background is the room of <Picture 4> the whole time"
-- "ONE slow gesture in place; she stays at the same distance from the camera; she never leans
+- "ONE gesture in place at a calm natural tempo; she stays at the same distance from the camera; she never leans
   toward the lens"
 - "she ends in exactly the pose of <Picture 1>, every strap and garment as at the start"
 - "a wide black velvet choker, a small silver KEY pendant on a thin silver chain (never a
@@ -123,7 +132,8 @@ section is a significant gap: one `enhance_prompt` naming it.
 ## 3. Render and check (per variant k, in order)
 
 1. **Render**: `wf_h3_loop_clip_nsfw` with `ref0`-`ref3` as above, `prompt_ids`,
-   `duration_seconds` = `variant_seconds`, LoRAs: only the shot's `LoRAs:` names that belong to
+   `duration_seconds` = `variant_seconds` / 1.5 (one decimal), `fps` = 32 (slow motion; never
+   48), no `steps` (the workspace profile sets 6), LoRAs: only the shot's `LoRAs:` names that belong to
    the minimaxh3 family (a variant has no act: no act LoRA). Never pass width / height (the
    anchor's 16:9 shape decides). Outputs → `/workspace/<artifact id>/clip<N>_v<k>.mp4`
    (`output_video`) and `clip<N>_v<k>_audio.flac` (`output_audio`). The variants are independent:

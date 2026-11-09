@@ -24,7 +24,8 @@ storyboard it renders from). You render nothing.
 Fields: `plan` (default `visual_plan`), `design_plan` (default `design_plan`), `clips` (the clip
 numbers to schedule, e.g. `[1, 2]`; default all clips of the plan), `inputs` (default
 `episode_inputs`), `variants` (variants per clip, default 3, max 4) and `variant_seconds`
-(default 12, allowed 10-12): both passed on to every clip task.
+(playback seconds; default 11, allowed 10-12 - the clip task renders each variant at 1/1.5 of
+that and plays it in slow motion): both passed on to every clip task.
 1. `read_artifact` `visual_plan.json` (clips: number, outfit_id, set_id, the count of
    `variants[]`; sets: room_id) and
    `design_plan.json` (the design keys: `character_<slug>`, `outfit_<slug>_<look>`,

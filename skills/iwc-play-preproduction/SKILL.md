@@ -46,8 +46,9 @@ renders each variant of a clip from the anchor's storyboard frame.
 
 Task prompt fields: `inputs` (the artifact key of the episode inputs, default `episode_inputs`),
 `window` (`mm:ss-mm:ss`, the part of the audio to cover; default: all), `variants` (variants per
-clip, default 3, allowed 1-4), `variant_seconds` (default 12, allowed 10-12), `max_clips` (upper
-bound from the budget). A clip's CYCLE is `variants × variant_seconds` (3 × 12 s = 36 s): the
+clip, default 3, allowed 1-4), `variant_seconds` (playback seconds; default 11, allowed 10-12 - each variant renders at
+1/1.5 of it and plays in slow motion, see `iwc-loop-clip`), `max_clips` (upper
+bound from the budget). A clip's CYCLE is `variants × variant_seconds` (3 × 11 s = 33 s): the
 variant set played once, every join on the anchor frame.
 
 `read_artifact` the inputs: `play.md` (sections: kink, goal, character, arc, script) and
@@ -105,7 +106,7 @@ the number of clips N:
 
 Merge or split phases until there are exactly N, each phase at most 4 cycles long where possible.
 One phase = one clip; its variant set is repeated over the phase's duration
-(`cycles = phase_seconds / cycle_seconds`, e.g. a 120 s phase = 3.3 cycles of 3 × 12 s).
+(`cycles = phase_seconds / cycle_seconds`, e.g. a 120 s phase = 3.6 cycles of 3 × 11 s).
 
 ## 4. Per clip: anchor, outfit, action
 
