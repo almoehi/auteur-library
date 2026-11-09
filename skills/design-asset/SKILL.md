@@ -73,6 +73,7 @@ Before any `wf_*` render: run "Curated LoRAs" of `workflow-calling-conventions` 
   `wf_<workflow>(prompt_positive="<prompt>", …, output_ports={"<primary output port>": "/workspace/<artifact id>/take_draft-<n>-<slug>.png"})`
 - Same prompt for every draft; the seed varies them. Clear alternatives in the attributes ("short or long hair") may vary exactly that phrase across drafts (say so).
 - Outfit: each call passes the prompt's `full_body_shot:` ref as the image input and the edit instruction as the prompt.
+- Outfit with a `garment_reference` attribute: the task prompt names both inputs - the `full_body_shot:` ref on the subject input (Figure 1) and the garment reference on the garment input (Figure 2, e.g. `garment_reference_image`); pass exactly those. Its "Prompt idea" keeps the outfit's text AND says to replace ALL of the original clothing, footwear and legwear included, with the garment of Figure 2 - keep both in the instruction. When the prompt says the workflow has no garment input, draft from the text only and never pass the garment picture.
 - A failed draft fails only itself: re-read instructions, fix, retry that draft once (same name); still failing -> leave it (the studio shows a failed take with Retry) and report it.
 
 ## Phase 3b — Named views (only when `design.json.attributes` has `views`)

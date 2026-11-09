@@ -14,7 +14,7 @@ agentType: worker
 
 Plain LLM planning worker: read text, write `design_plan.json` one entry per `write_design` call, then ONE `create_designs_from_plan` call creates every design of the plan.
 
-- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `create_designs_from_plan`, `task_complete`, `task_failed`.
+- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `create_designs_from_plan`, `task_complete`, `task_failed`; where the workspace exposes a catalog also `catalog_index`, `search_catalog`, `use_reference` ("Garment references").
 - `create_designs_from_plan` takes no input: it reads your own `design_plan.json` and creates every entry that has no design yet, in the file's order. It needs `can_create_tasks: true` on your task. Never create designs one by one, and never pass `policies`.
 - Output file: `design_plan.json` only, written with `write_design` (the checks read the scene list from your `scene_list` input; never copy it).
 - Never render, draft or write any design file (`design.json` included); design workers (`design-asset`, `storyboard-scene`) continue each design.
@@ -96,7 +96,7 @@ Build every entry with its FINAL key; nothing is decided later.
 | kind | keys |
 |---|---|
 | character | `character_type` (own entry field, not an attribute: woman, man, non-binary person, child, elderly person, animal, creature, robot, fantasy being, or free text); attributes `age`, `ethnicity`, `hair`, `eyes`, `build`, `wardrobe`, `features`, `marks`, `voice` |
-| outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` (from the tracker row); `garments` in construction terms, one comma-joined entry per garment: type and cut, then defining details ("cropped double-breasted wool blazer with gold buttons, high-waisted wide-leg trousers, pointed-toe leather pumps"), never vague tags ("nice outfit", "sparkly dress"), never details the sources do not state; `accessories` never restate, replace or contradict a mark of the character's own `marks` / `features` (jewellery, glasses, tattoos, piercings, scars): precedence: the character's identity attributes (face, marks, jewellery) beat the outfit's accessories everywhere (outfit generation, binding, outfit check - the server drops an outfit accessory of the same kind on the same body part as a verified character mark); the outfit lists only other accessories |
+| outfit | `garments`, `colors`, `pattern`, `material`, `fit`, `accessories` (from the tracker row), and `garment_reference` (a catalog pick, "Garment references" - never anything else); `garments` in construction terms, one comma-joined entry per garment: type and cut, then defining details ("cropped double-breasted wool blazer with gold buttons, high-waisted wide-leg trousers, pointed-toe leather pumps"), never vague tags ("nice outfit", "sparkly dress"), never details the sources do not state; `accessories` never restate, replace or contradict a mark of the character's own `marks` / `features` (jewellery, glasses, tattoos, piercings, scars): precedence: the character's identity attributes (face, marks, jewellery) beat the outfit's accessories everywhere (outfit generation, binding, outfit check - the server drops an outfit accessory of the same kind on the same body part as a verified character mark); the outfit lists only other accessories |
 | location | `place`, `space` (`interior` \| `exterior`, from the Places row), `era`, `time_of_day`, `weather`, `lighting`, `mood`, `set`, `set_style`, `connections`, `views` |
 
    - Character `hair`, `build` and `features` copy the profile's face, hair, skin tone and distinguishing marks verbatim; never summarize them away.
@@ -112,6 +112,7 @@ Build every entry with its FINAL key; nothing is decided later.
        - Put each view on the design whose LOOK the beats that need it show, read from those beats' `Outfits` cell: a beat with the character's base look (`<character>:nude`, `:none`, or the character's plain look) -> the CHARACTER design; a beat with an outfit look (`<character>:<look slug>`) -> that OUTFIT design. A pose the beats need in both looks goes on both. Never put a view on the character design for beats that only ever show the person in an outfit: the character design is nude or neutral, so the view would show the wrong look.
        - Never a view of the main picture's own pose: standing, facing the camera, arms at the sides (in any wording) IS the main picture, so it adds nothing. Every entry must differ from it, and from the standard `front` / `profile` / `back` / `face`, in posture, facing, arms / head or expression.
        - Two-person beats (an act, a carry, an embrace): the act itself is not a view (the storyboard renders it), but the person's OWN body in it is - read each such beat for what this person's head, back, hips, arms and face do, alone: "head thrown back with eyes closed", "back arched with the chest lifted", "bent forward at the waist", "arms raised and crossed behind the head", "biting the lower lip". A character whose base-look beats are mostly acts gets 2-4 such views on the character design, never one placeholder; a character design with no view at all is right only when no base-look beat shows a pose or expression other than the main picture's.
+3b. Garment references ("Garment references" below): per outfit entry, before writing it.
 4. LoRAs: assign none. Never write `loras` or tag-based LoRA lists into the plan; the design's agent and the storyboard's shot curation pick LoRAs from the catalog's names and descriptions ("Curated LoRAs" in `workflow-calling-conventions`).
 5. Storyboards: per scene key `storyboard_scene_<n>` (`display_name` "Scene <n>", `key_slug` `scene_<n>`) with attributes `scene` = `<n>`, `notes`, `format`:
    - `notes` = the Summary.
@@ -150,6 +151,27 @@ Example calls (one production; a few per reply):
 
 - The file name is canonical: `design_plan.json` in the `design_plan` artifact; if the declared files differ, still write it and add `file mismatch: <declared> vs design_plan.json` to the summary.
 - Writing files is NOT completion: Phase 2 must follow. If `task_complete` is refused because nothing was created or plan entries have no design, go to Phase 2; never loop on `task_complete`.
+
+## Garment references (catalog picks, optional)
+
+A catalog flat-lay of the garment makes the outfit's drafts far closer to the planned look than text alone. Only when `catalog_index` is offered AND lists a catalog whose `search_catalog {catalog, describe: true}` kinds include `outfit`; otherwise skip this section entirely (no catalog = text only, nothing to flag). Never for a minor's outfit.
+
+For EACH outfit entry (one per WARDROBE TRACKER row), before its `write_design`:
+
+1. `search_catalog {catalog, kinds: ["outfit"], context}` - `context` = the row's garments in construction terms (type, cut, colour, material, legwear, footwear), then the scene context of the beats that show this look: the kink / act and the roleplay it serves (e.g. "nurse roleplay", "office domination", "bridal night"), and the setting / era. Two or three sentences, only what the sources state.
+2. Take the BEST fitting pick: the garment type, cut, colour and coverage match the row, and it suits the scene context. A pick that contradicts the row (another garment type, colour, coverage or era) is no fit; when no pick fits, write the entry WITHOUT a garment reference. Never settle for "close enough".
+3. `use_reference {catalog, id}` with the pick's `id` -> `{artifact, files}`; set the attribute `{ "key": "garment_reference", "value": "<files[0]>" }` (the `artifact://ref-…/image.png` ref, verbatim) on that outfit entry.
+4. Keep ALL the outfit's text attributes from the tracker row (`garments`, `colors`, ...): the drafts use the text AND the picture. Where the pick differs from the row in a detail the scenes never show, leave the text as the row says.
+5. A search or `use_reference` that is refused or fails: write the entry without the reference and add `garment_reference skipped: <key> (<reason>)` to the `flagged:` line.
+
+The pick is recorded on the plan entry: the person sees it in the studio, and a swap is `write_design` of the same entry with another pick's ref (or without the attribute to drop it).
+
+```json
+{ "kind": "outfit", "display_name": "Mira - Lingerie", "key_slug": "mira_lingerie", "character_slug": "mira", "look_slug": "lingerie",
+  "attributes": [ { "key": "garments", "value": "ivory lace bustier with criss-cross straps, high-waist lace shorts, lace-top stockings, ivory bow pumps" },
+    { "key": "colors", "value": "ivory" }, { "key": "garment_reference", "value": "artifact://ref-refs-lng_0036/image.png" } ],
+  "links": [ { "role": "character", "key": "character_mira" } ], "scenes": [2] }
+```
 
 ## Phase 2 — Create the designs with `create_designs_from_plan`
 
