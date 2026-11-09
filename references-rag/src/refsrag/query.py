@@ -17,6 +17,7 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -375,7 +376,7 @@ class Recommender:
     ) -> Recommender:
         """The calibrated default: the preferred vector set, and the decider rerank when
         FEATHERLESS_API_KEY is set (without a key: local ONNX or stage 1, no rerank)."""
-        cache = cache_dir or Path.home() / ".cache" / "refs-recommender"
+        cache = cache_dir or default_cache_dir()
         return cls(Index(fetch_index(source, cache)), base_url=base_url, decider_rerank=decider,
                    featherless_api_key=os.environ.get("FEATHERLESS_API_KEY") or None)  # fmt: skip
 
@@ -470,6 +471,22 @@ class Recommender:
         return dot(wanted, view["focus"])
 
 
+def default_cache_dir() -> Path:
+    """REFS_CACHE_DIR, else ~/.cache/refs-recommender when the home is writable, else the system temp
+    dir (sandboxes run with an unwritable HOME)."""
+    if env := os.environ.get("REFS_CACHE_DIR"):
+        return Path(env)
+    home_cache = Path.home() / ".cache" / "refs-recommender"
+    try:
+        home_cache.mkdir(parents=True, exist_ok=True)
+        probe = home_cache / ".write-probe"
+        probe.touch()
+        probe.unlink()
+        return home_cache
+    except OSError:
+        return Path(tempfile.gettempdir()) / "refs-recommender"
+
+
 def _pair_similarity(rec: Recommender, rows: Sequence[int]) -> Callable[[int, int], float]:
     """Similarity of two candidates given by their position in ``rows``."""
     return lambda a, b: rec._similarity(rows[a], rows[b])
@@ -523,6 +540,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Top poses and outfits for a text context.")
     ap.add_argument("context")
     ap.add_argument("--index", default=os.environ.get("REFS_INDEX", ""), help="index dir or latest.json URL")
+    ap.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=None,
+        help="download cache (default: REFS_CACHE_DIR, ~/.cache or temp)",
+    )
     ap.add_argument("--base-url", default=None)
     ap.add_argument("-k", type=int, default=3)
     ap.add_argument("--kind", choices=KINDS, action="append")
@@ -533,7 +556,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     a = ap.parse_args(argv)
     if not a.index:
         ap.error("--index (or REFS_INDEX) is required")
-    rec = Recommender.load(a.index, base_url=a.base_url, decider=not a.no_decider)
+    rec = Recommender.load(a.index, cache_dir=a.cache_dir, base_url=a.base_url, decider=not a.no_decider)
     filters = Filters(solo=None if a.solo is None else a.solo == "solo", max_exposure=a.max_exposure)
     result = rec.recommend(a.context, k=a.k, kinds=a.kind or KINDS, filters=filters)
     if a.json:

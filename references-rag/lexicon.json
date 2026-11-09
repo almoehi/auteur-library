@@ -1,5 +1,11 @@
 {
  "aliases": {
+  "adoration": {
+   "body_goddess_worship": 0.8
+  },
+  "adore me": {
+   "body_goddess_worship": 0.8
+  },
   "adore my body": {
    "body_goddess_worship": 0.8
   },
@@ -41,8 +47,11 @@
   "anime cosplay": {
    "cosplay": 1.0
   },
+  "anime costume": {
+   "cosplay": 1.0
+  },
   "anime girl": {
-   "cosplay": 0.6
+   "cosplay": 0.7
   },
   "ankle socks": {
    "socks": 0.9
@@ -83,6 +92,9 @@
   "ass clap": {
    "twerk_ass_shaking": 0.7
   },
+  "ass clapping": {
+   "twerk_ass_shaking": 0.9
+  },
   "ass domination": {
    "ass_worship": 0.8
   },
@@ -116,6 +128,9 @@
   },
   "asshole fetish": {
    "ass_worship": 1.0
+  },
+  "authority": {
+   "general_roleplay": 0.5
   },
   "baby oil": {
    "wet_oily_messy": 0.8
@@ -169,7 +184,7 @@
    "foot_fetish": 0.8
   },
   "beauty": {
-   "body_goddess_worship": 0.5
+   "body_goddess_worship": 0.6
   },
   "belly": {
    "belly_focus": 0.9
@@ -185,6 +200,9 @@
   },
   "belly focus": {
    "belly_focus": 1.0
+  },
+  "beta humiliation": {
+   "brat_mean_girl": 0.5
   },
   "big ass": {
    "ass_worship": 0.8
@@ -202,6 +220,7 @@
    "toys_solo_female": 1.0
   },
   "big natural tits": {
+   "body_goddess_worship": 0.6,
    "breasts": 0.9
   },
   "big tits": {
@@ -222,14 +241,26 @@
   "bimbo": {
    "sissy_feminization": 0.5
   },
+  "bitchy": {
+   "brat_mean_girl": 0.8
+  },
   "bj": {
    "blowjob_oral": 0.9
   },
   "black latex": {
    "latex_rubber_pvc": 1.0
   },
+  "blackmail": {
+   "femdom": 0.6
+  },
   "blackmail fantasy": {
    "femdom": 0.7
+  },
+  "bliss": {
+   "body_goddess_worship": 0.6
+  },
+  "blonde brat": {
+   "brat_mean_girl": 0.6
   },
   "blonde goddess": {
    "body_goddess_worship": 1.0
@@ -271,7 +302,7 @@
    "breasts": 1.0
   },
   "boob worship": {
-   "body_goddess_worship": 0.9
+   "body_goddess_worship": 1.0
   },
   "boobs": {
    "breasts": 1.0
@@ -307,14 +338,17 @@
   "booty bounce": {
    "twerk_ass_shaking": 0.9
   },
-  "booty shaking": {
+  "booty clapping": {
    "twerk_ass_shaking": 0.9
+  },
+  "booty shaking": {
+   "twerk_ass_shaking": 1.0
   },
   "booty worship": {
    "body_goddess_worship": 0.9
   },
   "bouncing ass": {
-   "twerk_ass_shaking": 0.8
+   "twerk_ass_shaking": 0.9
   },
   "bouncing boobs": {
    "breasts": 1.0
@@ -324,6 +358,9 @@
   },
   "bouncy": {
    "breasts": 0.5
+  },
+  "bow down": {
+   "body_goddess_worship": 0.8
   },
   "bow to me": {
    "femdom": 0.6
@@ -351,13 +388,15 @@
    "brat_mean_girl": 1.0
   },
   "brat worship": {
-   "brat_mean_girl": 0.9
+   "brat_mean_girl": 1.0,
+   "femdom": 0.6
   },
   "brats": {
-   "brat_mean_girl": 0.8
+   "brat_mean_girl": 1.0
   },
   "bratty": {
-   "brat_mean_girl": 1.0
+   "brat_mean_girl": 1.0,
+   "femdom": 0.5
   },
   "bratty ass": {
    "ass_worship": 0.8
@@ -406,19 +445,22 @@
    "panties_thong": 0.7
   },
   "british brat": {
-   "brat_mean_girl": 0.8
+   "brat_mean_girl": 1.0
   },
   "brother": {
    "step_family_roleplay": 0.5
+  },
+  "bubble butt": {
+   "twerk_ass_shaking": 0.5
   },
   "bukkake": {
    "cumshot_creampie": 0.9
   },
   "bullied": {
-   "brat_mean_girl": 0.6
+   "brat_mean_girl": 0.8
   },
   "bully": {
-   "brat_mean_girl": 0.7
+   "brat_mean_girl": 0.8
   },
   "bullying": {
    "brat_mean_girl": 0.7
@@ -431,6 +473,9 @@
   },
   "butt plug": {
    "anal_play": 1.0
+  },
+  "butt shaking": {
+   "twerk_ass_shaking": 0.9
   },
   "butt worship": {
    "ass_worship": 1.0,
@@ -470,7 +515,7 @@
    "joi_stroking": 0.6
   },
   "character costume": {
-   "cosplay": 0.8
+   "cosplay": 1.0
   },
   "character roleplay": {
    "general_roleplay": 1.0
@@ -523,8 +568,17 @@
   "college girl": {
    "schoolgirl_teacher": 0.7
   },
+  "comic book": {
+   "cosplay": 0.7
+  },
   "comic con": {
    "cosplay": 0.7
+  },
+  "commanding": {
+   "femdom": 0.5
+  },
+  "control": {
+   "femdom": 0.5
   },
   "control you": {
    "femdom": 0.5
@@ -545,7 +599,7 @@
    "cosplay": 0.9
   },
   "costume": {
-   "cosplay": 0.7
+   "cosplay": 1.0
   },
   "cougar": {
    "milf_mature": 0.6
@@ -645,7 +699,7 @@
    "cumshot_creampie": 0.9
   },
   "cum on body": {
-   "cumshot_creampie": 0.9
+   "cumshot_creampie": 1.0
   },
   "cum on face": {
    "cumshot_creampie": 1.0
@@ -656,8 +710,11 @@
   "cum on my face": {
    "cumshot_creampie": 1.0
   },
+  "cum on pussy": {
+   "cumshot_creampie": 1.0
+  },
   "cum on tits": {
-   "cumshot_creampie": 0.9
+   "cumshot_creampie": 1.0
   },
   "cum shot": {
    "cumshot_creampie": 1.0
@@ -675,7 +732,13 @@
    "cumshot_creampie": 1.0
   },
   "dad": {
-   "step_family_roleplay": 0.5
+   "step_family_roleplay": 0.6
+  },
+  "daddy s girl": {
+   "step_family_roleplay": 1.0
+  },
+  "daddys girl": {
+   "step_family_roleplay": 1.0
   },
   "dancing": {
    "twerk_ass_shaking": 1.0
@@ -690,7 +753,7 @@
    "heels_shoes": 1.0
   },
   "daughter": {
-   "step_family_roleplay": 0.5
+   "step_family_roleplay": 0.6
   },
   "deep throat": {
    "blowjob_oral": 1.0
@@ -709,6 +772,9 @@
   },
   "denim leggings": {
    "denim_leggings": 1.0
+  },
+  "devotion": {
+   "body_goddess_worship": 0.5
   },
   "dildo": {
    "anal_play": 0.5,
@@ -744,7 +810,7 @@
    "doggy_style": 1.0
   },
   "domina": {
-   "femdom": 0.9
+   "femdom": 1.0
   },
   "dominant woman": {
    "femdom": 0.9
@@ -756,7 +822,7 @@
    "femdom": 1.0
   },
   "domme": {
-   "femdom": 0.9
+   "femdom": 1.0
   },
   "double domination": {
    "femdom": 1.0
@@ -771,7 +837,7 @@
    "cosplay": 0.5
   },
   "each other": {
-   "lesbian_pairing": 0.5
+   "lesbian_pairing": 0.7
   },
   "earn my attention": {
    "brat_mean_girl": 0.6
@@ -810,6 +876,9 @@
   "edging games": {
    "joi_stroking": 0.9
   },
+  "embarrassing": {
+   "brat_mean_girl": 0.6
+  },
   "encouraged feminization": {
    "sissy_feminization": 1.0
   },
@@ -835,7 +904,7 @@
    "mouth_face": 1.0
   },
   "eye roll": {
-   "brat_mean_girl": 0.7
+   "brat_mean_girl": 1.0
   },
   "face fetish": {
    "mouth_face": 1.0
@@ -863,13 +932,19 @@
   },
   "facial": {
    "blowjob_oral": 0.6,
-   "cumshot_creampie": 0.8
+   "cumshot_creampie": 1.0
   },
   "facial cumshot": {
    "cumshot_creampie": 1.0
   },
+  "family": {
+   "step_family_roleplay": 0.5
+  },
   "fandom": {
    "cosplay": 0.5
+  },
+  "fans": {
+   "cosplay": 0.7
   },
   "fantasy": {
    "general_roleplay": 0.5
@@ -918,7 +993,8 @@
    "femdom": 1.0
   },
   "femdom brat": {
-   "femdom": 0.8
+   "brat_mean_girl": 0.6,
+   "femdom": 1.0
   },
   "femdom counselling fantasy": {
    "general_roleplay": 1.0
@@ -1054,6 +1130,12 @@
   "footstool": {
    "human_furniture": 0.9
   },
+  "fucking herself": {
+   "toys_solo_female": 0.8
+  },
+  "fucking loser": {
+   "brat_mean_girl": 0.6
+  },
   "fucking machine": {
    "strap_on_pegging": 0.8
   },
@@ -1110,13 +1192,13 @@
    "lesbian_pairing": 1.0
   },
   "girlcock": {
-   "cosplay": 0.8
+   "cosplay": 1.0
   },
   "girlfriend experience": {
    "pov_close_up": 1.0
   },
   "girlfriends": {
-   "lesbian_pairing": 0.6
+   "lesbian_pairing": 0.7
   },
   "girly": {
    "sissy_feminization": 0.5
@@ -1181,6 +1263,9 @@
   "hairy fetish": {
    "armpits_hair": 1.0
   },
+  "halloween costume": {
+   "cosplay": 1.0
+  },
   "hand fetish": {
    "hands_nails": 1.0
   },
@@ -1214,6 +1299,9 @@
   "headphones": {
    "edging_denial": 0.5
   },
+  "healing": {
+   "general_roleplay": 0.6
+  },
   "heel": {
    "boots": 0.5,
    "heels_shoes": 0.7
@@ -1246,10 +1334,13 @@
    "foot_fetish": 1.0
   },
   "hitachi": {
-   "toys_solo_female": 0.7
+   "toys_solo_female": 0.8
   },
   "hosiery": {
    "pantyhose_stockings": 1.0
+  },
+  "hot girls": {
+   "brat_mean_girl": 0.8
   },
   "huge tits": {
    "breasts": 0.9
@@ -1280,6 +1371,12 @@
   },
   "impact play": {
    "impact_play": 1.0
+  },
+  "impress": {
+   "body_goddess_worship": 0.5
+  },
+  "intellectual domination": {
+   "general_roleplay": 0.8
   },
   "internal cumshot": {
    "cumshot_creampie": 0.9
@@ -1320,6 +1417,9 @@
   "jerkaholic": {
    "joi_stroking": 0.6
   },
+  "jiggling ass": {
+   "twerk_ass_shaking": 0.8
+  },
   "joi": {
    "joi_stroking": 1.0
   },
@@ -1348,6 +1448,7 @@
    "cbt_ballbusting": 0.6
   },
   "kiss": {
+   "lesbian_pairing": 0.5,
    "mouth_face": 0.6
   },
   "kissing": {
@@ -1359,6 +1460,9 @@
   "knee socks": {
    "schoolgirl_teacher": 0.6,
    "socks": 0.8
+  },
+  "kneel": {
+   "body_goddess_worship": 0.5
   },
   "kneel before me": {
    "body_goddess_worship": 0.6
@@ -1420,7 +1524,7 @@
    "leg_focus": 0.9
   },
   "leg worship": {
-   "body_goddess_worship": 0.9,
+   "body_goddess_worship": 1.0,
    "leg_focus": 0.9
   },
   "legging": {
@@ -1500,6 +1604,9 @@
   "load": {
    "cumshot_creampie": 0.5
   },
+  "load on face": {
+   "cumshot_creampie": 0.7
+  },
   "long hair": {
    "hair_play": 0.7
   },
@@ -1509,11 +1616,17 @@
   "long nails": {
    "hands_nails": 0.9
   },
+  "loser abuse fantasy": {
+   "brat_mean_girl": 0.6
+  },
   "loser symbol": {
    "brat_mean_girl": 1.0
   },
   "loser training": {
    "brat_mean_girl": 0.5
+  },
+  "losers like": {
+   "brat_mean_girl": 0.6
   },
   "lotion": {
    "wet_oily_messy": 1.0
@@ -1527,11 +1640,14 @@
   "luscious lips": {
    "mouth_face": 1.0
   },
+  "madam": {
+   "body_goddess_worship": 0.5
+  },
   "magic fantasy": {
    "general_roleplay": 1.0
   },
   "magic wand": {
-   "toys_solo_female": 0.7
+   "toys_solo_female": 0.8
   },
   "maid": {
    "sissy_feminization": 0.5
@@ -1548,8 +1664,14 @@
   "manicure": {
    "hands_nails": 0.8
   },
+  "manipulation fantasy": {
+   "general_roleplay": 1.0
+  },
   "masculine": {
    "sissy_feminization": 0.5
+  },
+  "masturbating": {
+   "toys_solo_female": 0.7
   },
   "masturbation": {
    "joi_stroking": 1.0
@@ -1570,7 +1692,7 @@
    "milf_mature": 0.8
   },
   "mean": {
-   "brat_mean_girl": 0.5
+   "brat_mean_girl": 0.8
   },
   "mean giantess": {
    "giantess_shrinking": 0.9
@@ -1596,6 +1718,9 @@
   "medical play fetish": {
    "nurse_medical": 1.0
   },
+  "meditational domination": {
+   "general_roleplay": 0.8
+  },
   "mesmerise": {
    "body_goddess_worship": 0.5,
    "edging_denial": 0.6
@@ -1613,7 +1738,7 @@
    "bikini_swimwear": 1.0
   },
   "middle finger": {
-   "brat_mean_girl": 0.7
+   "brat_mean_girl": 1.0
   },
   "midriff": {
    "belly_focus": 0.8
@@ -1639,17 +1764,20 @@
   "mistress": {
    "femdom": 0.8
   },
-  "mom": {
-   "step_family_roleplay": 0.5
+  "mistress commands": {
+   "femdom": 0.5
   },
-  "mommy": {
+  "mom": {
    "step_family_roleplay": 0.6
   },
+  "mommy": {
+   "step_family_roleplay": 0.8
+  },
   "money shot": {
-   "cumshot_creampie": 0.9
+   "cumshot_creampie": 1.0
   },
   "mother": {
-   "step_family_roleplay": 0.5
+   "step_family_roleplay": 0.6
   },
   "mouth": {
    "mouth_face": 0.7
@@ -1730,6 +1858,13 @@
   "nylons": {
    "pantyhose_stockings": 0.9
   },
+  "obedience": {
+   "body_goddess_worship": 0.5,
+   "femdom": 0.6
+  },
+  "obey": {
+   "femdom": 0.6
+  },
   "obey me": {
    "femdom": 0.7
   },
@@ -1753,6 +1888,9 @@
   },
   "oily": {
    "wet_oily_messy": 0.9
+  },
+  "old man": {
+   "step_family_roleplay": 0.6
   },
   "on pov": {
    "strap_on_pegging": 1.0
@@ -1858,6 +1996,12 @@
   "perfect ass": {
    "ass_worship": 0.8
   },
+  "perfect bratty": {
+   "brat_mean_girl": 0.8
+  },
+  "perfect bratty princess": {
+   "brat_mean_girl": 0.8
+  },
   "perfect feet": {
    "foot_fetish": 0.8
   },
@@ -1873,6 +2017,9 @@
   "pits": {
    "armpits_hair": 0.8
   },
+  "playing with her pussy": {
+   "toys_solo_female": 0.9
+  },
   "pleated skirt": {
    "schoolgirl_teacher": 0.7
   },
@@ -1881,6 +2028,9 @@
   },
   "point of view pov": {
    "pov_close_up": 1.0
+  },
+  "pointing and laughing": {
+   "brat_mean_girl": 0.5
   },
   "pop shot": {
    "cumshot_creampie": 0.8
@@ -1894,7 +2044,13 @@
   "pov close up": {
    "pov_close_up": 1.0
   },
+  "powerful woman": {
+   "body_goddess_worship": 0.8
+  },
   "powerful women": {
+   "body_goddess_worship": 0.8
+  },
+  "prayer": {
    "body_goddess_worship": 0.6
   },
   "pregnant": {
@@ -1906,8 +2062,11 @@
   "private location play": {
    "outdoor_location": 1.0
   },
+  "psychological domination": {
+   "general_roleplay": 0.8
+  },
   "psychology": {
-   "general_roleplay": 0.5
+   "general_roleplay": 0.6
   },
   "pussy": {
    "pussy_worship": 0.6
@@ -1933,14 +2092,23 @@
   "pvc vinyl": {
    "latex_rubber_pvc": 1.0
   },
+  "queen": {
+   "body_goddess_worship": 0.6
+  },
   "red lips": {
    "mouth_face": 0.8
   },
   "red nails": {
    "hands_nails": 0.8
   },
+  "regal": {
+   "body_goddess_worship": 0.6
+  },
   "regal goddess": {
    "body_goddess_worship": 0.7
+  },
+  "reprogramming": {
+   "general_roleplay": 0.6
   },
   "revving": {
    "trampling_stomping": 1.0
@@ -1952,6 +2120,9 @@
    "ass_worship": 0.5
   },
   "role play": {
+   "general_roleplay": 1.0
+  },
+  "role play fantasy": {
    "general_roleplay": 1.0
   },
   "roleplay": {
@@ -1969,6 +2140,9 @@
   "rubber fetish": {
    "latex_rubber_pvc": 1.0
   },
+  "rubbing her clit": {
+   "toys_solo_female": 0.9
+  },
   "ruin": {
    "edging_denial": 0.5
   },
@@ -1985,7 +2159,7 @@
    "lesbian_pairing": 1.0
   },
   "sassy": {
-   "brat_mean_girl": 0.6
+   "brat_mean_girl": 0.8
   },
   "satin": {
    "lingerie": 0.6,
@@ -2017,10 +2191,13 @@
    "leg_focus": 1.0
   },
   "scissoring": {
-   "lesbian_pairing": 0.9
+   "lesbian_pairing": 1.0
   },
   "scrubs": {
    "nurse_medical": 0.8
+  },
+  "secretary": {
+   "general_roleplay": 0.6
   },
   "seduction": {
    "strip_tease": 1.0
@@ -2031,13 +2208,17 @@
   "sensual domination": {
    "femdom": 1.0
   },
+  "serve me": {
+   "femdom": 0.5
+  },
   "servitude": {
-   "body_goddess_worship": 0.6
+   "body_goddess_worship": 0.8
   },
   "session": {
-   "general_roleplay": 0.5
+   "general_roleplay": 0.6
   },
   "sex toy": {
+   "lesbian_pairing": 0.5,
    "toys_solo_female": 0.7
   },
   "sexual rejection": {
@@ -2046,8 +2227,11 @@
   "sexy smoker": {
    "smoking": 1.0
   },
-  "shaking ass": {
+  "shake that ass": {
    "twerk_ass_shaking": 0.9
+  },
+  "shaking ass": {
+   "twerk_ass_shaking": 1.0
   },
   "sheer": {
    "pantyhose_stockings": 0.5
@@ -2159,7 +2343,7 @@
    "sissy_feminization": 1.0
   },
   "sister": {
-   "step_family_roleplay": 0.5
+   "step_family_roleplay": 0.6
   },
   "sitting": {
    "facesitting_smothering": 0.5
@@ -2224,7 +2408,7 @@
    "facesitting_smothering": 0.9
   },
   "smug": {
-   "brat_mean_girl": 0.6
+   "brat_mean_girl": 0.8
   },
   "sneaker": {
    "heels_shoes": 0.9
@@ -2274,6 +2458,9 @@
   "solo female": {
    "toys_solo_female": 1.0
   },
+  "solo girl": {
+   "toys_solo_female": 0.8
+  },
   "solo masturbation": {
    "toys_solo_female": 1.0
   },
@@ -2290,13 +2477,14 @@
    "mouth_face": 0.7
   },
   "spoiled": {
-   "brat_mean_girl": 0.6
+   "brat_mean_girl": 0.8
   },
   "spoiled brat": {
    "brat_mean_girl": 1.0
   },
   "spread legs": {
-   "pussy_worship": 0.6
+   "pussy_worship": 0.6,
+   "toys_solo_female": 0.6
   },
   "squirting": {
    "toys_solo_female": 1.0
@@ -2304,14 +2492,20 @@
   "squirting female orgasm": {
    "toys_solo_female": 1.0
   },
+  "statuesque": {
+   "body_goddess_worship": 0.6
+  },
   "step": {
-   "step_family_roleplay": 0.7
+   "step_family_roleplay": 0.8
   },
   "step brother": {
    "general_roleplay": 0.5,
    "step_family_roleplay": 1.0
   },
   "step dad": {
+   "step_family_roleplay": 1.0
+  },
+  "step daddy": {
    "step_family_roleplay": 1.0
   },
   "step daddys girl": {
@@ -2461,6 +2655,9 @@
   "stuck up": {
    "brat_mean_girl": 0.6
   },
+  "sub training": {
+   "femdom": 0.8
+  },
   "submissive men": {
    "femdom": 0.7
   },
@@ -2470,11 +2667,14 @@
   "sucking": {
    "blowjob_oral": 0.6
   },
+  "superhero": {
+   "cosplay": 0.7
+  },
   "superhero costume": {
    "cosplay": 0.8
   },
   "surrender": {
-   "body_goddess_worship": 0.5
+   "body_goddess_worship": 0.6
   },
   "sweat": {
    "wet_oily_messy": 0.7
@@ -2502,10 +2702,17 @@
   "swimwear": {
    "bikini_swimwear": 1.0
   },
+  "taboo": {
+   "step_family_roleplay": 0.8
+  },
   "taboo fantasy": {
    "step_family_roleplay": 1.0
   },
+  "tasks": {
+   "femdom": 0.6
+  },
   "teacher": {
+   "general_roleplay": 0.6,
    "schoolgirl_teacher": 0.9
   },
   "teacher fantasy": {
@@ -2537,7 +2744,7 @@
    "general_roleplay": 0.8
   },
   "therapy": {
-   "general_roleplay": 0.7
+   "general_roleplay": 0.8
   },
   "therapy fantasy": {
    "general_roleplay": 1.0
@@ -2638,16 +2845,20 @@
    "human_furniture": 0.8
   },
   "tongue": {
+   "lesbian_pairing": 0.5,
    "mouth_face": 0.7
   },
   "tongue fetish": {
    "mouth_face": 1.0
   },
   "tongues": {
-   "lesbian_pairing": 0.6
+   "lesbian_pairing": 0.7
   },
   "topless": {
    "strip_tease": 1.0
+  },
+  "toy play": {
+   "toys_solo_female": 0.7
   },
   "toys solo female": {
    "toys_solo_female": 1.0
@@ -2698,11 +2909,11 @@
    "femdom": 1.0
   },
   "treatment": {
-   "general_roleplay": 0.4,
+   "general_roleplay": 0.6,
    "nurse_medical": 0.5
   },
   "true goddess": {
-   "body_goddess_worship": 0.8
+   "body_goddess_worship": 1.0
   },
   "tugjob": {
    "handjob": 0.8
@@ -2713,11 +2924,14 @@
   "twerk ass shaking": {
    "twerk_ass_shaking": 1.0
   },
+  "twerk dance": {
+   "twerk_ass_shaking": 1.0
+  },
   "twerking": {
    "twerk_ass_shaking": 1.0
   },
   "two girls": {
-   "lesbian_pairing": 0.8
+   "lesbian_pairing": 1.0
   },
   "two goddesses": {
    "lesbian_pairing": 0.6
@@ -2760,6 +2974,9 @@
   },
   "vinyl": {
    "latex_rubber_pvc": 1.0
+  },
+  "virgin humiliation": {
+   "brat_mean_girl": 0.6
   },
   "virtual reality": {
    "pov_close_up": 0.8
@@ -2820,10 +3037,13 @@
    "sissy_feminization": 0.7
   },
   "worship ass": {
-   "body_goddess_worship": 0.9
+   "body_goddess_worship": 1.0
+  },
+  "worship her": {
+   "body_goddess_worship": 0.8
   },
   "worship me": {
-   "body_goddess_worship": 0.8
+   "body_goddess_worship": 1.0
   },
   "worship my ass": {
    "ass_worship": 1.0
@@ -2838,13 +3058,16 @@
    "foot_fetish": 1.0
   },
   "worship tit": {
-   "body_goddess_worship": 0.9
+   "body_goddess_worship": 1.0
   },
   "worship topless": {
-   "body_goddess_worship": 0.7
+   "body_goddess_worship": 0.8
+  },
+  "worship your goddess": {
+   "body_goddess_worship": 0.8
   },
   "worshipping": {
-   "body_goddess_worship": 0.7
+   "body_goddess_worship": 1.0
   },
   "wrinkled soles": {
    "foot_fetish": 1.0

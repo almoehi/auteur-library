@@ -163,3 +163,15 @@ def test_decider_scores_reorder_the_top(index_dir: Path, monkeypatch: pytest.Mon
     plain = Recommender(Index(index_dir)).recommend("soles stockings school girl", k=2, kinds=["outfit"])
     decided = rec.recommend("soles stockings school girl", k=2, kinds=["outfit"])
     assert [p.id for p in decided.outfits] == [p.id for p in plain.outfits][::-1]
+
+
+def test_cache_dir_falls_back_when_home_is_not_writable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from refsrag import query
+
+    monkeypatch.delenv("REFS_CACHE_DIR", raising=False)
+    monkeypatch.setattr(query.Path, "home", staticmethod(lambda: Path("/nonexistent-root-home")))
+    assert query.default_cache_dir().parent == Path(query.tempfile.gettempdir())
+    monkeypatch.setenv("REFS_CACHE_DIR", str(tmp_path / "c"))
+    assert query.default_cache_dir() == tmp_path / "c"
