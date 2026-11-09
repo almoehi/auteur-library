@@ -86,7 +86,7 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 
 - The workspace style `{workspace.story.style}` (HOW the film looks: medium, camera / film look, colour, light - one line,
   a given fact: never infer the look from the plot) and the design brief go VERBATIM into the
-  `context` of every prompt-writer call. A take in another medium is a miss.
+  `context` of every prompt-writer call. A take in another medium is a miss. The prompt writer may place a photographic look after subject, framing and lighting (`prompt-writer-<family>`); the look is still carried and never dropped.
 
 ## Setting is kept
 
