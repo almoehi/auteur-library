@@ -102,8 +102,9 @@ episode's kinks (the plan's `kinks[]` outfit details and the outfit's own descri
 accessories (collar, heels, gloves, cuffs) are part of the outfit; never put a HANDHELD item
 (key in the hand, crop, toy, cash) into an outfit or character design - it would leak into every
 render built on it; handheld items appear only in the keyframes. Put the outfit's `pose_views` from the
-plan into the `views` attribute (separated by `;`, never `,`; each label at most 80 characters,
-body only), so the studio makes them as named pose views; the standard front / profile / back
+plan into the `views` attribute VERBATIM - the plan's exact words, never shortened, since the
+storyboards step looks them up by these labels (separated by `;`, never `,`; each label at most
+80 characters, body only), so the studio makes them as named pose views; the standard front / profile / back
 views are made by the finish anyway. LoRAs: none.
 
 Write `outfits.md` into your output artifact: per outfit its plan id, design key, @name, task id
@@ -113,7 +114,8 @@ released; a design finished without them gets them with Add views." Then `task_c
 
 ## 4. step: storyboards → artifact `loop_storyboards`
 
-Per clip in `visual_plan.json` (`clips[]`):
+Field `missing_views` (from the task prompt or the person's retry instructions): `fail` (default)
+or `text`. Per clip in `visual_plan.json` (`clips[]`):
 
 1. **Anchor keyframe** `anchor_clip<N>.png` = the FIRST and LAST frame of the loop, composed
    INTO the clip's set: `wf_flux2_reference_compose_nsfw` with
@@ -121,12 +123,26 @@ Per clip in `visual_plan.json` (`clips[]`):
      `camera` when it has one, else its `full_body_shot.<ext>` (Picture 1);
    - `reference_image_2` = the outfit design's named pose view for the clip's `body_pose`
      (`artifact://outfit_vesper_<outfit_id>/<view file>`, found in its `design.json`
-     `published.outputs` by the view label; Picture 2, her in the outfit and the pose);
+     `published.outputs`; Picture 2, her in the outfit and the pose). Match the plan's
+     `body_pose` / `pose_views` label to the published views by MEANING, not by exact text: the
+     outfit step may have shortened a label ("sitting on table edge knees apart" is the plan's
+     "sitting upright on a table edge, knees apart, one knee raised"). Take the published pose
+     view whose body position, support and limbs match; a view of another position (kneeling for
+     lying, floor-sitting for edge-sitting) is no match;
    - `reference_image_3` = the character design's face view (else its portrait, else its
      `full_body_shot`; Picture 3, her face).
-   A missing pose view or face view: `task_failed("<design>: missing view <label>")` - never
-   compose a pose from words alone (the first pilot: faces drifted and a kneeling pose became
-   sitting on the floor).
+   A missing face view: `task_failed("<design>: missing view face")`. A missing POSE view:
+   - `missing_views: fail` (default): `task_failed("<design>: missing view <label>")` - never
+     compose a pose from words alone (the first pilot: faces drifted and a kneeling pose became
+     sitting on the floor);
+   - `missing_views: text`: compose this clip's anchor anyway: `reference_image_2` = the outfit
+     design's `view_front`, else its `full_body_shot` (her in the outfit, standing), and the pose
+     comes from the prompt alone - written as exact body geometry (what carries her weight,
+     torso angle and facing, each arm and leg, head and gaze, which body parts touch the
+     furniture). `check_take` on the POSE first (support, torso facing, limbs); a miss retries
+     once with the miss named; a second miss keeps the better take and says so. Mark the clip
+     `pose from text` in its storyboard entry (`Anchor:` line) and list these clips in the
+     reply. Clips that have their pose view are made as usual.
    Prompt: the woman from Picture 2 (face of Picture 3) in the set of Picture 1, posed as the
    catalog `Body pose:` `<body_pose>` - state it limb by limb (support, facing, arms, legs, head) -
    ON / AGAINST the furniture of the clip's `furniture_use` (where her body touches it: seat,
@@ -142,7 +158,7 @@ Per clip in `visual_plan.json` (`clips[]`):
 
 ```
 ## Clip <N> - <phase title>
-Anchor: anchor_clip<N>.png (body pose: <body_pose>, pose view: <view label>)
+Anchor: anchor_clip<N>.png (body pose: <body_pose>, pose view: <view label> | pose from text)
 Covers audio: <start>-<end> (<groups>), repeats ≈ <x>
 Outfit: <outfit_id> (outfit_vesper_<id> design)
 Duration: <loop_seconds> s
