@@ -93,10 +93,10 @@ descriptor yaml + items jsonl (`refs index build --catalog --items`, README "Add
 | **P7.2 Library import** (2 days) | `S3Client.copyObjectFrom(srcBucket, srcKey, destKey)` (the existing raw copy request with the source bucket as a parameter; S3 showed ~130–530 ms per file); `importLibraryReference`; `use_reference({catalog, id, angle?})` tool + HTTP endpoint; KV idempotency; artifact metadata; the same catalog exposure / nudity gate as `search_catalog`; auto-approved artifacts; tests | A pick becomes an approved artifact in less than 2 s; re-import is free |
 | **P7.3 Outfits** (2–3 days) | `garment_reference` attribute on the outfit kind; generate role with 2 images (character + garment → `garment_reference_image`, role `garment`); text fallback for workflows without the port; prompt rules from S2 (keep the outfit text, "replace all original clothing, including footwear"); `plan-designs` skill attaches catalog picks; studio display | On 10 outfits, garment fidelity ≥ the S2 result (mean 1.85 / 3, "same" 4/6) |
 | **P7.4 Poses, route (a)** (3–4 days) | `Pose reference:` shot line; a `pose:<shotId>` binding; route (a): `qwen_image_pose_transfer` with the imported **line art** as `pose_image`, on pose-check failure (repair) and optionally first-pass for single-person pose shots. **Solo poses only**: the `storyboard-scene` skill searches with `filters: {solo: true}` for shots with one person in frame; two-person shots keep today's text route. View choice: deterministic, from the shot's `Camera:` direction (front / side / diag / high / low), not from a model judgement. Pose check judged on support + limbs only (S1: the camera question is unreliable) | On solo act and pose shots, pose-check pass rate ≥ today's rendered-reference route with half the renders |
-| **P7.4b Depth route (gated)** (1 day validation + 2–3 days) | **S5 validation first:** RefControl depth LoRA (`thedeoxen/refcontrol-FLUX.2-klein-9B-reference-depth-lora`, 166 MB) on the existing `flux2_image_edit_nsfw` (depth map as image 1, character as image 2), 10 poses including duo and explicit. If it holds up: register the LoRA in the model cache, add a `depth-pose` capability mapping (depth in `subject_image`), and route two-person shots through it | S5 ≥ 8/10 on support + limbs + identity, including duo |
+| **P7.4b Depth route for two-person shots** (2–3 days; S5 gate **met**) | Register the RefControl depth LoRA in the model cache (folder `loras`, `flux2_klein_9b_refcontrol_depth.safetensors`, sha256 `d627631d…bb8d`, strength 1.0). A `depth-pose` capability / binding on `flux2_image_edit_nsfw`: the imported depth view goes to `subject_image` (Figure 1) and the character to the second image port. That port is declared `reference_role: garment`, so the binding overrides the role; it does not reuse garment semantics. Prompt templates per S5 (solo / duo; always append `Pose: <library title>`; describe the man in text). It is a **keyframe route**, not a repair: framing and background follow the depth map. Use it for two-person pose and act shots (route (a) fails there); solo shots keep route (a). Choose the view from the image's angle tag, never from the view text. Stricter duo pose check (the judge is lenient on floor-level duo poses) | Duo act shots pass support + limbs + identity at ≥ the S5 rate (10/10 with title prompts) |
 | **P7.5 Evaluation** (1–2 days) | A/B on a real NSFW episode with vs without references (pose-check pass rate, repairs, garment fidelity, render cost) | A report; per-workspace defaults |
 
-Remaining: about 8–11 dev-days for P7.2–P7.5, plus 3–4 for P7.4b if S5 passes.
+Remaining: about 10–14 dev-days for P7.2–P7.5 including P7.4b.
 
 ## 5. Risks and open questions
 
@@ -130,3 +130,13 @@ Remaining: about 8–11 dev-days for P7.2–P7.5, plus 3–4 for P7.4b if S5 pas
 - **Artifacts:**
   - `scratchpad/p7-spikes/s12/` (driver, judge, scores, contact sheets);
   - `scratchpad/p7-spikes/s34/NOTES.md`.
+- **S5, depth-LoRA validation** (P7.4b gate; 18 renders, about $2):
+  - Setup: RefControl depth LoRA on `flux2_image_edit_nsfw`, library depth view as Figure 1, character as Figure 2, strength 1.0. 10 poses: 4 duo, 2 explicit solo, 4 other solo.
+  - **Gate met:** base prompt 9/10 by the judge and 8/10 by eye. With `Pose: <library title>` added to duo prompts, all 5 duo renders pass, so 10/10.
+  - Every duo render shows exactly one woman and one man; the woman is never duplicated, which was route (a)'s failure.
+  - Failure modes:
+    - without the title, a lying or partly hidden man falls back to an upright "posing couple";
+    - a lying duo pose can turn the woman's face away (identity 0.65).
+  - The negative controls fail as they should. The duo judge is lenient on floor-level duo poses: missionary against a cowgirl reference passed.
+  - Strength 0.8 vs 1.0: no difference, so use 1.0.
+  - Artifacts: `scratchpad/p7-spikes/s5/` (NOTES.md, contact sheets `S5_*_overview.png`).
