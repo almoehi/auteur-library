@@ -1,6 +1,6 @@
 # Plan P7: using reference picks in production
 
-Status: **draft for review** (2026-11-09). Parent plan: `PLAN_REFERENCE_RECOMMENDER.md` (P0–P6 done).
+Status: **draft v2 for review** (2026-11-09). P7.1 is done; P7.0 and P7.2–P7.5 wait for approval. Parent plan: `PLAN_REFERENCE_RECOMMENDER.md` (P0–P6 done).
 
 ## 1. Goal
 
@@ -76,26 +76,33 @@ Review fixes (same day): publish never moves `latest.json` for schema ≥ 2; a n
 descriptor yaml + items jsonl (`refs index build --catalog --items`, README "Adding a catalog"); the
 `decider` status, default `k` (min(3, max_k)), integer-like kind keys, null `depth`/`view` and
 `Catalog.describe()` are pinned for both ports; v4 fixtures regenerated (index unchanged).
-Stage B: the TypeScript port reads `latest.s2.json`.
+**Stage B (TypeScript) done 2026-11-09** (video-harness `229-design-studio` `18ef2efba`):
+- `spec.catalogs: [{key, description, nudity}]`, a per-workspace allow list like `spec.loras`;
+- the generic core and `CatalogIndexAgent`;
+- `catalog_index` + `search_catalog` (with a `describe` mode), and `recommend_references` as a deprecated alias;
+- the nudity gate trusts the catalog's own descriptor; a `nudity: true` catalog is listed and searchable only when the workspace allows nudity;
+- the sha256 check, hard result bounds, and catalog tools also for text-output tasks;
+- parity tests on the v4 fixtures.
 
 ## 4. Phases
 
 | Phase | Scope | Exit criteria |
 |---|---|---|
 | **P7.0 Spikes** (2–3 days) | **S1:** pose transfer with library line art and with depth vs today's rendered pose reference, 10 act and pose shots, judged. **S2:** outfit generation with `garment_reference_image` = library flat-lay vs text only, 10 outfits, judged for fidelity. **S3:** cross-bucket `CopyObject` model-cache → fileshare with the app credentials (permissions, latency). **S4:** krea2 or flux depth ControlNet availability on the compute images (decides route b). | Go / no-go per route; chosen pose route |
-| **P7.1 Catalog generalisation** (5–6 days) | The review's design: descriptor in index v3 (Python first), generic TS core, `CatalogIndexAgent`, `catalog_index` + `search_catalog`, alias, per-catalog content gate, result-size budget | Parity tests green; alias returns the v2 shape |
-| **P7.2 Library import** (2 days) | `copyObjectFrom`, `importLibraryReference`, `use_reference` tool + HTTP endpoint, KV idempotency, artifact metadata, gating, tests | A pick becomes an approved artifact in less than 2 s, re-import is free |
+| ~~P7.1 Catalog generalisation~~ | **Done** (3.4) | Met |
+| **P7.2 Library import** (2 days) | `copyObjectFrom`, `importLibraryReference`, `use_reference({catalog, id, angle?})` tool + HTTP endpoint, KV idempotency, artifact metadata, the same catalog exposure / nudity gate as `search_catalog`, auto-approved artifacts, tests | A pick becomes an approved artifact in less than 2 s, re-import is free |
 | **P7.3 Outfits** (2–3 days) | `garment_reference` attribute, generate role with 2 images, slot binding + fallback, `plan-designs` skill, studio display | S2-quality outfits from the plan without manual steps |
 | **P7.4 Poses** (3–5 days) | `Pose reference:` line, `pose:<shotId>` binding, route (a) in the take renderer, `storyboard-scene` skill; route (b) only if S1/S4 favour it | Pose-check pass rate on act shots ≥ the S1 result |
 | **P7.5 Evaluation** (1–2 days) | A/B on a real NSFW episode: with vs without references (pose-check pass rate, repairs, render cost) | A report; defaults on/off per workspace setting |
 
-Total: about 15–20 dev-days, or 10–12 without route (b).
+Remaining: about 10–17 dev-days (P7.0 + P7.2–P7.5), or 10–12 without route (b).
 
 ## 5. Risks and open questions
 
 - **Line art as a pose input is untested.** `qwen_image_pose_transfer` asks for a "scene-free neutral figure". The library's faceless line-art mannequins fit that description, but the duo poses' occlusion may confuse it. S1 decides.
 - **Garment flat-lay → worn outfit fidelity:** `flux2_image_edit`'s garment port is optional and unused today. S2 decides whether it beats text.
-- **Auto-approval of imported references.** Library items are curated and gated by the content policy. Approving them automatically skips a human step; the alternative is "pending" plus an approve click in the studio.
+- **Auto-approval:** decided. Imported library references and user uploads are approved automatically.
 - **Cost.** Every import is one S3 copy per file, which is cheap. Route (a) adds one pose-transfer render per shot when used always; using it on repair only keeps today's cost.
 - **Duo poses** depict two people. Binding one to a shot requires the shot's people to match the pose's roles (`sex_positions` role order). The catalog's role rules (`explicit-acts`) apply.
-- **Question for you:** should P7.1 (catalog generalisation) gate P7.2–P7.4, as proposed, or run in parallel on the current tool?
+- **Decided:** P7.1 went first, and it is done.
+- **Open:** the Featherless query instruction in `index_build.py` still names poses and outfits. A new catalog needs its own query instruction, so move it into the catalog descriptor (which re-embeds refs on the next build) when the second catalog arrives.
