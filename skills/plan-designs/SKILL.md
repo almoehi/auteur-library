@@ -160,7 +160,7 @@ For EACH outfit entry (one per WARDROBE TRACKER row), before its `write_design`:
 
 1. `search_catalog {catalog, kinds: ["outfit"], context}` - `context` = the row's garments in construction terms (type, cut, colour, material, legwear, footwear), then the scene context of the beats that show this look: the kink / act and the roleplay it serves (e.g. "nurse roleplay", "office domination", "bridal night"), and the setting / era. Two or three sentences, only what the sources state.
 2. Take the BEST fitting pick: the garment type, cut, colour and coverage match the row, and it suits the scene context. A pick that contradicts the row (another garment type, colour, coverage or era) is no fit; when no pick fits, write the entry WITHOUT a garment reference. Never settle for "close enough".
-3. `use_reference {catalog, id}` with the pick's `id` -> `{artifact, files}`; set the attribute `{ "key": "garment_reference", "value": "<files[0]>" }` (the `artifact://ref-…/image.png` ref, verbatim) on that outfit entry.
+3. `use_reference {catalog, id}` with the pick's `id` -> `{artifact, files}`; set the attribute `{ "key": "garment_reference", "value": "<files[0]>" }` (the `artifact://ref-…/image.<ext>` ref, verbatim) on that outfit entry.
 4. Keep ALL the outfit's text attributes from the tracker row (`garments`, `colors`, ...): the drafts use the text AND the picture. Where the pick differs from the row in a detail the scenes never show, leave the text as the row says.
 5. A search or `use_reference` that is refused or fails: write the entry without the reference and add `garment_reference skipped: <key> (<reason>)` to the `flagged:` line.
 
@@ -169,7 +169,7 @@ The pick is recorded on the plan entry: the person sees it in the studio, and a 
 ```json
 { "kind": "outfit", "display_name": "Mira - Lingerie", "key_slug": "mira_lingerie", "character_slug": "mira", "look_slug": "lingerie",
   "attributes": [ { "key": "garments", "value": "ivory lace bustier with criss-cross straps, high-waist lace shorts, lace-top stockings, ivory bow pumps" },
-    { "key": "colors", "value": "ivory" }, { "key": "garment_reference", "value": "artifact://ref-refs-lng_0036/image.png" } ],
+    { "key": "colors", "value": "ivory" }, { "key": "garment_reference", "value": "artifact://ref-refs-lng-0036-3f9a1c2e/image.png" } ],
   "links": [ { "role": "character", "key": "character_mira" } ], "scenes": [2] }
 ```
 
