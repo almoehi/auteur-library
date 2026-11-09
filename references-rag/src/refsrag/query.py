@@ -8,7 +8,7 @@ reranking use onnxruntime + tokenizers when installed, or the Featherless embedd
 FEATHERLESS_API_KEY is set. Without either it runs stage 1 only (lexicon + BM25).
 
     python recommend.py "college girl cosplay, foot tease" --index <dir or latest.s2.json URL> [--json]
-    python recommend.py --describe --index <...>   # the catalog: kinds, filters, max_k
+    python recommend.py --describe --index <...>   # the catalog: kinds, filters, max_k (Catalog.describe)
 """
 
 from __future__ import annotations
@@ -46,7 +46,8 @@ AUTO: Final = "auto"
 
 
 # The JSON form omits unset optional fields (never null): depth, best_angle and views of an ``image``
-# pick, depth of a view without one, and decider when the decision-model rerank is off.
+# pick, depth of a view without one, and decider when no decider runs. In ``index.json`` a view's
+# ``depth`` and ``view`` may be absent or null; null means absent.
 
 
 @dataclass(frozen=True)
@@ -78,7 +79,9 @@ class Recommendations:
     concepts: dict[str, float]  # what the context was understood as
     dense: str  # the vector set used, or "unavailable: <reason>"
     picks: dict[str, list[Pick]]  # kind -> picks, one entry per requested kind in catalog order
-    decider: str | None = None  # the decision model that reranked, "unavailable: <reason>", or off
+    # The decision model that reranked; "unavailable: the decision model failed (<kind>[, <kind>…])"
+    # naming the failed kinds in catalog order; None (absent) when no decider runs.
+    decider: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = _without_none(asdict(self))
@@ -412,17 +415,31 @@ class Recommender:
         return cls(Index(fetch_index(source, cache)), base_url=base_url, decider_rerank=decider,
                    featherless_api_key=os.environ.get("FEATHERLESS_API_KEY") or None)  # fmt: skip
 
+    def describe(self) -> dict[str, Any]:
+        """The catalog summary an agent needs to ask: kinds, filters, max_k (``Catalog.describe``)."""
+        return self.index.catalog.describe()
+
     def recommend(
         self,
         context: str,
         *,
-        k: int = 3,
+        k: int | None = None,
         kinds: Sequence[str] | None = None,
         filters: Mapping[str, FilterValue] | None = None,
     ) -> Recommendations:
-        """Top ``k`` picks per kind (``kinds``: None = all, in catalog order). ``filters``: filter name
-        -> value as the catalog declares them; an unknown filter or a wrongly typed value is a
-        ValueError."""
+        """Top ``k`` picks per kind (None: min(3, max_k); else 1..max_k) of ``kinds`` (None = all, in
+        catalog order). ``filters``: filter name -> value as the catalog declares them. An unknown filter
+        or kind, a wrongly typed value or a ``k`` out of range is a ValueError."""
+        return self._recommend(context, self.index.catalog.check_k(k), kinds, filters)
+
+    def _recommend(
+        self,
+        context: str,
+        k: int,
+        kinds: Sequence[str] | None = None,
+        filters: Mapping[str, FilterValue] | None = None,
+    ) -> Recommendations:
+        """``recommend`` without the 1..max_k bound on ``k`` (calibration pools deeper lists)."""
         p, catalog = self.params, self.index.catalog
         wanted = catalog.check_kinds(kinds)
         active = catalog.check_filters(filters)
@@ -430,7 +447,7 @@ class Recommender:
         q_tokens = tokenize(context)
         q_vec = self.embedder.embed_query(context) if self.embedder else None
         picks: dict[str, list[Pick]] = {kind: [] for kind in wanted}
-        decider_failed = False
+        decider_failed: list[str] = []  # kinds, in catalog order
         for kind in wanted:
             rows = [r for r in self.index.rows[kind] if _passes(self.index.items[r], active)]
             if not rows:
@@ -463,13 +480,17 @@ class Recommender:
                     relevance = dict(zip(top, fused_top, strict=True))
                     order = top  # the final picks come from the decided candidates
                 else:
-                    decider_failed = True
+                    decider_failed.append(kind)
             rel = [relevance.get(i, 0.0) for i in range(len(rows))]
             chosen = mmr_pick(order, rel, _pair_similarity(self, rows), k=k, lam=p["mmr_lambda"])
             picks[kind] = [self._pick(rows[i], rel[i], q_concepts) for i in chosen]
         decider = None
         if self.decider:
-            decider = "unavailable: the decision model failed" if decider_failed else self.decider.model
+            decider = (
+                f"unavailable: the decision model failed ({', '.join(decider_failed)})"
+                if decider_failed
+                else self.decider.model
+            )
         return Recommendations(
             catalog.key, self.index.version, context, q_concepts, self.dense_status, picks, decider
         )
@@ -598,7 +619,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="download cache (default: REFS_CACHE_DIR, ~/.cache or temp)",
     )
     ap.add_argument("--base-url", default=None)
-    ap.add_argument("-k", type=int, default=3, help="picks per kind, at most the catalog's max_k")
+    ap.add_argument("-k", type=int, default=None, help="picks per kind: 1..max_k (default: min(3, max_k))")
     ap.add_argument("--kind", action="append", help="only this kind (repeatable; default: all)")
     ap.add_argument(
         "--filter", action="append", default=None, metavar="NAME=VALUE", help="repeatable; see --describe"
@@ -612,12 +633,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     rec = Recommender.load(a.index, cache_dir=a.cache_dir, base_url=a.base_url, decider=not a.no_decider)
     catalog = rec.index.catalog
     if a.describe:
-        print(json.dumps(catalog.to_json(), indent=1))
+        print(json.dumps(catalog.describe(), indent=1))
         return 0
     if not a.context:
         ap.error("a context is required")
-    if not 1 <= a.k <= catalog.max_k:
-        ap.error(f"-k must be 1..{catalog.max_k} for this catalog")
     try:
         filters: Filters = dict(catalog.parse_filter(f) for f in a.filter or [])
         result = rec.recommend(a.context, k=a.k, kinds=a.kind, filters=filters)

@@ -159,7 +159,8 @@ def strip_used_for(doc: str) -> str:
 
 
 def ranking(rec: Recommender, context: str, kind: str, depth: int) -> list[str]:
-    return [p.id for p in rec.recommend(context, k=depth, kinds=[kind]).picks[kind]]
+    # pools go deeper than the catalog's max_k, so the unbounded variant
+    return [p.id for p in rec._recommend(context, depth, [kind]).picks[kind]]
 
 
 EXTRA_SEP: Final = "+extra"  # id suffix of an incremental grading item (new pool members only)

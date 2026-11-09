@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import TypeAdapter
 
+from refsrag.descriptor import Catalog
 from refsrag.settings import CATALOG_FILE, Settings, load_catalog
 
 YAML = "bucket: yaml-bucket\nregion: yaml-region\npublic_prefix: p/\nbase_url: https://yaml.test/\n"
@@ -70,3 +72,14 @@ def test_invalid_catalog_descriptors_are_rejected(tmp_path: Path, change: str, m
     (tmp_path / "catalog.yaml").write_text(text.replace(change, message, 1))
     with pytest.raises(ValueError):
         load_catalog(tmp_path / "catalog.yaml")
+
+
+@pytest.mark.parametrize("kind", ["1", "42", "007"])
+def test_integer_like_kind_keys_are_rejected(kind: str) -> None:
+    """JavaScript objects order integer-like keys first, so they would break the catalog's kind order."""
+    data = load_catalog().to_json()
+    data["kinds"] = {**data["kinds"], kind: {"label": "N", "description": "n", "media": "image"}}
+    with pytest.raises(ValueError, match=f"kind {kind!r} is integer-like"):
+        Catalog.from_json(data)
+    with pytest.raises(ValueError, match="integer-like"):
+        TypeAdapter(Catalog).validate_python(data, extra="forbid")

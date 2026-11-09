@@ -35,13 +35,13 @@ stage 1 only), `REFS_BASE_URL` / `REFS_BUCKET` (overrides) and `REFS_INDEX` (def
 | Command | What it does |
 |---|---|
 | `catalog` | Counts of the English-only catalog (1,407 outfits, 288 poses, 4,285 files) |
-| `upload-assets [--dry-run]` | Publishes library files to `s3://<bucket>/public/library/<catalog>/assets/<library path>`; skips unchanged files via the sha256 manifest |
+| `upload-assets [--dry-run] [--catalog Y] [--items J --root D]` | Publishes a catalog's files to `s3://<bucket>/public/library/<catalog>/assets/<library path>`: the files the `--items` media refer to (below `--root`), else the refs library's; skips unchanged files via the sha256 manifest |
 | `export-lake` | Read-only snapshot of iWantClips clips and categories from the content lake into `data/lake/` |
 | `jobs make <job>` / `jobs collect <job>` | Agent jobs (labelling): write batch files, validate and merge outputs; see [`LABELING.md`](LABELING.md) |
 | `lexicon concepts` / `aliases [--round N] [--only C]` / `build` | Mine the concept lexicon from the lake snapshot: batches for the concept grouping and the alias filter, then assemble `vocab.yaml`, `lexicon.json` and `lexicon_report.md` (validated on held-out clips) |
-| `index build <version> [--vector-set S]` | Builds `data/index/<version>`: `index.json` (with the `catalog` descriptor), vector sets, models, `golden.json` and the bundled `recommend.py` |
-| `index golden <version>` | (Re)writes the TypeScript parity fixtures `golden.json` (stage 1) and `selection-golden.json` (whole results: filter cases of every op, an `image` and a `views` kind, a single-kind request, decider cases, and the `invalid` requests a reader must reject) |
-| `index publish <version> [--no-latest]` | Uploads the version to `library/<catalog>/rag/<version>/` (index.json last), points `rag/latest.s<schema>.json` (with the sha256 of `index.json`) at it and, unless `--no-latest`, `rag/latest.json` too |
+| `index build <version> [--catalog Y] [--items J] [--lexicon L] [--vocab V] [--vector-set S \| --no-vectors] [--cases C]` | Builds `data/index/<version>` of the descriptor `--catalog` (default `catalog.yaml`): `index.json` (with the `catalog` descriptor), vector sets, models, `golden.json` and the bundled `recommend.py`. Items: `--items` (schema-2 jsonl), else the refs builder (labels, `lexicon.json`, `vocab.yaml`, affinities). `--no-vectors`: no vector set (offline, stage 1 only) |
+| `index golden <version> [--cases C]` | (Re)writes the TypeScript parity fixtures `golden.json` (stage 1) and `selection-golden.json` (whole results: filter cases of every op, an `image` and a `views` kind, a single-kind request, a default-`k` request, decider cases including a failing kind, a `views` item without `depth`/`view`, and the `invalid` requests a reader must reject). `--cases`: a yaml of `queries`, `filters`, `invalid` (default: the refs cases) |
+| `index publish <version>` | Uploads the version to `library/<catalog>/rag/<version>/` (index.json last) and points `rag/latest.s<schema>.json` (with the sha256 of `index.json`) at it; `rag/latest.json` only for a schema-1 index |
 | `eval sample` | Writes `eval/contexts.jsonl`: held-out clips round-robin over the mined concepts (one per concept, then a second, up to 100), plus the hand cases |
 | `eval pool [--extra] [--variant V]` | Pools every variant's top candidates per context into `eval_grade` batches (graders do not see the lexicon aliases); `--extra` grades only new pool members |
 | `eval score [--no-search] [--variant V]` | nDCG@3 per variant and a grid search, tuned on the tune half of the contexts and reported on the test half with the share of unjudged top-3 picks; writes `eval/report.md` |
@@ -75,8 +75,10 @@ weights etc.), `lexicon`, `concepts`, `items`, `vector_sets`, `files`.
   `kinds` (`{kind: {label, description, media: "image" | "views"}}`, in result order), `filters`
   (`[{name, kind, field, type: integer|number|boolean|string, op: eq|lte|gte|in, description, min?, max?}]`),
   `result_fields` (`{kind: [attr]}`), `decider_context`, `decider_guidance` (`{kind: hint}`), `max_k`.
+  Kind keys are never integer-like (all digits, e.g. `"1"`): JavaScript would reorder them.
 - item: `{id, kind, title, doc, concepts, attrs: {field: value}, media}`; `media` is `{image: ref key}` for
-  an `image` kind and `{views: [{angle, image, depth?, focus, view?}]}` for a `views` kind.
+  an `image` kind and `{views: [{angle, image, depth?, focus, view?}]}` for a `views` kind. A view's
+  `depth` and `view` may be absent or null; readers treat null as absent (the build never writes null).
 - filters: a filter applies to items of its `kind` only and compares `attrs[field]` (`in`: the value is a
   non-empty list; `min`/`max` bound the value of a numeric filter); an item without the field fails it.
   An unknown filter or kind, or a value of the wrong type or range, is an error naming what is allowed.
@@ -85,13 +87,45 @@ weights etc.), `lexicon`, `concepts`, `items`, `vector_sets`, `files`.
 - result: `{catalog, index_version, context, concepts, dense, decider?, picks: {kind: [pick]}}` with one
   `picks` entry per requested kind; pick = `{id, kind, title, score, why, image, depth?, best_angle?,
   views?: [{angle, image, depth?}], attrs}` where `attrs` holds the kind's `result_fields` only. Unset
-  optional fields are omitted, never null. `decider` is the decision model that reranked, or
-  `unavailable: <reason>`; absent when the decider is off.
+  optional fields are omitted, never null.
+- `decider`: absent when no decider runs (none configured, or the index's `params` define none); the
+  decision model's name when it reranked; `unavailable: the decision model failed (<kind>[, <kind>…])`
+  naming the kinds it failed on, in catalog kind order (e.g. `(outfit, pose)`).
+- `k`: picks per kind; default `min(3, max_k)`; outside 1..`max_k` it is an error with the text
+  `k must be between 1 and <max_k>`.
+- describe (`recommend.py --describe`, `Catalog.describe()` / `Recommender.describe()`, the TypeScript
+  `search_catalog` describe mode), field for field: `{catalog, title, description, nudity, kinds: {kind:
+  {label, description, media}}, filters: [{name, kind, type, op, min?, max?, description}], max_k}`
+  (no attr `field`, result fields or decider wording).
+- Numbers in error texts print as JavaScript does (`0..3`, not `0.0..3.0`).
 
-**Pointers.** `rag/latest.json` is what the deployed (schema 1) TypeScript reader follows; a schema-2 publish
-leaves it alone with `--no-latest`. Every publish writes `rag/latest.s<schema>.json`, so the TypeScript port
-of schema 2 reads **`library/refs/rag/latest.s2.json`**. Once every reader speaks schema 2, publishing
-without `--no-latest` flips `latest.json` as well. A recommend.py refuses an index of another schema.
+**Pointers.** `rag/latest.json` is what the deployed (schema 1) TypeScript reader follows, so only a
+schema-1 index is ever published to it; a schema ≥ 2 publish cannot move it. Every publish writes
+`rag/latest.s<schema>.json`, so the TypeScript port of schema 2 reads **`library/refs/rag/latest.s2.json`**.
+A recommend.py refuses an index of another schema.
+
+## Adding a catalog
+
+A new catalog (faces, locations, props…) is data only: a descriptor yaml, an items jsonl and its files.
+
+1. `faces.yaml`: the descriptor (same keys as `catalog.yaml`; `key` is the S3 path segment).
+2. `faces.jsonl`: one schema-2 item per line, `{id, kind, title, doc, concepts, attrs, media}`, with media
+   ref keys `library/<key>/assets/<library path>`. The build checks every item against the descriptor
+   (fields, unique ids, declared kinds, media of the kind's type below the catalog's assets, the attrs
+   that filters and result fields name). `concepts` may be `{}`; then add `--lexicon` / `--vocab` for
+   concept matching, or rely on BM25 and dense retrieval.
+3. Build, check, upload, publish (pick a version name no other catalog uses in `data/index/`):
+
+```sh
+uv run refs index build faces-v1 --catalog faces.yaml --items faces.jsonl   # --no-vectors: offline, stage 1 only
+uv run refs index golden faces-v1 --cases faces-cases.yaml                  # queries, filters, invalid
+uv run refs upload-assets --catalog faces.yaml --items faces.jsonl --root /path/to/faces-files
+uv run refs index publish faces-v1   # -> library/faces/rag/latest.s2.json
+```
+
+The query code (`recommend.py`, the TypeScript port) needs no change. The Featherless query instruction
+of the vector sets still names poses and outfits; a catalog that needs other wording changes
+`QWEN_INSTRUCTION`.
 
 ## Using the recommender
 
@@ -106,7 +140,7 @@ python recommend.py --describe --index "$LATEST"   # kinds, filters, max_k
 python recommend.py "college girl cosplay, foot tease" --index "$LATEST" --filter solo=true --json
 ```
 
-Options: `-k` (1..`max_k`), `--kind <kind>` (repeatable), `--filter name=value` (repeatable; `in`
+Options: `-k` (1..`max_k`, default `min(3, max_k)`), `--kind <kind>` (repeatable), `--filter name=value` (repeatable; `in`
 filters take comma-separated values, e.g. `--filter outfit_category=lingerie,sexy`), `--describe`,
 `--base-url`, `--no-decider`. The index (`index.json`, vectors, models) is downloaded once into
 `~/.cache/refs-recommender/<version>` (or `REFS_CACHE_DIR` / `--cache-dir`): the download is verified

@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterable, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Final
 
 import boto3
 from botocore.config import Config
@@ -41,10 +43,36 @@ class UploadReport:
     total: int
 
 
-def upload_assets(settings: Settings, catalog: str, *, dry_run: bool, workers: int) -> UploadReport:
-    """Upload the library files to ``library/<catalog>/assets/``."""
-    root = settings.require_library_root()
-    paths = list(library_files(load_outfits(root), load_poses(root)))
+def item_library_paths(catalog: str, items: Iterable[Mapping[str, Any]]) -> list[str]:
+    """The library paths (sorted, unique) of every file the items' media refer to: each image and depth
+    ref key ``library/<catalog>/assets/<path>`` gives ``<path>``."""
+    prefix = keys.asset_ref_key(catalog, "")
+    refs = []
+    for item in items:
+        media = item["media"]
+        if "image" in media:
+            refs.append(media["image"])
+        for view in media.get("views") or []:
+            refs += [view["image"], *([view["depth"]] if view.get("depth") is not None else [])]
+    outside = [r for r in refs if not r.startswith(prefix)]
+    if outside:
+        raise ValueError(f"media outside {prefix}: {outside[:3]}")
+    return sorted({r.removeprefix(prefix) for r in refs})
+
+
+def upload_assets(
+    settings: Settings,
+    catalog: str,
+    *,
+    dry_run: bool,
+    workers: int,
+    root: Path | None = None,
+    paths: Sequence[str] | None = None,
+) -> UploadReport:
+    """Upload library files to ``library/<catalog>/assets/``: ``paths`` below ``root`` (e.g. from
+    ``item_library_paths``), else the ``refs`` library's files below ``REFS_LIBRARY_ROOT``."""
+    root = root or settings.require_library_root()
+    paths = list(paths) if paths is not None else list(library_files(load_outfits(root), load_poses(root)))
     missing = [p for p in paths if not (root / p).is_file()]
     if missing:
         raise FileNotFoundError(f"{len(missing)} missing library files: {missing}")

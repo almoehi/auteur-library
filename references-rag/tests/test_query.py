@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 import pytest
-from conftest import BASE, ITEMS, TEST_CATALOG
+from conftest import BASE, ITEMS
 
 from refsrag.index_build import bundle_recommend_py
 from refsrag.query import SCHEMA_VERSION, Index, Recommender
@@ -163,10 +163,100 @@ def test_cli_filters_kinds_and_describe(
     )
     assert [p["id"] for p in json.loads(capsys.readouterr().out)["picks"]["outfit"]] == ["SPR-1"]
     main(["--describe", *index])
-    assert json.loads(capsys.readouterr().out) == TEST_CATALOG
+    assert json.loads(capsys.readouterr().out) == Index(index_dir).catalog.describe()
     for bad in (["--filter", "nope=1"], ["--filter", "solo=maybe"], ["-k", "5"]):
         with pytest.raises(SystemExit):
             main(["x", *index, *bad])
+    assert "k must be between 1 and 4" in capsys.readouterr().err
+
+
+def test_describe_is_the_agent_facing_summary(index_dir: Path) -> None:
+    """The ``--describe`` output, field for field what the TypeScript port's describe mode returns: no
+    attr names (``field``), result fields or decider wording; min / max only when set."""
+    rec = Recommender(Index(index_dir))
+    assert rec.describe() == rec.index.catalog.describe() == {
+        "catalog": "refs",
+        "title": "Pose and outfit references",
+        "description": "Test catalog.",
+        "nudity": True,
+        "kinds": {
+            "outfit": {"label": "Outfits", "description": "an outfit image", "media": "image"},
+            "pose": {"label": "Poses", "description": "a pose in views", "media": "views"},
+        },
+        "filters": [
+            {"name": "max_exposure", "kind": "outfit", "type": "integer", "op": "lte", "min": 0, "max": 3,
+             "description": "skin"},
+            {"name": "solo", "kind": "pose", "type": "boolean", "op": "eq", "description": "solo"},
+            {"name": "outfit_category", "kind": "outfit", "type": "string", "op": "in",
+             "description": "categories"},
+            {"name": "pose_series", "kind": "pose", "type": "string", "op": "in", "description": "series"},
+        ],
+        "max_k": 4,
+    }  # fmt: skip
+
+
+def _faces_index(path: Path, n: int, max_k: int) -> Index:
+    catalog = {
+        "key": "faces", "title": "Faces", "description": "Face references.", "nudity": False,
+        "kinds": {"face": {"label": "Faces", "description": "a face", "media": "image"}},
+        "filters": [], "result_fields": {}, "decider_context": "a portrait", "decider_guidance": {},
+        "max_k": max_k,
+    }  # fmt: skip
+    items = [
+        {"id": f"F{n}", "kind": "face", "title": f"face {n}", "doc": f"smiling face {n}", "concepts": {},
+         "attrs": {}, "media": {"image": f"library/faces/assets/{n}.png"}}
+        for n in range(n)
+    ]  # fmt: skip
+    index = {"schema_version": SCHEMA_VERSION, "index_version": "f1", "catalog": catalog, "default_base_url": BASE,
+             "params": {"bm25_k1": 1.2, "bm25_b": 0.75, "rrf_k": 60, "w_bm25": 1.0, "w_concept": 1.0,
+                        "w_dense": 1.0, "candidates": 30, "mmr_lambda": 0.7, "reranker": None},
+             "lexicon": {}, "concepts": {}, "items": items, "vector_sets": {}, "files": []}  # fmt: skip
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "index.json").write_text(json.dumps(index))
+    return Index(path)
+
+
+@pytest.mark.parametrize(("max_k", "default"), [(4, 3), (2, 2), (1, 1)])
+def test_default_k_is_three_capped_by_max_k(tmp_path: Path, max_k: int, default: int) -> None:
+    rec = Recommender(_faces_index(tmp_path, 6, max_k))
+    assert len(rec.recommend("smiling face").picks["face"]) == default
+    for k in (0, max_k + 1):
+        with pytest.raises(ValueError, match=f"^k must be between 1 and {max_k}$"):
+            rec.recommend("smiling face", k=k)
+
+
+def test_cli_default_k_and_out_of_range_k(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from refsrag.query import main
+
+    monkeypatch.delenv("FEATHERLESS_API_KEY", raising=False)
+    _faces_index(tmp_path, 6, 2)
+    main(["smiling face", "--index", str(tmp_path), "--json"])
+    assert len(json.loads(capsys.readouterr().out)["picks"]["face"]) == 2
+    with pytest.raises(SystemExit):
+        main(["smiling face", "--index", str(tmp_path), "-k", "3"])
+    assert "k must be between 1 and 2" in capsys.readouterr().err
+
+
+def test_views_without_depth_or_view_text(index_dir: Path) -> None:
+    """``depth`` and ``view`` of a view may be absent or null: both are treated as absent."""
+    data = json.loads((index_dir / "index.json").read_text())
+    pose = data["items"][2]
+    front, low = pose["media"]["views"]
+    pose["media"]["views"] = [
+        {k: v for k, v in front.items() if k not in ("depth", "view")},
+        {**low, "depth": None, "view": None},
+    ]
+    (index_dir / "index.json").write_text(json.dumps(data))
+    out = Recommender(Index(index_dir)).recommend("show me your soles", k=1, kinds=["pose"]).to_dict()
+    (pick,) = out["picks"]["pose"]
+    assert pick["best_angle"] == "low" and pick["why"][-1] == "best view: low"
+    assert "depth" not in pick
+    assert pick["views"] == [
+        {"angle": "front", "image": BASE + "library/refs/assets/pose_pngs/front.png"},
+        {"angle": "low", "image": BASE + "library/refs/assets/pose_pngs/low.png"},
+    ]
 
 
 def test_decider_failures_keep_the_order_and_trip_the_breaker(
@@ -187,13 +277,38 @@ def test_decider_failures_keep_the_order_and_trip_the_breaker(
     plain = Recommender(Index(index_dir)).recommend("soles in stockings", k=1)
     first = rec.recommend("soles in stockings", k=1)
     assert first.picks["pose"][0].id == plain.picks["pose"][0].id
-    assert first.decider == "unavailable: the decision model failed"
+    assert first.decider == "unavailable: the decision model failed (outfit, pose)"  # catalog kind order
     assert rec.decider is not None and rec.decider.failures >= 1
     for n in range(query.DECIDER_BREAKER + 2):
         rec.recommend(f"stockings {n}", k=1)
     tripped = len(calls)
     rec.recommend("stockings again", k=1)
     assert len(calls) == tripped  # breaker open: no more requests
+
+
+def test_decider_status_names_the_failed_kinds_or_is_absent(
+    index_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from refsrag import query
+
+    def pose_fails(self: object, context: str, kind: str, docs: list[str]) -> list[float]:
+        if kind == "pose":
+            raise ValueError("malformed payload")
+        return [1.0] * len(docs)
+
+    monkeypatch.setattr(query.DeciderReranker, "_score", pose_fails)
+    monkeypatch.setattr(query.time, "sleep", lambda s: None)
+    params = {"decider": {"url": "http://x", "model": "m"}, "decider_depth": 4, "w_decider": 2.0}
+    rec = Recommender(Index(index_dir), featherless_api_key="k", decider_rerank=True, params=params)
+    assert rec.recommend("soles", k=1, kinds=["pose", "outfit"]).decider == (
+        "unavailable: the decision model failed (pose)"
+    )
+    assert rec.recommend("stockings", k=1, kinds=["outfit"]).decider == "m"
+    # no decider runs: none configured (no key, or not asked for), or the index defines none
+    no_decider = Recommender(Index(index_dir), featherless_api_key="k", decider_rerank=True,
+                             params={"decider": None})  # fmt: skip
+    for r in (no_decider, Recommender(Index(index_dir), featherless_api_key="k", params=params)):
+        assert "decider" not in r.recommend("soles", k=1).to_dict()
 
 
 def test_decider_scores_reorder_the_top(index_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:

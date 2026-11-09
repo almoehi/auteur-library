@@ -7,9 +7,9 @@ Three layers, never mixed:
 - s3 key: the bucket key, ``<public_prefix><ref key>``.
 
 Every catalog lives below ``library/<catalog key>/``: its files in ``assets/``, its index versions in
-``rag/<version>/`` and the pointers in ``rag/``: ``latest.json`` (the version the deployed readers
-follow; a publish may leave it alone) and ``latest.s<schema>.json`` (the newest published version of
-that index schema, for readers of exactly that schema).
+``rag/<version>/`` and the pointers in ``rag/``: ``latest.json`` (what the deployed schema-1 readers
+follow; only a schema-1 index is ever published to it) and ``latest.s<schema>.json`` (the newest
+published version of that index schema, for readers of exactly that schema).
 """
 
 from __future__ import annotations

@@ -94,7 +94,8 @@ class FilterSpec:
         if not isinstance(value, bool | str) and (
             (self.min is not None and value < self.min) or (self.max is not None and value > self.max)
         ):
-            raise ValueError(f"filter {self.name}: {value} is outside {self.min}..{self.max}")
+            lo, hi = _num(self.min), _num(self.max)
+            raise ValueError(f"filter {self.name}: {_num(value)} is outside {lo}..{hi}")
         return value
 
     def _parse_scalar(self, text: str) -> Scalar:
@@ -110,6 +111,13 @@ class FilterSpec:
                 raise ValueError(f"filter {self.name} takes true or false, not {text!r}")
             return text.lower() in _TRUE
         return text
+
+
+def _num(value: float | None) -> str:
+    """A number as JavaScript prints it (``3.0`` -> ``3``), so error texts match the TypeScript port."""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
 
 
 @dataclass(frozen=True)
@@ -128,6 +136,9 @@ class Catalog:
     def __post_init__(self) -> None:
         if not self.kinds:
             raise ValueError("a catalog needs at least one kind")
+        for kind in self.kinds:
+            if kind.isdigit():  # a JavaScript object would put it first, out of the declared order
+                raise ValueError(f"kind {kind!r} is integer-like; kind keys must not be all digits")
         names = [f.name for f in self.filters]
         if len(set(names)) != len(names):
             raise ValueError(f"duplicate filter names: {names}")
@@ -154,6 +165,43 @@ class Catalog:
         out = asdict(self)
         out["filters"] = [{k: v for k, v in f.items() if v is not None} for f in out["filters"]]
         return out
+
+    def describe(self) -> dict[str, Any]:
+        """The agent-facing summary (``recommend.py --describe``): what the catalog holds, its kinds, the
+        filters an agent may set and ``max_k``. Filters omit their attr ``field``, and min / max when
+        unset."""
+        return {
+            "catalog": self.key,
+            "title": self.title,
+            "description": self.description,
+            "nudity": self.nudity,
+            "kinds": {k: asdict(v) for k, v in self.kinds.items()},
+            "filters": [
+                {
+                    "name": f.name,
+                    "kind": f.kind,
+                    "type": f.type,
+                    "op": f.op,
+                    **({"min": f.min} if f.min is not None else {}),
+                    **({"max": f.max} if f.max is not None else {}),
+                    "description": f.description,
+                }
+                for f in self.filters
+            ],
+            "max_k": self.max_k,
+        }
+
+    def default_k(self) -> int:
+        """Picks per kind when the caller names no ``k``: 3, at most ``max_k``."""
+        return min(3, self.max_k)
+
+    def check_k(self, k: int | None) -> int:
+        """``k`` (None: ``default_k``) when it is 1..max_k, else a ValueError."""
+        if k is None:
+            return self.default_k()
+        if isinstance(k, bool) or not isinstance(k, int) or not 1 <= k <= self.max_k:
+            raise ValueError(f"k must be between 1 and {self.max_k}")
+        return k
 
     def check_kinds(self, kinds: Sequence[str] | None) -> list[str]:
         """The requested kinds in catalog order (None: all); an unknown kind is a ValueError."""

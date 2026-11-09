@@ -9,13 +9,17 @@
       golden.json           parity fixtures for the TypeScript port (and selection-golden.json, written
                             by ``refs index golden``)
 
-``publish`` uploads it to ``library/<catalog>/rag/<version>/``, points ``rag/latest.s<schema>.json`` at it
-and, unless told not to, ``rag/latest.json`` too.
+The items come from the ``refs`` builder (``build_items``: labels, lexicon, affinities) or, for any
+catalog, from a prebuilt items jsonl checked against the catalog's descriptor (``read_items`` +
+``check_items``). ``publish`` uploads a version to ``library/<catalog>/rag/<version>/`` and points
+``rag/latest.s<schema>.json`` at it; ``rag/latest.json``, the pointer of the deployed schema-1 readers,
+only for a schema-1 index.
 """
 
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 import json
 import logging
@@ -417,18 +421,61 @@ def bundle_recommend_py() -> str:
     return "\n".join(parts) + "\n"
 
 
-GOLDEN_QUERIES: Final = (
-    "college girl cosplay",
-    "foot fetish, show me your soles",
-    "ass worship, bend over and show your ass",
-    "lingerie strip tease in stockings and garters",
-    "doggy style sex",
-    "cowgirl riding him",
-    "femdom goddess in leather boots",
-    "Shiny Tan Pantyhose Footjob. I love you underneath me, look up at my nyloned legs and high heels.",
-    "secretary roleplay in the office",
-    "beach bikini tease",
+@dataclass(frozen=True)
+class GoldenCases:
+    """The requests of a catalog's parity fixtures: ``queries`` (contexts), ``filters`` (filter cases,
+    each run on the first and the fifth query, or the last one when there are fewer) and ``invalid``
+    (keyword arguments of ``recommend`` a reader must reject)."""
+
+    queries: tuple[str, ...]
+    filters: tuple[descriptor.Filters, ...] = ()
+    invalid: tuple[dict[str, Any], ...] = ()
+
+
+REFS_GOLDEN_CASES: Final = GoldenCases(
+    queries=(
+        "college girl cosplay",
+        "foot fetish, show me your soles",
+        "ass worship, bend over and show your ass",
+        "lingerie strip tease in stockings and garters",
+        "doggy style sex",
+        "cowgirl riding him",
+        "femdom goddess in leather boots",
+        "Shiny Tan Pantyhose Footjob. I love you underneath me, look up at my nyloned legs and high heels.",
+        "secretary roleplay in the office",
+        "beach bikini tease",
+    ),
+    # every op, a ``views`` kind and an ``image`` kind
+    filters=(
+        {"solo": True, "max_exposure": 1},
+        {"solo": False},
+        {"outfit_category": ["lingerie", "sexy"], "pose_series": ["duo"]},
+    ),
+    # an unknown filter, a wrong type, a bool for an integer, a value out of range, a scalar for ``in``,
+    # an unknown kind, k below 1 and above max_k
+    invalid=(
+        {"filters": {"exposure": 1}},
+        {"filters": {"max_exposure": "1"}},
+        {"filters": {"max_exposure": True}},
+        {"filters": {"max_exposure": 4}},
+        {"filters": {"outfit_category": "lingerie"}},
+        {"kinds": ["location"]},
+        {"k": 0},
+        {"k": 5},
+    ),
 )
+
+
+def load_golden_cases(path: Path | None) -> GoldenCases:
+    """The cases of a yaml file (``queries``, ``filters``, ``invalid``); None: the ``refs`` cases."""
+    if path is None:
+        return REFS_GOLDEN_CASES
+    data = yaml.safe_load(path.read_text())
+    return GoldenCases(
+        queries=tuple(data["queries"]),
+        filters=tuple(data.get("filters") or ()),
+        invalid=tuple(data.get("invalid") or ()),
+    )
 
 
 def golden(
@@ -436,11 +483,12 @@ def golden(
     items: Sequence[Mapping[str, Any]],
     lexicon: Mapping[str, Mapping[str, float]],
     params: Mapping[str, Any],
+    queries: Sequence[str] = REFS_GOLDEN_CASES.queries,
 ) -> dict[str, Any]:
     """Stage-1 outputs (no dense, no rerank) the TypeScript port must reproduce exactly: per case the
     tokens, the matched concepts and, per kind (``scores``), the top 10 by fused score."""
     cases = []
-    for text in GOLDEN_QUERIES:
+    for text in queries:
         q_concepts = stage1.match_concepts(text, lexicon)
         q_tokens = stage1.tokenize(text)
         scores: dict[str, list[dict[str, Any]]] = {}
@@ -465,6 +513,7 @@ def golden(
     return {"catalog": catalog.key, "cases": cases}
 
 
+LATEST_JSON_SCHEMA: Final = 1  # the only index schema rag/latest.json may point at
 SELECTION_BASE_URL: Final = "https://refs.example/base/"
 GOLDEN_FILE: Final = "golden.json"
 SELECTION_GOLDEN_FILE: Final = "selection-golden.json"
@@ -472,127 +521,230 @@ SELECTION_GOLDEN_FILE: Final = "selection-golden.json"
 
 class FixedDecider:
     """Deterministic stand-in for the decision model in the selection fixtures: candidate n (1-based)
-    scores (n * 7) % 4. The TypeScript parity test feeds the same scores."""
+    scores (n * 7) % 4. The TypeScript parity test feeds the same scores; for the kinds in ``fails`` it
+    fails (a case's ``decider_fails``)."""
 
     model = "fixed"
 
+    def __init__(self, fails: Collection[str] = ()) -> None:
+        self.fails = set(fails)
+
     def score(self, context: str, kind: str, docs: Sequence[str]) -> list[float] | None:
+        if kind in self.fails:
+            return None
         return [float((n * 7) % 4) for n in range(1, len(docs) + 1)]
 
 
-# Filter cases of the selection fixtures: every op, a ``views`` kind and an ``image`` kind.
-SELECTION_FILTERS: Final[tuple[descriptor.Filters, ...]] = (
-    {"solo": True, "max_exposure": 1},
-    {"solo": False},
-    {"outfit_category": ["lingerie", "sexy"], "pose_series": ["duo"]},
-)
-# Requests the readers must reject (ValueError in Python): an unknown filter, a wrong type, a bool for
-# an integer, a value out of range, a scalar for ``in``, an unknown kind.
-INVALID_REQUESTS: Final[tuple[dict[str, Any], ...]] = (
-    {"filters": {"exposure": 1}},
-    {"filters": {"max_exposure": "1"}},
-    {"filters": {"max_exposure": True}},
-    {"filters": {"max_exposure": 4}},
-    {"filters": {"outfit_category": "lingerie"}},
-    {"kinds": ["location"]},
-)
+def bare_views(media: Mapping[str, Any]) -> dict[str, Any]:
+    """``media`` of a ``views`` item with the first view's ``depth`` and ``view`` absent and the second's
+    null: the selection fixtures' ``media_override`` case (both mean absent)."""
+    views = [dict(v) for v in media["views"]]
+    views[0] = {k: v for k, v in views[0].items() if k not in ("depth", "view")}
+    if len(views) > 1:
+        views[1] |= {"depth": None, "view": None}
+    return {"views": views}
 
 
-def selection_golden(index_dir: Path) -> dict[str, Any]:
+def selection_golden(index_dir: Path, cases: GoldenCases = REFS_GOLDEN_CASES) -> dict[str, Any]:
     """``Recommender.recommend`` results (stage 1: no dense, no cross-encoder) the TypeScript port
-    must reproduce field for field: every GOLDEN_QUERIES context, the SELECTION_FILTERS variants of two
-    of them, one single-kind request, four decider cases with ``FixedDecider`` scores, and the
-    INVALID_REQUESTS (``invalid``) that must be rejected."""
-    idx = query.Index(index_dir)
-    plain = query.Recommender(idx, base_url=SELECTION_BASE_URL, vector_set=None, rerank=False)
-    decided = query.Recommender(idx, base_url=SELECTION_BASE_URL, vector_set=None, rerank=False)
-    decided.decider = FixedDecider()
-    kinds = list(idx.catalog.kinds)
+    must reproduce field for field.
 
-    def case(
-        rec: query.Recommender, ctx: str, k: int, flt: descriptor.Filters, decider: bool, kinds: list[str]
+    A case is ``{context, k?, kinds, filters, decider, decider_fails?, media_override?, result}``: ``k``
+    absent = the default k; ``decider`` true = ``FixedDecider`` scores, failing for the kinds in
+    ``decider_fails``; ``media_override`` = ``{id, media}`` replaces that item's media before the request.
+    Cases: every query; the filter cases on two of them; one single-kind request; one default-k request;
+    four decider cases and one with a failing kind; one ``views`` item whose views lack depth and view
+    (``bare_views``). ``invalid``: the requests that must be rejected, with the error text."""
+    idx = query.Index(index_dir)
+    kinds = list(idx.catalog.kinds)
+    qs = cases.queries
+
+    def run(
+        ctx: str,
+        k: int | None,
+        flt: descriptor.Filters,
+        wanted: list[str],
+        decider: FixedDecider | None = None,
+        index: query.Index = idx,
     ) -> dict[str, Any]:
-        result = rec.recommend(ctx, k=k, kinds=kinds, filters=flt)
-        out = {"context": ctx, "k": k, "kinds": kinds, "filters": flt, "decider": decider}
+        rec = query.Recommender(index, base_url=SELECTION_BASE_URL, vector_set=None, rerank=False)
+        rec.decider = decider
+        result = rec.recommend(ctx, k=k, kinds=wanted, filters=flt)
+        out: dict[str, Any] = {"context": ctx} | ({"k": k} if k is not None else {})
+        out |= {"kinds": wanted, "filters": flt, "decider": decider is not None}
+        if decider is not None and decider.fails:
+            out["decider_fails"] = [kind for kind in kinds if kind in decider.fails]
         return out | {"result": result.to_dict()}
 
-    cases = [case(plain, ctx, 3, {}, False, kinds) for ctx in GOLDEN_QUERIES]
-    for ctx in (GOLDEN_QUERIES[0], GOLDEN_QUERIES[4]):
-        cases += [case(plain, ctx, 4, flt, False, kinds) for flt in SELECTION_FILTERS]
-    cases.append(case(plain, GOLDEN_QUERIES[1], 2, {}, False, kinds[-1:]))
-    cases += [case(decided, ctx, 3, {}, True, kinds) for ctx in GOLDEN_QUERIES[:4]]
+    k2, k3, k4 = (min(n, idx.catalog.max_k) for n in (2, 3, 4))
+    out = [run(ctx, k3, {}, kinds) for ctx in qs]
+    for ctx in dict.fromkeys((qs[0], qs[min(4, len(qs) - 1)])):
+        out += [run(ctx, k4, flt, kinds) for flt in cases.filters]
+    out.append(run(qs[min(1, len(qs) - 1)], k2, {}, kinds[-1:]))
+    out += [run(ctx, k3, {}, kinds, FixedDecider()) for ctx in qs[:4]]
+    # added with the catalog-generic review: default k, a failing kind, views without depth / view
+    out.append(run(qs[0], None, {}, kinds))
+    out.append(run(qs[0], k3, {}, kinds, FixedDecider(kinds[-1:])))
+    views_kind = next((k for k, spec in idx.catalog.kinds.items() if spec.media == "views"), None)
+    if views_kind is not None:
+        row = idx.rows[views_kind][0]
+        item, media = idx.items[row], bare_views(idx.items[row]["media"])
+        bare = copy.copy(idx)
+        bare.items = [*idx.items[:row], {**item, "media": media}, *idx.items[row + 1 :]]
+        case = run(item["title"], k3, {}, [views_kind], index=bare)
+        out.append(case | {"media_override": {"id": item["id"], "media": media}})
+    plain = query.Recommender(idx, base_url=SELECTION_BASE_URL, vector_set=None, rerank=False)
     invalid = []
-    for request in INVALID_REQUESTS:
+    for request in cases.invalid:
         try:
-            plain.recommend(GOLDEN_QUERIES[0], **request)
+            plain.recommend(qs[0], **request)
         except ValueError as e:
             invalid.append(request | {"error": str(e)})
             continue
         raise AssertionError(f"{request} was accepted")
     return {
         "base_url": SELECTION_BASE_URL,
-        "decider_scores": "(n * 7) % 4 for candidate n",
-        "cases": cases,
+        "decider_scores": "(n * 7) % 4 for candidate n; none for the kinds in decider_fails",
+        "cases": out,
         "invalid": invalid,
     }
 
 
-def write_golden(version: str) -> list[Path]:
+def write_golden(version: str, cases: GoldenCases = REFS_GOLDEN_CASES) -> list[Path]:
     """(Re)write the parity fixtures of ``data/index/<version>`` from its own ``index.json``:
     ``golden.json`` (stage 1) and ``selection-golden.json`` (whole recommendations)."""
     out = INDEX_ROOT / version
     index = json.loads((out / "index.json").read_text())
     catalog = Catalog.from_json(index["catalog"])
-    stage = golden(catalog, index["items"], index["lexicon"], index["params"])
+    stage = golden(catalog, index["items"], index["lexicon"], index["params"], cases.queries)
+    selection = selection_golden(out, cases)
     paths = [out / GOLDEN_FILE, out / SELECTION_GOLDEN_FILE]
     paths[0].write_text(json.dumps(stage, indent=1) + "\n")
-    paths[1].write_text(json.dumps(selection_golden(out), indent=1) + "\n")
+    paths[1].write_text(json.dumps(selection, indent=1) + "\n")
     return paths
 
 
+ITEM_KEYS: Final = ("id", "kind", "title", "doc", "concepts", "attrs", "media")
+VIEW_OPTIONAL: Final = ("depth", "view")  # absent or null; the build writes them only when set
+
+
+def read_items(path: Path) -> list[dict[str, Any]]:
+    """The schema-2 items of a jsonl file, one item per non-empty line (unchecked: see check_items)."""
+    lines = path.read_text().splitlines()
+    return [json.loads(line) for line in lines if line.strip()]
+
+
+def normalize_items(items: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """The items with null ``depth`` / ``view`` of a view dropped: null means absent, and the index
+    never stores null for them."""
+    out = []
+    for item in items:
+        media = item["media"]
+        if isinstance(media.get("views"), list):
+            views = [{k: v for k, v in view.items() if not (k in VIEW_OPTIONAL and v is None)}
+                     for view in media["views"]]  # fmt: skip
+            media = {**media, "views": views}
+        out.append({**item, "media": media})
+    return out
+
+
 def check_items(catalog: Catalog, items: Sequence[Mapping[str, Any]]) -> None:
-    """Every item has a declared kind, the media its kind declares, and the attrs the catalog's filters
-    and result fields name; a ValueError names the first offender."""
+    """Every item has the schema-2 fields, a unique id, a declared kind, the media its kind declares
+    (ref keys below ``library/<catalog key>/assets/``) and the attrs the catalog's filters and result
+    fields name; a ValueError names the first offender."""
     needed = {kind: set(fields) for kind, fields in catalog.result_fields.items()}
     for f in catalog.filters:
         needed.setdefault(f.kind, set()).add(f.field)
-    for item in items:
+    assets = keys.asset_ref_key(catalog.key, "")
+    seen: set[str] = set()
+    for n, item in enumerate(items):
+        name = item.get("id", f"item {n + 1}")
+        missing_keys = [k for k in ITEM_KEYS if k not in item]
+        if missing_keys:
+            raise ValueError(f"{name}: missing {', '.join(missing_keys)}")
+        if not isinstance(item["id"], str) or not item["id"]:
+            raise ValueError(f"item {n + 1}: id must be a non-empty string")
+        if item["id"] in seen:
+            raise ValueError(f"duplicate id {item['id']!r}")
+        seen.add(item["id"])
+        if not all(isinstance(item[k], str) for k in ("title", "doc")):
+            raise ValueError(f"{name}: title and doc must be strings")
+        if not all(isinstance(item[k], dict) for k in ("concepts", "attrs", "media")):
+            raise ValueError(f"{name}: concepts, attrs and media must be objects")
         spec = catalog.kinds.get(item["kind"])
         if spec is None:
-            raise ValueError(f"{item['id']}: kind {item['kind']!r} is not in the catalog")
+            raise ValueError(f"{name}: kind {item['kind']!r} is not in the catalog")
         if spec.media not in item["media"]:
-            raise ValueError(f"{item['id']}: no media {spec.media!r}")
+            raise ValueError(f"{name}: no media {spec.media!r}")
+        refs = [item["media"]["image"]] if spec.media == "image" else _view_refs(name, item["media"]["views"])
+        for ref in refs:
+            if not isinstance(ref, str) or not ref.startswith(assets):
+                raise ValueError(f"{name}: media {ref!r} is not below {assets}")
         missing = needed.get(item["kind"], set()) - set(item["attrs"])
         if missing:
-            raise ValueError(f"{item['id']}: attrs {sorted(missing)} missing")
+            raise ValueError(f"{name}: attrs {sorted(missing)} missing")
+
+
+def _view_refs(name: str, views: object) -> list[object]:
+    if not isinstance(views, list) or not views:
+        raise ValueError(f"{name}: views must be a non-empty list")
+    refs: list[object] = []
+    for view in views:
+        missing = [k for k in ("angle", "image", "focus") if k not in view]
+        if missing:
+            raise ValueError(f"{name}: a view is missing {', '.join(missing)}")
+        refs += [view["image"], *([view["depth"]] if view.get("depth") is not None else [])]
+    return refs
 
 
 def build(
-    settings: Settings, catalog: Catalog, version: str, *, vector_sets: Sequence[str] | None = None
+    settings: Settings,
+    catalog: Catalog,
+    version: str,
+    *,
+    items_file: Path | None = None,
+    lexicon_file: Path | None = None,
+    vocab_file: Path | None = None,
+    vector_sets: Sequence[str] | None = None,
+    cases: GoldenCases = REFS_GOLDEN_CASES,
 ) -> Path:
+    """Build ``data/index/<version>`` of ``catalog``. Items: ``items_file`` (a schema-2 jsonl), else the
+    ``refs`` builder. Lexicon (``{"aliases": {alias: {concept: w}}}``) and vocab (``{"concepts": {name:
+    {type, description}}}``): the given files, else the project's for the ``refs`` builder and none for
+    an items file. ``vector_sets``: None = all, [] = none (no network)."""
     out = INDEX_ROOT / version
+    if (out / "index.json").is_file():
+        held = json.loads((out / "index.json").read_text())["catalog"]["key"]
+        if held != catalog.key:
+            raise ValueError(f"{out} already holds catalog {held}, not {catalog.key}: pick another version")
+    if items_file is None:
+        lexicon_file, vocab_file = lexicon_file or LEXICON_FILE, vocab_file or VOCAB_FILE
+    lexicon = json.loads(lexicon_file.read_text())["aliases"] if lexicon_file else {}
+    vocab = yaml.safe_load(vocab_file.read_text())["concepts"] if vocab_file else {}
+    raw = read_items(items_file) if items_file else build_items(settings, catalog.key, lexicon)
+    check_items(catalog, raw)
+    items = normalize_items(raw)
     out.mkdir(parents=True, exist_ok=True)
-    lexicon = json.loads(LEXICON_FILE.read_text())["aliases"]
-    vocab = yaml.safe_load(VOCAB_FILE.read_text())["concepts"]
-    items = build_items(settings, catalog.key, lexicon)
-    check_items(catalog, items)
     terms = {c for i in items for c in i["concepts"] if c.startswith(LABEL_PREFIX)}
     focus = concept_focus(items, list(vocab))
     concepts = {
         c: {"type": v["type"], "description": v["description"], "focus": focus.get(c, {})}
         for c, v in vocab.items()
     } | label_concepts(terms)
-    common = common_words(read_clips(LAKE_CLIPS), share=COMMON_WORD_SHARE) if LAKE_CLIPS.is_file() else set()
-    if not common:
-        log.warning("no lake snapshot at %s: label aliases are not filtered for common words", LAKE_CLIPS)
-    lexicon = _merge_lexicons(lexicon, label_lexicon(terms, common))
+    if terms:
+        common = (
+            common_words(read_clips(LAKE_CLIPS), share=COMMON_WORD_SHARE) if LAKE_CLIPS.is_file() else set()
+        )
+        if not common:
+            log.warning("no lake snapshot at %s: label aliases are not filtered for common words", LAKE_CLIPS)
+        lexicon = _merge_lexicons(lexicon, label_lexicon(terms, common))
     params = dict(DEFAULT_PARAMS)
     if params["reranker"]:
         fetch_onnx_model(RERANKER_REPO, out / params["reranker"]["model_dir"])
     sets: dict[str, Any] = {}
     files: list[str] = []
     for spec in VECTOR_SETS:
-        if vector_sets and spec.name not in vector_sets:
+        if vector_sets is not None and spec.name not in vector_sets:
             continue
         log.info("embedding %d docs with %s", len(items), spec.name)
         vecs = embed_docs(spec, [i["doc"] for i in items], out, settings)
@@ -614,7 +766,8 @@ def build(
             f"{params['reranker']['model_dir']}/tokenizer.json",
         ]
     (out / "recommend.py").write_text(bundle_recommend_py())
-    (out / GOLDEN_FILE).write_text(json.dumps(golden(catalog, items, lexicon, params), indent=1) + "\n")
+    stage = golden(catalog, items, lexicon, params, cases.queries)
+    (out / GOLDEN_FILE).write_text(json.dumps(stage, indent=1) + "\n")
     files += ["recommend.py", "golden.json"]
     index = {
         "schema_version": query.SCHEMA_VERSION,
@@ -632,10 +785,11 @@ def build(
     return out
 
 
-def publish(settings: Settings, version: str, *, flip_latest: bool) -> dict[str, str]:
+def publish(settings: Settings, version: str) -> dict[str, str]:
     """Upload ``data/index/<version>`` below its catalog's key (index.json last), then point
-    ``rag/latest.s<schema>.json`` at it and, with ``flip_latest``, ``rag/latest.json`` too. Returns the
-    URLs of the pointers written."""
+    ``rag/latest.s<schema>.json`` at it and, for a schema-1 index only, ``rag/latest.json``: that is the
+    pointer the deployed schema-1 readers follow, so a newer schema never moves it. Returns the URLs of
+    the pointers written."""
     src = INDEX_ROOT / version
     index = json.loads((src / "index.json").read_text())
     catalog, schema = str(index["catalog"]["key"]), int(index["schema_version"])
@@ -661,7 +815,7 @@ def publish(settings: Settings, version: str, *, flip_latest: bool) -> dict[str,
         "sha256": hashlib.sha256((src / "index.json").read_bytes()).hexdigest(),
     }
     pointers = [keys.schema_latest_ref_key(catalog, schema)]
-    if flip_latest:
+    if schema == LATEST_JSON_SCHEMA:
         pointers.append(keys.latest_ref_key(catalog))
     for ref_key in pointers:
         put(ref_key, json.dumps(pointer).encode(), "application/json", "public, max-age=60")

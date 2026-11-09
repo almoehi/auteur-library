@@ -72,6 +72,10 @@ The final review recommends generalising before more consumers bind to the curre
 items (`attrs`, `media`), generic filters and result shape, per-catalog keys; index v4 published to
 `library/refs/rag/latest.s2.json` (`latest.json` stays on v3 for the deployed schema-1 reader). The contract
 is in `references-rag/README.md` ("Index schema 2"); v4 rankings equal v3's (`eval/compare_v3_v4.py`).
+Review fixes (same day): publish never moves `latest.json` for schema ≥ 2; a new catalog builds from a
+descriptor yaml + items jsonl (`refs index build --catalog --items`, README "Adding a catalog"); the
+`decider` status, default `k` (min(3, max_k)), integer-like kind keys, null `depth`/`view` and
+`Catalog.describe()` are pinned for both ports; v4 fixtures regenerated (index unchanged).
 Stage B: the TypeScript port reads `latest.s2.json`.
 
 ## 4. Phases
