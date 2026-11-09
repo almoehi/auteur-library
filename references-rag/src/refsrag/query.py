@@ -1,11 +1,14 @@
-"""The query interface: given a text context, the top poses and outfits with public URLs.
+"""The query interface: given a text context, the top items of each kind of a catalog (poses and
+outfits for ``refs``) with public URLs. Catalog-generic: kinds, filters, media and result fields come
+from the index's ``catalog`` descriptor (``descriptor.py``).
 
-Shipped as the single file ``recommend.py`` (bundled from keys.py + stage1.py + this module by
-``refs index build``), so it uses the standard library plus numpy; dense retrieval and reranking
-use onnxruntime + tokenizers when installed, or the Featherless embeddings API when
+Shipped as the single file ``recommend.py`` (bundled from keys.py + stage1.py + descriptor.py + this
+module by ``refs index build``), so it uses the standard library plus numpy; dense retrieval and
+reranking use onnxruntime + tokenizers when installed, or the Featherless embeddings API when
 FEATHERLESS_API_KEY is set. Without either it runs stage 1 only (lexicon + BM25).
 
-    python recommend.py "college girl cosplay, foot tease" --index <dir or latest.json URL> [--json]
+    python recommend.py "college girl cosplay, foot tease" --index <dir or latest.s2.json URL> [--json]
+    python recommend.py --describe --index <...>   # the catalog: kinds, filters, max_k
 """
 
 from __future__ import annotations
@@ -22,19 +25,18 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Final, Literal, Protocol
+from typing import Any, Final, Protocol
 
 import numpy as np
 
-from refsrag.keys import url
+from refsrag.descriptor import Catalog, Filters, FilterSpec, FilterValue
+from refsrag.keys import is_pointer, url
 from refsrag.stage1 import Bm25, dot, match_concepts, mmr_pick, rrf, tokenize
 
-Kind = Literal["outfit", "pose"]
-KINDS: Final[tuple[Kind, ...]] = ("outfit", "pose")
 FEATHERLESS_URL: Final = "https://api.featherless.ai/v1/embeddings"
-SCHEMA_VERSION: Final = 1
+SCHEMA_VERSION: Final = 2
 RETRIES: Final = 4
 DECIDER_BREAKER: Final = 3  # consecutive failed requests that turn the decider rerank off
 AUTO: Final = "auto"
@@ -43,45 +45,55 @@ AUTO: Final = "auto"
 # ── Results ──────────────────────────────────────────────────────────────────────────────────
 
 
+# The JSON form omits unset optional fields (never null): depth, best_angle and views of an ``image``
+# pick, depth of a view without one, and decider when the decision-model rerank is off.
+
+
 @dataclass(frozen=True)
 class ViewUrls:
     angle: str
     image: str
-    depth: str
+    depth: str | None = None
 
 
 @dataclass(frozen=True)
 class Pick:
     id: str
-    kind: Kind
+    kind: str
     title: str
     score: float
-    why: list[str]
-    image: str  # outfit image, or the pose's best view line art
-    depth: str | None = None  # pose only: depth map of the best view
-    best_angle: str | None = None
-    views: list[ViewUrls] = field(default_factory=list)  # pose only: every view
+    why: list[str]  # the query concepts the item serves; a ``views`` pick ends with its best view
+    image: str  # the item's image, or its best view's image (``views`` kinds)
+    attrs: dict[str, Any]  # the kind's ``result_fields`` only
+    depth: str | None = None  # ``views`` kinds: depth map of the best view, when it has one
+    best_angle: str | None = None  # ``views`` kinds
+    views: list[ViewUrls] | None = None  # ``views`` kinds: every view
 
 
 @dataclass(frozen=True)
 class Recommendations:
+    catalog: str  # the catalog key
     index_version: str
     context: str
     concepts: dict[str, float]  # what the context was understood as
     dense: str  # the vector set used, or "unavailable: <reason>"
-    outfits: list[Pick]
-    poses: list[Pick]
+    picks: dict[str, list[Pick]]  # kind -> picks, one entry per requested kind in catalog order
+    decider: str | None = None  # the decision model that reranked, "unavailable: <reason>", or off
+
+    def to_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = _without_none(asdict(self))
+        return out
 
     def to_json(self) -> str:
-        return json.dumps(asdict(self), indent=1)
+        return json.dumps(self.to_dict(), indent=1)
 
 
-@dataclass(frozen=True)
-class Filters:
-    solo: bool | None = None  # poses: True solo only, False duo only
-    max_exposure: int | None = None  # outfits: 0..3
-    outfit_categories: tuple[str, ...] = ()  # e.g. ("lingerie", "sexy")
-    pose_series: tuple[str, ...] = ()  # e.g. ("full_body_sexy", "duo")
+def _without_none(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _without_none(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [_without_none(v) for v in value]
+    return value
 
 
 # ── Embedders ────────────────────────────────────────────────────────────────────────────────
@@ -172,17 +184,25 @@ class CrossEncoder:
         return [self._cache[(query, d)] for d in docs]
 
 
+class Decider(Protocol):
+    model: str
+
+    def score(self, context: str, kind: str, docs: Sequence[str]) -> list[float] | None: ...
+
+
 class DeciderReranker:
     """Reranks candidates with a decision model (Featherless classifier API): ONE request per kind,
     the context plus a numbered candidate list as state, one 0..3 score question per candidate. The
-    TypeScript port does the same through the workspace decider (``spec.decider``)."""
+    TypeScript port does the same through the workspace decider (``spec.decider``). The catalog's
+    ``decider_context`` and ``decider_guidance`` word the state."""
 
     QUESTION: Final = (
         "How well does candidate {n} fit the context? 0 = does not fit, 3 = exactly what it would use."
     )
 
-    def __init__(self, spec: Mapping[str, Any], api_key: str) -> None:
+    def __init__(self, spec: Mapping[str, Any], api_key: str, catalog: Catalog) -> None:
         self.url, self.model, self.api_key = str(spec["url"]), str(spec["model"]), api_key
+        self.catalog = catalog
         self._cache: dict[tuple[str, tuple[str, ...]], list[float] | None] = {}
         self.failures = 0  # consecutive; at DECIDER_BREAKER the reranker turns itself off
 
@@ -213,8 +233,7 @@ class DeciderReranker:
         return result
 
     def _score(self, context: str, kind: str, docs: Sequence[str]) -> list[float]:
-        listing = "\n".join(f"Candidate {n}: {d}" for n, d in enumerate(docs, start=1))
-        state = f"Context of an adult clip: {context}\n\nCandidate {kind} references:\n{listing}"
+        state = decider_state(self.catalog, context, kind, docs)
         questions = {
             f"c{n}": {
                 "type": "score",
@@ -237,6 +256,14 @@ class DeciderReranker:
         return [float(s) if isinstance(s, int | float) else 0.0 for s in scores]
 
 
+def decider_state(catalog: Catalog, context: str, kind: str, docs: Sequence[str]) -> str:
+    """The decision model's state: the context, the numbered candidates and the kind's guidance."""
+    listing = "\n".join(f"Candidate {n}: {d}" for n, d in enumerate(docs, start=1))
+    state = f"Context of {catalog.decider_context}: {context}\n\nCandidate {kind} references:\n" + listing
+    guidance = catalog.decider_guidance.get(kind)
+    return f"{state}\n\n{guidance}" if guidance else state
+
+
 # ── Index ───────────────────────────────────────────────────────────────────────────────────
 
 
@@ -248,6 +275,7 @@ class Index:
         data = json.loads((index_dir / "index.json").read_text())
         if data["schema_version"] != SCHEMA_VERSION:
             raise ValueError(f"index schema {data['schema_version']} != supported {SCHEMA_VERSION}")
+        self.catalog = Catalog.from_json(data["catalog"])
         self.version: str = data["index_version"]
         self.default_base_url: str = data["default_base_url"]
         self.params: dict[str, Any] = data["params"]
@@ -255,18 +283,21 @@ class Index:
         self.concepts: dict[str, dict[str, Any]] = data["concepts"]
         self.items: list[dict[str, Any]] = data["items"]
         self.vector_sets: dict[str, dict[str, Any]] = data["vector_sets"]
+        strays = {i["kind"] for i in self.items} - set(self.catalog.kinds)
+        if strays:
+            raise ValueError(f"items of kinds {sorted(strays)} the catalog does not declare")
+        self.rows = {k: [n for n, i in enumerate(self.items) if i["kind"] == k] for k in self.catalog.kinds}
         self.bm25 = {
             kind: Bm25(
-                [tokenize(i["doc"]) for i in self.items if i["kind"] == kind],
+                [tokenize(self.items[r]["doc"]) for r in rows],
                 k1=self.params["bm25_k1"],
                 b=self.params["bm25_b"],
             )
-            for kind in KINDS
+            for kind, rows in self.rows.items()
         }
-        self.rows = {kind: [n for n, i in enumerate(self.items) if i["kind"] == kind] for kind in KINDS}
-        self._bm25_cache: dict[tuple[Kind, tuple[str, ...]], list[float]] = {}
+        self._bm25_cache: dict[tuple[str, tuple[str, ...]], list[float]] = {}
 
-    def bm25_scores(self, kind: Kind, tokens: Sequence[str]) -> list[float]:
+    def bm25_scores(self, kind: str, tokens: Sequence[str]) -> list[float]:
         """BM25 of every item of ``kind`` (in ``rows[kind]`` order), cached per query."""
         key = (kind, tuple(tokens))
         if key not in self._bm25_cache:
@@ -280,23 +311,24 @@ class Index:
 
 
 def fetch_index(source: str, cache_dir: Path) -> Path:
-    """A local index directory for ``source``: a directory, or a ``latest.json`` / ``index.json`` URL
-    (downloaded with its vector sets and models into ``cache_dir/<version>``, once).
+    """A local index directory for ``source``: a directory, or a pointer (``latest.json``,
+    ``latest.s<schema>.json``) / ``index.json`` URL (downloaded with its vector sets and models into
+    ``cache_dir/<version>``, once).
 
     Safe for concurrent runs: the download goes to a per-process temp directory that is renamed into
-    place, so ``cache_dir/<version>`` is either absent or complete. With a ``latest.json`` source the
+    place, so ``cache_dir/<version>`` is either absent or complete. With a pointer source the
     ``index.json`` bytes must match its sha256."""
     if not source.startswith(("http://", "https://")):
         return Path(source)
     expected_sha: str | None = None
-    if source.endswith("latest.json"):
+    if is_pointer(source):
         latest = json.loads(_get(source))
         expected_sha = latest.get("sha256")
         source = source.rsplit("/", 1)[0] + "/" + _safe_rel(latest["path"])  # e.g. "v3/index.json"
     base = source.rsplit("/", 1)[0] + "/"
     raw = _get(source)
     if expected_sha is not None and hashlib.sha256(raw).hexdigest() != expected_sha:
-        raise ValueError(f"{source}: sha256 does not match latest.json")
+        raise ValueError(f"{source}: sha256 does not match its pointer")
     index = json.loads(raw)
     target = cache_dir / _safe_rel(str(index["index_version"]))
     if (target / "index.json").is_file():
@@ -358,8 +390,8 @@ class Recommender:
         spec = self.params.get("reranker")
         self.reranker = CrossEncoder(index.dir, spec) if rerank and spec and _has_onnx() else None
         decider = self.params.get("decider")
-        self.decider = (
-            DeciderReranker(decider, featherless_api_key)
+        self.decider: Decider | None = (
+            DeciderReranker(decider, featherless_api_key, index.catalog)
             if decider_rerank and decider and featherless_api_key
             else None
         )
@@ -381,15 +413,26 @@ class Recommender:
                    featherless_api_key=os.environ.get("FEATHERLESS_API_KEY") or None)  # fmt: skip
 
     def recommend(
-        self, context: str, *, k: int = 3, kinds: Sequence[Kind] = KINDS, filters: Filters | None = None
+        self,
+        context: str,
+        *,
+        k: int = 3,
+        kinds: Sequence[str] | None = None,
+        filters: Mapping[str, FilterValue] | None = None,
     ) -> Recommendations:
-        p, flt = self.params, filters or Filters()
+        """Top ``k`` picks per kind (``kinds``: None = all, in catalog order). ``filters``: filter name
+        -> value as the catalog declares them; an unknown filter or a wrongly typed value is a
+        ValueError."""
+        p, catalog = self.params, self.index.catalog
+        wanted = catalog.check_kinds(kinds)
+        active = catalog.check_filters(filters)
         q_concepts = {c: w for c, w in match_concepts(context, self.index.lexicon).items()}
         q_tokens = tokenize(context)
         q_vec = self.embedder.embed_query(context) if self.embedder else None
-        picks: dict[Kind, list[Pick]] = {"outfit": [], "pose": []}
-        for kind in kinds:
-            rows = [r for r in self.index.rows[kind] if _passes(self.index.items[r], flt)]
+        picks: dict[str, list[Pick]] = {kind: [] for kind in wanted}
+        decider_failed = False
+        for kind in wanted:
+            rows = [r for r in self.index.rows[kind] if _passes(self.index.items[r], active)]
             if not rows:
                 continue
             local = {r: n for n, r in enumerate(self.index.rows[kind])}
@@ -419,51 +462,65 @@ class Recommender:
                     )
                     relevance = dict(zip(top, fused_top, strict=True))
                     order = top  # the final picks come from the decided candidates
+                else:
+                    decider_failed = True
             rel = [relevance.get(i, 0.0) for i in range(len(rows))]
             chosen = mmr_pick(order, rel, _pair_similarity(self, rows), k=k, lam=p["mmr_lambda"])
             picks[kind] = [self._pick(rows[i], rel[i], q_concepts) for i in chosen]
+        decider = None
+        if self.decider:
+            decider = "unavailable: the decision model failed" if decider_failed else self.decider.model
         return Recommendations(
-            self.index.version, context, q_concepts, self.dense_status, picks["outfit"], picks["pose"]
+            catalog.key, self.index.version, context, q_concepts, self.dense_status, picks, decider
         )
 
     def _similarity(self, a: int, b: int) -> float:
-        ia, ib = self.index.items[a], self.index.items[b]
-        same_group = 1.0 if ia.get("group") and ia.get("group") == ib.get("group") else 0.0
-        ca, cb = ia["concepts"], ib["concepts"]
+        """Cosine of two items' concept weights (MMR's redundancy)."""
+        ca, cb = self.index.items[a]["concepts"], self.index.items[b]["concepts"]
         norm = (dot(ca, ca) * dot(cb, cb)) ** 0.5
-        return max(same_group, dot(ca, cb) / norm if norm else 0.0)
+        return dot(ca, cb) / norm if norm else 0.0
 
     def _pick(self, row: int, score: float, q_concepts: Mapping[str, float]) -> Pick:
         item = self.index.items[row]
+        kind, media, attrs = item["kind"], item["media"], item["attrs"]
         why = [
             f"{readable_concept(c)} {item['concepts'][c]:.1f}"
             for c in sorted(q_concepts, key=lambda c: -q_concepts[c] * item["concepts"].get(c, 0))
             if item["concepts"].get(c, 0) > 0
         ][:4]
-        if item["kind"] == "outfit":
-            return Pick(
-                item["id"], "outfit", item["title"], round(score, 5), why, url(self.base_url, item["image"])
-            )
-        views = item["views"]
+        fields = self.index.catalog.result_fields.get(kind, [])
+        common: dict[str, Any] = {
+            "id": item["id"],
+            "kind": kind,
+            "title": item["title"],
+            "score": round(score, 5),
+            "attrs": {f: attrs[f] for f in fields if f in attrs},
+        }
+        if self.index.catalog.kinds[kind].media == "image":
+            return Pick(**common, why=why, image=self._url(media["image"]))
+        views = media["views"]
         best = max(views, key=lambda v: (self._view_score(v, q_concepts), -views.index(v)))
-        best_view = f"best view: {best['angle']} ({best['view']})"
+        best_view = f"best view: {best['angle']}" + (f" ({best['view']})" if best.get("view") else "")
         return Pick(
-            id=item["id"],
-            kind="pose",
-            title=item["title"],
-            score=round(score, 5),
+            **common,
             why=[*why, best_view],
-            image=url(self.base_url, best["image"]),
-            depth=url(self.base_url, best["depth"]),
+            image=self._url(best["image"]),
+            depth=self._optional_url(best.get("depth")),
             best_angle=best["angle"],
             views=[
-                ViewUrls(v["angle"], url(self.base_url, v["image"]), url(self.base_url, v["depth"]))
-                for v in views
+                ViewUrls(v["angle"], self._url(v["image"]), self._optional_url(v.get("depth"))) for v in views
             ],
         )
 
+    def _url(self, ref_key: str) -> str:
+        return url(self.base_url, ref_key)
+
+    def _optional_url(self, ref_key: str | None) -> str | None:
+        return None if ref_key is None else url(self.base_url, ref_key)
+
     def _view_score(self, view: Mapping[str, Any], q_concepts: Mapping[str, float]) -> float:
-        """How well a camera view presents the body parts the query's concepts care about."""
+        """How well a view presents what the query's concepts care about: the concepts' ``focus``
+        weights (e.g. body parts) against the view's ``focus``."""
         wanted: dict[str, float] = {}
         for c, w in q_concepts.items():
             for part, fw in self.index.concepts.get(c, {}).get("focus", {}).items():
@@ -497,14 +554,8 @@ def readable_concept(name: str) -> str:
     return name.removeprefix("label:").replace(":", " ").replace("_", " ")
 
 
-def _passes(item: Mapping[str, Any], f: Filters) -> bool:
-    if item["kind"] == "outfit":
-        return (f.max_exposure is None or item["exposure"] <= f.max_exposure) and (
-            not f.outfit_categories or item["category"] in f.outfit_categories
-        )
-    return (f.solo is None or item["solo"] == f.solo) and (
-        not f.pose_series or item["series"] in f.pose_series
-    )
+def _passes(item: Mapping[str, Any], active: Sequence[tuple[FilterSpec, FilterValue]]) -> bool:
+    return all(spec.matches(item, value) for spec, value in active)
 
 
 def _has_onnx() -> bool:
@@ -537,9 +588,9 @@ def _choose_embedder(index: Index, api_key: str | None, choice: str | None) -> t
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Top poses and outfits for a text context.")
-    ap.add_argument("context")
-    ap.add_argument("--index", default=os.environ.get("REFS_INDEX", ""), help="index dir or latest.json URL")
+    ap = argparse.ArgumentParser(description="Top items per kind of a catalog for a text context.")
+    ap.add_argument("context", nargs="?", default="")
+    ap.add_argument("--index", default=os.environ.get("REFS_INDEX", ""), help="index dir or pointer URL")
     ap.add_argument(
         "--cache-dir",
         type=Path,
@@ -547,25 +598,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="download cache (default: REFS_CACHE_DIR, ~/.cache or temp)",
     )
     ap.add_argument("--base-url", default=None)
-    ap.add_argument("-k", type=int, default=3)
-    ap.add_argument("--kind", choices=KINDS, action="append")
-    ap.add_argument("--solo", choices=["solo", "duo"])
-    ap.add_argument("--max-exposure", type=int, choices=[0, 1, 2, 3])
+    ap.add_argument("-k", type=int, default=3, help="picks per kind, at most the catalog's max_k")
+    ap.add_argument("--kind", action="append", help="only this kind (repeatable; default: all)")
+    ap.add_argument(
+        "--filter", action="append", default=None, metavar="NAME=VALUE", help="repeatable; see --describe"
+    )
+    ap.add_argument("--describe", action="store_true", help="print the catalog descriptor and exit")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--no-decider", action="store_true", help="skip the decision-model rerank")
     a = ap.parse_args(argv)
     if not a.index:
         ap.error("--index (or REFS_INDEX) is required")
     rec = Recommender.load(a.index, cache_dir=a.cache_dir, base_url=a.base_url, decider=not a.no_decider)
-    filters = Filters(solo=None if a.solo is None else a.solo == "solo", max_exposure=a.max_exposure)
-    result = rec.recommend(a.context, k=a.k, kinds=a.kind or KINDS, filters=filters)
+    catalog = rec.index.catalog
+    if a.describe:
+        print(json.dumps(catalog.to_json(), indent=1))
+        return 0
+    if not a.context:
+        ap.error("a context is required")
+    if not 1 <= a.k <= catalog.max_k:
+        ap.error(f"-k must be 1..{catalog.max_k} for this catalog")
+    try:
+        filters: Filters = dict(catalog.parse_filter(f) for f in a.filter or [])
+        result = rec.recommend(a.context, k=a.k, kinds=a.kind, filters=filters)
+    except ValueError as e:
+        ap.error(str(e))
     if a.json:
         print(result.to_json())
         return 0
-    print(f"concepts: {result.concepts}  dense: {result.dense}")
-    for pick in result.outfits + result.poses:
-        print(f"{pick.kind:6} {pick.id:28} {pick.score:.4f}  {pick.title}")
-        print(f"       {pick.image}\n       why: {'; '.join(pick.why)}")
+    print(f"{catalog.title} ({result.index_version})  concepts: {result.concepts}  dense: {result.dense}")
+    for kind, picks in result.picks.items():
+        print(f"\n{catalog.kinds[kind].label}:")
+        for pick in picks:
+            print(f"  {pick.id:28} {pick.score:.4f}  {pick.title}")
+            print(f"       {pick.image}\n       why: {'; '.join(pick.why)}")
+            if pick.attrs:
+                print(f"       {', '.join(f'{k}: {v}' for k, v in pick.attrs.items())}")
     return 0
 
 

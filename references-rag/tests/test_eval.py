@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import TEST_CATALOG
 
 from refsrag import eval as ev
 from refsrag.labels import EvalGrades
@@ -26,7 +27,8 @@ def _item(item_id: str, kind: str, doc: str) -> dict[str, Any]:
         "concepts": {},
     }
     if kind == "outfit":
-        return base | {"image": f"library/refs/assets/{item_id}.png", "exposure": 1, "category": "c"}
+        attrs: dict[str, Any] = {"exposure": 1, "category": "c"}
+        return base | {"attrs": attrs, "media": {"image": f"library/refs/assets/{item_id}.png"}}
     view = {
         "angle": "front",
         "image": f"library/refs/assets/{item_id}.png",
@@ -34,7 +36,8 @@ def _item(item_id: str, kind: str, doc: str) -> dict[str, Any]:
         "focus": {},
         "view": "v",
     }
-    return base | {"views": [view], "solo": True, "sex_positions": [], "series": "s", "category": "c"}
+    attrs = {"solo": True, "sex_positions": [], "series": "s", "category": "c"}
+    return base | {"attrs": attrs, "media": {"views": [view]}}
 
 
 ITEMS = [
@@ -50,6 +53,7 @@ def rec(tmp_path: Path) -> Recommender:
     index = {
         "schema_version": SCHEMA_VERSION,
         "index_version": "vtest",
+        "catalog": TEST_CATALOG,
         "default_base_url": "https://cdn.test/",
         "params": {"bm25_k1": 1.2, "bm25_b": 0.75, "rrf_k": 60, "w_bm25": 1.0, "w_concept": 1.0,
                    "w_dense": 1.0, "w_rerank": 1.0, "candidates": 30, "mmr_lambda": 0.7, "reranker": None},
@@ -195,7 +199,8 @@ def test_score_ignores_grades_of_items_no_longer_in_the_index(rec: Recommender) 
     grades = {"hand-01": {"O1": 3, "P1": 2, "removed": 3}}
     result = ev.score(rec, [ctx, ev.EvalContext("hand-02", "x", "hand", ())], grades, kind_of)
     assert result.contexts == 1  # hand-02 has no grades
-    assert result.outfit == pytest.approx(1.0)
+    assert result.kinds["outfit"] == pytest.approx(1.0)
+    assert list(result.kinds) == ["outfit", "pose"]
 
 
 def test_score_reports_the_unjudged_share_of_top3(rec: Recommender) -> None:

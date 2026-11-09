@@ -1,12 +1,13 @@
 """Settings: non-secret defaults from config.yaml; env / .env (prefix REFS_) override them; secrets
-and machine paths come from env / .env only."""
+and machine paths come from env / .env only. The catalog descriptor (non-secret data) is catalog.yaml."""
 
 from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+import yaml
+from pydantic import Field, TypeAdapter
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -14,7 +15,10 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
+from refsrag.descriptor import Catalog
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CATALOG_FILE = PROJECT_ROOT / "catalog.yaml"
 
 
 class Settings(BaseSettings):
@@ -30,7 +34,6 @@ class Settings(BaseSettings):
     bucket: str
     region: str
     public_prefix: str
-    key_root: str
     base_url: str
     # Read from env / .env explicitly (pydantic-settings does not export .env); None -> boto3's default chain.
     aws_access_key_id: str | None = Field(default=None, validation_alias="AWS_ACCESS_KEY_ID")
@@ -63,3 +66,9 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]  # required fields come from config.yaml
+
+
+def load_catalog(path: Path = CATALOG_FILE) -> Catalog:
+    """The catalog descriptor, validated by pydantic against the ``descriptor`` dataclasses (types,
+    literals and their cross-field rules); an unknown key is rejected, as the index readers do."""
+    return TypeAdapter(Catalog).validate_python(yaml.safe_load(path.read_text()), extra="forbid")

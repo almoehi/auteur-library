@@ -41,14 +41,15 @@ class UploadReport:
     total: int
 
 
-def upload_assets(settings: Settings, *, dry_run: bool, workers: int) -> UploadReport:
+def upload_assets(settings: Settings, catalog: str, *, dry_run: bool, workers: int) -> UploadReport:
+    """Upload the library files to ``library/<catalog>/assets/``."""
     root = settings.require_library_root()
     paths = list(library_files(load_outfits(root), load_poses(root)))
     missing = [p for p in paths if not (root / p).is_file()]
     if missing:
         raise FileNotFoundError(f"{len(missing)} missing library files: {missing}")
     s3 = _client(settings)
-    manifest_key = keys.s3_key(settings.public_prefix, keys.asset_manifest_ref_key(settings.key_root))
+    manifest_key = keys.s3_key(settings.public_prefix, keys.asset_manifest_ref_key(catalog))
     known = _read_manifest(s3, settings.bucket, manifest_key)
 
     def sync(path: str) -> tuple[str, str, int]:
@@ -62,7 +63,7 @@ def upload_assets(settings: Settings, *, dry_run: bool, workers: int) -> UploadR
             s3.upload_file(
                 str(file),
                 settings.bucket,
-                keys.asset_s3_key(settings.public_prefix, settings.key_root, path),
+                keys.asset_s3_key(settings.public_prefix, catalog, path),
                 ExtraArgs={"ContentType": "image/png", "CacheControl": PNG_CACHE_CONTROL},
             )
         return path, sha, size

@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from refsrag.settings import Settings
+from refsrag.settings import CATALOG_FILE, Settings, load_catalog
 
-YAML = "bucket: yaml-bucket\nregion: yaml-region\npublic_prefix: p/\nkey_root: k/\nbase_url: https://yaml.test/\n"
+YAML = "bucket: yaml-bucket\nregion: yaml-region\npublic_prefix: p/\nbase_url: https://yaml.test/\n"
 
 
 @pytest.fixture
@@ -46,3 +46,27 @@ def test_env_overrides_dotenv_and_yaml(files: Path, monkeypatch: pytest.MonkeyPa
 def test_init_kwargs_override_env(files: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("REFS_BUCKET", "env-bucket")
     assert Settings(_env_file=files / ".env", bucket="init-bucket").bucket == "init-bucket"  # type: ignore[call-arg]
+
+
+def test_the_shipped_catalog_descriptor_is_valid() -> None:
+    catalog = load_catalog()
+    assert catalog.key == "refs" and list(catalog.kinds) == ["outfit", "pose"]
+    assert {f.op for f in catalog.filters} >= {"eq", "lte", "in"}
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ("max_k: 4", "max_k: 0"),  # max_k must be at least 1
+        ("media: image", "media: video"),  # not a media type
+        ("    op: eq", "    op: lte"),  # lte on a boolean
+        ("nudity: true", "nudity: true\nnudtiy: true"),  # a typo is an unknown key
+        ("  outfit: [category]", "  face: [category]"),  # result fields of an unknown kind
+    ],
+)
+def test_invalid_catalog_descriptors_are_rejected(tmp_path: Path, change: str, message: str) -> None:
+    text = CATALOG_FILE.read_text()
+    assert change in text
+    (tmp_path / "catalog.yaml").write_text(text.replace(change, message, 1))
+    with pytest.raises(ValueError):
+        load_catalog(tmp_path / "catalog.yaml")

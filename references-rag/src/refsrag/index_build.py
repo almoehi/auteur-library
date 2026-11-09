@@ -1,13 +1,16 @@
 """Build one immutable index version from the labels and publish it.
 
     data/index/<version>/
-      index.json            items (docs, concepts, URLs as ref keys), lexicon, concepts, params, vector sets
+      index.json            catalog descriptor, items (docs, concepts, attrs, media as ref keys), lexicon,
+                            concepts, params, vector sets
       vectors.<name>.f32    one L2-normalised float32 row per item (little-endian, item order)
       models/<name>/        local ONNX models (model.onnx + tokenizer.json)
-      recommend.py          the single-file query interface (bundled from keys + stage1 + query)
-      golden.json           parity fixtures for the TypeScript port
+      recommend.py          the single-file query interface (bundled from keys + stage1 + descriptor + query)
+      golden.json           parity fixtures for the TypeScript port (and selection-golden.json, written
+                            by ``refs index golden``)
 
-``publish`` uploads it to ``<key_root>rag/<version>/`` and then points ``rag/latest.json`` at it.
+``publish`` uploads it to ``library/<catalog>/rag/<version>/``, points ``rag/latest.s<schema>.json`` at it
+and, unless told not to, ``rag/latest.json`` too.
 """
 
 from __future__ import annotations
@@ -27,8 +30,9 @@ import httpx
 import numpy as np
 import yaml
 
-from refsrag import keys, query, stage1
+from refsrag import descriptor, keys, query, stage1
 from refsrag.catalog import Outfit, Pose, load_outfits, load_poses
+from refsrag.descriptor import Catalog
 from refsrag.jobs import load_results
 from refsrag.labels import ConceptAffinity, OutfitVision, PoseVision
 from refsrag.mine_lexicon import LEXICON_FILE, VOCAB_FILE, common_words, read_clips
@@ -100,7 +104,10 @@ RERANKER_REPO: Final = "Xenova/ms-marco-MiniLM-L-6-v2"
 # ── Items and docs ──────────────────────────────────────────────────────────────────────────
 
 
-def build_items(settings: Settings, lexicon: Mapping[str, Mapping[str, float]]) -> list[dict[str, Any]]:
+def build_items(
+    settings: Settings, catalog: str, lexicon: Mapping[str, Mapping[str, float]]
+) -> list[dict[str, Any]]:
+    """The generic items of the ``refs`` library (descriptor.py): outfits, then poses."""
     root = settings.require_library_root()
     outfit_labels, pose_labels = load_results("outfit_vision"), load_results("pose_vision")
     affinity = load_results("concept_affinity")
@@ -109,16 +116,16 @@ def build_items(settings: Settings, lexicon: Mapping[str, Mapping[str, float]]) 
     for o in load_outfits(root):
         label = outfit_labels[o.id]
         assert isinstance(label, OutfitVision)
-        items.append(outfit_entry(settings, o, label, _concepts(affinity, f"outfit:{o.id}"), aliases))
+        items.append(outfit_entry(catalog, o, label, _concepts(affinity, f"outfit:{o.id}"), aliases))
     for p in load_poses(root):
         plabel = pose_labels[p.id]
         assert isinstance(plabel, PoseVision)
-        items.append(pose_entry(settings, p, plabel, _concepts(affinity, f"pose:{p.id}"), aliases))
+        items.append(pose_entry(catalog, p, plabel, _concepts(affinity, f"pose:{p.id}"), aliases))
     return items
 
 
 def outfit_entry(
-    settings: Settings,
+    catalog: str,
     o: Outfit,
     label: OutfitVision,
     concepts: dict[str, float],
@@ -142,14 +149,13 @@ def outfit_entry(
         "title": _first_sentence(label.description_en),
         "doc": doc,
         "concepts": concepts | outfit_label_terms(label),
-        "category": o.category,
-        "exposure": label.exposure,
-        "image": keys.asset_ref_key(settings.key_root, o.image),
+        "attrs": {"category": o.category, "exposure": label.exposure},
+        "media": {"image": keys.asset_ref_key(catalog, o.image)},
     }
 
 
 def pose_entry(
-    settings: Settings,
+    catalog: str,
     p: Pose,
     label: PoseVision,
     concepts: dict[str, float],
@@ -173,8 +179,8 @@ def pose_entry(
         views.append(
             {
                 "angle": v.angle,
-                "image": keys.asset_ref_key(settings.key_root, v.image),
-                "depth": keys.asset_ref_key(settings.key_root, v.depth),
+                "image": keys.asset_ref_key(catalog, v.image),
+                "depth": keys.asset_ref_key(catalog, v.depth),
                 "focus": {str(k): w for k, w in vl.focus.items()},
                 "view": vl.view,
             }
@@ -185,11 +191,13 @@ def pose_entry(
         "title": label.name_en,
         "doc": doc,
         "concepts": concepts | pose_label_terms(label),
-        "series": p.series,
-        "category": p.category,
-        "solo": p.solo,
-        "sex_positions": list(label.sex_positions),
-        "views": views,
+        "attrs": {
+            "series": p.series,
+            "category": p.category,
+            "solo": p.solo,
+            "sex_positions": list(label.sex_positions),
+        },
+        "media": {"views": views},
     }
 
 
@@ -260,10 +268,10 @@ def top_aliases(lexicon: Mapping[str, Mapping[str, float]]) -> dict[str, list[st
 
 
 def concept_focus(items: Sequence[Mapping[str, Any]], concepts: Sequence[str]) -> dict[str, dict[str, float]]:
-    """Concept -> body-focus weights, learnt from the poses: the focus profile of the poses that serve a
-    concept (affinity-weighted) minus the average pose's; positive parts only, max scaled to 1. It
-    tells the query which camera view of a pose presents what the concept is about."""
-    poses = [i for i in items if i["kind"] == "pose"]
+    """Concept -> focus weights (body parts for ``refs``), learnt from the items with views: the focus
+    profile of the items that serve a concept (affinity-weighted) minus the average one's; positive
+    parts only, max scaled to 1. It tells the query which view presents what the concept is about."""
+    poses = [i for i in items if "views" in i["media"]]
     profiles = [_view_max_focus(p) for p in poses]
     parts = sorted({k for pr in profiles for k in pr})
     mean = {k: sum(pr.get(k, 0.0) for pr in profiles) / len(profiles) for k in parts}
@@ -283,9 +291,9 @@ def concept_focus(items: Sequence[Mapping[str, Any]], concepts: Sequence[str]) -
     return out
 
 
-def _view_max_focus(pose: Mapping[str, Any]) -> dict[str, float]:
+def _view_max_focus(item: Mapping[str, Any]) -> dict[str, float]:
     focus: dict[str, float] = {}
-    for v in pose["views"]:
+    for v in item["media"]["views"]:
         for k, w in v["focus"].items():
             focus[k] = max(focus.get(k, 0.0), w)
     return focus
@@ -377,12 +385,12 @@ def fetch_onnx_model(repo: str, target: Path) -> Path:
 
 # ── Bundle, golden, build, publish ──────────────────────────────────────────────────────────
 
-BUNDLED_MODULES: Final = (keys, stage1, query)  # dependency order
+BUNDLED_MODULES: Final = (keys, stage1, descriptor, query)  # dependency order
 
 
 def bundle_recommend_py() -> str:
-    """keys.py + stage1.py + query.py as one self-contained script: one module docstring (query's),
-    one ``from __future__`` import, no ``refsrag`` imports (they are defined above their use)."""
+    """keys.py + stage1.py + descriptor.py + query.py as one self-contained script: one module docstring
+    (query's), one ``from __future__`` import, no ``refsrag`` imports (they are defined above their use)."""
     parts = [
         f'"""{ast.get_docstring(ast.parse(Path(query.__file__).read_text()))}"""',
         "",
@@ -424,15 +432,19 @@ GOLDEN_QUERIES: Final = (
 
 
 def golden(
-    items: Sequence[Mapping[str, Any]], lexicon: Mapping[str, Mapping[str, float]], params: Mapping[str, Any]
+    catalog: Catalog,
+    items: Sequence[Mapping[str, Any]],
+    lexicon: Mapping[str, Mapping[str, float]],
+    params: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Stage-1 outputs (no dense, no rerank) the TypeScript port must reproduce exactly."""
+    """Stage-1 outputs (no dense, no rerank) the TypeScript port must reproduce exactly: per case the
+    tokens, the matched concepts and, per kind (``scores``), the top 10 by fused score."""
     cases = []
     for text in GOLDEN_QUERIES:
         q_concepts = stage1.match_concepts(text, lexicon)
         q_tokens = stage1.tokenize(text)
-        case: dict[str, Any] = {"context": text, "tokens": q_tokens, "concepts": q_concepts}
-        for kind in query.KINDS:
+        scores: dict[str, list[dict[str, Any]]] = {}
+        for kind in catalog.kinds:
             rows = [i for i in items if i["kind"] == kind]
             bm = stage1.Bm25(
                 [stage1.tokenize(i["doc"]) for i in rows], k1=params["bm25_k1"], b=params["bm25_b"]
@@ -440,7 +452,7 @@ def golden(
             cs = [stage1.dot(q_concepts, i["concepts"]) for i in rows]
             fused = stage1.rrf([bm, cs], [params["w_bm25"], params["w_concept"]], k=params["rrf_k"])
             top = sorted(range(len(rows)), key=lambda n: (-fused[n], n))[:10]
-            case[kind] = [
+            scores[kind] = [
                 {
                     "id": rows[n]["id"],
                     "bm25": round(bm[n], 6),
@@ -449,8 +461,8 @@ def golden(
                 }
                 for n in top
             ]
-        cases.append(case)
-    return {"cases": cases}
+        cases.append({"context": text, "tokens": q_tokens, "concepts": q_concepts, "scores": scores})
+    return {"catalog": catalog.key, "cases": cases}
 
 
 SELECTION_BASE_URL: Final = "https://refs.example/base/"
@@ -462,30 +474,67 @@ class FixedDecider:
     """Deterministic stand-in for the decision model in the selection fixtures: candidate n (1-based)
     scores (n * 7) % 4. The TypeScript parity test feeds the same scores."""
 
+    model = "fixed"
+
     def score(self, context: str, kind: str, docs: Sequence[str]) -> list[float] | None:
         return [float((n * 7) % 4) for n in range(1, len(docs) + 1)]
 
 
+# Filter cases of the selection fixtures: every op, a ``views`` kind and an ``image`` kind.
+SELECTION_FILTERS: Final[tuple[descriptor.Filters, ...]] = (
+    {"solo": True, "max_exposure": 1},
+    {"solo": False},
+    {"outfit_category": ["lingerie", "sexy"], "pose_series": ["duo"]},
+)
+# Requests the readers must reject (ValueError in Python): an unknown filter, a wrong type, a bool for
+# an integer, a value out of range, a scalar for ``in``, an unknown kind.
+INVALID_REQUESTS: Final[tuple[dict[str, Any], ...]] = (
+    {"filters": {"exposure": 1}},
+    {"filters": {"max_exposure": "1"}},
+    {"filters": {"max_exposure": True}},
+    {"filters": {"max_exposure": 4}},
+    {"filters": {"outfit_category": "lingerie"}},
+    {"kinds": ["location"]},
+)
+
+
 def selection_golden(index_dir: Path) -> dict[str, Any]:
     """``Recommender.recommend`` results (stage 1: no dense, no cross-encoder) the TypeScript port
-    must reproduce field for field: every GOLDEN_QUERIES context, two filtered variants of two of
-    them, and four decider cases with ``FixedDecider`` scores."""
+    must reproduce field for field: every GOLDEN_QUERIES context, the SELECTION_FILTERS variants of two
+    of them, one single-kind request, four decider cases with ``FixedDecider`` scores, and the
+    INVALID_REQUESTS (``invalid``) that must be rejected."""
     idx = query.Index(index_dir)
     plain = query.Recommender(idx, base_url=SELECTION_BASE_URL, vector_set=None, rerank=False)
     decided = query.Recommender(idx, base_url=SELECTION_BASE_URL, vector_set=None, rerank=False)
-    decided.decider = FixedDecider()  # type: ignore[assignment]
+    decided.decider = FixedDecider()
+    kinds = list(idx.catalog.kinds)
 
-    def case(rec: query.Recommender, ctx: str, k: int, flt: dict[str, Any], decider: bool) -> dict[str, Any]:
-        result = rec.recommend(ctx, k=k, filters=query.Filters(**flt))
-        out = json.loads(result.to_json())
-        return {"context": ctx, "k": k, "filters": flt, "decider": decider, "result": out}
+    def case(
+        rec: query.Recommender, ctx: str, k: int, flt: descriptor.Filters, decider: bool, kinds: list[str]
+    ) -> dict[str, Any]:
+        result = rec.recommend(ctx, k=k, kinds=kinds, filters=flt)
+        out = {"context": ctx, "k": k, "kinds": kinds, "filters": flt, "decider": decider}
+        return out | {"result": result.to_dict()}
 
-    cases = [case(plain, ctx, 3, {}, False) for ctx in GOLDEN_QUERIES]
+    cases = [case(plain, ctx, 3, {}, False, kinds) for ctx in GOLDEN_QUERIES]
     for ctx in (GOLDEN_QUERIES[0], GOLDEN_QUERIES[4]):
-        cases.append(case(plain, ctx, 4, {"solo": True, "max_exposure": 1}, False))
-        cases.append(case(plain, ctx, 3, {"solo": False}, False))
-    cases += [case(decided, ctx, 3, {}, True) for ctx in GOLDEN_QUERIES[:4]]
-    return {"base_url": SELECTION_BASE_URL, "decider_scores": "(n * 7) % 4 for candidate n", "cases": cases}
+        cases += [case(plain, ctx, 4, flt, False, kinds) for flt in SELECTION_FILTERS]
+    cases.append(case(plain, GOLDEN_QUERIES[1], 2, {}, False, kinds[-1:]))
+    cases += [case(decided, ctx, 3, {}, True, kinds) for ctx in GOLDEN_QUERIES[:4]]
+    invalid = []
+    for request in INVALID_REQUESTS:
+        try:
+            plain.recommend(GOLDEN_QUERIES[0], **request)
+        except ValueError as e:
+            invalid.append(request | {"error": str(e)})
+            continue
+        raise AssertionError(f"{request} was accepted")
+    return {
+        "base_url": SELECTION_BASE_URL,
+        "decider_scores": "(n * 7) % 4 for candidate n",
+        "cases": cases,
+        "invalid": invalid,
+    }
 
 
 def write_golden(version: str) -> list[Path]:
@@ -493,19 +542,40 @@ def write_golden(version: str) -> list[Path]:
     ``golden.json`` (stage 1) and ``selection-golden.json`` (whole recommendations)."""
     out = INDEX_ROOT / version
     index = json.loads((out / "index.json").read_text())
-    stage = golden(index["items"], index["lexicon"], index["params"])
+    catalog = Catalog.from_json(index["catalog"])
+    stage = golden(catalog, index["items"], index["lexicon"], index["params"])
     paths = [out / GOLDEN_FILE, out / SELECTION_GOLDEN_FILE]
     paths[0].write_text(json.dumps(stage, indent=1) + "\n")
     paths[1].write_text(json.dumps(selection_golden(out), indent=1) + "\n")
     return paths
 
 
-def build(settings: Settings, version: str, *, vector_sets: Sequence[str] | None = None) -> Path:
+def check_items(catalog: Catalog, items: Sequence[Mapping[str, Any]]) -> None:
+    """Every item has a declared kind, the media its kind declares, and the attrs the catalog's filters
+    and result fields name; a ValueError names the first offender."""
+    needed = {kind: set(fields) for kind, fields in catalog.result_fields.items()}
+    for f in catalog.filters:
+        needed.setdefault(f.kind, set()).add(f.field)
+    for item in items:
+        spec = catalog.kinds.get(item["kind"])
+        if spec is None:
+            raise ValueError(f"{item['id']}: kind {item['kind']!r} is not in the catalog")
+        if spec.media not in item["media"]:
+            raise ValueError(f"{item['id']}: no media {spec.media!r}")
+        missing = needed.get(item["kind"], set()) - set(item["attrs"])
+        if missing:
+            raise ValueError(f"{item['id']}: attrs {sorted(missing)} missing")
+
+
+def build(
+    settings: Settings, catalog: Catalog, version: str, *, vector_sets: Sequence[str] | None = None
+) -> Path:
     out = INDEX_ROOT / version
     out.mkdir(parents=True, exist_ok=True)
     lexicon = json.loads(LEXICON_FILE.read_text())["aliases"]
     vocab = yaml.safe_load(VOCAB_FILE.read_text())["concepts"]
-    items = build_items(settings, lexicon)
+    items = build_items(settings, catalog.key, lexicon)
+    check_items(catalog, items)
     terms = {c for i in items for c in i["concepts"] if c.startswith(LABEL_PREFIX)}
     focus = concept_focus(items, list(vocab))
     concepts = {
@@ -544,11 +614,12 @@ def build(settings: Settings, version: str, *, vector_sets: Sequence[str] | None
             f"{params['reranker']['model_dir']}/tokenizer.json",
         ]
     (out / "recommend.py").write_text(bundle_recommend_py())
-    (out / GOLDEN_FILE).write_text(json.dumps(golden(items, lexicon, params), indent=1) + "\n")
+    (out / GOLDEN_FILE).write_text(json.dumps(golden(catalog, items, lexicon, params), indent=1) + "\n")
     files += ["recommend.py", "golden.json"]
     index = {
         "schema_version": query.SCHEMA_VERSION,
         "index_version": version,
+        "catalog": catalog.to_json(),
         "default_base_url": settings.base_url,
         "params": params,
         "lexicon": lexicon,
@@ -561,10 +632,13 @@ def build(settings: Settings, version: str, *, vector_sets: Sequence[str] | None
     return out
 
 
-def publish(settings: Settings, version: str) -> str:
-    """Upload ``data/index/<version>`` (index.json last), then point latest.json at it. Returns its URL."""
+def publish(settings: Settings, version: str, *, flip_latest: bool) -> dict[str, str]:
+    """Upload ``data/index/<version>`` below its catalog's key (index.json last), then point
+    ``rag/latest.s<schema>.json`` at it and, with ``flip_latest``, ``rag/latest.json`` too. Returns the
+    URLs of the pointers written."""
     src = INDEX_ROOT / version
     index = json.loads((src / "index.json").read_text())
+    catalog, schema = str(index["catalog"]["key"]), int(index["schema_version"])
     s3 = boto3.client(
         "s3",
         region_name=settings.region,
@@ -572,28 +646,26 @@ def publish(settings: Settings, version: str) -> str:
         aws_secret_access_key=settings.aws_secret_access_key,
     )
 
-    def put(rel: str, body: bytes, content_type: str, cache: str) -> None:
-        key = keys.s3_key(settings.public_prefix, keys.rag_ref_key(settings.key_root, version, rel))
+    def put(ref_key: str, body: bytes, content_type: str, cache: str) -> None:
+        key = keys.s3_key(settings.public_prefix, ref_key)
         s3.put_object(
             Bucket=settings.bucket, Key=key, Body=body, ContentType=content_type, CacheControl=cache
         )
 
     immutable = "public, max-age=31536000, immutable"  # a version's files never change
     for rel in [*index["files"], "index.json"]:
-        put(rel, (src / rel).read_bytes(), _content_type(rel), immutable)
-    latest = {
+        put(keys.rag_ref_key(catalog, version, rel), (src / rel).read_bytes(), _content_type(rel), immutable)
+    pointer = {
         "index_version": version,
         "path": f"{version}/index.json",
         "sha256": hashlib.sha256((src / "index.json").read_bytes()).hexdigest(),
     }
-    s3.put_object(
-        Bucket=settings.bucket,
-        Key=keys.s3_key(settings.public_prefix, keys.latest_ref_key(settings.key_root)),
-        Body=json.dumps(latest).encode(),
-        ContentType="application/json",
-        CacheControl="public, max-age=60",
-    )
-    return keys.url(settings.base_url, keys.latest_ref_key(settings.key_root))
+    pointers = [keys.schema_latest_ref_key(catalog, schema)]
+    if flip_latest:
+        pointers.append(keys.latest_ref_key(catalog))
+    for ref_key in pointers:
+        put(ref_key, json.dumps(pointer).encode(), "application/json", "public, max-age=60")
+    return {ref_key.rsplit("/", 1)[1]: keys.url(settings.base_url, ref_key) for ref_key in pointers}
 
 
 def _content_type(rel: str) -> str:

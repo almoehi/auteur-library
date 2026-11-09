@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 from refsrag.jobs import JOB_SPECS, JobName
-from refsrag.settings import PROJECT_ROOT, get_settings
+from refsrag.settings import PROJECT_ROOT, get_settings, load_catalog
 
 if TYPE_CHECKING:
     from refsrag.labels import ConceptGrouping
@@ -51,7 +51,7 @@ def upload_assets(
     """Publish the library files to the public bucket prefix (skips unchanged files by sha256)."""
     from refsrag.assets import upload_assets as run
 
-    _echo(asdict(run(get_settings(), dry_run=dry_run, workers=workers)))
+    _echo(asdict(run(get_settings(), load_catalog().key, dry_run=dry_run, workers=workers)))
 
 
 @app.command("export-lake")
@@ -182,10 +182,10 @@ def index_build(
         list[str] | None, typer.Option(help="only these vector sets (default: all)")
     ] = None,
 ) -> None:
-    """Build data/index/<version> from the labels, lexicon and concept affinities."""
+    """Build data/index/<version> from the labels, lexicon, concept affinities and catalog.yaml."""
     from refsrag.index_build import build
 
-    _echo({"built": str(build(get_settings(), version, vector_sets=vector_set))})
+    _echo({"built": str(build(get_settings(), load_catalog(), version, vector_sets=vector_set))})
 
 
 @index_app.command("golden")
@@ -202,11 +202,16 @@ def index_golden(version: Annotated[str, typer.Argument(help="e.g. v2 (an alread
 
 
 @index_app.command("publish")
-def index_publish(version: str) -> None:
-    """Upload data/index/<version> and point rag/latest.json at it."""
+def index_publish(
+    version: str,
+    latest: Annotated[
+        bool, typer.Option(help="also point rag/latest.json at it (off: only rag/latest.s<schema>.json)")
+    ] = True,
+) -> None:
+    """Upload data/index/<version> and point rag/latest.s<schema>.json (and rag/latest.json) at it."""
     from refsrag.index_build import publish
 
-    _echo({"latest": publish(get_settings(), version)})
+    _echo({"pointers": publish(get_settings(), version, flip_latest=latest)})
 
 
 eval_app = typer.Typer(no_args_is_help=True, help="Calibration: sample contexts, pool + grade, score.")
@@ -278,8 +283,8 @@ def eval_score(
     )
 
     recs = _recommenders(version, variant)
-    items = next(iter(recs.values())).index.items
-    kind_of = {i["id"]: i["kind"] for i in items}
+    index = next(iter(recs.values())).index
+    kind_of = {i["id"]: i["kind"] for i in index.items}
     grades = load_grades(kind_of.keys())
     tune, test = split_contexts(read_contexts())
     variant_scores = {
@@ -292,7 +297,7 @@ def eval_score(
             trials = [(p, score(r.with_params(p), tune, grades, kind_of)) for p in grid(r)]
             params, tuned = max(trials, key=lambda t: t[1].mean)
             best[n] = (params, SplitScore(tuned, score(r.with_params(params), test, grades, kind_of)))
-    report = write_report(variant_scores, best, len(tune), len(test))
+    report = write_report(index.catalog, variant_scores, best, len(tune), len(test))
     _echo(
         {
             "report": str(report),

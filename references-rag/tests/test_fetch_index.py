@@ -67,6 +67,16 @@ def test_downloads_once_with_the_original_index_bytes(site: tuple[Path, str], tm
     assert fetch_index(url + "latest.json", cache) == target
 
 
+def test_a_schema_pointer_is_verified_like_latest(site: tuple[Path, str], tmp_path: Path) -> None:
+    root, url = site
+    _publish(root, [])
+    (root / "latest.json").rename(root / "latest.s2.json")
+    assert fetch_index(url + "latest.s2.json", tmp_path / "c") == tmp_path / "c" / "v1"
+    (root / "v1" / "index.json").write_text(json.dumps({"index_version": "v1", "files": []}))  # tampered
+    with pytest.raises(ValueError, match="sha256"):
+        fetch_index(url + "latest.s2.json", tmp_path / "other")
+
+
 def test_index_url_without_latest_is_not_verified(site: tuple[Path, str], tmp_path: Path) -> None:
     root, url = site
     raw = _publish(root, [])
