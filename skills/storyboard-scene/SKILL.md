@@ -480,21 +480,45 @@ check); they go to the clip prompt verbatim.
   `Sex position:` (the explicit position already poses its people). Each person's `Pose:` line must
   agree with the named pose (the same support, facing and limbs: `tiptoe kiss` = she is on tiptoe,
   arms around his neck); a pose changes = a new shot.
-- `Pose reference: artifact://<key>` (optional; only when `catalog_index()` lists a catalog with a `pose` kind - skip
-  it otherwise): a library pose the server renders the shot's pose from. For a shot with a `Body pose:` or a
-  `Sex position:` (after you wrote its `Camera:` line):
-  1. `search_catalog({catalog, context: "<the shot's Action:, the act and position / pose name>", kinds: ["pose"],
-     filters: {solo: true}})` for ONE person in frame, `filters: {solo: false}` for TWO (a duo pose needs nudity
-     `allowed` and a third-person camera - no `POV:`; one woman and one man).
-  2. Pick the item whose `sex_positions` (the `explicit-acts` name of your `Sex position:`) or support (who stands,
-     kneels, lies, sits on what) matches the shot - none fits: no line (never a near miss).
-  3. `use_reference({catalog, id, camera: "<the shot's Camera: line>"})` - the server picks the view by the camera's
-     angle (front / side / diag / high / low); a camera from behind has no view (refused: no line).
-  4. Write `Pose reference: <the returned artifact>` (e.g. `artifact://ref-refs-duo-p041-side`).
+- `Pose reference: artifact://<key>` (optional; only when `catalog_index()` lists a catalog whose kinds include
+  `pose` - see the fallback below). A library pose the server renders the shot's pose from. The server REFUSES an
+  ineligible line at `write_shot` and names the fix (import the matching view, use a wider `Camera:`, drop the
+  line) - apply it, never argue. Write it per shot, after its `Camera:` line, before `plan_shot`:
+  - **Eligible** - solo: exactly ONE pictured person who touches nobody (the viewer included: no `Contact:` to
+    anyone), extent not `limbs` / `face`, the camera view by its angle (`front` / `side` / `diag` / `high` / `low` /
+    `back`). Duo: third person (no `POV:`), a `Sex position:` or a two-person `Body pose:`, both people pictured,
+    one woman and one man, `Camera:` size `medium full` or wider (the pose's depth map sets the framing). Anything
+    else: no line.
+  - **Search, solo:** `search_catalog({catalog, kinds: ["pose"], k: 4, context, filters: {solo: true, pose_series:
+    <by the Camera size: close-up / medium close-up / medium -> upper_body; medium full / full / wide ->
+    [full_body_standard, full_body_sexy]>}})`; `context` = ONE sentence in the catalog's words: "<a woman / man>
+    <support> <torso: upright / leaning / bent> <BOTH arms: one hand X, other hand Y> <head and gaze>; <the
+    `Camera:` line>".
+  - **Search, duo:** `filters: {pose_series: ["duo"]}`; `context` = "<the `Sex position:` / `Body pose:` NAME>: <who
+    is where, by role: she sits astride him facing him, he lies on his back>; <the act>; <the `Camera:` line>" (the
+    name first).
+  - **Accept** only on structure, else reword ONCE, else no line (never a near miss). Solo: support, torso and both
+    arms match. Duo: `attrs.sex_positions` contains the shot's `Sex position:` exactly and the title agrees on who
+    is above / behind.
+  - **Hands follow the catalog:** hands the beat does not fix (no prop, contact or story gesture) are REWRITTEN in
+    the person's `Pose:` to the accepted pick, in the shot's words; hands the beat fixes are searched for - no pick
+    shows them: no line. A pick never overrides a story action.
+  - **Import:** `use_reference({catalog, id, camera: "<the shot's Camera: line>", why})`, then write `Pose
+    reference: <the returned artifact>` (e.g. `artifact://ref-refs-duo-p041-side`). Reuse an import of the same
+    item and angle across shots; re-import when the `Camera:` direction changes. `describe_image` the imported
+    `image.<ext>` once (support, torso, both arms; a duo: the arrangement): a mismatch (library labels can be
+    wrong) = the next pick, else no line. At most 2 searches and 2 imports per shot; group shots with the same
+    pose and camera.
+  - **POV:** only the partner alone, with no contact to the viewer: approach, undress, seated, lying or kneeling
+    before the act. Act shots (any contact to the viewer): no line - the act and camera route decide. The view is
+    the viewer's angle: a lying viewer looking up = `low`, a seated viewer looking down = `high`.
+  - **Fallback:** no `pose` kind in `catalog_index`, a refusal, an unavailable tool or nothing fits -> write no line
+    and say none. The pose is carried by the `Pose:` / `Body pose:` / `Sex position:` lines and the bound design
+    views (standard views `front` / `profile` / `back` / `face`), as before. Never retry a refused kind, never
+    improvise another catalog.
   A solo pose re-poses the person by the pose's line art when the take fails its pose check (or at once, per the
   workspace's `keyframes.poseReference`); a duo pose renders the keyframe from the pose's depth map - its framing and
-  background follow the pose, the place is said in words, so keep `Camera:` and `Frame:` to that view. Re-import when
-  you change the shot's `Camera:` direction (the view must match it).
+  background follow the pose, the place is said in words, so keep `Camera:` and `Frame:` to that view.
 - A character with a `true size (not human-sized)` line in the Referenced designs block (a doll, a pet, a
   giant) is NOT drawn at a person's size: its `Pose:` says how it is held and how big it is ("a small doll
   in her arms at her chest"), and a `Contact:` entry states the hold; a held small character is pictured
@@ -926,8 +950,9 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] every kiss / embrace / carry / dance - and every catalog sitting, kneeling, leaning or walking
       pose - is on a `Body pose:` line (catalog name, keys in role order); `Pose:` agrees with it and
       with the `Sex position:`
-- [ ] (a pose catalog exposed) every `Pose reference:` came from `use_reference` with the shot's CURRENT `Camera:` line, solo
-      for one person in frame, duo only for a third-person two-person pose / act shot
+- [ ] (a pose catalog exposed) every `Pose reference:` came from `use_reference` with the shot's CURRENT `Camera:` line, is
+      eligible (solo: one person, no contact incl. the viewer; duo: third person, position matches, medium full or
+      wider), its hands in `Pose:` follow the pick, and the import was checked with `describe_image`; otherwise no line
 - [ ] `draft_storyboard` was accepted; `design.json` untouched
 - `task_complete(summary="Storyboard scene <n>: <N> shots handed to the server; open: …")` (1–3
   lines). The takes land afterwards; this hands the design to the person, it does not finish it.
