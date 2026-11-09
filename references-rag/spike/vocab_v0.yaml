@@ -1,0 +1,51 @@
+# Spike vocabulary v0. Controlled terms for enrichment; every weighted field is term -> 0..1.
+# Kink concepts are seeded from the top iWantClips categories (iwc_categories_top150.json),
+# keeping only those a pose or an outfit can visually serve. Age-coded categories
+# ("18-19 Years Old") are never concepts; "schoolgirl" is always the adult roleplay look.
+
+outfit:
+  archetypes: [schoolgirl_adjacent, office_secretary, nurse_like, maid_like, cosplay_like,
+               girl_next_door, date_night, boudoir, bridal, fetishwear, dominatrix, athleisure,
+               beach, party_club, cozy_home, casual_street, elegant_evening]
+  accentuated: [legs, feet, chest, butt, waist, back, thighs, arms]
+  footwear: [heels, stockings, pantyhose, socks, sandals, sneakers, boots, loafers, none]
+  exposure: "0 covered street wear .. 3 lingerie / swimwear"
+
+pose:
+  support: [standing, sitting, kneeling, all_fours, lying_back, lying_front, lying_side,
+            squatting, bridge, bent_over]
+  focus: [feet_soles, feet, legs, thighs, butt, crotch, chest, back, armpits, face, hands, belly]
+  mood: [cute, playful, seductive, submissive, dominant, explicit, relaxed]
+
+# Shared by poses and outfits: under which kinks / scenarios an item is typically used.
+concepts:
+  foot_fetish:       [foot fetish, foot worship, feet, soles, toes, barefoot, wrinkled soles, foot domination, footjob, trampling]
+  ass_worship:       [ass worship, ass fetish, booty, butt, face sitting, ass smothering, anal fetish]
+  tit_worship:       [tit worship, big tits, breasts, boobs, cleavage, titjob]
+  pussy_worship:     [pussy worship, pussy play, spread legs, cunnilingus]
+  body_worship:      [body worship, goddess worship, curves, belly fetish]
+  armpit_fetish:     [armpit fetish, armpits]
+  legs_hosiery:      [pantyhose, stockings, nylons, pantyhose tease, legs]
+  heels_boots:       [high heels fetish, boot fetish, boot worship, shoe fetish, boot domination]
+  sock_fetish:       [sock fetish, socks, knee socks]
+  latex_leather:     [latex fetish, leather fetish, shiny fetish, pvc]
+  lingerie_panties:  [lingerie fetish, panty fetish, panties, bra]
+  bikini_swimwear:   [bikini, swimsuit, beach]
+  jeans_denim:       [jeans, denim]
+  femdom:            [female domination, femdom, femdom pov, goddess, princess, slave training, humiliation, ballbusting, strap-on, pegging, cbt]
+  giantess_pov:      [giantess, shrinking, trampling fantasy, looking down pov]
+  joi_tease:         [jerk off instruction, joi, tease and denial, edging, gooning, mind fuck, captivate, cum countdown, orgasm control, masturbation encouragement]
+  strip_tease:       [strip tease, striptease, undressing, sensual tease]
+  solo_masturbation: [masturbation, female masturbation, dildo, solo female, squirting]
+  oral:              [blowjob, deepthroat, oral, mouth fetish, lip fetish]
+  sex_from_behind:   [doggy style, from behind, prone bone]
+  sex_on_top:        [cowgirl, reverse cowgirl, riding]
+  sex_missionary:    [missionary, legs on shoulders]
+  bondage_submissive: [bondage, bdsm, submissive, restrained, wrists pinned, spanking]
+  schoolgirl_rp:     [schoolgirl fantasy, schoolgirl, school girl, college girl, college, student, school uniform, cosplay school]
+  cosplay_rp:        [cosplay, costume, anime, halloween]
+  office_rp:         [secretary, office, boss, teacher, business]
+  nurse_medical_rp:  [nurse, medical play, doctor]
+  girlfriend_exp:    [girlfriend experience, girl next door, romantic, cute, date]
+  milf_rp:           [milf, step mom, mature, hot wife]
+  brat_rp:           [brat, bratty princess, spoiled]

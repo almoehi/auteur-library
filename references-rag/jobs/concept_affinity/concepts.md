@@ -1,0 +1,62 @@
+# Concepts (name - type: what it means for a pose or an outfit)
+
+- `foot_fetish` - kink: Bare or shod feet presented to camera: soles up, toes spread, feet raised or crossed.
+- `footjob` - act: Seated or reclined pose with feet positioned around a penis or toy.
+- `trampling_stomping` - act: Standing over a lying figure with one foot planted on the body, often in heels or boots.
+- `femdom` - kink: Dominant stance: standing over, arms crossed or hands on hips, commanding posture, commanding outfit.
+- `ass_worship` - body_focus: Rear view with the buttocks emphasized, bent over or looking back over the shoulder.
+- `facesitting_smothering` - act: Straddling or hovering over a lying person's face, seated or squatting.
+- `twerk_ass_shaking` - act: Dynamic rear-facing dance poses: bent forward, hips popped, bouncing buttocks.
+- `joi_stroking` - act: Direct-to-camera pose, eye contact, pointing or gesturing as if instructing someone.
+- `edging_denial` - kink: Teasing pose with a hand raised in a stop gesture or a withholding, taunting look.
+- `strip_tease` - act: Gradual undressing poses: pulling off a top, lowering straps, topless, nude, upskirt flashes.
+- `pantyhose_stockings` - garment: Sheer pantyhose, stockings, fishnets or nylon-clad legs.
+- `leg_focus` - body_focus: Legs emphasized: crossed, extended, stretched or wrapped.
+- `boots` - garment: Boots, especially knee-high or thigh-high, worn by the dominant figure.
+- `heels_shoes` - garment: High heels, sneakers, flip flops and other shoes, including dangling shoes off the foot.
+- `socks` - garment: Socks of any length on or being removed from feet.
+- `panties_thong` - garment: Panties, thongs and briefs, worn, pulled aside or pulled up.
+- `lingerie` - garment: Bras, panties, silk, satin and lace lingerie sets.
+- `latex_rubber_pvc` - garment: Tight shiny latex, rubber, PVC or vinyl catsuits, dresses and gloves.
+- `leather_gloves` - garment: Leather outfits and gloves, jackets, pants, skirts.
+- `denim_leggings` - garment: Tight jeans, leggings and yoga pants showing the lower body.
+- `bikini_swimwear` - garment: Bikinis and swimsuits, often wet or at a pool or beach.
+- `wet_oily_messy` - body_focus: Wet, oiled, sweaty or messy skin: showering, lotion, oil.
+- `strap_on_pegging` - act: Standing or kneeling pose wearing a harness and strap-on.
+- `breasts` - body_focus: Chest emphasized: cupping, pressing together, leaning forward, topless.
+- `body_goddess_worship` - kink: Posed to be admired: standing tall, arms raised, full-body display, regal outfit.
+- `armpits_hair` - body_focus: Raised arms showing armpits, or visible natural body hair.
+- `belly_focus` - body_focus: Midriff and belly shown: crop top, belly button, rounded stomach.
+- `mouth_face` - body_focus: Close-up face poses: lips, tongue, kissing, lipstick, eyes, nose.
+- `smoking` - kink: Holding a cigarette to the lips or exhaling smoke, ashtray pose.
+- `giantess_shrinking` - roleplay: Towering over the viewer, looking down, foot or hand overhead for scale.
+- `sissy_feminization` - roleplay: Feminine clothing, makeup and wigs on a male figure.
+- `bondage_restraint` - kink: Wrists or ankles tied, rope, cuffs, gag, restrained poses.
+- `impact_play` - act: Arm raised holding a whip, cane, paddle or hand, over-the-knee spanking pose.
+- `cbt_ballbusting` - act: Kicking or striking pose aimed at the groin, leg raised.
+- `blowjob_oral` - act: Kneeling or crouching oral sex poses, face at crotch level.
+- `handjob` - act: Hand wrapped around a penis, seated or kneeling beside.
+- `doggy_style` - act: On all fours, hips raised, seen from behind.
+- `cowgirl_riding` - act: Straddling and riding, knees bent, upright or leaning forward.
+- `anal_play` - act: Rear-facing poses with the anus exposed, butt plug or anal penetration.
+- `toys_solo_female` - act: Solo female poses with a dildo, vibrator or hand between the legs, spread legs.
+- `pussy_worship` - body_focus: Spread legs and exposed vulva presented, standing over or seated above the viewer.
+- `cumshot_creampie` - act: Post-climax poses with ejaculate on face, body or between legs.
+- `schoolgirl_teacher` - roleplay: Adult schoolgirl uniform, pleated skirt, knee socks, or a teacher with glasses and pointer.
+- `step_family_roleplay` - roleplay: Casual home outfits, intimate seated or standing pairings in family roleplay.
+- `general_roleplay` - roleplay: Character-driven scene with a themed costume and props.
+- `nurse_medical` - roleplay: Nurse or doctor uniform, scrubs, gloves, medical props.
+- `cosplay` - roleplay: Character costumes from film, games and comics, including clown and futanari looks.
+- `milf_mature` - roleplay: Mature woman look with elegant or maternal styling.
+- `brat_mean_girl` - roleplay: Sassy, smug posture: hand on hip, eye roll, pointing, middle finger.
+- `lesbian_pairing` - act: Two women posed together, kissing, touching or one dominating the other.
+- `tickling` - act: Playful poses with fingers reaching toward feet, ribs or sides.
+- `hands_nails` - body_focus: Hands and manicured nails shown, grasping or posed near camera.
+- `hair_play` - body_focus: Hair emphasized: long, flowing, twirled or pulled.
+- `breath_choking` - act: Hand on throat or face-covering poses.
+- `sneezing_nose` - body_focus: Nose and tissue poses: sneezing, nose blowing.
+- `pov_close_up` - act: First-person camera angle looking up or toward the viewer, close framing.
+- `human_furniture` - act: Person on all fours or lying as a seat, footrest or table.
+- `balloon_fetish` - kink: Balloons held, sat on or popped.
+- `outdoor_location` - roleplay: Public or outdoor setting, casual outfits, location-appropriate clothing.
+- `trans_shemale` - body_focus: Trans or shemale performers posed nude or in lingerie.

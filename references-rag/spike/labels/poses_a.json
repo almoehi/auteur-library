@@ -1,0 +1,384 @@
+[
+ {
+  "id": "full_sexy/P007",
+  "name_en": "Standing back view, looking over shoulder",
+  "description_en": "Standing in a wide stance with the back to the camera, hands resting on the thighs and knees slightly flexed. The torso twists so the head looks back over the shoulder, which emphasises the buttocks, waist curve and thighs.",
+  "support": "standing",
+  "solo_duo": "solo",
+  "mood": {
+   "seductive": 0.8,
+   "playful": 0.35,
+   "dominant": 0.3
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "butt": 0.95,
+     "back": 0.6,
+     "thighs": 0.55,
+     "legs": 0.5,
+     "hands": 0.25
+    },
+    "view": "seen from behind: buttocks centered, back arched, hands on thighs, heels toward camera, head turned back in profile"
+   },
+   "high": {
+    "focus": {
+     "butt": 0.95,
+     "back": 0.65,
+     "thighs": 0.5,
+     "legs": 0.4
+    },
+    "view": "from behind and above: buttocks and upper back dominate, legs foreshortened, feet small"
+   },
+   "low": {
+    "focus": {
+     "butt": 0.95,
+     "thighs": 0.7,
+     "legs": 0.65,
+     "feet": 0.35,
+     "back": 0.3
+    },
+    "view": "from behind and below: buttocks tower over camera, long legs, heels and soles of shoes-less feet slightly visible"
+   },
+   "side": {
+    "focus": {
+     "butt": 0.85,
+     "chest": 0.5,
+     "back": 0.5,
+     "thighs": 0.45,
+     "legs": 0.4
+    },
+    "view": "near profile: buttock and spine curve in silhouette, bust visible, hand on thigh, head turned to camera"
+   },
+   "diag": {
+    "focus": {
+     "chest": 0.6,
+     "legs": 0.5,
+     "thighs": 0.5,
+     "belly": 0.35,
+     "hands": 0.3,
+     "butt": 0.3
+    },
+    "view": "front three-quarter: bust and torso toward camera, wide stance, hands on thighs; the buttocks are mostly hidden"
+   }
+  },
+  "concepts": {
+   "ass_worship": 0.85,
+   "body_worship": 0.5,
+   "strip_tease": 0.4,
+   "joi_tease": 0.3,
+   "legs_hosiery": 0.3
+  },
+  "sex_positions": [],
+  "typical_acts": [],
+  "confidence": 0.75,
+  "notes": "File 'front' shows the figure from behind (the pose faces away by design); 'diag' is actually a front three-quarter view, so diag is the only angle that shows the front of the body. All other angles read as back views, so the label set is consistent but 'front' is semantically 'rear'."
+ },
+ {
+  "id": "full_sexy/P032",
+  "name_en": "All fours, arched back, looking forward",
+  "description_en": "On hands and knees with straight arms, an arched back and the head raised to look ahead. The hips are pushed back and the bust hangs forward, showing off the curve of the spine, buttocks and chest.",
+  "support": "all_fours",
+  "solo_duo": "solo",
+  "mood": {
+   "seductive": 0.65,
+   "playful": 0.4,
+   "submissive": 0.4
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "chest": 0.9,
+     "hands": 0.4,
+     "face": 0.3,
+     "thighs": 0.3
+    },
+    "view": "head-on from the front: bust and shoulders dominate, arms straight to the floor, hips and buttocks to one side behind the torso, soles hidden"
+   },
+   "high": {
+    "focus": {
+     "chest": 0.85,
+     "hands": 0.4,
+     "butt": 0.4,
+     "back": 0.35
+    },
+    "view": "from front and above: bust and shoulders large, buttock curve visible behind the head, knees tucked"
+   },
+   "low": {
+    "focus": {
+     "chest": 0.9,
+     "hands": 0.4,
+     "butt": 0.4,
+     "thighs": 0.3
+    },
+    "view": "from front and low: bust and chin level with camera, arms planted, buttock arc behind, feet soles faintly in profile"
+   },
+   "side": {
+    "focus": {
+     "butt": 0.85,
+     "back": 0.85,
+     "chest": 0.6,
+     "thighs": 0.5,
+     "legs": 0.35
+    },
+    "view": "true profile: arched spine, buttock and thigh in silhouette, bust in profile, shins on floor with soles up at left"
+   },
+   "diag": {
+    "focus": {
+     "chest": 0.8,
+     "butt": 0.6,
+     "back": 0.5,
+     "thighs": 0.5,
+     "hands": 0.3
+    },
+    "view": "front three-quarter: bust toward camera, hip and thigh at left, buttock curve in view, shin and foot visible on the floor"
+   }
+  },
+  "concepts": {
+   "ass_worship": 0.55,
+   "tit_worship": 0.65,
+   "sex_from_behind": 0.4,
+   "bondage_submissive": 0.3,
+   "body_worship": 0.4
+  },
+  "sex_positions": [
+   "doggy style"
+  ],
+  "typical_acts": [],
+  "confidence": 0.8,
+  "notes": "The pose clearly echoes a doggy-style stance, but as a solo reference it is only tagged as such. Front, high and low are close to each other (front-facing with slight elevation changes); the high/low differences are subtle. Side is a clean profile."
+ },
+ {
+  "id": "full_sexy/P040",
+  "name_en": "Cat pose, chest down, hips high",
+  "description_en": "Kneeling with the chest lowered toward the floor and the arms stretched forward, while the hips are raised high. The spine dips into a deep curve that lifts the buttocks and thighs and shows off the bust in profile.",
+  "support": "all_fours",
+  "solo_duo": "solo",
+  "mood": {
+   "seductive": 0.7,
+   "playful": 0.5,
+   "submissive": 0.5
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "butt": 0.75,
+     "back": 0.6,
+     "thighs": 0.55,
+     "chest": 0.45,
+     "legs": 0.4
+    },
+    "view": "in profile (not from the front): arms reaching left, spine dip, raised hips and thighs at right, shins and soles on floor at far right"
+   },
+   "high": {
+    "focus": {
+     "butt": 0.9,
+     "back": 0.8,
+     "thighs": 0.5,
+     "hands": 0.3,
+     "chest": 0.3
+    },
+    "view": "from behind and above: buttocks and arched back in front, head and outstretched arms below, feet small at right"
+   },
+   "low": {
+    "focus": {
+     "butt": 0.75,
+     "chest": 0.6,
+     "hands": 0.5,
+     "back": 0.4,
+     "thighs": 0.4
+    },
+    "view": "from the front and low: head and bust near the camera, hands spread at the bottom, raised hips behind the head"
+   },
+   "side": {
+    "focus": {
+     "butt": 0.8,
+     "back": 0.65,
+     "thighs": 0.55,
+     "chest": 0.45,
+     "legs": 0.4
+    },
+    "view": "clean profile: arms stretched left, deep spine curve, hips high, thigh vertical and calves flat, soles up at right"
+   },
+   "diag": {
+    "focus": {
+     "butt": 0.85,
+     "back": 0.7,
+     "thighs": 0.55,
+     "chest": 0.4,
+     "hands": 0.3
+    },
+    "view": "three-quarter from the rear side: hips and buttocks towering at right, arms stretched forward, bust partly visible"
+   }
+  },
+  "concepts": {
+   "ass_worship": 0.75,
+   "sex_from_behind": 0.5,
+   "bondage_submissive": 0.35,
+   "body_worship": 0.4,
+   "tit_worship": 0.3
+  },
+  "sex_positions": [
+   "doggy style"
+  ],
+  "typical_acts": [],
+  "confidence": 0.75,
+  "notes": "The 'front' file is essentially a profile and is nearly identical to 'side' (only a small shift in rotation), so a front-on view of this pose does not exist in the set. The soles are tiny and never prominent. Name_ja says 'from the side', which matches front/side/diag."
+ },
+ {
+  "id": "full_sexy/P063",
+  "name_en": "Prone, chin on hand, one leg raised",
+  "description_en": "Lying prone on the forearms with the head propped on one hand, while one leg is bent upward at the knee and the other lies on the floor. This is a playful, relaxed pin-up pose that shows the bust, buttocks and raised soles.",
+  "support": "lying_front",
+  "solo_duo": "solo",
+  "mood": {
+   "playful": 0.8,
+   "cute": 0.6,
+   "seductive": 0.55,
+   "relaxed": 0.55
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "feet_soles": 0.7,
+     "butt": 0.6,
+     "chest": 0.6,
+     "face": 0.3,
+     "legs": 0.4,
+     "hands": 0.3
+    },
+    "view": "from the front: chin on hand at left, bust on the forearms, buttock mound at right, raised sole facing the camera at upper right"
+   },
+   "high": {
+    "focus": {
+     "butt": 0.85,
+     "feet_soles": 0.6,
+     "back": 0.4,
+     "chest": 0.35,
+     "legs": 0.4
+    },
+    "view": "from above and behind-ish: buttocks large in the middle, raised sole at the top, bust below at left, other foot small at right"
+   },
+   "low": {
+    "focus": {
+     "chest": 0.8,
+     "butt": 0.6,
+     "feet_soles": 0.6,
+     "hands": 0.3,
+     "thighs": 0.35
+    },
+    "view": "from low in front: bust and shoulder dominate, buttock to the right, raised sole with toes upper right at smaller scale"
+   },
+   "side": {
+    "focus": {
+     "butt": 0.7,
+     "legs": 0.5,
+     "feet_soles": 0.4,
+     "back": 0.4,
+     "chest": 0.35,
+     "thighs": 0.4
+    },
+    "view": "profile: head propped at left, long line of back to buttocks, calf raised with the sole angled away at right, other leg flat"
+   },
+   "diag": {
+    "focus": {
+     "feet_soles": 0.7,
+     "chest": 0.65,
+     "butt": 0.6,
+     "legs": 0.4,
+     "hands": 0.3
+    },
+    "view": "front three-quarter: bust and propped head at left, buttock mound, raised sole with toes facing the camera at upper right"
+   }
+  },
+  "concepts": {
+   "foot_fetish": 0.65,
+   "ass_worship": 0.5,
+   "girlfriend_exp": 0.45,
+   "tit_worship": 0.35,
+   "body_worship": 0.3
+  },
+  "sex_positions": [],
+  "typical_acts": [],
+  "confidence": 0.8,
+  "notes": "The raised leg shows the sole in front, diag and low but only partially in side, as expected. My low-angle guess of strongest soles did not hold: low is more a front view with chest dominating and the sole fairly small. Front/low/diag are similar views."
+ },
+ {
+  "id": "full_sexy/P055",
+  "name_en": "Supine V-shaped raised legs",
+  "description_en": "Lying on the back with both legs lifted and spread in a V, hands holding the thighs or calves. The raised legs and feet dominate, with the hips and crotch region foreshortened between the thighs.",
+  "support": "lying_back",
+  "solo_duo": "solo",
+  "mood": {
+   "seductive": 0.6,
+   "explicit": 0.4,
+   "playful": 0.35
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "legs": 0.9,
+     "thighs": 0.8,
+     "feet_soles": 0.6,
+     "hands": 0.3,
+     "crotch": 0.3
+    },
+    "view": "viewed from the feet end, slightly above: legs in a V toward the top, head and torso at lower left, soles tilted toward the camera"
+   },
+   "high": {
+    "focus": {
+     "legs": 0.9,
+     "thighs": 0.8,
+     "crotch": 0.55,
+     "feet_soles": 0.55,
+     "belly": 0.35,
+     "hands": 0.3
+    },
+    "view": "from above the hips: both legs spread, the pelvis between the thighs in view, head at the bottom, soles facing roughly up and out"
+   },
+   "low": {
+    "focus": {
+     "legs": 0.9,
+     "thighs": 0.75,
+     "feet_soles": 0.55,
+     "crotch": 0.4,
+     "belly": 0.35
+    },
+    "view": "from above the head end (not low): head and chest at the bottom, pelvis between the thighs, legs spread upward, soles toward the top"
+   },
+   "side": {
+    "focus": {
+     "legs": 0.85,
+     "thighs": 0.7,
+     "feet_soles": 0.5,
+     "butt": 0.4,
+     "hands": 0.3,
+     "belly": 0.3
+    },
+    "view": "diagonal oblique, not a true side: legs crossed in an X-like overlap, hip curve at right, head at lower left"
+   },
+   "diag": {
+    "focus": {
+     "legs": 0.9,
+     "thighs": 0.8,
+     "feet_soles": 0.6,
+     "hands": 0.3,
+     "crotch": 0.3
+    },
+    "view": "three-quarter from the feet end: legs in a V, head at lower left, hands gripping the thighs, soles tilted toward the camera"
+   }
+  },
+  "concepts": {
+   "pussy_worship": 0.45,
+   "foot_fetish": 0.5,
+   "legs_hosiery": 0.4,
+   "body_worship": 0.3,
+   "sex_missionary": 0.3,
+   "solo_masturbation": 0.3
+  },
+  "sex_positions": [],
+  "typical_acts": [],
+  "confidence": 0.55,
+  "notes": "Camera angles are very ambiguous. 'low' and 'high' both look like elevated views from the head end or hips; 'side' is oblique and not a true profile; 'front' and 'diag' are almost the same. The mannequin has no drawn genital detail, so crotch focus is inferred from geometry only."
+ }
+]
