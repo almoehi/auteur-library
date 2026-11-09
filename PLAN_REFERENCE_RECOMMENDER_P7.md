@@ -1,6 +1,6 @@
 # Plan P7: using reference picks in production
 
-Status: **draft v2 for review** (2026-11-09). P7.1 is done; P7.0 and P7.2–P7.5 wait for approval. Parent plan: `PLAN_REFERENCE_RECOMMENDER.md` (P0–P6 done).
+Status: **draft v3 for review** (2026-11-09). P7.1 is done, the P7.0 spikes are done (section 6), and P7.2–P7.5 are refined from their results. Parent plan: `PLAN_REFERENCE_RECOMMENDER.md` (P0–P6 done).
 
 ## 1. Goal
 
@@ -84,18 +84,19 @@ descriptor yaml + items jsonl (`refs index build --catalog --items`, README "Add
 - the sha256 check, hard result bounds, and catalog tools also for text-output tasks;
 - parity tests on the v4 fixtures.
 
-## 4. Phases
+## 4. Phases (refined after the spikes)
 
 | Phase | Scope | Exit criteria |
 |---|---|---|
-| **P7.0 Spikes** (2–3 days) | **S1:** pose transfer with library line art and with depth vs today's rendered pose reference, 10 act and pose shots, judged. **S2:** outfit generation with `garment_reference_image` = library flat-lay vs text only, 10 outfits, judged for fidelity. **S3:** cross-bucket `CopyObject` model-cache → fileshare with the app credentials (permissions, latency). **S4:** krea2 or flux depth ControlNet availability on the compute images (decides route b). | Go / no-go per route; chosen pose route |
+| ~~P7.0 Spikes~~ | **Done**: see section 6 | Met |
 | ~~P7.1 Catalog generalisation~~ | **Done** (3.4) | Met |
-| **P7.2 Library import** (2 days) | `copyObjectFrom`, `importLibraryReference`, `use_reference({catalog, id, angle?})` tool + HTTP endpoint, KV idempotency, artifact metadata, the same catalog exposure / nudity gate as `search_catalog`, auto-approved artifacts, tests | A pick becomes an approved artifact in less than 2 s, re-import is free |
-| **P7.3 Outfits** (2–3 days) | `garment_reference` attribute, generate role with 2 images, slot binding + fallback, `plan-designs` skill, studio display | S2-quality outfits from the plan without manual steps |
-| **P7.4 Poses** (3–5 days) | `Pose reference:` line, `pose:<shotId>` binding, route (a) in the take renderer, `storyboard-scene` skill; route (b) only if S1/S4 favour it | Pose-check pass rate on act shots ≥ the S1 result |
-| **P7.5 Evaluation** (1–2 days) | A/B on a real NSFW episode: with vs without references (pose-check pass rate, repairs, render cost) | A report; defaults on/off per workspace setting |
+| **P7.2 Library import** (2 days) | `S3Client.copyObjectFrom(srcBucket, srcKey, destKey)` (the existing raw copy request with the source bucket as a parameter; S3 showed ~130–530 ms per file); `importLibraryReference`; `use_reference({catalog, id, angle?})` tool + HTTP endpoint; KV idempotency; artifact metadata; the same catalog exposure / nudity gate as `search_catalog`; auto-approved artifacts; tests | A pick becomes an approved artifact in less than 2 s; re-import is free |
+| **P7.3 Outfits** (2–3 days) | `garment_reference` attribute on the outfit kind; generate role with 2 images (character + garment → `garment_reference_image`, role `garment`); text fallback for workflows without the port; prompt rules from S2 (keep the outfit text, "replace all original clothing, including footwear"); `plan-designs` skill attaches catalog picks; studio display | On 10 outfits, garment fidelity ≥ the S2 result (mean 1.85 / 3, "same" 4/6) |
+| **P7.4 Poses, route (a)** (3–4 days) | `Pose reference:` shot line; a `pose:<shotId>` binding; route (a): `qwen_image_pose_transfer` with the imported **line art** as `pose_image`, on pose-check failure (repair) and optionally first-pass for single-person pose shots. **Solo poses only**: the `storyboard-scene` skill searches with `filters: {solo: true}` for shots with one person in frame; two-person shots keep today's text route. View choice: deterministic, from the shot's `Camera:` direction (front / side / diag / high / low), not from a model judgement. Pose check judged on support + limbs only (S1: the camera question is unreliable) | On solo act and pose shots, pose-check pass rate ≥ today's rendered-reference route with half the renders |
+| **P7.4b Depth route (gated)** (1 day validation + 2–3 days) | **S5 validation first:** RefControl depth LoRA (`thedeoxen/refcontrol-FLUX.2-klein-9B-reference-depth-lora`, 166 MB) on the existing `flux2_image_edit_nsfw` (depth map as image 1, character as image 2), 10 poses including duo and explicit. If it holds up: register the LoRA in the model cache, add a `depth-pose` capability mapping (depth in `subject_image`), and route two-person shots through it | S5 ≥ 8/10 on support + limbs + identity, including duo |
+| **P7.5 Evaluation** (1–2 days) | A/B on a real NSFW episode with vs without references (pose-check pass rate, repairs, garment fidelity, render cost) | A report; per-workspace defaults |
 
-Remaining: about 10–17 dev-days (P7.0 + P7.2–P7.5), or 10–12 without route (b).
+Remaining: about 8–11 dev-days for P7.2–P7.5, plus 3–4 for P7.4b if S5 passes.
 
 ## 5. Risks and open questions
 
@@ -106,3 +107,26 @@ Remaining: about 10–17 dev-days (P7.0 + P7.2–P7.5), or 10–12 without route
 - **Duo poses** depict two people. Binding one to a shot requires the shot's people to match the pose's roles (`sex_positions` role order). The catalog's role rules (`explicit-acts`) apply.
 - **Decided:** P7.1 went first, and it is done.
 - **Open:** the Featherless query instruction in `index_build.py` still names poses and outfits. A new catalog needs its own query instruction, so move it into the catalog descriptor (which re-embeds refs on the next build) when the second catalog arrives.
+
+## 6. Spike results (P7.0, 2026-11-09)
+
+- **S3, cross-bucket copy: GO.**
+  - Both the app (`Auteur-app-svc`) and the local / dev credentials can `CopyObject` from the model-cache bucket into the fileshare bucket. It takes 130–530 ms per file, and size, content type and cache headers are preserved.
+  - `s3-lite-client` supports a source bucket, but keep our raw request so the check for a 200 response with an error body stays.
+- **S4, ControlNet availability.** No ControlNet exists in any bundle or in the model cache.
+  - The cheapest depth route is the Flux.2 klein **RefControl depth LoRA** on the existing flux2 nodes, with no new custom nodes.
+  - `qwen_image_pose_transfer` is Qwen-Image-Edit 2511 + the AnyPose LoRA, with no ControlNet.
+- **S1, pose renders** (8 library poses, 2 characters, Modal l40s; judged by the decision model with images; pass = support, limbs, identity and single person all ≥ 0.5):
+  - **(a) line art as `pose_image`: 6/6 solo pass.** It matches or beats today's rendered-reference route (c), 2/3, at half the renders.
+  - **Duo poses fail, 0/2:** pose transfer copies both figures, so the subject appears twice.
+  - **(b) depth as `pose_image`: 2/3.** It once rewrote body and clothing. NO-GO.
+  - **(d) klein + RefControl depth LoRA: 3/3.** It re-composes the scene (framing and background follow the depth map). Promising; validate on duo and explicit poses (S5).
+  - **The camera-view question in the judge is unreliable,** so P7.4 uses support + limbs.
+- **S2, garment renders** (6 outfits; `flux2_image_edit` with `garment_reference_image` vs text only):
+  - garment image: mean fidelity 1.85 / 3, "same garment" 4/6;
+  - text only: 1.34, 0/6;
+  - identity kept everywhere.
+  - Failure modes: the original top sometimes stays under the garment, and shoes and stockings get dropped. Fix with the prompt rules in P7.3.
+- **Artifacts:**
+  - `scratchpad/p7-spikes/s12/` (driver, judge, scores, contact sheets);
+  - `scratchpad/p7-spikes/s34/NOTES.md`.
