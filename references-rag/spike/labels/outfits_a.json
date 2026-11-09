@@ -1,0 +1,460 @@
+[
+ {
+  "id": "SPR-0062",
+  "description_en": "Beige long-sleeve wrap top with a deep V, side tie and flared cuffs, a pink pleated mini skirt, pink bow choker and bow shoulder bag, white ribbed slouch socks and beige bow ballet flats.",
+  "garments": [
+   "wrap top",
+   "pleated mini skirt",
+   "choker",
+   "shoulder bag",
+   "slouch socks",
+   "ballet flats"
+  ],
+  "colors": [
+   "beige",
+   "pink",
+   "white"
+  ],
+  "materials": [
+   "jersey",
+   "cotton",
+   "leather"
+  ],
+  "archetypes": {
+   "girl_next_door": 0.8,
+   "schoolgirl_adjacent": 0.5,
+   "date_night": 0.5,
+   "casual_street": 0.4
+  },
+  "exposure": 1,
+  "accentuated": {
+   "chest": 0.5,
+   "waist": 0.4,
+   "legs": 0.4
+  },
+  "footwear": "socks",
+  "season": "spring",
+  "concepts": {
+   "schoolgirl_rp": 0.55,
+   "sock_fetish": 0.5,
+   "girlfriend_exp": 0.7,
+   "tit_worship": 0.2
+  },
+  "confidence": 0.8,
+  "notes": "Footwear is flats over socks; vocab has no flats, so 'socks' chosen. Legs between skirt and socks are bare mannequin."
+ },
+ {
+  "id": "SPR-0037",
+  "description_en": "Pale blue sheer puff-sleeve bolero with bows over a white lace-trimmed bustier top, a pink pleated mini skirt with tulle underlayer, pearl necklace, quilted cream bag, white thigh-high stockings and white strappy bow sandals.",
+  "garments": [
+   "sheer bolero",
+   "bustier camisole",
+   "pleated mini skirt",
+   "pearl necklace",
+   "handbag",
+   "thigh-high stockings",
+   "strappy heeled sandals"
+  ],
+  "colors": [
+   "light blue",
+   "pink",
+   "white",
+   "cream"
+  ],
+  "materials": [
+   "chiffon",
+   "lace",
+   "cotton",
+   "knit"
+  ],
+  "archetypes": {
+   "girl_next_door": 0.6,
+   "schoolgirl_adjacent": 0.5,
+   "date_night": 0.6,
+   "cosplay_like": 0.2
+  },
+  "exposure": 1,
+  "accentuated": {
+   "legs": 0.7,
+   "thighs": 0.5,
+   "chest": 0.5,
+   "waist": 0.3
+  },
+  "footwear": "heels",
+  "season": "spring",
+  "concepts": {
+   "legs_hosiery": 0.65,
+   "schoolgirl_rp": 0.4,
+   "girlfriend_exp": 0.6,
+   "heels_boots": 0.3,
+   "brat_rp": 0.2
+  },
+  "confidence": 0.75,
+  "notes": "Tag says socks but they are opaque thigh-high stockings. Heels are strappy sandals with moderate heel; footwear 'heels' chosen over 'sandals'."
+ },
+ {
+  "id": "SPR-0010",
+  "description_en": "Yellow button-front shirt dress with a big waist bow and tiered flared hem under a cropped denim jacket with rolled sleeves, straw basket bag, sheer white knee-high socks with wide bands and white platform sneakers.",
+  "garments": [
+   "shirt dress",
+   "denim jacket",
+   "waist bow",
+   "knee-high socks",
+   "platform sneakers",
+   "basket bag",
+   "ribbon choker"
+  ],
+  "colors": [
+   "yellow",
+   "blue",
+   "white",
+   "straw"
+  ],
+  "materials": [
+   "cotton",
+   "denim",
+   "straw",
+   "sheer knit"
+  ],
+  "archetypes": {
+   "girl_next_door": 0.85,
+   "casual_street": 0.7,
+   "cozy_home": 0.1
+  },
+  "exposure": 1,
+  "accentuated": {
+   "legs": 0.5,
+   "waist": 0.5,
+   "chest": 0.4
+  },
+  "footwear": "sneakers",
+  "season": "spring",
+  "concepts": {
+   "sock_fetish": 0.45,
+   "girlfriend_exp": 0.7,
+   "jeans_denim": 0.25
+  },
+  "confidence": 0.8,
+  "notes": "Grey areas of leg above the socks are mannequin. Socks look sheer, possibly lace-textured."
+ },
+ {
+  "id": "LNG-0106",
+  "description_en": "Black lingerie set with gold star embroidery: strappy underwire bra, lace garter belt with suspender straps, lace thong, sheer black thigh-high stockings with wide lace tops, and black patent ankle-strap stilettos.",
+  "garments": [
+   "underwire bra",
+   "garter belt",
+   "thong",
+   "thigh-high stockings",
+   "ankle-strap stilettos"
+  ],
+  "colors": [
+   "black",
+   "gold"
+  ],
+  "materials": [
+   "lace",
+   "mesh",
+   "sheer nylon",
+   "patent leather"
+  ],
+  "archetypes": {
+   "boudoir": 0.9,
+   "date_night": 0.4,
+   "fetishwear": 0.3
+  },
+  "exposure": 3,
+  "accentuated": {
+   "legs": 0.8,
+   "thighs": 0.6,
+   "chest": 0.6,
+   "butt": 0.4,
+   "waist": 0.3
+  },
+  "footwear": "heels",
+  "season": "any",
+  "concepts": {
+   "lingerie_panties": 0.9,
+   "legs_hosiery": 0.8,
+   "heels_boots": 0.5,
+   "strip_tease": 0.4,
+   "tit_worship": 0.3
+  },
+  "confidence": 0.9,
+  "notes": "Stockings are held by garter clips; footwear 'heels' chosen over 'stockings'."
+ },
+ {
+  "id": "LNG-0018",
+  "description_en": "Lavender lace lingerie set: ruffled lace-up corset top with front bow and peplum, sheer lace shorts-style panties with side bows, matching ribbon choker and sheer lace-top thigh-high stockings with bows.",
+  "garments": [
+   "corset top",
+   "lace panties",
+   "choker",
+   "thigh-high stockings"
+  ],
+  "colors": [
+   "lavender"
+  ],
+  "materials": [
+   "lace",
+   "satin",
+   "tulle",
+   "sheer nylon"
+  ],
+  "archetypes": {
+   "boudoir": 0.85,
+   "cosplay_like": 0.3,
+   "girl_next_door": 0.3
+  },
+  "exposure": 3,
+  "accentuated": {
+   "chest": 0.6,
+   "waist": 0.6,
+   "legs": 0.5,
+   "thighs": 0.4
+  },
+  "footwear": "stockings",
+  "season": "any",
+  "concepts": {
+   "lingerie_panties": 0.9,
+   "legs_hosiery": 0.7,
+   "strip_tease": 0.35,
+   "girlfriend_exp": 0.4
+  },
+  "confidence": 0.85,
+  "notes": "No shoes shown; stockings end in sheer feet. Tag says socks, but they are lace-top thigh-highs."
+ },
+ {
+  "id": "LNG-0105",
+  "description_en": "Navy sheer mesh lingerie set embroidered with gold stars: underwire bra with star charm, matching bikini briefs with bows and charms, star-patterned thigh-high stockings, star pendant necklace and navy satin ankle-strap stilettos.",
+  "garments": [
+   "underwire bra",
+   "briefs",
+   "thigh-high stockings",
+   "necklace",
+   "ankle-strap stilettos"
+  ],
+  "colors": [
+   "navy",
+   "gold"
+  ],
+  "materials": [
+   "mesh",
+   "tulle",
+   "satin",
+   "sheer nylon"
+  ],
+  "archetypes": {
+   "boudoir": 0.9,
+   "date_night": 0.5,
+   "elegant_evening": 0.2
+  },
+  "exposure": 3,
+  "accentuated": {
+   "legs": 0.8,
+   "thighs": 0.6,
+   "chest": 0.6,
+   "butt": 0.4
+  },
+  "footwear": "heels",
+  "season": "any",
+  "concepts": {
+   "lingerie_panties": 0.9,
+   "legs_hosiery": 0.8,
+   "heels_boots": 0.5,
+   "strip_tease": 0.4,
+   "tit_worship": 0.3
+  },
+  "confidence": 0.9,
+  "notes": "Bra and briefs are sheer; stockings have no garter visible (stay-up)."
+ },
+ {
+  "id": "SXY-0007",
+  "description_en": "Burgundy velvet witch costume: lace-up corset mini dress with tiered lace ruffles and a high-low lace train, sheer lace puff sleeves with bows, pointed witch hat, black lace choker with ruby pendant, garter straps with lace-top bow stockings and black buckled platform boots.",
+  "garments": [
+   "witch hat",
+   "corset mini dress",
+   "lace sleeves",
+   "choker",
+   "garter straps",
+   "thigh-high stockings",
+   "platform ankle boots"
+  ],
+  "colors": [
+   "burgundy",
+   "black",
+   "gold"
+  ],
+  "materials": [
+   "velvet",
+   "lace",
+   "leather",
+   "sheer nylon"
+  ],
+  "archetypes": {
+   "cosplay_like": 0.95,
+   "party_club": 0.4,
+   "fetishwear": 0.3,
+   "boudoir": 0.2
+  },
+  "exposure": 2,
+  "accentuated": {
+   "waist": 0.6,
+   "chest": 0.6,
+   "legs": 0.6,
+   "thighs": 0.4
+  },
+  "footwear": "boots",
+  "season": "autumn",
+  "concepts": {
+   "cosplay_rp": 0.9,
+   "legs_hosiery": 0.55,
+   "heels_boots": 0.5,
+   "lingerie_panties": 0.25,
+   "femdom": 0.2
+  },
+  "confidence": 0.9,
+  "notes": "Halloween-style costume, season autumn is an inference."
+ },
+ {
+  "id": "SXY-0004",
+  "description_en": "Black and red ninja-style outfit: turtleneck long-sleeve top with chest cutout and red cord wrapping, strapped gauntlet cuffs, asymmetric wrap mini skirt with red lining, tassel sash, crossed thigh straps with a holster pouch, and black leather thigh-high stiletto boots.",
+  "garments": [
+   "turtleneck top",
+   "cutout bodice",
+   "wrap mini skirt",
+   "sash",
+   "arm gauntlets",
+   "thigh straps",
+   "thigh-high boots"
+  ],
+  "colors": [
+   "black",
+   "red"
+  ],
+  "materials": [
+   "jersey",
+   "leather",
+   "cord",
+   "brocade"
+  ],
+  "archetypes": {
+   "cosplay_like": 0.85,
+   "fetishwear": 0.6,
+   "dominatrix": 0.5,
+   "party_club": 0.2
+  },
+  "exposure": 2,
+  "accentuated": {
+   "legs": 0.7,
+   "thighs": 0.7,
+   "chest": 0.6,
+   "waist": 0.5,
+   "arms": 0.3
+  },
+  "footwear": "boots",
+  "season": "any",
+  "concepts": {
+   "cosplay_rp": 0.8,
+   "latex_leather": 0.6,
+   "heels_boots": 0.7,
+   "femdom": 0.5,
+   "bondage_submissive": 0.3,
+   "tit_worship": 0.3
+  },
+  "confidence": 0.85,
+  "notes": "Boots look like leather or faux leather; not clearly latex. Bare thigh gap between skirt and boots is mannequin skin."
+ },
+ {
+  "id": "SXY-0002",
+  "description_en": "White satin angel costume: halter mini dress with keyhole and hip cutouts and ruched side ties, sheer long gloves, feather wings and halo, garter straps with white lace-top bow stockings and white platform ankle-strap heels.",
+  "garments": [
+   "halter mini dress",
+   "sheer arm sleeves",
+   "angel wings",
+   "halo",
+   "garter straps",
+   "thigh-high stockings",
+   "platform heels"
+  ],
+  "colors": [
+   "white"
+  ],
+  "materials": [
+   "satin",
+   "feathers",
+   "lace",
+   "sheer nylon"
+  ],
+  "archetypes": {
+   "cosplay_like": 0.9,
+   "party_club": 0.5,
+   "boudoir": 0.3,
+   "bridal": 0.2
+  },
+  "exposure": 2,
+  "accentuated": {
+   "chest": 0.7,
+   "waist": 0.6,
+   "legs": 0.7,
+   "thighs": 0.5
+  },
+  "footwear": "heels",
+  "season": "any",
+  "concepts": {
+   "cosplay_rp": 0.9,
+   "legs_hosiery": 0.65,
+   "heels_boots": 0.4,
+   "lingerie_panties": 0.3,
+   "tit_worship": 0.3
+  },
+  "confidence": 0.9,
+  "notes": "Gloves are sheer detached sleeves ending over the hand. Halloween or costume party look."
+ },
+ {
+  "id": "SXY-0127",
+  "description_en": "Kitsune-miko style costume: white wide-sleeve cropped kimono top with red trim and tassels, red pleated mini skirt with floral embroidery and large bow with bell, fox ear headband with bells, white thigh-high tabi-style stockings with red tassel bows, and red and black platform geta sandals.",
+  "garments": [
+   "cropped kimono top",
+   "detached wide sleeves",
+   "pleated mini skirt",
+   "bow sash",
+   "fox ear headband",
+   "thigh-high tabi stockings",
+   "platform geta"
+  ],
+  "colors": [
+   "white",
+   "red",
+   "black",
+   "gold"
+  ],
+  "materials": [
+   "cotton",
+   "satin",
+   "faux fur",
+   "knit"
+  ],
+  "archetypes": {
+   "cosplay_like": 0.95,
+   "schoolgirl_adjacent": 0.2
+  },
+  "exposure": 1,
+  "accentuated": {
+   "legs": 0.6,
+   "thighs": 0.5,
+   "waist": 0.4,
+   "chest": 0.3
+  },
+  "footwear": "sandals",
+  "season": "any",
+  "concepts": {
+   "cosplay_rp": 0.95,
+   "legs_hosiery": 0.5,
+   "foot_fetish": 0.3,
+   "schoolgirl_rp": 0.2,
+   "girlfriend_exp": 0.2
+  },
+  "confidence": 0.9,
+  "notes": "Split-toe tabi socks in thigh-high form with geta; tag lists socks. Midriff gap visible between top and skirt."
+ }
+]

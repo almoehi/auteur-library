@@ -1,0 +1,400 @@
+[
+ {
+  "id": "full_sexy/P019",
+  "name_en": "Seated M-spread, hands on knees",
+  "description_en": "The figure sits on the floor with knees raised and spread wide in an M shape, feet flat, and both hands resting on the knees with arms slightly bent. The torso leans slightly back with the head tilted down, showing off the open thighs, crotch line and bust.",
+  "support": "sitting",
+  "solo_duo": "solo",
+  "mood": {
+   "seductive": 0.5,
+   "relaxed": 0.5,
+   "explicit": 0.35,
+   "playful": 0.2
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "crotch": 0.7,
+     "thighs": 0.7,
+     "legs": 0.5,
+     "chest": 0.5,
+     "belly": 0.4,
+     "feet": 0.35,
+     "hands": 0.3
+    },
+    "view": "Straight-on symmetric view: wide-open knees frame the pelvis, torso upright above, feet planted at the bottom."
+   },
+   "high": {
+    "focus": {
+     "chest": 0.55,
+     "thighs": 0.6,
+     "crotch": 0.45,
+     "belly": 0.4,
+     "legs": 0.4,
+     "face": 0.3,
+     "hands": 0.3
+    },
+    "view": "Camera above and in front: head tipped toward camera, chest and belly foreshortened, knees bulge forward, crotch partly hidden by thighs."
+   },
+   "low": {
+    "focus": {
+     "thighs": 0.7,
+     "crotch": 0.6,
+     "legs": 0.6,
+     "feet": 0.6,
+     "feet_soles": 0.4,
+     "chest": 0.35,
+     "hands": 0.3
+    },
+    "view": "Camera near floor: huge knees and shins in front, feet large in foreground, pelvis between thighs, chest above."
+   },
+   "side": {
+    "focus": {
+     "butt": 0.55,
+     "thighs": 0.6,
+     "chest": 0.5,
+     "back": 0.4,
+     "legs": 0.4,
+     "hands": 0.3
+    },
+    "view": "True profile: torso upright, near leg bent with hand on knee, rounded hip/butt at the back, bust in profile; the spread is barely readable."
+   },
+   "diag": {
+    "focus": {
+     "crotch": 0.65,
+     "thighs": 0.65,
+     "legs": 0.5,
+     "chest": 0.5,
+     "feet": 0.35,
+     "belly": 0.35
+    },
+    "view": "Three-quarter front: open legs and pelvis clear, torso turned slightly, hands on knees."
+   }
+  },
+  "concepts": {
+   "pussy_worship": 0.5,
+   "solo_masturbation": 0.4,
+   "strip_tease": 0.35,
+   "body_worship": 0.3,
+   "joi_tease": 0.3,
+   "foot_fetish": 0.25
+  },
+  "sex_positions": [],
+  "typical_acts": [],
+  "confidence": 0.85,
+  "notes": "Angles match file names. Pose matches the catalog name. Crotch focus is a line drawing so only the pelvis silhouette is judged."
+ },
+ {
+  "id": "upper/P030",
+  "name_en": "Arms crossed under bust, lifting",
+  "description_en": "Upper-body figure with both forearms crossed horizontally beneath an exaggeratedly large bust, hands tucked at the sides of the ribs, pushing the breasts upward and together. Shoulders are relaxed and the head is upright and faceless; the pose is all about presenting cleavage and chest volume.",
+  "support": "standing",
+  "solo_duo": "solo",
+  "mood": {
+   "seductive": 0.5,
+   "cute": 0.3,
+   "playful": 0.25,
+   "submissive": 0.2
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "chest": 0.95,
+     "hands": 0.25,
+     "face": 0.25,
+     "belly": 0.2
+    },
+    "view": "Frontal bust-up: both breasts pressed together over the crossed forearms, head centred above, waist visible below."
+   },
+   "high": {
+    "focus": {
+     "chest": 0.95,
+     "face": 0.3,
+     "hands": 0.15
+    },
+    "view": "Camera above: head tilted down in front, breasts and cleavage dominant below the chin, arms crossing underneath."
+   },
+   "low": {
+    "focus": {
+     "chest": 0.9,
+     "face": 0.25,
+     "hands": 0.25,
+     "armpits": 0.2
+    },
+    "view": "Slightly from below and front: chest big, chin underside visible, crossed arms below; barely different from front."
+   },
+   "side": {
+    "focus": {
+     "chest": 0.85,
+     "hands": 0.25,
+     "back": 0.3,
+     "face": 0.3,
+     "belly": 0.2
+    },
+    "view": "Pure profile: breast projecting forward on top of the crossing arm, hand gripping the ribs, curved back."
+   },
+   "diag": {
+    "focus": {
+     "chest": 0.95,
+     "hands": 0.25,
+     "face": 0.2
+    },
+    "view": "Three-quarter: torso turned, near breast in front, crossed arms and one hand tucked under the arm."
+   }
+  },
+  "concepts": {
+   "tit_worship": 0.9,
+   "body_worship": 0.35,
+   "joi_tease": 0.25,
+   "lingerie_panties": 0.25,
+   "bikini_swimwear": 0.2
+  },
+  "sex_positions": [],
+  "typical_acts": [],
+  "confidence": 0.85,
+  "notes": "Angles match file names, but 'low' is only a mild low angle (chin underside) and is close to front. Cropped to upper body so lower support is an assumption (standing). Bust is heavily exaggerated."
+ },
+ {
+  "id": "duo/P013",
+  "name_en": "All fours with partner kneeling behind",
+  "description_en": "The female figure is on hands and knees with arms straight, back slightly arched, head hanging down, and breasts hanging. The male figure kneels upright directly behind her with his hands on her hips or butt, his torso over her lower back.",
+  "support": "all_fours",
+  "solo_duo": "duo",
+  "mood": {
+   "explicit": 0.6,
+   "submissive": 0.5,
+   "seductive": 0.3,
+   "dominant": 0.2
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "chest": 0.55,
+     "face": 0.4,
+     "hands": 0.4,
+     "back": 0.4
+    },
+    "view": "Head-on from her front: her head and shoulders in front, male upright behind her, her butt hidden behind her body, his hands on her shoulders/back."
+   },
+   "high": {
+    "focus": {
+     "back": 0.7,
+     "chest": 0.45,
+     "hands": 0.35,
+     "face": 0.3,
+     "butt": 0.25
+    },
+    "view": "From above and front: her bowed head and back from above, male leaning over her, hands on her back; butt hidden."
+   },
+   "low": {
+    "focus": {
+     "chest": 0.55,
+     "back": 0.5,
+     "hands": 0.4,
+     "face": 0.4,
+     "butt": 0.35
+    },
+    "view": "Oblique three-quarter from front-left, not clearly low: her face and bust toward camera, male kneeling behind with a hand on her hip."
+   },
+   "side": {
+    "focus": {
+     "butt": 0.85,
+     "back": 0.6,
+     "thighs": 0.5,
+     "chest": 0.3,
+     "crotch": 0.25
+    },
+    "view": "True side: her arched back and butt are in clear profile, male's hands gripping her hips, his torso upright behind."
+   },
+   "diag": {
+    "focus": {
+     "butt": 0.8,
+     "back": 0.65,
+     "thighs": 0.45,
+     "chest": 0.45,
+     "hands": 0.3
+    },
+    "view": "Three-quarter rear-side: butt and back toward camera, male kneeling behind with hands on her hips."
+   }
+  },
+  "concepts": {
+   "sex_from_behind": 0.95,
+   "ass_worship": 0.35,
+   "bondage_submissive": 0.2
+  },
+  "sex_positions": [
+   "kneeling upright from behind",
+   "doggy style",
+   "kneeling"
+  ],
+  "typical_acts": [
+   "vaginal penetration",
+   "anal penetration"
+  ],
+  "confidence": 0.85,
+  "notes": "'low' file is not truly low; it is an oblique 3/4 view close in nature to diag. Front and high hide her butt entirely."
+ },
+ {
+  "id": "duo/P022",
+  "name_en": "Missionary, legs bent up, partner kneeling over",
+  "description_en": "The female figure lies on her back with knees raised and bent up toward the male, who kneels upright between and over her thighs, leaning forward on straight arms or holding her hips. Her body is largely hidden under the male; the catalog's crossed wrists overhead and knee hugging are not clearly visible.",
+  "support": "lying_back",
+  "solo_duo": "duo",
+  "mood": {
+   "explicit": 0.65,
+   "seductive": 0.35,
+   "submissive": 0.3
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "legs": 0.6,
+     "thighs": 0.55,
+     "feet": 0.45,
+     "crotch": 0.25
+    },
+    "view": "Male upright, centred and dominant; her bent knees and shins rise on either side of him and her feet reach the foreground. Torso and face are hidden."
+   },
+   "high": {
+    "focus": {
+     "face": 0.35,
+     "legs": 0.4,
+     "thighs": 0.35,
+     "feet": 0.3
+    },
+    "view": "Top-down: male leaning over, her head at the bottom, limbs tangled and hard to read; little of her body is visible."
+   },
+   "low": {
+    "focus": {
+     "legs": 0.6,
+     "thighs": 0.6,
+     "feet": 0.5,
+     "crotch": 0.3,
+     "belly": 0.2
+    },
+    "view": "Slightly oblique frontal view: her bent legs and feet in the foreground, male kneeling and leaning behind, her torso hidden."
+   },
+   "side": {
+    "focus": {
+     "legs": 0.6,
+     "thighs": 0.65,
+     "belly": 0.35,
+     "crotch": 0.35,
+     "feet": 0.3
+    },
+    "view": "True side: she lies flat with knees raised, male kneeling between her legs holding her hips; her belly and thighs are visible."
+   },
+   "diag": {
+    "focus": {
+     "legs": 0.6,
+     "thighs": 0.65,
+     "feet": 0.45,
+     "crotch": 0.3
+    },
+    "view": "Three-quarter: her raised knees large in front, male sitting back on his heels over her hips, her torso mostly hidden."
+   }
+  },
+  "concepts": {
+   "sex_missionary": 0.95,
+   "bondage_submissive": 0.25
+  },
+  "sex_positions": [
+   "missionary",
+   "kneeling between legs",
+   "lying on back"
+  ],
+  "typical_acts": [
+   "vaginal penetration"
+  ],
+  "confidence": 0.6,
+  "notes": "Image does not clearly show the catalog name (wrists crossed overhead, knee hugging): her arms are not visible in any angle. Both 'front' and 'low' are near-frontal and similar. Female largely occluded, so per-angle focus is low-confidence."
+ },
+ {
+  "id": "duo/P023",
+  "name_en": "Seated on partner's hips, facing him",
+  "description_en": "The male figure lies flat on his back while the female figure sits upright on his pelvis, knees bent either side of his hips, facing toward his head, with her hands propped on the floor behind her. Her torso is upright and open, showing her chest, thighs and legs, while he is mostly foreshortened below her.",
+  "support": "sitting",
+  "solo_duo": "duo",
+  "mood": {
+   "explicit": 0.55,
+   "seductive": 0.5,
+   "dominant": 0.4,
+   "playful": 0.25
+  },
+  "angles": {
+   "front": {
+    "focus": {
+     "chest": 0.7,
+     "thighs": 0.55,
+     "legs": 0.45,
+     "face": 0.4,
+     "belly": 0.35,
+     "hands": 0.3,
+     "crotch": 0.2
+    },
+    "view": "Oblique three-quarter from above, not a true front: she sits upright on the right facing the male lying at left with his head turned up."
+   },
+   "high": {
+    "focus": {
+     "chest": 0.6,
+     "thighs": 0.6,
+     "legs": 0.5,
+     "face": 0.35,
+     "belly": 0.35,
+     "hands": 0.3
+    },
+    "view": "Steep from above: her upper body leans forward over his chest, thigh and knee forward, male's torso beside her."
+   },
+   "low": {
+    "focus": {
+     "feet_soles": 0.8,
+     "feet": 0.8,
+     "legs": 0.65,
+     "thighs": 0.55,
+     "chest": 0.45,
+     "belly": 0.3,
+     "crotch": 0.3,
+     "face": 0.25
+    },
+    "view": "Floor-level from the foot end: huge soles and shins in front, her torso upright behind and the male almost hidden, only his head and arm visible at left."
+   },
+   "side": {
+    "focus": {
+     "chest": 0.6,
+     "butt": 0.55,
+     "thighs": 0.5,
+     "back": 0.4,
+     "belly": 0.25,
+     "legs": 0.3
+    },
+    "view": "True profile: she sits on his hips facing left, bust and rounded butt in profile, male stretched below."
+   },
+   "diag": {
+    "focus": {
+     "chest": 0.65,
+     "thighs": 0.6,
+     "legs": 0.55,
+     "belly": 0.35,
+     "feet": 0.3,
+     "face": 0.3
+    },
+    "view": "Three-quarter front: she sits with legs crossed over him, bust forward, male lying back at left."
+   }
+  },
+  "concepts": {
+   "sex_on_top": 0.9,
+   "femdom": 0.3,
+   "tit_worship": 0.3,
+   "girlfriend_exp": 0.25
+  },
+  "sex_positions": [
+   "cowgirl",
+   "lying on back"
+  ],
+  "typical_acts": [
+   "vaginal penetration"
+  ],
+  "confidence": 0.7,
+  "notes": "Visually it is facing cowgirl with the male lying flat, not both seated. 'front' is oblique, not a true front; 'low' is the true low angle and is very different from the others. She is not literally facing the camera in any front view."
+ }
+]

@@ -1,0 +1,427 @@
+[
+ {
+  "id": "SWM-0002",
+  "description_en": "Light-blue zip-front one-piece swimsuit with white side-panel stripes and a high-cut leg, worn under an open light-blue track jacket with mesh side panels. Paired with a blue mesh tote and blue-and-white sneakers.",
+  "garments": [
+   "one-piece swimsuit",
+   "track jacket",
+   "mesh tote bag",
+   "sneakers"
+  ],
+  "colors": [
+   "light blue",
+   "white",
+   "silver"
+  ],
+  "materials": [
+   "spandex",
+   "mesh",
+   "nylon"
+  ],
+  "archetypes": {
+   "beach": 0.7,
+   "athleisure": 0.7
+  },
+  "exposure": 3,
+  "accentuated": {
+   "waist": 0.5,
+   "chest": 0.4,
+   "thighs": 0.3,
+   "legs": 0.3
+  },
+  "footwear": "sneakers",
+  "season": "summer",
+  "concepts": {
+   "bikini_swimwear": 0.8,
+   "body_worship": 0.25
+  },
+  "confidence": 0.85,
+  "notes": "Existing tags match (the 'mesh' tag refers to the bag and jacket panels). No bare legs shown, only the swimsuit and sneakers."
+ },
+ {
+  "id": "SWM-0048",
+  "description_en": "Teal-and-white gingham bikini set: halter top with a knotted front and a wrap-style tie skort/bottom. Worn with a sheer long cream cover-up with ruffle hem, a wide straw hat, a straw tote and white strappy sandals.",
+  "garments": [
+   "bikini top",
+   "wrap skirt bottoms",
+   "sheer long cover-up",
+   "straw hat",
+   "straw tote bag",
+   "strappy sandals"
+  ],
+  "colors": [
+   "teal",
+   "white",
+   "cream",
+   "straw"
+  ],
+  "materials": [
+   "gingham cotton",
+   "chiffon",
+   "straw"
+  ],
+  "archetypes": {
+   "beach": 0.9,
+   "girl_next_door": 0.4
+  },
+  "exposure": 3,
+  "accentuated": {
+   "chest": 0.5,
+   "waist": 0.4,
+   "legs": 0.4
+  },
+  "footwear": "sandals",
+  "season": "summer",
+  "concepts": {
+   "bikini_swimwear": 0.9,
+   "girlfriend_exp": 0.35
+  },
+  "confidence": 0.8,
+  "notes": "Existing tags (mini, skirt, shorts, cardigan) miss that this is a gingham bikini; the 'cardigan' is a sheer kimono-style cover-up and the 'shorts' are a wrap skort-style bottom. Not clear if the bottom is a swim bottom."
+ },
+ {
+  "id": "PTY-0003",
+  "description_en": "Mint satin halter evening gown with a deep plunge neckline, ruched waist and a high thigh slit with a jeweled brooch, worn with matching long satin gloves, a pearl-and-crystal clutch and strappy rhinestone heels.",
+  "garments": [
+   "halter evening gown",
+   "opera gloves",
+   "clutch",
+   "strappy heeled sandals"
+  ],
+  "colors": [
+   "mint",
+   "pearl white",
+   "gold"
+  ],
+  "materials": [
+   "satin",
+   "pearls",
+   "rhinestones"
+  ],
+  "archetypes": {
+   "elegant_evening": 0.95,
+   "party_club": 0.4
+  },
+  "exposure": 1,
+  "accentuated": {
+   "chest": 0.7,
+   "waist": 0.6,
+   "butt": 0.4,
+   "thighs": 0.4,
+   "legs": 0.3
+  },
+  "footwear": "heels",
+  "season": "any",
+  "concepts": {
+   "tit_worship": 0.3,
+   "body_worship": 0.45,
+   "femdom": 0.2
+  },
+  "confidence": 0.85,
+  "notes": "Existing tags are correct but incomplete (no gown or clutch). Footwear is a heeled sandal with a sheer ankle panel."
+ },
+ {
+  "id": "WIN-0066",
+  "description_en": "Cropped black puffer jacket with a large faux-fur collar over a black rib-knit top with a lace yoke, a navy plaid mini skirt and sheer black tights. Fur-trimmed brown platform boots, fur earmuffs and a fur mini bag complete it.",
+  "garments": [
+   "puffer jacket",
+   "lace-yoke knit top",
+   "plaid mini skirt",
+   "tights",
+   "platform boots",
+   "earmuffs",
+   "fur bag"
+  ],
+  "colors": [
+   "black",
+   "navy",
+   "tan",
+   "brown"
+  ],
+  "materials": [
+   "nylon",
+   "faux fur",
+   "lace",
+   "wool tweed",
+   "knit",
+   "suede"
+  ],
+  "archetypes": {
+   "casual_street": 0.6,
+   "girl_next_door": 0.4,
+   "schoolgirl_adjacent": 0.35,
+   "date_night": 0.3
+  },
+  "exposure": 1,
+  "accentuated": {
+   "legs": 0.8,
+   "chest": 0.4,
+   "thighs": 0.4
+  },
+  "footwear": "boots",
+  "season": "winter",
+  "concepts": {
+   "legs_hosiery": 0.6,
+   "schoolgirl_rp": 0.25,
+   "girlfriend_exp": 0.3
+  },
+  "confidence": 0.8,
+  "notes": "Tags agree with the image; footwear is fur-cuffed platform boots (tags only say 'boots'). The plaid mini gives a mild school-skirt read."
+ },
+ {
+  "id": "AUT-0011",
+  "description_en": "Taupe wool peacoat worn open over a beige ribbed square-neck top and a navy faux-leather mini skirt, with sheer black tights, chunky brown suede platform ankle boots, a navy beret and a small tweed chain bag.",
+  "garments": [
+   "peacoat",
+   "rib-knit top",
+   "leather mini skirt",
+   "tights",
+   "platform ankle boots",
+   "beret",
+   "chain bag"
+  ],
+  "colors": [
+   "taupe",
+   "beige",
+   "navy",
+   "black",
+   "brown"
+  ],
+  "materials": [
+   "wool",
+   "knit",
+   "faux leather",
+   "suede",
+   "tweed"
+  ],
+  "archetypes": {
+   "casual_street": 0.6,
+   "date_night": 0.5
+  },
+  "exposure": 1,
+  "accentuated": {
+   "legs": 0.85,
+   "thighs": 0.4,
+   "chest": 0.3
+  },
+  "footwear": "boots",
+  "season": "autumn",
+  "concepts": {
+   "legs_hosiery": 0.65,
+   "heels_boots": 0.35,
+   "latex_leather": 0.25
+  },
+  "confidence": 0.85,
+  "notes": "Existing tags agree ('khaki' is closer to taupe/beige). Boots are block-heel platform boots."
+ },
+ {
+  "id": "SUM-0247",
+  "description_en": "Black ruched one-shoulder fitted top with a silver collar necklace, low-rise washed grey wide-leg jeans and pointed black leather ankle boots, plus a black slouchy leather shoulder bag.",
+  "garments": [
+   "one-shoulder top",
+   "wide-leg jeans",
+   "pointed ankle boots",
+   "shoulder bag",
+   "metal choker"
+  ],
+  "colors": [
+   "black",
+   "grey",
+   "silver"
+  ],
+  "materials": [
+   "jersey",
+   "denim",
+   "leather"
+  ],
+  "archetypes": {
+   "casual_street": 0.85,
+   "date_night": 0.4
+  },
+  "exposure": 0,
+  "accentuated": {
+   "waist": 0.5,
+   "chest": 0.4,
+   "arms": 0.2
+  },
+  "footwear": "boots",
+  "season": "any",
+  "concepts": {
+   "jeans_denim": 0.8
+  },
+  "confidence": 0.8,
+  "notes": "Filed under summer but the outfit (long jeans, boots) is season-neutral. The footwear is mostly hidden under the hems. The existing 'leather' tag refers to the bag."
+ },
+ {
+  "id": "AUT-0196",
+  "description_en": "Sheer black ribbed turtleneck bodysuit/top with a dark bra visible through it, under a grey cable-knit button vest, with black wide-leg pleated trousers, black chunky loafers and a black leather tote.",
+  "garments": [
+   "sheer turtleneck top",
+   "knit vest",
+   "wide-leg trousers",
+   "loafers",
+   "tote bag"
+  ],
+  "colors": [
+   "black",
+   "grey"
+  ],
+  "materials": [
+   "sheer knit",
+   "wool knit",
+   "leather"
+  ],
+  "archetypes": {
+   "office_secretary": 0.45,
+   "casual_street": 0.55
+  },
+  "exposure": 1,
+  "accentuated": {
+   "chest": 0.5,
+   "arms": 0.2
+  },
+  "footwear": "loafers",
+  "season": "autumn",
+  "concepts": {
+   "office_rp": 0.4,
+   "tit_worship": 0.2
+  },
+  "confidence": 0.8,
+  "notes": "Existing tags omit the trousers. The top is see-through, showing a dark bra, so exposure is 1 rather than 0. The suit-like trousers and vest are the basis for the office roleplay read."
+ },
+ {
+  "id": "SPR-0001",
+  "description_en": "Cream ruffled off-the-shoulder rib knit top with a pink denim mini skirt under a beige belted trench coat, with white sheer knee socks and chunky white sneakers. Straw bucket hat and a lace-trimmed straw bag with a bow.",
+  "garments": [
+   "off-shoulder knit top",
+   "denim mini skirt",
+   "trench coat",
+   "knee socks",
+   "sneakers",
+   "straw hat",
+   "straw bag"
+  ],
+  "colors": [
+   "cream",
+   "blush pink",
+   "beige",
+   "white"
+  ],
+  "materials": [
+   "knit",
+   "denim",
+   "cotton twill",
+   "lace",
+   "straw"
+  ],
+  "archetypes": {
+   "girl_next_door": 0.8,
+   "schoolgirl_adjacent": 0.45,
+   "casual_street": 0.5
+  },
+  "exposure": 1,
+  "accentuated": {
+   "legs": 0.5,
+   "chest": 0.3,
+   "thighs": 0.3
+  },
+  "footwear": "sneakers",
+  "season": "spring",
+  "concepts": {
+   "sock_fetish": 0.55,
+   "schoolgirl_rp": 0.4,
+   "girlfriend_exp": 0.55,
+   "jeans_denim": 0.3
+  },
+  "confidence": 0.85,
+  "notes": "Existing tags agree ('ivory/white/denim/socks'); the pink colour of the skirt is missing. Knee socks plus mini give a cute, schoolgirl-adjacent look."
+ },
+ {
+  "id": "SXY-0060",
+  "description_en": "Mint satin qipao-style mini dress with a keyhole cutout, white floral embroidery, a side slit and frog fastenings, worn with white lace-top thigh-high stockings and mint ankle-strap platform pumps.",
+  "garments": [
+   "qipao mini dress",
+   "thigh-high stockings",
+   "ankle-strap platform pumps"
+  ],
+  "colors": [
+   "mint",
+   "white",
+   "gold"
+  ],
+  "materials": [
+   "satin",
+   "lace",
+   "embroidery",
+   "sheer nylon"
+  ],
+  "archetypes": {
+   "date_night": 0.6,
+   "cosplay_like": 0.55,
+   "elegant_evening": 0.4,
+   "boudoir": 0.2
+  },
+  "exposure": 2,
+  "accentuated": {
+   "legs": 0.85,
+   "thighs": 0.6,
+   "chest": 0.5,
+   "waist": 0.4,
+   "butt": 0.4
+  },
+  "footwear": "stockings",
+  "season": "any",
+  "concepts": {
+   "legs_hosiery": 0.85,
+   "cosplay_rp": 0.55,
+   "heels_boots": 0.4,
+   "lingerie_panties": 0.2,
+   "body_worship": 0.3
+  },
+  "confidence": 0.8,
+  "notes": "Existing tags omit the white stockings colour and the cutout/slit design. Stockings and heels are both worn; footwear field lists stockings."
+ },
+ {
+  "id": "LNG-0159",
+  "description_en": "Black satin underwire bra and ruffled lace-trim satin briefs with small bows, with sheer black thigh-high stockings with wide satin tops and black patent pointed stilettos with bows.",
+  "garments": [
+   "satin bra",
+   "satin briefs",
+   "thigh-high stockings",
+   "patent stilettos"
+  ],
+  "colors": [
+   "black",
+   "gold"
+  ],
+  "materials": [
+   "satin",
+   "lace",
+   "sheer nylon",
+   "patent leather"
+  ],
+  "archetypes": {
+   "boudoir": 0.95,
+   "fetishwear": 0.3,
+   "date_night": 0.3
+  },
+  "exposure": 3,
+  "accentuated": {
+   "chest": 0.6,
+   "legs": 0.8,
+   "thighs": 0.5,
+   "butt": 0.3
+  },
+  "footwear": "heels",
+  "season": "any",
+  "concepts": {
+   "lingerie_panties": 0.95,
+   "legs_hosiery": 0.8,
+   "heels_boots": 0.5,
+   "strip_tease": 0.3,
+   "tit_worship": 0.25
+  },
+  "confidence": 0.9,
+  "notes": "Tags agree. The briefs show faint suspender-tab details at the sides, but no suspender belt is visible and the stockings are hold-up style."
+ }
+]
