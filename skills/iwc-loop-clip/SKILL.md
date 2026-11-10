@@ -112,8 +112,9 @@ v5) -, `ref3` = the room plate (a nude look: `ref2`).
    trail ("the frame was edited: <edits> - keep those changes").
 4. The garment state (`garment_state`): a `worn` still - "her outfit stays fully on as in the
    start frame"; a `partly` / `removed` still - the displaced garment and its end state held for
-   the whole video ("her lace bralette stays pulled down below her bare breasts as in the start
-   frame, it is never pulled back up") plus "the outfit picture `artifact://<outfit>/full_body_shot.<ext>`
+   the whole video ("her <garment> stays <its state from the still's `garment_state`> as in the
+   start frame, it is never put back on", e.g. a top lifted, a strap off the shoulder, a cup
+   pulled down, a robe off the shoulders) plus "the outfit picture `artifact://<outfit>/full_body_shot.<ext>`
    gives only the garments' colours, materials and details; how they are worn comes only from the
    start frame".
 5. NOTHING about the room in words: no furniture, lamp, colour or light (a room text that differed
@@ -126,7 +127,8 @@ v5) -, `ref3` = the room plate (a nude look: `ref2`).
 `continuity_constraints`): "a fixed camera on a tripod: no handheld movement, no shake, no pan, no
 zoom, no cut, no reframing", "ONE clearly visible gesture in place at a natural tempo; she stays in
 the same body pose at the same distance from the camera; she never leans toward the lens", "the
-room stays exactly as in the start frame for the whole video: nothing added, nothing recoloured"
+set behind her stays exactly as in the start frame for the whole video: nothing added, nothing
+recoloured"
 (the writer dropped this lock in 3 of 4 drafts, and every clip whose room drifted lacked it - v7),
 and the garment state sentence of item 4.
 

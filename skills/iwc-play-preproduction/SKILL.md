@@ -61,7 +61,8 @@ write in `kinks[]` how it is SHOWN on camera:
   hypnotic rhythm, glazed half-lidded eyes; denial / edging: a hand lifted away, a knowing smile;
   chastity / key: the key pendant lifted and shown; JOI: counting on fingers, a rhythm hand);
 - `outfit`: the outfit details that signal it;
-- `set`: the set elements that serve it (a bed to kneel on, a chair to straddle);
+- `set`: the set elements that serve it (a bed to kneel on, a chair to straddle) - the set
+  dressing itself (section 3) is always there: an attractive set in her style;
 - `items`: worn accessories belong to the outfit; HANDHELD items are props (only what play.md's
   kinks, script or persona call for, never decoration);
 - `camera`: why the plan's angles serve it (a low camera looking up when she dominates).
@@ -83,9 +84,27 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
   never a first-person view. Write `why` (the kink focus and power dynamic it serves).
 - **Set** (`set_id`): where the look plays. At most 2 sets for the whole episode (a montage cuts
   between looks every few seconds: one room keeps it one continuous session). A second set only
-  where the play calls for it. Describe each set concretely: room type, the surface she uses as
-  the stage, light (key light, practicals, colour accents), 3-5 background props, mood. Set ids
-  are lowercase snake_case space words (`bed_corner`): they become location slugs.
+  where the play calls for it. Set ids are lowercase snake_case space words (`bed_corner`): they
+  become location slugs.
+  **The set is HER space, dressed for her audience** - an attractive set that fits the
+  episode's kinks and tone and the persona (play.md sections 1-3: her bio, style, epithets,
+  signature colours and accessories), never a bare, empty, plain or anonymous one (a hotel-like
+  room). A viewer should want to be there and should read who she is from it. Describe
+  concretely, whatever the place (a bedroom, a living room, a bathroom, an office, outdoors):
+  - the place and its style in HER taste, taken from the persona (its era, mood and signature
+    colours decide the materials, e.g. velvet and candlelight, pastel and plush, chrome and neon,
+    linen and daylight);
+  - the stage she uses (what she kneels, sits or leans on) and how it is dressed - layered,
+    textured and inviting (cushions, throws, upholstery, fabrics), never a single plain surface;
+  - the backdrop behind her, which IS the background of every look (its colour, texture and what
+    is on it) - at a close-up it is soft bokeh behind her head, at a wide or low angle it fills
+    the frame around her: it must read at every look's framing;
+  - the light: a soft flattering key on her, 2-3 practicals in the background (lamps, candles,
+    string lights, a window) and ONE colour accent (a glow, a small neon, a coloured lamp) in the
+    persona's palette - the background stays readable, never falling into black;
+  - 4-6 background props that say who she is - styled and tidy, never clutter, no text, logos or
+    screens;
+  - the palette (2-3 colours plus her signature colour) and the mood.
 - **Room** (`sets[].room`, `room_id`, `view`): `room: shared` - a corner of ONE room shared with
   other sets (same `room_id`, one location design; the room's first set `view: main`, every other
   corner `view: "<what the camera faces> (left 45°|left 90°|right 45°|right 90°)"`, at most a
