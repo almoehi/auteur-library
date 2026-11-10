@@ -213,6 +213,9 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
 - `forbidden`, or any depicted minor: never an [nsfw] workflow.
 - `allowed` and the frame shows adult nudity or sex: prefer the [nsfw] workflow of the SAME
   capability (capability first).
+  Exception: an outfit design (an edit of the character's picture) uses the plain image-edit
+  workflow the server picked - its nudity comes from the character's picture; the [nsfw] one only
+  when no plain one is loaded.
 - Explicit acts: an [nsfw] reference-to-image workflow (place = Picture 1, people after, a general
   NSFW LoRA). An [nsfw] multi-reference EDIT cannot produce an act (people keep their reference
   poses). Without a reference-to-image one, two steps:
