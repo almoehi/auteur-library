@@ -39,8 +39,8 @@ clock (0-7.3 s).
 - the room is ONLY pictured, never described: a room text that differed from the location picture
   (a "crimson" lamp, a vanity) made the model repaint the room and widen the shot to fit it;
 - every reference is named in `subject_definitions` with a retention level in
-  `retention_analysis` (H3 Template B) - by the platform's picture lines from `image_inputs`, never
-  by hand-written picture definitions;
+  `retention_analysis` (H3 Template B) - written by platform CODE from `image_inputs` (a writer
+  once swapped the face and outfit pictures), never by hand-written picture definitions;
 - a still with a garment partly off: the outfit picture (fully worn) must not be `fully_preserved`,
   or the model pulls the garment back on mid-clip;
 - ONE gesture in place; nothing toward or away from the lens.
@@ -85,18 +85,20 @@ key), `plan` (default `visual_plan`), `inputs` (default `episode_inputs`).
 ## 2. The prompt (one per clip)
 
 **The references are named by the platform, never by you.** Pass every picture as `image_inputs`
-of `draft_prompt` (`{port, ref}`); platform code writes the prompt writer's "Picture N is ..."
-lines from the workflow's port labels and the artifacts (the storyboard frame as the opening frame
-and target framing, the face view with the character's identity cue and marks, the outfit
-reference, the place's main picture), and the writer builds `subject_definitions` and a per-picture
-`retention_analysis` from them (H3 Template B). In `context`, NEVER number or describe a picture;
-when an instruction is about one picture, name it by its `artifact://` ref - code rewrites the ref
-into that picture's label.
+of `draft_prompt` (`{port, ref[, retention]}`); platform code writes the prompt's
+`subject_definitions` picture lines (the start frame, the face view with the character's identity
+cue and marks, the outfit by its garments, the place's main picture) and the per-picture
+`retention_analysis` lines from them (H3 Template B, `picture_sections` of the workflow), after the
+writer answers and again after every enhance. A picture's `retention` defaults to
+`fully_preserved`. In `context`, NEVER number or describe a picture; when an instruction is about
+one picture, name it by its `artifact://` ref - code rewrites the ref into that picture's label.
 
 `image_inputs` (ports of `wf_h3_loop_clip_nsfw`, without gaps): `ref0` = the clip's still frame
 (`artifact://<storyboard>/<frame file>`, pinned as the first AND last frame), `ref1` =
 `artifact://<character>/view_face.<ext>`, `ref2` = the outfit's `full_body_shot` (not for a nude
-look), `ref3` = the room plate (a nude look: `ref2`).
+look) - with `retention: attribute_transfer` on a `partly` / `removed` still (the outfit picture
+shows the garments fully worn; kept `fully_preserved`, it pulled a garment back on mid-clip, pilot
+v5) -, `ref3` = the room plate (a nude look: `ref2`).
 
 **`context`** - only what the platform cannot know, in this order:
 1. The clip: "One continuous take from a fixed camera on a tripod, 16:9 landscape, framed <the look's
@@ -112,27 +114,28 @@ look), `ref3` = the room plate (a nude look: `ref2`).
    start frame"; a `partly` / `removed` still - the displaced garment and its end state held for
    the whole video ("her lace bralette stays pulled down below her bare breasts as in the start
    frame, it is never pulled back up") plus "the outfit picture `artifact://<outfit>/full_body_shot.<ext>`
-   gives only the garments' colours, materials and details (attribute_transfer); how they are worn
-   comes only from the start frame" (the outfit picture shows them fully worn; kept fully, it pulled
-   the garment back on mid-clip, pilot v5).
-5. "The room of `artifact://<location>/<plate file>` stays exactly as in the start frame for the
-   whole video: nothing added, nothing recoloured (fully_preserved)." - and NOTHING else about the
-   room: no furniture, lamp, colour or light in words (a room text that differed from the picture
-   made the model repaint the room and widen the shot, pilot v5).
+   gives only the garments' colours, materials and details; how they are worn comes only from the
+   start frame".
+5. NOTHING about the room in words: no furniture, lamp, colour or light (a room text that differed
+   from the picture made the model repaint the room and widen the shot, pilot v5) - the room lock
+   is a verbatim phrase (below).
 6. "No speech: her lips stay closed or part only for soft breaths and the gesture's sounds; no
    music. Quiet room tone."
 
-`verbatim_phrases` (kept word for word by code): "a fixed camera on a tripod: no handheld
-movement, no shake, no pan, no zoom, no cut, no reframing", "ONE clearly visible gesture in place
-at a natural tempo; she stays in the same body pose at the same distance from the camera; she never
-leans toward the lens", and the garment state sentence of item 4.
+`verbatim_phrases` (kept word for word by code; one the writer drops becomes a line of
+`continuity_constraints`): "a fixed camera on a tripod: no handheld movement, no shake, no pan, no
+zoom, no cut, no reframing", "ONE clearly visible gesture in place at a natural tempo; she stays in
+the same body pose at the same distance from the camera; she never leans toward the lens", "the
+room stays exactly as in the start frame for the whole video: nothing added, nothing recoloured"
+(the writer dropped this lock in 3 of 4 drafts, and every clip whose room drifted lacked it - v7),
+and the garment state sentence of item 4.
 
 **Drafting**: `draft_prompt` for `wf_h3_loop_clip_nsfw` with `duration_seconds` = 7.3,
-`image_inputs`, `context` and `verbatim_phrases` as above. One `review_prompt`: the six Template B
-sections, a `subject_definitions` line and a `retention_analysis` level for every supplied
-picture, the `[keyframe completion]` tag, the timestamped phases ending in the return to the start
-frame, the gesture, the garment state, and no room, furniture, lamp or colour described in words; a
-missing one is a significant gap: one `enhance_prompt` naming it.
+`image_inputs`, `context` and `verbatim_phrases` as above. One `review_prompt` (the picture and
+retention sections and the locked phrases are code's - not part of the review): the summary's
+`[keyframe completion]` tag, a `detailed_description` with the timestamped phases ending in the
+return to the start frame, the gesture, the garment state, and no room, furniture, lamp or colour
+described in words; a missing one is a significant gap: one `enhance_prompt` naming it.
 
 ## 3. Render (per clip, in plan order)
 
