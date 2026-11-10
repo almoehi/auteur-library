@@ -1,6 +1,7 @@
-"""Pose-fidelity check of the style edit (method c can drift: on a top-down view it once redrew the library
-reference instead of our figures): IoU of the line art's filled figure silhouette against the people silhouette of
-the mannequin render, both from extract.py's aligned crops. A view below THRESHOLD is flagged for redo / review.
+"""Pose-fidelity check of the style edit (method c drifts on top-down views: it redraws the library reference
+instead of our figures): IoU of the line art's filled silhouette against the mannequin render's silhouette, both from
+extract.py's aligned crops. The edit sometimes draws the support (counter) too, so the score is the better of two
+references: people only (u2net_human_seg) and people + support (bria-rmbg). Below THRESHOLD = flagged.
 
   uv run --no-project --with pillow --with numpy --with scipy --with rembg --with onnxruntime \
     python -I fidelity.py <parts dir> [<parts dir> ...]
@@ -16,16 +17,15 @@ from PIL import Image, ImageFilter
 from scipy.ndimage import binary_fill_holes
 
 THRESHOLD = 0.6
-_SESSION = None
+_SESSIONS: dict[str, object] = {}
 
 
-def people(path: Path) -> np.ndarray:
+def silhouette(path: Path, model: str) -> np.ndarray:
     from rembg import new_session, remove
 
-    global _SESSION
-    if _SESSION is None:
-        _SESSION = new_session("u2net_human_seg")
-    return np.asarray(remove(Image.open(path).convert("RGB"), only_mask=True, session=_SESSION)) > 127
+    if model not in _SESSIONS:
+        _SESSIONS[model] = new_session(model)
+    return np.asarray(remove(Image.open(path).convert("RGB"), only_mask=True, session=_SESSIONS[model])) > 127
 
 
 def drawn(path: Path) -> np.ndarray:
@@ -39,8 +39,11 @@ def main() -> None:
             line = man.with_name(man.name.replace("_mannequin", "_lineart"))
             if not line.exists():
                 continue
-            a, b = people(man), drawn(line)
-            iou = float((a & b).sum() / max((a | b).sum(), 1))
+            b = drawn(line)
+            iou = max(
+                float((a & b).sum() / max((a | b).sum(), 1))
+                for a in (silhouette(man, "u2net_human_seg"), silhouette(man, "bria-rmbg"))
+            )
             print(f"{d.parent.name}/{man.name.split('_')[0]}: IoU {iou:.2f} {'OK' if iou >= THRESHOLD else 'FLAG'}")
 
 

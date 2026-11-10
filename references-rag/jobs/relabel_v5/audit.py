@@ -59,12 +59,12 @@ SUPPORTS = (
 _lock = threading.Lock()
 
 
-def catalog_text(entries: list[dict[str, Any]]) -> str:
+def catalog_text(entries: list[dict[str, Any]], include_proposed: bool = False) -> str:
     """The NSFW positions with their roles, postures, who is above and their NUMBERED essential supports."""
     lines = []
     for e in entries:
-        if e["content"] != "nsfw":
-            continue
+        if e["content"] != "nsfw" or (e.get("proposed") and not include_proposed):
+            continue  # proposed positions are not the server's yet: only pose_gen asks for them
         above = {"a": "person A is above", "b": "person B is above"}.get(e["above"] or "", "neither is above")
         essentials = " ".join(f"({n}) {s['sentence']}." for n, s in enumerate(essential_supports(e), 1))
         lines.append(

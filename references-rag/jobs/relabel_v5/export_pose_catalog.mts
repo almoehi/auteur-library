@@ -7,9 +7,10 @@
  *   cd <video-harness>/video-harness && npx tsx <this file> <path to pose-catalog.ts> <out.json>
  *
  * Sentences are rendered with the placeholder names "person A" / "person B" (a one-person pose: "person A" twice).
+ * Entries of proposed_positions.json (next to the output) are appended marked `"proposed": true`.
  */
-import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 type Role = "a" | "b";
@@ -69,5 +70,13 @@ const exported: ExportedEntry[] = mod.POSE_CATALOG.map((entry) => {
   };
 });
 
-writeFileSync(outPath, `${JSON.stringify({ source: "video-harness/src/design/pose-catalog.ts", entries: exported }, null, 2)}\n`);
-console.log(`${exported.length} entries -> ${outPath}`);
+// PROPOSED positions (not in the server catalog yet) from proposed_positions.json next to the output, marked.
+const proposedPath = resolve(dirname(resolve(outPath)), "proposed_positions.json");
+const proposed = existsSync(proposedPath)
+  ? (JSON.parse(readFileSync(proposedPath, "utf8")) as { entries: object[] }).entries.map((e) => ({ ...e, proposed: true }))
+  : [];
+writeFileSync(
+  outPath,
+  `${JSON.stringify({ source: "video-harness/src/design/pose-catalog.ts", proposed_source: "proposed_positions.json", entries: [...exported, ...proposed] }, null, 2)}\n`,
+);
+console.log(`${exported.length} server entries + ${proposed.length} proposed -> ${outPath}`);

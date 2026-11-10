@@ -118,11 +118,40 @@ POSES: tuple[PoseSpec, ...] = (
         camera={
             "front": "Frontal full-body view at eye level, the camera facing the wall and the woman's front from slightly to the man's "
             f"side, so that her face, chest, raised knee at his hip and his hand on her thigh are visible beside him. {FRAMING}",
-            "low": f"Low-angle full-body view: the camera at knee height near the floor, tilted up at the couple. {FRAMING}",
+            "low": "Worm's-eye low-angle view: the camera lies on the floor a few steps from the couple, pointing steeply up, "
+            f"the underside of their chins visible, strong upward perspective, the wall beside them. {FRAMING}",
             "high": f"High-angle full-body view from above and in front, looking down at the couple. {FRAMING}",
             "side": f"Exact side profile view of the couple and the wall at eye level. {FRAMING}",
             "diag": f"Three-quarter view at eye level. {FRAMING}",
             "back": f"View from behind the man at eye level, his back toward the camera, the woman against the wall beyond him. {FRAMING}",
+        },
+    ),
+    PoseSpec(
+        # PROPOSED position (../jobs/relabel_v5/proposed_positions.json): not the catalog's `standing from behind`,
+        # which needs her bent forward at the hips. The camera cannot face the couple (the wall is there), so the
+        # base view is the profile and there is no `front` view.
+        slug="against_the_wall_from_behind",
+        title="Facing the wall, chest pressed to it, arms raised, he stands pressed against her back",
+        position="against the wall from behind",
+        series="duo",
+        roles={"a": "the man", "b": "the woman"},
+        extra=(
+            "She stands upright on both feet close to the wall, facing it, legs slightly apart. Both of her arms are raised "
+            "high and spread wide above her head, both palms flat on the wall. Her chest and breasts are pressed flat against "
+            "the wall. Her back is arched, her hips pushed back toward him. He stands upright on both feet right behind her, "
+            "his chest against her back, his hips pressed against her buttocks, his hands holding her hips. Nobody kneels, "
+            "nobody bends forward at the hips."
+        ),
+        furniture="The wall is a plain flat vertical wall panel of the same matte grey material, standing on the floor.",
+        camera={
+            "front": "",  # impossible: the camera would stand inside the wall
+            "side": "Exact side profile view at eye level: the wall panel seen edge-on at one side of the picture, the woman "
+            f"pressed against it facing it, the man right behind her, both in profile. {FRAMING}",
+            "low": "Worm's-eye low-angle view from the side: the camera lies on the floor a few steps away, pointing steeply "
+            f"up at the couple and the wall, strong upward perspective. {FRAMING}",
+            "high": f"High-angle view from above and to the side, looking down at the couple against the wall. {FRAMING}",
+            "diag": f"Three-quarter view from behind the man at eye level, the wall beyond the couple. {FRAMING}",
+            "back": f"View from directly behind the man at eye level, his back toward the camera, the wall beyond them. {FRAMING}",
         },
     ),
     PoseSpec(
@@ -166,7 +195,8 @@ POSES: tuple[PoseSpec, ...] = (
         camera={
             "front": "Frontal full-body view at eye level, the camera facing the man's front and the bed edge, the kneeling woman "
             f"between his knees with her back toward the camera, slightly off-centre so that her face at his lap is visible. {FRAMING}",
-            "low": f"Low-angle full-body view: the camera close to the floor, tilted up at the pair. {FRAMING}",
+            "low": "Worm's-eye low-angle view: the camera lies on the floor a few steps in front of the bed, pointing up at the "
+            f"pair, the underside of the man's chin visible, strong upward perspective. {FRAMING}",
             "high": f"High-angle view from above and in front, looking down at the pair. {FRAMING}",
             "side": f"Exact side profile view of the pair and the bed edge at seated eye level. {FRAMING}",
             "diag": f"Three-quarter view at seated eye level. {FRAMING}",
@@ -174,6 +204,7 @@ POSES: tuple[PoseSpec, ...] = (
         },
     ),
     PoseSpec(
+        # Usable only for the moment BEFORE contact: video-harness S1 refuses single-person references on contact shots.
         slug="solo_kneeling_oral",
         title="Kneeling, leaning slightly forward, head at lap height, mouth open, hands forward",
         position="kneeling",
@@ -188,34 +219,12 @@ POSES: tuple[PoseSpec, ...] = (
         furniture="",
         camera={
             "front": f"Frontal full-body view at the height of her head, the camera directly in front of her, facing her. {SOLO_FRAMING}",
-            "low": "Worm's-eye low-angle view as a person lying on the floor in front of her sees her: the camera lies on the floor "
-            f"in front of her knees, pointing steeply up at her, the underside of her chin visible, strong upward perspective. {SOLO_FRAMING}",
+            # Camera words only: "as a lying person sees her" drew that person into the picture (2026-11-10).
+            "low": "Worm's-eye low-angle view: the camera lies on the floor in front of her knees, pointing steeply up at her, "
+            f"the underside of her chin visible, strong upward perspective, nobody else in the picture. {SOLO_FRAMING}",
             "high": f"High-angle view from above and in front, as a seated person in front of her looks down at her face. {SOLO_FRAMING}",
             "side": f"Exact side profile view at the height of her head. {SOLO_FRAMING}",
             "diag": f"Three-quarter view at the height of her head. {SOLO_FRAMING}",
-            "back": f"View from directly behind her, her back toward the camera. {SOLO_FRAMING}",
-        },
-    ),
-    PoseSpec(
-        slug="solo_astride",
-        title="Kneeling astride, knees wide, hips lowered, hands braced forward",
-        position="cowgirl",
-        series="full_body_sexy",
-        roles={"b": "the woman"},
-        extra=(
-            "She kneels astride with her knees spread wide apart on the floor, her lower legs folded back along the floor, her hips "
-            "lowered close to the floor as if sitting on the hips of an unseen partner lying beneath her. Her torso is upright, "
-            "leaning slightly forward, both arms straight down in front of her, both hands braced forward at the height of her "
-            "knees as if on the chest of the unseen partner, facing forward."
-        ),
-        furniture="",
-        camera={
-            "front": f"Frontal full-body view at the height of her chest, the camera directly in front of her, facing her. {SOLO_FRAMING}",
-            "low": "Low-angle view as a person lying on their back beneath her sees her: the camera close to the floor in front of "
-            f"her knees, tilted steeply up at her face and chest. {SOLO_FRAMING}",
-            "high": f"High-angle view from above and in front, looking down at her. {SOLO_FRAMING}",
-            "side": f"Exact side profile view at chest height. {SOLO_FRAMING}",
-            "diag": f"Three-quarter view at chest height. {SOLO_FRAMING}",
             "back": f"View from directly behind her, her back toward the camera. {SOLO_FRAMING}",
         },
     ),
@@ -223,8 +232,11 @@ POSES: tuple[PoseSpec, ...] = (
 POSE_BY_SLUG = {p.slug: p for p in POSES}
 
 # Camera turns (qwen_image_camera_turn, LoRA grammar '<sks> <azimuth> <elevation> <distance>') from the base view.
-TURNS: dict[ViewName, str] = {
+# Keys are REQUEST names; label each result by what the camera actually sees (README step 6).
+TURNS: dict[str, str] = {
     "side": "<sks> right side view eye-level shot wide shot",
+    "side_left": "<sks> left side view eye-level shot wide shot",
+    "diag_left": "<sks> front-left quarter view eye-level shot wide shot",
     "diag": "<sks> front-right quarter view eye-level shot wide shot",
     "back": "<sks> back view eye-level shot wide shot",
     "high": "<sks> front view high-angle shot wide shot",
