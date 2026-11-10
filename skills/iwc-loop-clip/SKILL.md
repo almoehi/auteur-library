@@ -5,7 +5,8 @@ description: >
   CLIPS of one look of an iWantClips episode from its finished storyboard: each clip starts AND ends
   on its still's storyboard frame (h3_loop_clip_nsfw, slow motion: 7.3 s rendered, played 10.9 s),
   with the character's face view, the outfit picture and the room plate as named references; ONE
-  in-place gesture per clip from the plan; a clip list for post-production. Do NOT invoke for
+  in-place gesture per clip from the plan; a REVEAL clip (`kind: reveal`) runs from the look's worn
+  still to its exposed still instead (h3_start_end_clip_nsfw); a clip list for post-production. Do NOT invoke for
   planning (iwc-play-preproduction), scheduling the look tasks (iwc-schedule-loops), storyboards
   (storyboard-scene), scene clips of the film pipeline (shoot-clip) or editing the montage with the
   episode audio (post-production).
@@ -55,11 +56,13 @@ Fields: `look` (the look id), `scene` (N), `clips` (optional: only these clip id
 key), `outfit` (the outfit design key; `none` for a nude look), `location` (the location design
 key), `plan` (default `visual_plan`), `inputs` (default `episode_inputs`).
 1. `task_failed(reason)` if the tool `wf_h3_loop_clip_nsfw` is missing ("load the
-   h3_loop_clip_nsfw workflow").
+   h3_loop_clip_nsfw workflow"), or - when a clip of this look is `kind: reveal` -
+   `wf_h3_start_end_clip_nsfw` is ("load the h3_start_end_clip_nsfw workflow").
 2. `artifact_index`: the storyboard artifact must be finished (approved); else
    `task_failed("<storyboard> is not finished yet - finish it in the design studio and retry")`.
 3. `read_artifact` `visual_plan.json`: `looks[<look>]` (`camera`, `body_pose`, `stills` with `id`,
-   `beat`, `hands`, `face`, `garment_state`) and the clips whose `look` is this look (in plan
+   `beat`, `hands`, `face`, `garment_state`, `exposure_part`) and the clips whose `look` is this look
+   (each with `gesture`, `prompt_line`, `seed`; a reveal also `kind`, `from_still`) (in plan
    order; with a `pilot` block: only the clips it lists; with the `clips` field: only those).
 4. `read_artifact` the storyboard: `design.json` (`notes`; `published.outputs`: entries of group
    `frame` with `file`, `shot`, `edits`) and `shotlist.md`.
@@ -81,6 +84,12 @@ key), `plan` (default `visual_plan`), `inputs` (default `episode_inputs`).
      (`garments`, `colors`, `material`);
    - the location design: the room plate - `full_body_shot.<ext>` for the set's `view: main`, else
      the published view named by the set's `view`.
+7. **The start pose as DRAWN** (one `describe_image` per still frame of this task, before any
+   drafting): "In this frame, state in one short line each: her hands and arms; her head (angle,
+   tilt); her gaze (on the lens or where); each garment and how it is worn (on, pulled down,
+   lifted, off the shoulders, removed)." The frame is the clip's first AND last picture, so this
+   drawn pose is the start pose the prompt states - a frame can differ from its plan (a hand
+   placed elsewhere, a garment further off than planned). Keep the answer per still.
 
 ## 2. The prompt (one per clip)
 
@@ -103,14 +112,16 @@ v5) -, `ref3` = the room plate (a nude look: `ref2`).
 **`context`** - only what the platform cannot know, in this order:
 1. The clip: "One continuous take from a fixed camera on a tripod, 16:9 landscape, framed <the look's
    camera line>. ONE <gesture name> in place, then a return to the exact pose of the start frame."
-2. The phases on the render clock: "0-1 s: she holds the pose of the start frame, <the still's
-   face>. 1-5.5 s: <the clip's prompt_line, its tempo words made natural (not slow - the playback is
+2. The phases on the render clock: "0-1 s: she holds the pose of the start frame: <the DRAWN
+   start pose of step 1.7 - hands, head, gaze>. 1-5.5 s: <the clip's prompt_line, its tempo words made natural (not slow - the playback is
    slowed), the movement full and clearly visible>. 5.5-7.3 s: she returns exactly to the pose of
    the start frame - hands, head, gaze and garments as at the start - eyes on the lens."
 3. The shot's `Action`, `Pose`, `Contact` and `Camera` lines verbatim (NEVER its `Location`,
    `Frame` or `Lighting` lines, never the plan's set or outfit text) and the frame's `edits`
-   trail ("the frame was edited: <edits> - keep those changes").
-4. The garment state (`garment_state`): a `worn` still - "her outfit stays fully on as in the
+   trail ("the frame was edited: <edits> - keep those changes"); where a line contradicts the
+   DRAWN start pose (hands, head, a garment's state), leave that part out - the frame wins, two
+   different start poses in one prompt make the clip jump.
+4. The garment state (`garment_state`, as DRAWN where the frame differs - step 1.7): a `worn` still - "her outfit stays fully on as in the
    start frame"; a `partly` / `removed` still - the displaced garment and its end state held for
    the whole video ("her <garment> stays <its state from the still's `garment_state`> as in the
    start frame, it is never put back on", e.g. a top lifted, a strap off the shoulder, a cup
@@ -139,6 +150,31 @@ retention sections and the locked phrases are code's - not part of the review): 
 return to the start frame, the gesture, the garment state, and no room, furniture, lamp or colour
 described in words; a missing one is a significant gap: one `enhance_prompt` naming it.
 
+## 2b. Reveal clips (`kind: reveal`)
+
+A reveal shows the garment change itself, once per look: it starts on the frame of `from_still`
+(a worn still) and ends on the frame of `still` (the exposed still), both of this look - the same
+framing, set and body pose. Find both frames as in step 1.5 and describe both as drawn (1.7).
+- `image_inputs` (ports of `wf_h3_start_end_clip_nsfw`): `ref0` = the `from_still` frame (the start
+  frame), `ref1` = the face view, `ref2` = the outfit's `full_body_shot` with `retention:
+  attribute_transfer`, `ref3` = the room plate. The END frame is not an image input of the prompt
+  (no picture line): it goes only on the render's `end_frame` port.
+- `context`: 1. "One continuous take from a fixed camera on a tripod, 16:9 landscape, framed <the
+  look's camera line>: ONE garment change in place, from the start frame's state to the end
+  state." 2. The phases: "0-1.5 s: she holds the start pose: <the DRAWN pose of the start frame>.
+  1.5-5.5 s: with her own hands she <the change: the garment that differs between the two stills'
+  `garment_state` (as drawn), from its start state to its end state, e.g. slides the robe off both
+  shoulders, pulls the cups of her bra down, lifts her top>, at a natural tempo, the movement full
+  and clearly visible. 5.5-7.3 s: she holds the end state: <the DRAWN pose of the end frame>, eyes on
+  the lens." 3. The start still's shot lines as in item 3 above. 5. and 6. as above (no room in
+  words, no speech).
+- `verbatim_phrases`: the fixed-camera and set phrases above, "she stays in the same body pose at
+  the same distance from the camera; she never leans toward the lens", and the end state: "at the
+  end <the garment> is <its end state>, and it stays so".
+- Render: `wf_h3_start_end_clip_nsfw` with `ref0`-`ref3`, `end_frame` = `artifact://<storyboard>/<the
+  still's frame file>`, `prompt_ids`, `duration_seconds` = 7.3, `fps` = 32, the clip's `seed`;
+  otherwise as in section 3.
+
 ## 3. Render (per clip, in plan order)
 
 `wf_h3_loop_clip_nsfw` with `ref0`-`ref3` as above, `prompt_ids`, `duration_seconds` = 7.3, `fps`
@@ -153,7 +189,8 @@ video) is submitted once more; a finished render is delivered as it is.
 
 `look<N>_clips.json` (for post-production; one `sandbox_exec` python3 snippet): one entry per clip
 in plan order - `id`, `slot` (`start`, `end` from the plan), `still` (id, beat, shot, frame
-file), `gesture`, `garment_state`, `file`, `prompt_id`, `seed`.
+file), `gesture`, `garment_state`, `file`, `prompt_id`, `seed`; a reveal also `kind: "reveal"`,
+`from_still` (id, beat, shot, frame file) and `workflow`.
 
 ## 5. Reply
 

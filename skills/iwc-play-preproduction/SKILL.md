@@ -31,8 +31,10 @@ the play's kinks. Nothing is rendered here.
 still from the `refs` catalog. NEVER the `outfit` kind and never a `garment_reference`: the
 outfits stay text (more variety).
 
-**Format and camera.** 16:9 landscape, 1080p, a FIXED camera on a tripod: at most a very slow,
-subtle push in or out; never handheld-style movement, shake, pan, orbit, zoom jumps or reframing.
+**Format and camera.** 16:9 landscape, 1080p, a FIXED camera on a tripod that never moves: no push
+in or out, no handheld-style movement, shake, pan, orbit, zoom or reframing (each clip starts and
+ends on the same still, so a camera move can only go out and come back - the clips read as
+jumps). Push-ins are a post-production effect on the finished clips.
 
 `play.md` is the AUTHORITATIVE source of the production. There is no screenplay adaptation: the
 only "screenplay" is play.md copied verbatim (step 4b).
@@ -144,13 +146,20 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
   body. A `close-up` / `extreme close-up` look is face-only: its stills are always `worn` (the
   platform refuses a garment state on a face-only shot; its exposure slots move to another look of
   the episode).
+  **The bared part** (`exposure_part`, set by the montage plan on every `partly` / `removed`
+  still: `chest`, `ass` or `hips`): the garment state bares exactly that part - the clips of the
+  still play with it (their gestures come from that part's family: a chest still's clips cup,
+  squeeze or bounce the bared chest). Displace the garment that covers that part, so its skin is
+  visible in the framing; an outer layer alone (a robe or jacket off the shoulders) does not bare
+  it. Copy `exposure_part` into the still.
   **Vary them and make them count:** no two looks use the same partly / removed state, and the
   states escalate with the episode's `nudity` flag - with `conditional` or `full`, at least one
   state per episode bares skin under the lingerie where the framing shows it (`lace bralette
   (cups pulled down below her breasts)`, `lace bralette (pushed up above her breasts)`); an outer
   layer (a robe off the shoulders) counts once at most. Never a state the flag does not allow
   (`none`: always `worn`).
-- **Stills** (`stills[]`): COPY the look's stills (`id`, `beat`, `detail`, `exposure`) and add
+- **Stills** (`stills[]`): COPY the look's stills (`id`, `beat`, `detail`, `exposure`,
+  `exposure_part` where set) and add
   per still `garment_state` (above), `hands` and `face`: split the plan's `detail` into the hands / arms state (`hands` - a body
   state: `one hand resting on her collarbone, the other on her thigh`) and the expression and gaze
   (`face` - `lips slightly parted, eyes on the lens`). Never change the body pose, camera, set or
