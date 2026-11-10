@@ -9,6 +9,8 @@ PLAN_POSE_CATALOG_ADOPTION.md 4.6 L1. Proposals only: nothing is applied to the 
 - Changed poses: 150; tags dropped: 80; tags added: 150 (137 of them on SOLO figures, which only hold one role of a position - review those adds with care; the plan tags a solo only when it clearly mimics the position).
 - Support differs from pose_vision: 51; people count differs from `solo`: 0.
 
+**Status: APPLIED.** The full result (every DROP and every ADD; the `proposed` column) is applied to `jobs/pose_vision/results.jsonl` by `apply_review.py`; exact diff and per-position counts: `applied.md`.
+
 ## Known cases
 
 | id | expected | old | proposed | confidence | evidence |

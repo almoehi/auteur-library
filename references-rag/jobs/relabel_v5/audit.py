@@ -45,8 +45,16 @@ VIEWS = ("front", "diag", "side")  # front first; the others disambiguate line a
 MAX_SIDE = 768
 ASSET_PREFIX = "library/refs/assets/"
 SUPPORTS = (
-    "standing", "sitting", "kneeling", "all_fours", "lying_back", "lying_front",
-    "lying_side", "squatting", "bridge", "bent_over",
+    "standing",
+    "sitting",
+    "kneeling",
+    "all_fours",
+    "lying_back",
+    "lying_front",
+    "lying_side",
+    "squatting",
+    "bridge",
+    "bent_over",
 )
 _lock = threading.Lock()
 
@@ -133,7 +141,9 @@ ONE JSON object, no prose, no code fence:
 
 
 def facts_text(facts: dict[str, Any]) -> str:
-    figs = "; ".join(f"the {f.get('who')}: {f.get('posture')} ({f.get('detail')})" for f in facts.get("figures", []))
+    figs = "; ".join(
+        f"the {f.get('who')}: {f.get('posture')} ({f.get('detail')})" for f in facts.get("figures", [])
+    )
     return f"{figs}. Above: {facts.get('above')}. {facts.get('description', '')}"
 
 
@@ -146,17 +156,22 @@ def load_image(path: Path) -> str:
 
 
 def call(api_key: str, content: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
-    body = json.dumps({
-        "model": MODEL,
-        "messages": [{"role": "user", "content": content}],
-        "temperature": 0.1,
-        "max_tokens": 3500,
-        "chat_template_kwargs": {"enable_thinking": False},
-    }).encode()
+    body = json.dumps(
+        {
+            "model": MODEL,
+            "messages": [{"role": "user", "content": content}],
+            "temperature": 0.1,
+            "max_tokens": 3500,
+            "chat_template_kwargs": {"enable_thinking": False},
+        }
+    ).encode()
     delay = 10.0
     for attempt in range(8):
-        req = urllib.request.Request(ENDPOINT, data=body, headers={
-            "Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
+        req = urllib.request.Request(
+            ENDPOINT,
+            data=body,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        )
         try:
             with urllib.request.urlopen(req, timeout=300) as resp:
                 data = json.loads(resp.read())
@@ -187,7 +202,7 @@ def call(api_key: str, content: list[dict[str, Any]]) -> tuple[str, dict[str, An
 def parse_json(text: str) -> dict[str, Any]:
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
     start, end = text.find("{"), text.rfind("}")
-    return json.loads(text[start:end + 1])
+    return json.loads(text[start : end + 1])
 
 
 def ask(api_key: str, text: str, images: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -210,15 +225,38 @@ def audit(item: dict[str, Any], library: Path, catalog: str, api_key: str) -> di
     for angle in VIEWS:
         if angle in views:
             images.append({"type": "text", "text": f"View '{angle}':"})
-            images.append({"type": "image_url", "image_url": {
-                "url": load_image(library / views[angle].removeprefix(ASSET_PREFIX))}})
+            images.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": load_image(library / views[angle].removeprefix(ASSET_PREFIX))},
+                }
+            )
     people_hint = "a duo: a woman and a man" if not attrs["solo"] else "a solo female figure"
-    facts, usage1 = ask(api_key, BLIND_PROMPT.format(people_hint=people_hint, supports=", ".join(SUPPORTS)), images)
-    answer, usage2 = ask(api_key, PROMPT.format(
-        catalog=catalog, id=item["id"], series=attrs["series"], people_hint=people_hint, facts=facts_text(facts),
-        tags=", ".join(tags) if tags else "(none)", supports=", ".join(SUPPORTS)), images)
+    facts, usage1 = ask(
+        api_key, BLIND_PROMPT.format(people_hint=people_hint, supports=", ".join(SUPPORTS)), images
+    )
+    answer, usage2 = ask(
+        api_key,
+        PROMPT.format(
+            catalog=catalog,
+            id=item["id"],
+            series=attrs["series"],
+            people_hint=people_hint,
+            facts=facts_text(facts),
+            tags=", ".join(tags) if tags else "(none)",
+            supports=", ".join(SUPPORTS),
+        ),
+        images,
+    )
     cost = float(usage1.get("cost") or 0) + float(usage2.get("cost") or 0)
-    return {"id": item["id"], "tags": tags, "facts": facts, "answer": answer, "cost": round(cost, 6), "model": MODEL}
+    return {
+        "id": item["id"],
+        "tags": tags,
+        "facts": facts,
+        "answer": answer,
+        "cost": round(cost, 6),
+        "model": MODEL,
+    }
 
 
 def main() -> None:
@@ -233,13 +271,17 @@ def main() -> None:
     if not api_key:
         sys.exit("FEATHERLESS_API_KEY is not set")
     catalog = catalog_text(json.loads((HERE / "pose_catalog.json").read_text())["entries"])
-    items = [i for i in json.load(gzip.open(args.index))["items"] if i["kind"] == "pose"]
+    with gzip.open(args.index) as fh:
+        items = [i for i in json.load(fh)["items"] if i["kind"] == "pose"]
     if args.only:
         items = [i for i in items if i["id"] in set(args.only)]
     done = set()
     if args.out.exists():
-        done = {json.loads(line)["id"] for line in args.out.read_text().splitlines()
-                if line.strip() and "error" not in json.loads(line)}
+        done = {
+            json.loads(line)["id"]
+            for line in args.out.read_text().splitlines()
+            if line.strip() and "error" not in json.loads(line)
+        }
     todo = [i for i in items if i["id"] not in done]
     print(f"{len(todo)} to audit ({len(done)} done)", file=sys.stderr)
     with cf.ThreadPoolExecutor(args.workers) as pool:
@@ -251,8 +293,10 @@ def main() -> None:
                 rec = {"id": futures[fut], "error": str(err)}
             with _lock, args.out.open("a") as fh:
                 fh.write(json.dumps(rec) + "\n")
-            print(f"[{n}/{len(todo)}] {rec['id']} {'ERROR ' + rec['error'][:120] if 'error' in rec else 'ok'}",
-                  file=sys.stderr)
+            print(
+                f"[{n}/{len(todo)}] {rec['id']} {'ERROR ' + rec['error'][:120] if 'error' in rec else 'ok'}",
+                file=sys.stderr,
+            )
 
 
 if __name__ == "__main__":

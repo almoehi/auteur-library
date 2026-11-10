@@ -26,8 +26,10 @@ KNOWN = {
     "duo/P010": "sideways across his lap, tagged spooning",
     "full_body_sexy/P080": "reverse tabletop, tagged reverse cowgirl",
     "full_body_sexy/P054": "child's pose, tagged doggy style",
-    **{f"duo/P0{n}": "man kneeling between a lying woman's legs, tagged kneeling between legs"
-       for n in ("04", "20", "22", "26", "47", "59")},
+    **{
+        f"duo/P0{n}": "man kneeling between a lying woman's legs, tagged kneeling between legs"
+        for n in ("04", "20", "22", "26", "47", "59")
+    },
 }
 
 
@@ -36,8 +38,11 @@ POSTURE_OF_FACT = {"standing": "standing", "seated": "seated", "kneeling": "knee
 
 def structural_ok(entry: dict[str, Any], facts: dict[str, Any]) -> tuple[bool, str]:
     """Can the catalog's role postures and `above` be mapped onto the BLIND facts? (code, not the model)"""
-    figs = {f.get("who"): POSTURE_OF_FACT.get(str(f.get("posture"))) for f in facts.get("figures", [])
-            if isinstance(f, dict)}
+    figs = {
+        f.get("who"): POSTURE_OF_FACT.get(str(f.get("posture")))
+        for f in facts.get("figures", [])
+        if isinstance(f, dict)
+    }
     above = facts.get("above")
     want = entry["postures"]
     two = len(figs) >= 2
@@ -66,8 +71,13 @@ def judged(check: dict[str, Any], entry: dict[str, Any]) -> tuple[bool, str]:
     answered = [a for a in answers if a is not None]
     if not answered:
         return False, "no support answered"
-    failed = [entry_sentence for entry_sentence, a in zip(
-        [sup["sentence"] for sup in entry["supports"] if sup["essential"]], answers) if a is False]
+    failed = [
+        entry_sentence
+        for entry_sentence, a in zip(
+            [sup["sentence"] for sup in entry["supports"] if sup["essential"]], answers, strict=True
+        )
+        if a is False
+    ]
     return (not failed), ("fails: " + "; ".join(failed)) if failed else "all essential supports hold"
 
 
@@ -90,7 +100,10 @@ def proposal(raw: dict[str, Any], catalog: dict[str, dict[str, Any]]) -> dict[st
             ok, why = s_ok, "not checked by the judge; " + s_why
         else:
             j_ok, j_why = judged(c, entry)
-            ok, why = s_ok and j_ok, f"{s_why if not s_ok else ''}{' / ' if not s_ok else ''}{j_why} ({c.get('role_mapping', '')}) {c.get('evidence', '')}"
+            ok, why = (
+                s_ok and j_ok,
+                f"{s_why if not s_ok else ''}{' / ' if not s_ok else ''}{j_why} ({c.get('role_mapping', '')}) {c.get('evidence', '')}",
+            )
         conf = float((c or {}).get("confidence") or 0)
         if name in old:
             if ok or (c is None and s_ok):
@@ -104,14 +117,24 @@ def proposal(raw: dict[str, Any], catalog: dict[str, dict[str, Any]]) -> dict[st
             added.append(name)
             evidence.append(f"{name}: ADD ({conf}) - {why}")
             confs.append(conf)
-    figures = "; ".join(f"{f.get('who')} {f.get('posture')}" for f in facts.get("figures", []) if isinstance(f, dict))
+    figures = "; ".join(
+        f"{f.get('who')} {f.get('posture')}" for f in facts.get("figures", []) if isinstance(f, dict)
+    )
     return {
-        "old": old, "proposed": kept + added, "dropped": dropped, "added": added,
-        "fits": [f"{c.get('position')} ({c.get('confidence')})" for c in ans.get("checks", [])
-                 if isinstance(c, dict) and c.get("origin") == "candidate"],
-        "people": facts.get("people"), "support": facts.get("support"),
+        "old": old,
+        "proposed": kept + added,
+        "dropped": dropped,
+        "added": added,
+        "fits": [
+            f"{c.get('position')} ({c.get('confidence')})"
+            for c in ans.get("checks", [])
+            if isinstance(c, dict) and c.get("origin") == "candidate"
+        ],
+        "people": facts.get("people"),
+        "support": facts.get("support"),
         "description": f"[{figures}; above: {facts.get('above')}] {facts.get('description', '')}",
-        "evidence": evidence, "confidence": round(min(confs), 2) if confs else None,
+        "evidence": evidence,
+        "confidence": round(min(confs), 2) if confs else None,
     }
 
 
@@ -119,9 +142,13 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--index", required=True, type=Path)
     args = ap.parse_args()
-    catalog = {e["name"]: e for e in json.loads((HERE / "pose_catalog.json").read_text())["entries"]
-               if e["content"] == "nsfw"}
-    items = {i["id"]: i for i in json.load(gzip.open(args.index))["items"] if i["kind"] == "pose"}
+    catalog = {
+        e["name"]: e
+        for e in json.loads((HERE / "pose_catalog.json").read_text())["entries"]
+        if e["content"] == "nsfw"
+    }
+    with gzip.open(args.index) as fh:
+        items = {i["id"]: i for i in json.load(fh)["items"] if i["kind"] == "pose"}
     old_support = {}
     for line in (HERE.parent / "pose_vision" / "results.jsonl").read_text().splitlines():
         rec = json.loads(line)
@@ -145,8 +172,17 @@ def main() -> None:
             flags.append(f"people={p['people']} but solo={solo}")
         if p["support"] != old_support.get(pid):
             flags.append("support")
-        rows.append({"id": pid, "title": item["title"], "status": "audited", "solo": solo,
-                     "old_support": old_support.get(pid), **p, "flags": flags})
+        rows.append(
+            {
+                "id": pid,
+                "title": item["title"],
+                "status": "audited",
+                "solo": solo,
+                "old_support": old_support.get(pid),
+                **p,
+                "flags": flags,
+            }
+        )
     audited = [r for r in rows if r["status"] == "audited"]
     changed = [r for r in audited if r["dropped"] or r["added"]]
     n_dropped = sum(len(r["dropped"]) for r in audited)
@@ -154,16 +190,69 @@ def main() -> None:
 
     with (HERE / "review.csv").open("w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["id", "title", "solo", "old_tags", "proposed_tags", "dropped", "added", "open_pass_fits",
-                    "confidence", "old_support", "new_support", "people", "flags", "known_case", "description", "evidence"])
+        w.writerow(
+            [
+                "id",
+                "title",
+                "solo",
+                "old_tags",
+                "proposed_tags",
+                "dropped",
+                "added",
+                "open_pass_fits",
+                "confidence",
+                "old_support",
+                "new_support",
+                "people",
+                "flags",
+                "known_case",
+                "description",
+                "evidence",
+            ]
+        )
         for r in rows:
             if r["status"] != "audited":
-                w.writerow([r["id"], r["title"], "", "", "", "", "", "", "", "", "", "", "not audited", KNOWN.get(r["id"], ""), "", ""])
+                w.writerow(
+                    [
+                        r["id"],
+                        r["title"],
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "not audited",
+                        KNOWN.get(r["id"], ""),
+                        "",
+                        "",
+                    ]
+                )
                 continue
-            w.writerow([r["id"], r["title"], r["solo"], "; ".join(r["old"]), "; ".join(r["proposed"]),
-                        "; ".join(r["dropped"]), "; ".join(r["added"]), "; ".join(r["fits"]), r["confidence"],
-                        r["old_support"], r["support"], r["people"], "; ".join(r["flags"]), KNOWN.get(r["id"], ""),
-                        r["description"], " | ".join(r["evidence"])])
+            w.writerow(
+                [
+                    r["id"],
+                    r["title"],
+                    r["solo"],
+                    "; ".join(r["old"]),
+                    "; ".join(r["proposed"]),
+                    "; ".join(r["dropped"]),
+                    "; ".join(r["added"]),
+                    "; ".join(r["fits"]),
+                    r["confidence"],
+                    r["old_support"],
+                    r["support"],
+                    r["people"],
+                    "; ".join(r["flags"]),
+                    KNOWN.get(r["id"], ""),
+                    r["description"],
+                    " | ".join(r["evidence"]),
+                ]
+            )
 
     def esc(s: Any) -> str:
         return str(s).replace("|", "/").replace("\n", " ")
@@ -173,7 +262,7 @@ def main() -> None:
         "",
         "PLAN_POSE_CATALOG_ADOPTION.md 4.6 L1. Proposals only: nothing is applied to the index or published.",
         "",
-        f"- Authority: `pose_catalog.json` (exported from video-harness `src/design/pose-catalog.ts` by `export_pose_catalog.mts`).",
+        "- Authority: `pose_catalog.json` (exported from video-harness `src/design/pose-catalog.ts` by `export_pose_catalog.mts`).",
         f"- Judge: `{next(iter(raws.values()))['model'] if raws else '?'}` (Featherless), front + diag + side line art per pose, "
         f"two calls per pose (`audit.py`); cost ${sum(r.get('cost', 0) for r in raws.values()):.2f}.",
         "- Rule (decided in code, `review.py`): a position is shown when its catalog postures / `above` map onto the "
@@ -187,6 +276,9 @@ def main() -> None:
         f"- Support differs from pose_vision: {sum(1 for r in audited if 'support' in r['flags'])}; "
         f"people count differs from `solo`: {sum(1 for r in audited if any(f.startswith('people') for f in r['flags']))}.",
         "",
+        "**Status: APPLIED.** The full result (every DROP and every ADD; the `proposed` column) is applied to "
+        "`jobs/pose_vision/results.jsonl` by `apply_review.py`; exact diff and per-position counts: `applied.md`.",
+        "",
         "## Known cases",
         "",
         "| id | expected | old | proposed | confidence | evidence |",
@@ -198,17 +290,34 @@ def main() -> None:
         if not r or r["status"] != "audited":
             md.append(f"| {pid} | {why} | | not audited | | |")
             continue
-        md.append(f"| {pid} | {esc(why)} | {esc(', '.join(r['old']))} | **{esc(', '.join(r['proposed']) or '-')}** | "
-                  f"{r['confidence']} | {esc(' / '.join(r['evidence']))} |")
-    md += ["", "## All tag changes", "", "| id | title | old | proposed | conf | evidence |", "|---|---|---|---|---|---|"]
+        md.append(
+            f"| {pid} | {esc(why)} | {esc(', '.join(r['old']))} | **{esc(', '.join(r['proposed']) or '-')}** | "
+            f"{r['confidence']} | {esc(' / '.join(r['evidence']))} |"
+        )
+    md += [
+        "",
+        "## All tag changes",
+        "",
+        "| id | title | old | proposed | conf | evidence |",
+        "|---|---|---|---|---|---|",
+    ]
     for r in changed:
-        md.append(f"| {r['id']} | {esc(r['title'])} | {esc(', '.join(r['old']) or '-')} | **{esc(', '.join(r['proposed']) or '-')}** | "
-                  f"{r['confidence']} | {esc(' / '.join(r['evidence']))} |")
-    md += ["", "## Support / people-count disagreements (informational)", "", "| id | title | old support | new | people | solo |",
-           "|---|---|---|---|---|---|"]
+        md.append(
+            f"| {r['id']} | {esc(r['title'])} | {esc(', '.join(r['old']) or '-')} | **{esc(', '.join(r['proposed']) or '-')}** | "
+            f"{r['confidence']} | {esc(' / '.join(r['evidence']))} |"
+        )
+    md += [
+        "",
+        "## Support / people-count disagreements (informational)",
+        "",
+        "| id | title | old support | new | people | solo |",
+        "|---|---|---|---|---|---|",
+    ]
     for r in audited:
         if "support" in r["flags"] or any(f.startswith("people") for f in r["flags"]):
-            md.append(f"| {r['id']} | {esc(r['title'])} | {r['old_support']} | {r['support']} | {r['people']} | {r['solo']} |")
+            md.append(
+                f"| {r['id']} | {esc(r['title'])} | {r['old_support']} | {r['support']} | {r['people']} | {r['solo']} |"
+            )
     (HERE / "review.md").write_text("\n".join(md) + "\n")
     print(f"audited {len(audited)}, changed {len(changed)}, dropped {n_dropped}, added {n_added}")
 
