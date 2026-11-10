@@ -27,6 +27,10 @@ gesture. Your job is what the script cannot decide: WHERE each look plays (set, 
 in WHAT (outfit, worn and handheld items), how its body pose and contact read, and how it serves
 the play's kinks. Nothing is rendered here.
 
+**Catalog tools.** Use `search_catalog` / `use_reference` ONLY as section 3b says: pose picks per
+still from the `refs` catalog. NEVER the `outfit` kind and never a `garment_reference`: the
+outfits stay text (more variety).
+
 **Format and camera.** 16:9 landscape, 1080p, a FIXED camera on a tripod: at most a very slow,
 subtle push in or out; never handheld-style movement, shake, pan, orbit, zoom jumps or reframing.
 
@@ -92,6 +96,13 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
 - **Outfit** (`outfit_id`): ONE outfit for the whole episode where the play allows it (a montage
   that changes clothes between cuts reads as a continuity error); at most 2. Describe garments,
   colours and materials precisely. Outfit ids are snake_case look slugs (`black_lace_set`).
+  **An outfit is the garments as WORN, fully on**: cut, colour, material, fit - never a body
+  part, never exposure (no "nipples above the lace", no "bare breasts", no cupless, open-cup or
+  crotchless wording). The outfit design renders it as a fully worn garment over her nude base
+  picture; exposure baked into an outfit is drawn as the base's skin pasted onto the fabric (iwc
+  pilot v3: nipples pasted onto full lace cups). Everything that is bared is a STILL's garment
+  state (below), rendered and checked per shot. Name each garment by a plain noun the
+  `garment_state` can reuse (`lace bralette`, `lace briefs`, `chiffon robe`).
   `nude` is a look outfit (`outfit_id: "nude"`) but NOT an entry of `outfits[]`. The brand
   details (wide black velvet choker, small silver key pendant on a thin silver chain, violet nail
   polish) stay on in every outfit: they are the character's marks, never listed as garments.
@@ -101,11 +112,31 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
 - **Body pose** (`body_pose`): COPY the look's `body_pose` (a platform POSE CATALOG name for one
   person, or `other (<geometry>)`). Put the furniture contact in `anchor_contact` (plain body
   parts on the furniture: `Vesper's knees and shins on the mattress`).
-- **Stills** (`stills[]`): COPY the look's stills (`id`, `beat`, `detail`) and add per still
-  `hands` and `face`: split the plan's `detail` into the hands / arms state (`hands` - a body
+- **Garment state per still** (`garment_state`): from the still's `exposure` slot (the montage
+  plan's; never more exposure than the slot):
+  - `worn`: `{"wearing": [every garment], "partly": [], "removed": []}`;
+  - `partly`: ONE garment displaced or open - `"<plain garment noun> (<end state>)"`, at most 60
+    characters, no sequence words (`lace bralette (cups pulled down below her breasts)`, `chiffon
+    robe (off both shoulders, at the elbows)`, `lace bralette (left strap off the shoulder)`); the
+    OTHER garments in `wearing` (a garment is in exactly one list);
+  - `removed`: ONE garment fully off (`removed: ["chiffon robe"]`), the rest worn or partly.
+  The displaced garment must sit on a body part the look's framing SHOWS: a `medium close-up` /
+  `medium` the chest (bralette cups, straps, the robe), a `medium full` / `full shot` the whole
+  body. A `close-up` / `extreme close-up` look is face-only: its stills are always `worn` (the
+  platform refuses a garment state on a face-only shot; its exposure slots move to another look of
+  the episode).
+  **Vary them and make them count:** no two looks use the same partly / removed state, and the
+  states escalate with the episode's `nudity` flag - with `conditional` or `full`, at least one
+  state per episode bares skin under the lingerie where the framing shows it (`lace bralette
+  (cups pulled down below her breasts)`, `lace bralette (pushed up above her breasts)`); an outer
+  layer (a robe off the shoulders) counts once at most. Never a state the flag does not allow
+  (`none`: always `worn`).
+- **Stills** (`stills[]`): COPY the look's stills (`id`, `beat`, `detail`, `exposure`) and add
+  per still `garment_state` (above), `hands` and `face`: split the plan's `detail` into the hands / arms state (`hands` - a body
   state: `one hand resting on her collarbone, the other on her thigh`) and the expression and gaze
   (`face` - `lips slightly parted, eyes on the lens`). Never change the body pose, camera, set or
-  outfit between the stills of a look: they differ only in hands, head tilt and expression.
+  outfit between the stills of a look: they differ only in hands, head tilt, expression and the
+  garment state.
 - **Items** (`items`): handheld props of the look from `kinks[]` (or `none`), each with where it
   is in the stills. An item exists only as words (no design, no item check).
 - **Act-free stills**: no sex act is in progress in any still (no hand inside the panties, no toy
@@ -113,6 +144,44 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
 - **Kink focus** (`kink_focus`, `reinforcement`): the kink(s) the look serves and ONE line per
   channel (outfit, action = its whitelisted gestures, set / furniture, items, camera).
 - **Sound**: no dialogue in any clip (her voice is overlaid later). Room tone and breaths only.
+
+## 3b. Pose reference per still (the `refs` pose catalog)
+
+The keyframe renderer uses a still shot's `Pose reference:` (an imported library pose, line art)
+as the pose image of a pose transfer: it sets the support, torso, head AND ARMS of the one person
+in the shot. The stills of a look share body pose and camera but differ in the hands, so the pick
+is made PER STILL, matched to that still's `hands`; stills that match the same pose share ONE
+import (an import is per pose and camera view). A look framed `close-up` or `extreme close-up`
+shows her face only: NO pose pick for its stills (`pose_reference: "none"`, `pose_reason: "face-only
+framing"` - the platform refuses a pose reference on a face-only shot, a pose is a body pose).
+Per other look, per still, in order:
+1. `search_catalog` with `catalog: "refs"`, `kinds: ["pose"]`, `k: 4`, `filters`:
+   `{"solo": true, "pose_series": [...]}` - the series by the look's framing: `medium close-up`,
+   `medium` → `["upper_body"]`; `medium full`, `full shot` →
+   `["full_body_standard", "full_body_sexy"]`. `context` = one line: the support and torso of the
+   body pose, the still's `hands` (both arms), the head, the camera line (`a woman kneeling upright,
+   torso straight up, not leaning; one hand resting on her collarbone, the other arm relaxed at her
+   side; head level facing the viewer; medium close-up, eye level, from the front`).
+2. Accept a pick only when its title and `why` match ALL of: the support (kneeling / sitting / on
+   all fours - for an `upper_body` pick the support is out of frame, so any upright upper body
+   fits), the torso (upright vs leaning / bent / crouched forward - "crouched forward" or "leaning
+   forward" is NOT upright), and both arms / hands of the still (hands on the collarbone, at the
+   sides, on the thighs, at the pendant ~ hands near the throat). Arms that reach toward the
+   viewer, cross, cup or cover the chest only when the still's hands say so. No pick fits: ONE
+   more search with the context reworded; still none: `"none"` for that still (the shot is drafted
+   without a pose reference) and say why in `visual_plan.md`.
+3. A still whose accepted pick is an item already imported for this look with the same camera
+   reuses that import. Otherwise `use_reference` with `catalog: "refs"`, the pick's `id`,
+   `camera` = the look's camera `line` (the view by the camera's angle; `from behind` has none -
+   then `"none"`) and `why` = the pick's `why` lines.
+4. `describe_image` the imported `image.<ext>` once and compare support, torso, head and both arms
+   with the still. When `describe_image` fails or is unavailable, re-read the pick's `title` /
+   `why` against step 2 instead and SAY in `visual_plan.md` that the picture was not checked. A
+   mismatch: drop it and take the next acceptable pick (at most 2 imports per still), else
+   `"none"`.
+Record per still `pose_reference` = `{"artifact": "<the artifact:// ref>", "item": "<id>",
+"title": "<title>", "angle": "<angle>", "series": "<series>", "checked": "image" | "text"}` or
+`"none"` (+ `pose_reason`). At most 2 searches and 2 imports per still.
 
 ## 4. Write the outputs
 
@@ -124,8 +193,8 @@ single write under ~2500 characters (a longer tool call arrives cut off and empt
   `mode` = `"montage"`, `format`, `kinks`, `sets`, `outfits`, and per look (into
   `looks[<id>]`): `scene` (n), `camera` (the object above, replacing the plan's string - keep the
   plan's string as `camera_plan`), `set_id`, `set_reason`, `furniture_use`, `outfit_id`,
-  `anchor_contact`, `items`, `kink_focus`, `reinforcement`, `stills` (with `hands` and `face`
-  added). Never touch `clips`, `render`, `counts`, `pilot`.
+  `anchor_contact`, `items`, `kink_focus`, `reinforcement`, `stills` (with `hands`, `face` and
+  `pose_reference` added). Never touch `clips`, `render`, `counts`, `pilot`.
 - `visual_plan.md`: a summary (looks, clip count, the render settings), the kinks, sets, outfits,
   and per look its scene number, camera line, set, outfit, body pose, contact, stills table (id |
   beat | hands | face) and its clips (id | slot | still | gesture). First `sandbox_write_file`,
@@ -149,9 +218,12 @@ single write under ~2500 characters (a longer tool call arrives cut off and empt
    "set_id": "bed_corner", "set_reason": "…", "furniture_use": "kneels on the near edge of the bed",
    "outfit_id": "black_lace_set", "body_pose": "kneeling upright",
    "anchor_contact": "Vesper's knees and shins on the mattress", "items": "none",
-   "kink_focus": ["JOI"], "reinforcement": {"outfit": "…", "action": "…", "set": "…", "items": "…", "camera": "…"},
+   "kink_focus": ["JOI"],
+   "reinforcement": {"outfit": "…", "action": "…", "set": "…", "items": "…", "camera": "…"},
    "stills": [{"id": "chest_mcu_eye.s1", "beat": 1, "detail": "…",
-               "hands": "hands resting on her thighs", "face": "a soft knowing smile, eyes on the lens"}]}}}
+               "hands": "hands resting on her thighs", "face": "a soft knowing smile, eyes on the lens",
+               "pose_reference": {"artifact": "artifact://ref-refs-...", "item": "upper_body/P045", "title": "…",
+                                  "angle": "front", "series": "upper_body", "checked": "image"}}]}}}
 ```
 
 ## 4b. The screenplay artifact: play.md verbatim
@@ -167,7 +239,10 @@ header line. Never retype it; copy it in the sandbox:
 
 Before `task_complete`: every look of the plan has `scene`, `camera` (its line equal to the plan's
 camera), `set_id`, `outfit_id`, `body_pose` (the plan's), `anchor_contact`, `items`,
-`kink_focus`, `reinforcement` and its stills with `hands` and `face`; `clips` is unchanged; at
+`kink_focus`, `reinforcement` and its stills with `hands`, `face` and `pose_reference` (an
+import whose title / why match the still's support, torso and arms, or `"none"` with the reason)
+and its `garment_state` (per its exposure slot, on a body part the framing shows); no outfit text
+names a body part or exposure; no outfit search or `garment_reference`; `clips` is unchanged; at
 most 2 sets and 2 outfits; every set has `room`, `room_id`, `view` (one `main` per room_id);
 outfit and set ids are snake_case; no outfit lists a brand mark; no description names camera
 equipment; every central kink of play.md has a `kinks[]` entry; `screenplay.md` is play.md byte

@@ -12,6 +12,9 @@ agentType: worker
 
 # Schedule looks: one render task per look
 
+**Catalog tools:** none in this task (no `search_catalog` / `use_reference`, no catalog outfit or
+`garment_reference`).
+
 A static workspace YAML cannot require `storyboard_scene_<N>`: those designs are created at run
 time by `plan_designs`. This task runs after `plan_designs` and creates the render tasks, one per
 look (scene N = look N), each held back until its storyboard is finished. You render nothing.
@@ -37,13 +40,13 @@ ONE `create_task` per look, then its `create_artifact` right after, then the nex
 create_task({
   id: "shoot_look<N>",
   title: "Shoot look <N> (<look id>)",
-  description: "Render the <clip count> montage clips of look <N> (<look id>) from the stills of storyboard_scene_<N> (h3_single_cut_clip_nsfw, slow motion), per-clip checks",
+  description: "Render the <clip count> montage clips of look <N> (<look id>) from the stills of storyboard_scene_<N> (h3_loop_clip_nsfw: the still is the first and last frame, slow motion)",
   agent: "generic",
   requires_artifacts: ["storyboard_scene_<N>"],
   prompt: "Load and use skill: iwc-loop-clip\nlook: <look id>\nscene: <N>\nstoryboard: storyboard_scene_<N>\ncharacter: character_<slug>\noutfit: <outfit design key, or none for a nude look>\nlocation: location_<room_id>\nplan: visual_plan\ninputs: episode_inputs"
 })
 create_artifact({ task_id: "shoot_look<N>", id: "look<N>_clips", title: "Look <N> clips",
-  description: "<clip id>.mp4 and <clip id>_checks.txt per clip (+ <clip id>-r2.* on a retry), look<N>_clips.json, look<N>_summary.md" })
+  description: "<clip id>.mp4 per clip, look<N>_clips.json" })
 ```
 
 - The dependency: `requires_artifacts` holds the task until the storyboard design

@@ -15,6 +15,9 @@ agentType: worker
 
 # Montage scenes: one scene per look, one beat per still
 
+**Catalog tools:** none in this task (no `search_catalog` / `use_reference`): the look's pose
+references were imported by the visual plan (per still); you only list them in the Summary.
+
 The scene list is the platform's bridge from the plan to the designs: `plan-designs` creates the
 location, outfit and storyboard designs from it, and every storyboard shot is drafted from its
 scene's beats. Here a scene is NOT a story scene: scene n = LOOK n of the visual plan (one camera
@@ -72,6 +75,8 @@ Row:
   outfit-change beat; `b` = a + number of stills - 1):
   `Montage stills: beats N.a-N.b. Exactly ONE shot per still beat (no second or tighter shot of a beat), no establishing shot, 16:9 landscape, fixed camera, every shot's Camera = its beat's Framing with her face and eyes in frame, catalog Body pose <body_pose> in every shot, the furniture contact in Contact: <anchor_contact>. The stills differ only in hands, head and expression. Corner: <set name> (<view: main picture | location view '<view phrase>'>). Look <look id>: <the look's name>.`
   With an outfit-change beat, append: `Beat N.1 is one short beat of the look change from <old look> into <new look> and is never a still.`
+  Always append the per-still wardrobe: `Wardrobe (one line per still shot): beat N.x -> Wardrobe: character_<slug> (wearing: <garments>; partly: <garment (end state)>; removed: <garments>); beat N.y -> ...` from each still's `garment_state` (omit an empty list; a fully worn still is `wearing:` only; each garment in exactly ONE list - a `partly:` / `removed:` garment is never also in `wearing:`, the storyboard's check refuses it) - the storyboard writes the line on that still's shot.
+  When any still of the look has a `pose_reference` (not `"none"`), append: `Pose references (one line per still shot, same camera line as the import): beat N.x -> Pose reference: <artifact ref>; beat N.y -> ...` listing every still beat with its still's reference (`none` for a still without one) - the storyboard writes the line on that still's shot, never on an outfit-change shot.
 - `characters_present` = the character slug; `outfits` = the union of the beats' looks
   (`<slug>:<outfit_id>`; with an outfit-change beat both pairs); `audio` = the room's atmosphere in
   one line (room tone, size, distance, mood; never "silent"; no dialogue, no events).
@@ -85,10 +90,11 @@ with the garments mid-change, `outfits` = `<slug>:<old>`, `framing` = the look's
 **Still beats** `N.a` … `N.b` (one per entry of the look's `stills`, in order; still k = beat
 N.(a+k-1)):
 - `action` = BODY STATE ONLY: support, posture, limbs, the furniture contact, the hands (the
-  still's `hands`) and the garment state (`Vesper kneels upright on the near edge of the mattress,
-  sitting back on her heels, one hand resting on her collarbone, the other on her thigh, both bra
-  straps on her shoulders`). The same posture, support and garments in every still beat; only the
-  hands differ. Keep gaze, lips, breath, eyes, smile, skin and voice words OUT of the action (a
+  still's `hands`) and the still's garment state in plain words (`Vesper kneels upright on the near
+  edge of the mattress, sitting back on her heels, one hand resting on her collarbone, the other on
+  her thigh, the lace bralette cups pulled down below her bare breasts`; a `worn` still: `both
+  bralette straps on her shoulders`). The same posture, support and outfit in every still beat; the
+  hands and the garment state differ. Keep gaze, lips, breath, eyes, smile, skin and voice words OUT of the action (a
   sensation signal inside a body-state action is refused).
 - `location` = the row's `location_slug`; `outfits` = `<slug>:<outfit_id>`.
 - `framing` = the look's `camera.line`, IDENTICAL in every still beat. A `close-up` or `medium
@@ -101,9 +107,16 @@ N.(a+k-1)):
   `she looks into the lens, lips slightly parted`) and, for a close framing, what is out of frame.
   NEVER name camera equipment (camera, webcam, tripod, phone, ring light); `the lens` for her gaze
   is fine.
-- `contact` = the look's `anchor_contact` plus the still's hand contacts, plain body-part words,
-  one entry per contact (`Vesper's knees and shins on the mattress; her right hand on her
-  collarbone`).
+- `contact` = ONLY the contacts the look's framing SHOWS, plain body-part words, one entry per
+  contact: the look's `anchor_contact` entries whose body parts are in frame plus the still's hand
+  contacts that are in frame. The storyboard must put every beat contact on a shot of the beat, so
+  a contact the framing cannot show forces an extra wider shot (pilot v5: a full shot added per
+  medium close-up still to show the knees) or blocks the storyboard (a face-only close-up can never
+  show them: the draft was refused and the task stalled). By framing: `full shot` / `medium full`
+  - the support contact (knees and shins on the mattress) and the hands; `medium` / `medium
+  close-up` - only what touches the upper body (a hand on the collarbone, fingers at the pendant;
+  never the knees or a seat); `close-up` / `extreme close-up` - `none` unless a hand touches the
+  face or hair (`her right fingers in her hair at the temple`). Nothing in frame: `none`.
 - `sex_act` `none`, `sex_position` `none` (always both; see "Act-free stills").
 
 A refusal lists only that scene's problems and saves nothing: fix exactly those (`write_beats` for
@@ -122,9 +135,12 @@ in a still exist only as words in `Contact`.
 Every look of the plan has its scene (scene n = the look with `scene` n) and every scene was
 accepted; each scene has exactly one still beat per still of its look (after at most one
 outfit-change beat N.1 where the outfit changes from the scene before), all with `hold`, the
-look's camera line as `framing` (her face and eyes in frame), the same posture and contact apart
-from the hands, a body-state-only `action`, `contact` filled and `sex_act` / `sex_position` both
+look's camera line as `framing` (her face and eyes in frame), the same posture apart from the
+hands, a body-state-only `action`, `contact` holding only contacts the framing shows (`none` when
+nothing touches in frame) and `sex_act` / `sex_position` both
 `none`; no `blocking` names camera equipment; every summary STARTS with `Montage stills: beats
-N.a-N.b.` naming exactly the still beats; the row's `outfits` equals the union of the beats'
+N.a-N.b.` naming exactly the still beats, lists each still beat's Wardrobe from its garment_state, and
+lists each still beat's pose reference when the look has any; every beat's `outfits` stays the
+look's outfit (a partly-off garment keeps the outfit look); the row's `outfits` equals the union of the beats'
 pairs; every `location_slug` is a room id with exactly one Places row; one `location` name per
 slug. The policy `scenes-complete` judges each scene; fix what it names. Then `task_complete`.

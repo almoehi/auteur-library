@@ -13,6 +13,9 @@ agentType: worker
 
 # Loop cast: the character table of one performer
 
+**Catalog tools:** none in this task (no `search_catalog` / `use_reference`, no catalog outfit or
+`garment_reference`).
+
 The episode has ONE cast role: the play's character (play.md section 3). The listener ("you",
 "him") is the camera and the audio's addressee, never on screen: NOT a cast role. The file you
 write is read by the server's scene-list check (looks and the `character type:` / `age:` lines),
@@ -102,7 +105,11 @@ Rules:
   - look slug = the outfit's `id` EXACTLY (`[a-z0-9]+(_[a-z0-9]+)*`);
   - description = the outfit's name and what it is for (the kink it signals);
   - garments = every garment the plan's description names, with colours, material and fit, and
-    worn accessories (heels, stockings, gloves) - never a brand mark, never a handheld item;
+    worn accessories (heels, stockings, gloves) - never a brand mark, never a handheld item, and
+    never a body part or exposure (nipples, areolae, bare breasts, genitals, cupless / open-cup /
+    crotchless wording): the outfit is drawn fully worn, and bared skin is a still's garment state
+    in the scene list, never the outfit. A plan outfit whose description names one:
+    `task_failed("visual_plan outfit <id> names a body part / exposure - an outfit is the garments as worn")`;
   - scenes where worn = the scene numbers that wear it (scene n = look n of the visual plan; never
     clip ids).
   - NO row for nudity: `nude` is the scene list's base look (the character design's own picture is

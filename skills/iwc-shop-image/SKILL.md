@@ -12,6 +12,9 @@ agentType: worker
 
 # Shop image: 3 candidate store thumbnails
 
+**Catalog tools:** none in this task (no `search_catalog` / `use_reference`, no catalog outfit or
+`garment_reference`).
+
 Each candidate is ONE render plus code:
 1. **Picture pass:** `wf_flux2_reference_compose_nsfw` builds the frame from the episode's finished designs (identity, outfit, set). This pass has no text.
 2. **Lettering (sandbox, no render):** the hook word and the watermark are set in Python (Pillow) on the base - exact spelling, the picture untouched, no extra agent steps. (An AI type pass is only for a device graphic that code cannot draw.)
