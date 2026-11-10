@@ -1,0 +1,20 @@
+{
+ "wf": "qwen_image_camera_turn",
+ "gpu": "l40s",
+ "jobs": [
+  {
+   "inputs": {
+    "source_image": "edge_of_surface/base_s11.png"
+   },
+   "params": {
+    "prompt_positive": "<sks> right side view eye-level shot wide shot",
+    "longest_edge": 1536,
+    "steps": 8,
+    "cfg": 1,
+    "seed": 11
+   },
+   "file": "edge_of_surface/turn_side.png"
+  }
+ ],
+ "_comment": "One-job example written by build_jobs.py (worked example: edge_of_surface seed 11); build_jobs.py writes the real file."
+}

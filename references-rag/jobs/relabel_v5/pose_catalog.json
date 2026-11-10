@@ -1,5 +1,6 @@
 {
   "source": "video-harness/src/design/pose-catalog.ts",
+  "proposed_source": "proposed_positions.json",
   "entries": [
     {
       "name": "missionary",
@@ -2635,6 +2636,71 @@
           "parts": [
             "A:arms",
             "B:shoulders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "against the wall from behind",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "standing behind",
+        "b": "facing the wall"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person B stands facing a wall with the chest pressed against it, arms raised, person A stands right behind person B pressed against person B's back",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B stands facing the wall, close to it, both feet on the floor, the legs slightly apart",
+          "parts": [
+            "B:feet",
+            "B:legs"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's arms are raised and spread wide above the head, both palms flat on the wall",
+          "parts": [
+            "B:arms",
+            "B:hands"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's chest and breasts are pressed against the wall",
+          "parts": [
+            "B:chest"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's back is arched, the hips pushed back toward person A",
+          "parts": [
+            "B:back",
+            "B:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A stands right behind person B on both feet, person A's front against person B's back, person A's hips against person B's buttocks",
+          "parts": [
+            "A:chest|back",
+            "A:hips",
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands hold person B's hips",
+          "parts": [
+            "A:hands",
+            "B:hips"
           ]
         }
       ]

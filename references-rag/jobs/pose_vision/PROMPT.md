@@ -2,7 +2,7 @@
 
 You label a reference library for an adult-content production tool. Each pose is a faceless
 mannequin line drawing of adults - a solo female figure, or a duo (female + male figure) - drawn
-from up to 5 camera placements named front, high, low, side, diag. Your labels drive a
+from up to 6 camera placements named front, high, low, side, diag, back. Your labels drive a
 recommender that picks poses for scenes, kinks and sex acts. Write **English only**.
 
 ## Input
@@ -43,7 +43,8 @@ Write ONE JSON array to the batch's `output` path: one object per item, every it
   doggy style, kneeling upright from behind, kneeling, kneeling between legs, cowgirl,
   reverse cowgirl, squatting, face sitting, lotus, lap sitting, chair facing, reverse chair,
   scissoring, standing face to face, standing carry, against the wall, standing one leg raised,
-  edge of surface, bent over surface, standing from behind.
+  edge of surface, bent over surface, standing from behind, against the wall from behind
+  (she faces a wall, chest pressed to it, palms flat on it above her head, he stands behind her).
 - `typical_acts` - exact names: vaginal penetration, anal penetration, double penetration,
   blowjob, deepthroat, cunnilingus, 69, rimming, handjob, fingering, titjob, footjob, masturbation.
 - `notes`: mislabelled angles, occlusion, anything uncertain.

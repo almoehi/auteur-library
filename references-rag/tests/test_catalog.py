@@ -48,6 +48,14 @@ def test_views_sorted_by_angle_and_duo_series(library: Path) -> None:
     assert [v.angle for v in pose.views] == ["front", "low", "side"]
 
 
+def test_back_angle_sorts_last(library: Path) -> None:
+    # `back` (rear view) came with the generated poses (pose_gen): accepted and sorted after the original five.
+    rows = "".join(f"pair60_P066_{a}.png,duo/from_behind,x,x,P066,x,{a}\n" for a in ("back", "side", "diag"))
+    write_catalog(library / "pose_pngs/catalog.csv", POSE_CATALOG_HEADER + rows)
+    (pose,) = load_poses(library)
+    assert [v.angle for v in pose.views] == ["side", "diag", "back"]
+
+
 def test_rejects_unknown_angle(library: Path) -> None:
     write_catalog(
         library / "pose_pngs/catalog.csv",
@@ -79,6 +87,6 @@ def test_real_library_catalog() -> None:
     if root is None or not root.is_dir():
         pytest.skip("REFS_LIBRARY_ROOT not available")
     outfits, poses = load_outfits(root), load_poses(root)
-    assert (len(outfits), len(poses)) == (1407, 288)
+    assert (len(outfits), len(poses)) == (1407, 294)  # 288 + 6 generated (pose_gen)
     assert all((root / f).is_file() for f in library_files(outfits, poses))
     assert not NON_ENGLISH.search(repr((outfits, poses)))

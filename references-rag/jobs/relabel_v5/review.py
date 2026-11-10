@@ -145,7 +145,7 @@ def main() -> None:
     catalog = {
         e["name"]: e
         for e in json.loads((HERE / "pose_catalog.json").read_text())["entries"]
-        if e["content"] == "nsfw"
+        if e["content"] == "nsfw" and not e.get("proposed")  # proposed: not the server's yet
     }
     with gzip.open(args.index) as fh:
         items = {i["id"]: i for i in json.load(fh)["items"] if i["kind"] == "pose"}

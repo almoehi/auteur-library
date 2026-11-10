@@ -15,7 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Literal, get_args
 
-Angle = Literal["front", "high", "low", "side", "diag"]
+# `back` (rear view) came with the generated poses (pose_gen/).
+Angle = Literal["front", "high", "low", "side", "diag", "back"]
 ANGLES: Final[tuple[Angle, ...]] = get_args(Angle)
 
 PoseSeries = Literal["full_body_standard", "full_body_sexy", "upper_body", "duo"]

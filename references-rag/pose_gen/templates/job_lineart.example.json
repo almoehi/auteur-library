@@ -1,0 +1,21 @@
+{
+ "wf": "qwen_image_multi_edit",
+ "gpu": "l40s",
+ "jobs": [
+  {
+   "inputs": {
+    "reference_image_1": "edge_of_surface/base_s11.png",
+    "reference_image_2": "style/lib_P009_line.png"
+   },
+   "params": {
+    "prompt_positive": "Redraw the two figures of Picture 1 exactly in their pose, position, proportions and camera angle as a clean black line drawing on a pure white background, in the drawing style of Picture 2: articulated mannequin figures drawn with clean outlines, segment contours, circles at the joints and thin construction lines on the faceless heads. No shading, no grey fill, no furniture, no wall, no floor, no background - only the two figures. Do not change the pose of any limb.",
+    "prompt_negative": "shading, grey fill, colour, photo, 3D render, gradient, texture",
+    "steps": 8,
+    "cfg": 1,
+    "seed": 22
+   },
+   "file": "edge_of_surface/line_front.png"
+  }
+ ],
+ "_comment": "One-job example written by build_jobs.py (worked example: edge_of_surface seed 11); build_jobs.py writes the real file."
+}
