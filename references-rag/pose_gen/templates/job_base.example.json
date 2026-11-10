@@ -1,0 +1,19 @@
+{
+ "wf": "krea2_base_realism_nsfw",
+ "gpu": "l40s",
+ "jobs": [
+  {
+   "params": {
+    "prompt_positive": "Frontal full-body view at eye level, the camera directly in front of the woman and the counter, behind the man, slightly off-centre so that her face, chest, open thighs and both knees on either side of his hips are visible. The whole of both figures from head to feet is in frame and centred. The woman sits on the very edge of the surface. The woman's thighs are open, the knees apart on either side of the man's hips. The man stands between the woman's thighs, facing the woman. Her lower legs hang down and wrap around the backs of his thighs, her feet crossed behind his legs, off the floor. Her hands rest on his shoulders. Both of his feet are flat on the floor, both of his legs straight; nobody raises a knee. His hips are at the counter edge, pressed against her crotch, his hands on her waist. The surface she sits on is a plain rectangular counter block of the same matte grey material, about hip height. Studio 3D render of two smooth matte light-grey adult mannequin figures, a female mannequin and a male mannequin, athletic adult proportions, completely bald, no hair, no clothing, each figure made of one uniform pale grey material with a sculpted but featureless face in the same grey material, no skin colour, no skin texture. Plain seamless neutral mid-grey studio background, soft even diffuse lighting, soft contact shadow on the floor, sharp focus, clean product-photography look, no text, no labels.",
+    "prompt_negative": "",
+    "width": 1152,
+    "height": 1536,
+    "steps": 6,
+    "cfg": 1.0,
+    "seed": 11
+   },
+   "file": "edge_of_surface/base_s11.png"
+  }
+ ],
+ "_comment": "One-job example written by build_jobs.py (worked example: edge_of_surface seed 11); build_jobs.py writes the real file."
+}
