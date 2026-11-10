@@ -36,6 +36,7 @@ SexPosition = Literal[
     "reverse cowgirl", "squatting", "face sitting", "lotus", "lap sitting", "chair facing",
     "reverse chair", "scissoring", "standing face to face", "standing carry", "against the wall",
     "standing one leg raised", "edge of surface", "bent over surface", "standing from behind",
+    "against the wall from behind",
 ]  # fmt: skip
 SexAct = Literal[
     "vaginal penetration", "anal penetration", "double penetration", "blowjob", "deepthroat",

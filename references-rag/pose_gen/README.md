@@ -119,21 +119,38 @@ catalog before indexing items tagged with it.
 10. **Contact sheet**: `sheet.py rows.json <parts dir> <out.png> "<title>"`. Rows are views; a row without images
     names a view that could not be made. Add the library row. A person reviews the sheet before anything else
     happens.
-11. **Into the library** (only after review; the user decides when to publish):
-    - Copy each view as `pose_pngs/<folder>/<prefix>_<P-number>_<angle>.png` and
-      `pose_depth/<folder>/<same name>`. Folder examples: `duo/<category>`, `solo/full_body_sexy/<category>`.
-      Add one row per view to `pose_pngs/catalog.csv`: `file, folder, series_ja, category_ja, pose_number,
-      pose_name_ja, angle`. Use the next free P-number of the series.
-    - The id becomes `<series>/<P-number>`; `solo` follows the series (`duo` = two people).
-    - Angles are `front, high, low, side, diag`. **`back` is NOT a library angle yet**: `catalog.py` `Angle` and
-      the server's `poseViewAngleOf()` need the S5 change of the plan first. Until then, leave back views out.
-    - Labels: run the `pose_vision` labelling job for the new ids (`LABELING.md`: `uv run refs jobs make
-      pose_vision`, agents, `collect`). Then make sure `sex_positions` is exactly the position the pose was built
-      from (and only positions the gate confirmed), and that `typical_acts` holds the act (e.g. `blowjob` for an
-      oral item).
-    - Rebuild the index: `uv run refs index build <version>` (local, `data/index/<version>`).
-    - Upload and publish only when the user says so: `uv run refs upload-assets`, then
-      `uv run refs index publish <version>`, then refresh the video-harness fixtures.
+11. **Into the library** (only after the contact sheets are approved):
+    - **Manifest:** add the pose to `library_items.json`: the id (the next free P-number of its series:
+      `duo/P0NN`, `full_body_sexy/PNNN`, ...), the library folder (`duo/<category>`,
+      `solo/full_body_sexy/<category>`), the file prefix (`pair60` / `full_sexy`), the title, `sex_positions` (the
+      position it was built from), `typical_acts` (e.g. `blowjob` for an oral item), and the approved views
+      (library angle -> the view stem in the parts dir). Angles are `front, high, low, side, diag, back`.
+    - **Files:** `python3 add_to_library.py <REFS_LIBRARY_ROOT> <parts root>` copies the line art and the depth
+      into the library's local layout:
+      - `pose_pngs/<folder>/<prefix>_<P-number>_<angle>.png` and `pose_depth/<folder>/<same name>`;
+      - one row per view appended to both `catalog.csv` files.
+
+      The library dir (`nsfw-poses-references/`) is untracked local data: its images are never committed.
+    - **Labels:** `uv run refs jobs make pose_vision` batches only the new ids. Run one Sonnet agent per batch
+      (`LABELING.md`), then `uv run refs jobs collect pose_vision`. After that, `python3 apply_labels.py` sets
+      `sex_positions` exactly as approved (the labeller's extra guesses are dropped), the title, and the acts.
+    - **Affinities:** `uv run refs jobs make concept_affinity` + agents + `collect`. This also re-runs every pose
+      whose labels changed.
+    - **Index:** `uv run refs index build <version>` (local, `data/index/<version>`), then `uv run pytest -q`.
+12. **Upload and publish** (only when the user says so; a server that reads the index must know any new angle /
+    position first). Credentials go in the environment from a `.env` sourced in a subshell (`AWS_*`); never print
+    them.
+    1. `uv run refs upload-assets` uploads the library files whose sha256 changed: the new PNGs. It deletes
+       nothing; a manifest object records what is uploaded.
+    2. `uv run refs index publish <version>` uploads `rag/<version>/` (index.json last) and points
+       `rag/latest.s2.json` at it (with the sha256 of index.json). Older versions stay.
+    3. Rollback: put the previous pointer JSON back to `library/refs/rag/latest.s2.json`. Before step 2, record it
+       with `curl <base_url>library/refs/rag/latest.s2.json`.
+    4. Refresh the video-harness index fixtures (`src/references/__tests__/fixtures/`) in a server change.
+
+    The first generated items (2026-11-10): duo/P064 edge of surface, duo/P065 against the wall, duo/P066 against
+    the wall from behind, duo/P067 oral kneeling, duo/P068 oral between the knees, full_body_sexy/P081 solo
+    kneeling oral. Two high views carry PLAIN line art (P064, P068), and the solo item's low view is missing.
 
 ## Costs observed (2026-11-10, Modal L40S, shared app)
 

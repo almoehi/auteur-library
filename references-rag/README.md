@@ -34,7 +34,7 @@ stage 1 only), `REFS_BASE_URL` / `REFS_BUCKET` (overrides) and `REFS_INDEX` (def
 
 | Command | What it does |
 |---|---|
-| `catalog` | Counts of the English-only catalog (1,407 outfits, 288 poses, 4,285 files) |
+| `catalog` | Counts of the English-only catalog (1,407 outfits, 294 poses, 4,341 files) |
 | `upload-assets [--dry-run] [--catalog Y] [--items J --root D]` | Publishes a catalog's files to `s3://<bucket>/public/library/<catalog>/assets/<library path>`: the files the `--items` media refer to (below `--root`), else the refs library's; skips unchanged files via the sha256 manifest |
 | `export-lake` | Read-only snapshot of iWantClips clips and categories from the content lake into `data/lake/` |
 | `jobs make <job>` / `jobs collect <job>` | Agent jobs (labelling): write batch files, validate and merge outputs; see [`LABELING.md`](LABELING.md) |
