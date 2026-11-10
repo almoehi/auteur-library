@@ -1,0 +1,2643 @@
+{
+  "source": "video-harness/src/design/pose-catalog.ts",
+  "entries": [
+    {
+      "name": "missionary",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "on top",
+        "b": "lying on the back"
+      },
+      "postures": {
+        "a": null,
+        "b": "lying"
+      },
+      "above": "a",
+      "arrangement": "person B lies on the back with the legs open, person A between person B's thighs, bodies facing",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B lies on the back",
+          "parts": [
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hips are between person B's thighs",
+          "parts": [
+            "A:hips",
+            "B:thighs"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A is above person B, propped on the arms, person A's chest facing person B's chest",
+          "parts": [
+            "A:arms",
+            "A:chest|back",
+            "B:chest|back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's knees are bent and raised",
+          "parts": [
+            "B:knees"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hands hold person A's back",
+          "parts": [
+            "B:hands",
+            "A:back"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "doggy style",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "kneeling behind",
+        "b": "on all fours"
+      },
+      "postures": {
+        "a": "kneeling",
+        "b": "kneeling"
+      },
+      "above": null,
+      "arrangement": "person B is on all fours, person A kneels behind person B, hips against person B's buttocks",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B's hands are on the surface, the arms straight, holding up the upper body",
+          "parts": [
+            "B:hands"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B kneels on both knees, the buttocks raised",
+          "parts": [
+            "B:knees"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A kneels upright behind person B, facing person B's back",
+          "parts": [
+            "A:knees",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hips are against person B's buttocks",
+          "parts": [
+            "A:hips",
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands hold person B's hips",
+          "parts": [
+            "A:hands",
+            "B:hips"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "cowgirl",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "lying on the back",
+        "b": "astride, facing"
+      },
+      "postures": {
+        "a": "lying",
+        "b": "seated"
+      },
+      "above": "b",
+      "arrangement": "person A lies on the back, person B sits astride person A's hips facing person A",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A lies on the back",
+          "parts": [
+            "A:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B kneels astride person A's hips, one knee on each side",
+          "parts": [
+            "B:knees",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's torso is upright and faces person A's face",
+          "parts": [
+            "B:chest|back",
+            "A:face"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hands rest on person A's chest",
+          "parts": [
+            "B:hands",
+            "A:chest"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reverse cowgirl",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "lying on the back",
+        "b": "astride, facing away"
+      },
+      "postures": {
+        "a": "lying",
+        "b": "seated"
+      },
+      "above": "b",
+      "arrangement": "person A lies on the back, person B sits astride person A's hips facing away",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A lies on the back",
+          "parts": [
+            "A:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B kneels astride person A's hips, one knee on each side",
+          "parts": [
+            "B:knees",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's back faces person A's face",
+          "parts": [
+            "B:back",
+            "A:face"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hands rest on person A's thighs",
+          "parts": [
+            "B:hands",
+            "A:thighs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "spooning",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "behind",
+        "b": "in front"
+      },
+      "postures": {
+        "a": "lying",
+        "b": "lying"
+      },
+      "above": null,
+      "arrangement": "person A and person B lie on their sides, person A pressed against person B's back",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B lies on the side with the back toward person A",
+          "parts": [
+            "B:hips",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A lies on the side right behind person B, person A's chest against person B's back",
+          "parts": [
+            "A:chest",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hips are against person B's buttocks",
+          "parts": [
+            "A:hips",
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's arm wraps over person B's waist",
+          "parts": [
+            "A:arms",
+            "B:waist"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "prone bone",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "on top, behind",
+        "b": "lying on the stomach"
+      },
+      "postures": {
+        "a": "lying",
+        "b": "lying"
+      },
+      "above": null,
+      "arrangement": "person B lies flat on the stomach, person A lies on top of person B from behind",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B lies flat on the belly",
+          "parts": [
+            "B:belly"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A lies over person B's back, person A's chest toward it",
+          "parts": [
+            "A:chest",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hips are on person B's buttocks",
+          "parts": [
+            "A:hips",
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's legs are straight and close together",
+          "parts": [
+            "B:legs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lotus",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "sitting",
+        "b": "in the lap, facing"
+      },
+      "postures": {
+        "a": "seated",
+        "b": "seated"
+      },
+      "above": "b",
+      "arrangement": "person A sits, person B sits in person A's lap facing person A, arms around each other",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B sits in person A's lap",
+          "parts": [
+            "B:buttocks",
+            "A:lap"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's legs are wrapped around person A's waist",
+          "parts": [
+            "B:legs",
+            "A:waist"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's chest faces person A's chest, both torsos upright and close",
+          "parts": [
+            "B:chest",
+            "A:chest"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's legs are crossed",
+          "parts": [
+            "A:legs"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arms are around person A's shoulders",
+          "parts": [
+            "B:arms",
+            "A:shoulders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lap sitting",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "sitting",
+        "b": "in the lap"
+      },
+      "postures": {
+        "a": "seated",
+        "b": "seated"
+      },
+      "above": "b",
+      "arrangement": "person A sits, person B sits in person A's lap",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A sits upright on a seat",
+          "parts": [
+            "A:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's buttocks rest on person A's thighs",
+          "parts": [
+            "B:buttocks",
+            "A:thighs"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's back leans against person A's chest",
+          "parts": [
+            "B:back",
+            "A:chest"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "standing face to face",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "standing",
+        "b": "standing, facing"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person A and person B stand facing each other, bodies pressed together",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's feet and person B's feet stand on the floor",
+          "parts": [
+            "A:feet",
+            "B:feet"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's front faces person A's front",
+          "parts": [
+            "B:chest|back",
+            "A:chest|back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "one of person B's legs is raised against person A's hip",
+          "parts": [
+            "B:legs",
+            "A:hips"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "standing from behind",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "standing behind",
+        "b": "standing, bent forward"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person B stands bent forward, person A stands right behind person B, person A's groin pressed against person B's buttocks",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B is bent forward at the hips, the back toward person A",
+          "parts": [
+            "B:hips",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's feet stand on the floor",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A stands right behind person B, person A's hips against person B's buttocks",
+          "parts": [
+            "A:hips",
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands hold person B's hips",
+          "parts": [
+            "A:hands",
+            "B:hips"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "kneeling",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "kneeling",
+        "b": "in front"
+      },
+      "postures": {
+        "a": "kneeling",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A kneels, person B is at the same height or standing close in front",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A kneels on both knees",
+          "parts": [
+            "A:knees"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's front faces person B's front, close",
+          "parts": [
+            "A:chest|back",
+            "B:chest|back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B stands or kneels right in front of person A",
+          "parts": [
+            "B:legs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "squatting",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "lying beneath",
+        "b": "squatting over"
+      },
+      "postures": {
+        "a": "lying",
+        "b": null
+      },
+      "above": "b",
+      "arrangement": "person B squats over person A, knees bent, hips lowered",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A lies on the back beneath person B",
+          "parts": [
+            "A:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B squats over person A's hips, the knees bent wide, the hips lowered",
+          "parts": [
+            "B:knees",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's feet are flat on the surface",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hands rest on person A's chest",
+          "parts": [
+            "B:hands",
+            "A:chest"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "face sitting",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "lying on the back",
+        "b": "sitting over the face"
+      },
+      "postures": {
+        "a": "lying",
+        "b": null
+      },
+      "above": "b",
+      "arrangement": "person A lies on the back, person B sits over person A's face",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A lies on the back",
+          "parts": [
+            "A:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B kneels astride person A's head, one knee on each side of it",
+          "parts": [
+            "B:knees",
+            "A:head"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's hips are lowered onto person A's face",
+          "parts": [
+            "B:hips",
+            "A:face"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hands rest on person A's chest",
+          "parts": [
+            "B:hands",
+            "A:chest"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lying on back",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "beside or over",
+        "b": "lying on the back"
+      },
+      "postures": {
+        "a": null,
+        "b": "lying"
+      },
+      "above": null,
+      "arrangement": "person B lies on the back",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B lies on the back",
+          "parts": [
+            "B:back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's head rests on the surface or a pillow",
+          "parts": [
+            "B:head"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lying on side",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "beside",
+        "b": "lying on the side"
+      },
+      "postures": {
+        "a": null,
+        "b": "lying"
+      },
+      "above": null,
+      "arrangement": "person B lies on the side",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B lies on the side, one hip on the surface",
+          "parts": [
+            "B:hips"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's upper leg is bent forward",
+          "parts": [
+            "B:legs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "69",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "one partner",
+        "b": "the other partner"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A and person B lie head to groin",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's head is between person B's thighs",
+          "parts": [
+            "A:head",
+            "B:thighs"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's head is between person A's thighs",
+          "parts": [
+            "B:head",
+            "A:thighs"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "one lies on top of the other, person A's chest over person B's chest or under it, head to feet",
+          "parts": [
+            "A:chest",
+            "B:chest"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "standing carry",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "carrier",
+        "b": "carried"
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A stands and carries person B, who is lifted off the floor facing person A",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "both of person B's feet are off the floor",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's thighs wrap around person A's waist",
+          "parts": [
+            "B:thighs",
+            "A:waist"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hands are under person B's buttocks, holding person B up",
+          "parts": [
+            "A:hands",
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's front faces person A's front",
+          "parts": [
+            "B:chest|back",
+            "A:chest|back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arms are around person A's neck",
+          "parts": [
+            "B:arms",
+            "A:neck"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's ankles are crossed behind person A's back",
+          "parts": [
+            "B:feet",
+            "A:back"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "against the wall",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "pressing",
+        "b": "pinned to the wall"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person B stands with the back to the wall, person A stands pressed against person B",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B's back is pressed against the wall behind person B",
+          "parts": [
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "one of person B's legs is lifted, the knee raised at person A's hip",
+          "parts": [
+            "B:legs",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A stands facing person B, person A's front pressed against person B's front",
+          "parts": [
+            "A:chest|back",
+            "B:chest"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's other foot stands on the floor",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hand holds person B's lifted thigh",
+          "parts": [
+            "A:hands",
+            "B:thighs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "edge of surface",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "standing between the thighs",
+        "b": "sitting on the edge"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "seated"
+      },
+      "above": "a",
+      "arrangement": "person B sits on the edge of a table, vanity or bed, person A stands between person B's open thighs",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B sits on the very edge of the surface",
+          "parts": [
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's thighs are open, the knees apart on either side of person A's hips",
+          "parts": [
+            "B:thighs",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A stands between person B's thighs, facing person B",
+          "parts": [
+            "A:hips",
+            "B:thighs"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B leans back on both hands placed on the surface behind",
+          "parts": [
+            "B:hands"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bent over surface",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "standing behind",
+        "b": "bent over the furniture"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person B bends forward over a piece of furniture, person A stands right behind person B",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B's upper body is bent forward and lies on the surface in front of person B",
+          "parts": [
+            "B:chest"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's hips are at the edge of the surface, the buttocks toward person A",
+          "parts": [
+            "B:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A stands right behind person B, person A's hips against person B's buttocks",
+          "parts": [
+            "A:hips",
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's feet stand on the floor",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands hold person B's hips",
+          "parts": [
+            "A:hands",
+            "B:hips"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "legs on shoulders",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "kneeling between the legs",
+        "b": "lying on the back"
+      },
+      "postures": {
+        "a": "kneeling",
+        "b": "lying"
+      },
+      "above": "a",
+      "arrangement": "person B lies on the back with the calves on person A's shoulders, person A kneels between person B's raised legs",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B lies on the back",
+          "parts": [
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's legs are raised straight up, the calves resting on person A's shoulders",
+          "parts": [
+            "B:legs",
+            "A:shoulders"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A kneels upright, person A's hips against person B's buttocks",
+          "parts": [
+            "A:hips",
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands hold person B's thighs",
+          "parts": [
+            "A:hands",
+            "B:thighs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "chair facing",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "sitting on the chair",
+        "b": "straddling, facing"
+      },
+      "postures": {
+        "a": "seated",
+        "b": "seated"
+      },
+      "above": "b",
+      "arrangement": "person A sits on a chair, person B straddles person A's lap face to face",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A sits upright on a chair",
+          "parts": [
+            "A:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B straddles person A, one thigh on each side of person A's hips",
+          "parts": [
+            "B:thighs",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's front faces person A's front",
+          "parts": [
+            "B:chest|back",
+            "A:chest|back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arms are around person A's shoulders",
+          "parts": [
+            "B:arms",
+            "A:shoulders"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's feet touch the floor beside the chair",
+          "parts": [
+            "B:feet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reverse chair",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "sitting on the chair",
+        "b": "in the lap, facing away"
+      },
+      "postures": {
+        "a": "seated",
+        "b": "seated"
+      },
+      "above": "b",
+      "arrangement": "person A sits on a chair, person B sits on person A's lap facing away from person A",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A sits upright on a chair",
+          "parts": [
+            "A:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's buttocks rest on person A's thighs",
+          "parts": [
+            "B:buttocks",
+            "A:thighs"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's back faces person A's chest",
+          "parts": [
+            "B:back",
+            "A:chest"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's feet are on the floor",
+          "parts": [
+            "B:feet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scissoring",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "one partner",
+        "b": "the other partner"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A and person B sit or lie facing each other with their legs interlocked",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's legs and person B's legs are interlocked, each with one leg over the other's",
+          "parts": [
+            "A:legs",
+            "B:legs"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hips are pressed against person B's hips",
+          "parts": [
+            "A:hips",
+            "B:hips"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B leans back on the hands or forearms",
+          "parts": [
+            "B:hands"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "kneeling upright from behind",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "kneeling behind",
+        "b": "kneeling in front"
+      },
+      "postures": {
+        "a": "kneeling",
+        "b": "kneeling"
+      },
+      "above": null,
+      "arrangement": "person A and person B both kneel upright, person A right behind person B",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B kneels upright, the back toward person A",
+          "parts": [
+            "B:knees"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A kneels upright right behind person B",
+          "parts": [
+            "A:knees"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's back is against person A's chest",
+          "parts": [
+            "B:back",
+            "A:chest"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's arms wrap around person B's waist",
+          "parts": [
+            "A:arms",
+            "B:waist"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "standing one leg raised",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "standing, holding the leg",
+        "b": "standing on one leg"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person A and person B stand face to face, person B on one leg, the other leg raised and held by person A",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B stands on one foot",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's other leg is raised high, the knee at person A's hip or higher",
+          "parts": [
+            "B:legs",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hand holds person B's raised leg",
+          "parts": [
+            "A:hands",
+            "B:legs"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's front faces person A's front",
+          "parts": [
+            "B:chest|back",
+            "A:chest|back"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "kneeling between legs",
+      "content": "nsfw",
+      "people": 2,
+      "roles": {
+        "a": "kneeling",
+        "b": "sitting on the edge"
+      },
+      "postures": {
+        "a": "kneeling",
+        "b": "seated"
+      },
+      "above": "b",
+      "arrangement": "person B sits on the edge of a seat or surface, person A kneels on the floor between person B's knees",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B sits on the edge of the seat, the feet on the floor",
+          "parts": [
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A kneels on the floor between person B's knees",
+          "parts": [
+            "A:knees",
+            "B:knees"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's head is at the height of person B's lap",
+          "parts": [
+            "A:head",
+            "B:lap"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hand rests on person A's head",
+          "parts": [
+            "B:hands",
+            "A:head"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sitting on a chair",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "sitting",
+        "b": null
+      },
+      "postures": {
+        "a": "seated",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A sits upright on a chair",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A sits on the seat of a chair",
+          "parts": [
+            "A:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's knees are bent at about a right angle",
+          "parts": [
+            "A:knees"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's feet rest on the floor",
+          "parts": [
+            "A:feet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sitting cross-legged",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "sitting",
+        "b": null
+      },
+      "postures": {
+        "a": "seated",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A sits cross-legged on the floor",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A sits on the floor",
+          "parts": [
+            "A:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's legs are crossed in front of the body",
+          "parts": [
+            "A:legs"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands rest on the knees",
+          "parts": [
+            "A:hands"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "kneeling upright",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "kneeling",
+        "b": null
+      },
+      "postures": {
+        "a": "kneeling",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A kneels upright",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A kneels on both knees",
+          "parts": [
+            "A:knees"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A is upright, the hips above the knees",
+          "parts": [
+            "A:hips"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's feet point back behind the knees",
+          "parts": [
+            "A:feet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lying on the back reading",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "reading",
+        "b": null
+      },
+      "postures": {
+        "a": "lying",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A lies on the back, reading a book held above the chest",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A lies on the back",
+          "parts": [
+            "A:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hands hold a book up",
+          "parts": [
+            "A:hands"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's head rests on a pillow",
+          "parts": [
+            "A:head"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lying on the stomach",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "lying",
+        "b": null
+      },
+      "postures": {
+        "a": "lying",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A lies on the stomach",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A lies flat on the belly",
+          "parts": [
+            "A:belly"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's upper body is propped on person A's forearms",
+          "parts": [
+            "A:chest",
+            "A:forearms"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's lower legs are raised behind",
+          "parts": [
+            "A:legs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "leaning against a wall",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "leaning",
+        "b": null
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A stands leaning against a wall",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's back rests against the wall",
+          "parts": [
+            "A:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's feet stand on the floor a little away from the wall",
+          "parts": [
+            "A:feet"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's arms are crossed or hang loose",
+          "parts": [
+            "A:arms"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sitting on the edge of a bed",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "sitting",
+        "b": null
+      },
+      "postures": {
+        "a": "seated",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A sits on the edge of a bed",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A sits on the edge of the bed",
+          "parts": [
+            "A:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's feet rest on the floor",
+          "parts": [
+            "A:feet"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands rest on the mattress beside the thighs",
+          "parts": [
+            "A:hands"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "crouching",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "crouching",
+        "b": null
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A crouches low",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's knees are deeply bent, person A's hips low above the heels",
+          "parts": [
+            "A:knees",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's feet are on the floor",
+          "parts": [
+            "A:feet"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's forearms rest on the knees",
+          "parts": [
+            "A:forearms"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "walking",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "walking",
+        "b": null
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A walks",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's legs are mid-stride, one foot ahead of the other",
+          "parts": [
+            "A:legs"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's arms swing naturally, opposite to the legs",
+          "parts": [
+            "A:arms"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "standing with arms crossed",
+      "content": "sfw",
+      "people": 1,
+      "roles": {
+        "a": "standing",
+        "b": null
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A stands with the arms crossed",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's arms are folded across person A's chest",
+          "parts": [
+            "A:arms",
+            "A:chest"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A stands upright on both feet",
+          "parts": [
+            "A:feet"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's weight rests on one leg",
+          "parts": [
+            "A:legs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sitting side by side",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "sitting",
+        "b": "sitting beside"
+      },
+      "postures": {
+        "a": "seated",
+        "b": "seated"
+      },
+      "above": null,
+      "arrangement": "person A and person B sit side by side",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A sits",
+          "parts": [
+            "A:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B sits next to person A on the same seat, facing the same way",
+          "parts": [
+            "B:buttocks"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's shoulder touches person B's shoulder",
+          "parts": [
+            "A:shoulders",
+            "B:shoulders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "walking hand in hand",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "walking",
+        "b": "walking beside"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person A and person B walk side by side, holding hands",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's hand holds person B's hand",
+          "parts": [
+            "A:hands",
+            "B:hands"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's legs and person B's legs are mid-stride in the same direction",
+          "parts": [
+            "A:legs",
+            "B:legs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "helping up",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "standing, pulling",
+        "b": "rising"
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": "a",
+      "arrangement": "person A stands and pulls person B up from the ground by the hand",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's hand grips person B's hand, pulling person B up",
+          "parts": [
+            "A:hands",
+            "B:hands"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B is half-risen from the ground, the knees bent",
+          "parts": [
+            "B:knees"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A stands on both feet, leaning back to pull",
+          "parts": [
+            "A:feet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "piggyback",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "carrier",
+        "b": "riding on the back"
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": "b",
+      "arrangement": "person A carries person B piggyback",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B's chest is against person A's back",
+          "parts": [
+            "B:chest",
+            "A:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's legs wrap around person A's waist from behind",
+          "parts": [
+            "B:legs",
+            "A:waist"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hands hold person B's legs under the knees",
+          "parts": [
+            "A:hands",
+            "B:legs"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's feet are off the ground",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arms are around person A's shoulders",
+          "parts": [
+            "B:arms",
+            "A:shoulders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "arm around the shoulders",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "with the arm around",
+        "b": "beside"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A and person B stand side by side, person A with an arm around person B's shoulders",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's arm rests across person B's shoulders",
+          "parts": [
+            "A:arms",
+            "B:shoulders"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's shoulder is next to person A's shoulder, both facing the same way",
+          "parts": [
+            "B:shoulders",
+            "A:shoulders"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arm is around person A's waist",
+          "parts": [
+            "B:arms",
+            "A:waist"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "hug",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "hugging",
+        "b": "hugged"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A and person B stand face to face, holding each other",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's chest is against person B's chest",
+          "parts": [
+            "A:chest",
+            "B:chest"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's arms are around person B's back",
+          "parts": [
+            "A:arms",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's arms are around person A's back",
+          "parts": [
+            "B:arms",
+            "A:back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's head rests on person A's shoulder",
+          "parts": [
+            "B:head",
+            "A:shoulders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "embrace from behind",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "behind",
+        "b": "in front"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A stands behind person B, holding person B from behind",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A stands right behind person B, person A's chest against person B's back",
+          "parts": [
+            "A:chest",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's arms wrap around person B's waist from behind",
+          "parts": [
+            "A:arms",
+            "B:waist"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's chin rests on person B's shoulder",
+          "parts": [
+            "A:head",
+            "B:shoulders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "standing kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "kissing",
+        "b": "kissed"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person A and person B stand face to face and kiss",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's lips are on person B's lips",
+          "parts": [
+            "A:mouth",
+            "B:mouth"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's front faces person A's front",
+          "parts": [
+            "B:chest|back",
+            "A:chest|back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands hold person B's waist",
+          "parts": [
+            "A:hands",
+            "B:waist"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hands rest on person A's chest",
+          "parts": [
+            "B:hands",
+            "A:chest"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "deep kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "kissing, hands on the face",
+        "b": "kissed"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A and person B kiss deeply, person A holding person B's face",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's lips are pressed on person B's lips",
+          "parts": [
+            "A:mouth",
+            "B:mouth"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hands cup person B's face",
+          "parts": [
+            "A:hands",
+            "B:face"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's front faces person A's front",
+          "parts": [
+            "B:chest|back",
+            "A:chest|back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hands hold person A's waist",
+          "parts": [
+            "B:hands",
+            "A:waist"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tiptoe kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "on tiptoe",
+        "b": "taller"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person A rises on tiptoe to kiss person B",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A stands on tiptoe, the heels raised off the floor",
+          "parts": [
+            "A:feet"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's arms are around person B's neck",
+          "parts": [
+            "A:arms",
+            "B:neck"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's lips are on person B's lips",
+          "parts": [
+            "A:mouth",
+            "B:mouth"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's hands hold person A's waist",
+          "parts": [
+            "B:hands",
+            "A:waist"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "kiss from behind",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "behind",
+        "b": "turning back over the shoulder"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A stands behind person B; person B turns the head back over the shoulder to kiss person A",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A stands right behind person B, person A's chest against person B's back",
+          "parts": [
+            "A:chest",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's head is turned back over person B's shoulder",
+          "parts": [
+            "B:head",
+            "B:shoulders"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's lips are on person A's lips",
+          "parts": [
+            "B:mouth",
+            "A:mouth"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's arms wrap around person B's waist",
+          "parts": [
+            "A:arms",
+            "B:waist"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "neck kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "kissing the neck",
+        "b": "kissed"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A kisses the side of person B's neck",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's lips are on the side of person B's neck",
+          "parts": [
+            "A:mouth",
+            "B:neck"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's head is tilted to the side",
+          "parts": [
+            "B:head"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands hold person B's waist",
+          "parts": [
+            "A:hands",
+            "B:waist"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "forehead kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "kissing the forehead",
+        "b": "kissed"
+      },
+      "postures": {
+        "a": null,
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A kisses person B's forehead",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A's lips touch person B's forehead",
+          "parts": [
+            "A:mouth",
+            "B:head"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's head is lowered slightly, the face toward person A's chest",
+          "parts": [
+            "B:head",
+            "A:chest"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hands hold person B's shoulders",
+          "parts": [
+            "A:hands",
+            "B:shoulders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lying kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "lying",
+        "b": "lying, facing"
+      },
+      "postures": {
+        "a": "lying",
+        "b": "lying"
+      },
+      "above": null,
+      "arrangement": "person A and person B lie side by side, facing each other, and kiss",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A and person B lie on their sides, person A's hips level with person B's hips",
+          "parts": [
+            "A:hips",
+            "B:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's front faces person B's front",
+          "parts": [
+            "A:chest|back",
+            "B:chest|back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's lips are on person B's lips",
+          "parts": [
+            "A:mouth",
+            "B:mouth"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's arm rests over person B's waist",
+          "parts": [
+            "A:arms",
+            "B:waist"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lap kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "sitting",
+        "b": "straddling the lap"
+      },
+      "postures": {
+        "a": "seated",
+        "b": "seated"
+      },
+      "above": "b",
+      "arrangement": "person A sits, person B sits astride person A's lap, and they kiss",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A sits upright",
+          "parts": [
+            "A:buttocks"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B sits astride person A, one thigh on each side of person A's hips",
+          "parts": [
+            "B:thighs",
+            "A:hips"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's lips are on person A's lips",
+          "parts": [
+            "B:mouth",
+            "A:mouth"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arms are around person A's neck",
+          "parts": [
+            "B:arms",
+            "A:neck"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "carried kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "carrier",
+        "b": "carried"
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A stands and carries person B, lifted off the floor facing person A, and they kiss",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "both of person B's feet are off the floor",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's thighs wrap around person A's waist",
+          "parts": [
+            "B:thighs",
+            "A:waist"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hands are under person B's thighs, holding person B up",
+          "parts": [
+            "A:hands",
+            "B:thighs"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's lips are on person A's lips",
+          "parts": [
+            "B:mouth",
+            "A:mouth"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's front faces person A's front",
+          "parts": [
+            "B:chest|back",
+            "A:chest|back"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arms are around person A's neck",
+          "parts": [
+            "B:arms",
+            "A:neck"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's ankles are crossed behind person A's back",
+          "parts": [
+            "B:feet",
+            "A:back"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bridal carry",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "carrier",
+        "b": "carried"
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": null,
+      "arrangement": "person A carries person B in both arms across the chest",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "one of person A's arms is under person B's back and the other under person B's knees",
+          "parts": [
+            "A:arms",
+            "B:back",
+            "B:knees"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "both of person B's feet are off the floor",
+          "parts": [
+            "B:feet"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A stands upright, holding person B against person A's chest",
+          "parts": [
+            "A:chest"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arms are around person A's neck",
+          "parts": [
+            "B:arms",
+            "A:neck"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dip kiss",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "dipping",
+        "b": "dipped"
+      },
+      "postures": {
+        "a": "standing",
+        "b": null
+      },
+      "above": "a",
+      "arrangement": "person A dips person B backward and kisses person B",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B leans far back, person B's back below person A's chest",
+          "parts": [
+            "B:back",
+            "A:chest"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's arm supports person B's back",
+          "parts": [
+            "A:arms",
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A bends over person B, person A's lips on person B's lips",
+          "parts": [
+            "A:mouth",
+            "B:mouth"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "one of person B's legs is lifted off the floor",
+          "parts": [
+            "B:legs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "kiss against the wall",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "pressing",
+        "b": "against the wall"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person B stands with the back to the wall, person A kisses person B pressed close",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B's back is against the wall",
+          "parts": [
+            "B:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's front faces person B's front, pressed close",
+          "parts": [
+            "A:chest|back",
+            "B:chest"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's lips are on person B's lips",
+          "parts": [
+            "A:mouth",
+            "B:mouth"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's hand rests on the wall beside person B's head",
+          "parts": [
+            "A:hands",
+            "B:head"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "slow dance",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "leading",
+        "b": "dancing"
+      },
+      "postures": {
+        "a": "standing",
+        "b": "standing"
+      },
+      "above": null,
+      "arrangement": "person A and person B slow dance, holding each other close",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person B's front faces person A's front",
+          "parts": [
+            "B:chest|back",
+            "A:chest|back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's arms are around person A's neck",
+          "parts": [
+            "B:arms",
+            "A:neck"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person A's hands rest on person B's waist",
+          "parts": [
+            "A:hands",
+            "B:waist"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's feet and person B's feet are mid-step",
+          "parts": [
+            "A:feet",
+            "B:feet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lying on chest",
+      "content": "sfw",
+      "people": 2,
+      "roles": {
+        "a": "lying on the back",
+        "b": "lying on the chest"
+      },
+      "postures": {
+        "a": "lying",
+        "b": "lying"
+      },
+      "above": null,
+      "arrangement": "person A lies on the back, person B lies against person A with the head on person A's chest",
+      "supports": [
+        {
+          "essential": true,
+          "sentence": "person A lies on the back",
+          "parts": [
+            "A:back"
+          ]
+        },
+        {
+          "essential": true,
+          "sentence": "person B's head rests on person A's chest",
+          "parts": [
+            "B:head",
+            "A:chest"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person B's arm rests across person A's belly",
+          "parts": [
+            "B:arms",
+            "A:belly"
+          ]
+        },
+        {
+          "essential": false,
+          "sentence": "person A's arm is around person B's shoulders",
+          "parts": [
+            "A:arms",
+            "B:shoulders"
+          ]
+        }
+      ]
+    }
+  ]
+}
