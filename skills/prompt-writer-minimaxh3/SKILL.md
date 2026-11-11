@@ -31,7 +31,7 @@ Use this skill when asked to write or enhance a prompt targeting:
 4. **Observable behavior, not emotions.** Describe what a camera can see — not what characters feel. Vocal delivery is observable (audible) and is NOT covered by this ban: when the brief gives a spoken line's delivery (volume, pace, breath, pitch, a named emotion of the VOICE such as "whispered, trembling"), write it with the line (Step 6).
 5. **Audio is mandatory.** MiniMax H3 generates stereo audio natively. Every brief must include `overall_soundscape` and `non_diegetic_music` fields, even if set to `"N/A"`.
 6. **Use structured brief format.** Free-form prose is not accepted — output must use Template A or Template B.
-7. **Looks come from the `picture_map:` and the shot block only.** When the brief has a `picture_map:` (every clip task: single cut, continuation, bundle), `subject_definitions` take each subject's look - nude, or the garments worn, a persisting state - ONLY from that subject's picture line (the text after the dash: `nude in this clip`, `wearing: wool coat`) and the shot's `Wardrobe:` / `State:` lines. Never copy a look from the style line, the story or plot text, a design's name, another shot, or your own assumption about the character (a plot that says a character wears a bikini does not dress a nude clip). A picture whose line says `face and identity only` gives face and identity, never its clothes; one that says `bare skin where garments are off` shows what is NOT worn. A person with no picture line is described by the shot block alone. One line per `<Picture N>` / `<Video 1>` / `<Audio N>` exactly as the map names it - never invent, renumber, add or drop a picture.
+7. **Looks come from the `picture_map:` and the shot block only.** When the brief has a `picture_map:` (every clip task: single cut, continuation, bundle), `subject_definitions` take each subject's look - nude, or the garments worn, a persisting state - ONLY from that subject's picture line (the text after the dash: `nude in this clip`, `wearing: wool coat`) and the shot's `Wardrobe:` / `State:` lines. Never copy a look from the style line, the story or plot text, a design's name, another shot, or your own assumption about the character (a plot that says a character wears a bikini does not dress a nude clip). A picture whose line says `face and identity only` gives face and identity, never its clothes; one that says `bare skin where garments are off` shows what is NOT worn. A person with no picture line is described by the shot block alone. **A picture line that ends `applies to shot(s) <ids> only`** is stated ONLY in those shots: in every other shot of the bundle never mention its look, garments or outfit (each shot block's `pictures:` line lists the pictures that apply to it). A brief line `garments_not_shown:` / a bundle constraint `no garment is in frame ... state no clothing or outfit` means the shot's frame cannot show the person's garments: write no clothing, outfit or "as designed" for that person in that shot - only what the frame shows. One line per `<Picture N>` / `<Video 1>` / `<Audio N>` exactly as the map names it - never invent, renumber, add or drop a picture.
 
 ---
 
@@ -213,9 +213,9 @@ The number of beats is whatever the brief states (its Action, Motion, Beat and D
 
 **Static shot template** — ONLY when the brief says `Movement: hold` (or `static`):
 ```
-Static [wide/medium/close] shot. The frame never moves. No push in, no zoom, no tilt, no pan, no reframing, no focus change.
+Static [wide/medium/close] shot. The frame never moves and keeps this framing to the end. No push in, no pull out, no widening or reveal of more than the frame shows, no zoom, no tilt, no pan, no reframing, no focus change.
 ```
-Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
+A hold means the framing size stays for the whole shot - pulling back is as forbidden as pushing in (a video model widens a close-up on its own and reveals what the shot never shows). The brief states it as `camera_hold:` (single clip) or the `continuity_constraints:` line `the camera holds ... framing` (bundle): copy it into the prompt verbatim. Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
 
 **Dynamic shot template:**
 ```
@@ -250,14 +250,14 @@ What each move does (keep them apart - each is a different picture):
 - **Arc Left / Arc Right** - the camera travels around the subject: the ONLY move that turns a front view into a three-quarter or side view (spike: a 45-degree arc landed on three-quarter). Convention: "arcs left" = the camera travels to ITS OWN left (counter-clockwise from above), which from a frontal camera reveals the subject's right side. State left / right, 15-45 degrees per clip (front -> side 90 degrees is a cut or two clips) and the side it ends on.
 - **Follow / Lead** - the camera travels with a moving subject and keeps its framing (there is no "Tracking Shot": write "follows <subject>", or "trucks left / right" for plain sideways travel).
 - **Pedestal Up / Down** (or crane) - the camera rises / lowers: the only move that changes the camera height (eye level -> low / high angle); pair it with the tilt that keeps the subject in frame and state the angle it ends at. Its effect is small in one clip.
-- **Rack focus** (no camera move): name BOTH ends - "Focus starts on [near thing], [subject] soft; then racks to [subject]; at the end [subject] is sharp and [near thing] blurred." (spike: performed). A rack focus is not a camera move: the frame stays still. Write it with the static frame ("The frame never moves. No push in, no zoom, no pan, no tilt, no reframing.") and WITHOUT "no focus change".
+- **Rack focus** (no camera move): name BOTH ends - "Focus starts on [near thing], [subject] soft; then racks to [subject]; at the end [subject] is sharp and [near thing] blurred." (spike: performed). A rack focus is not a camera move: the frame stays still. Write it with the static frame ("The frame never moves. No push in, no pull out, no zoom, no pan, no tilt, no reframing.") and WITHOUT "no focus change".
 
 Rules: ONE camera move per shot - unless the brief's `Movement:` names several (e.g. `push-in and arc right`, one per framing change): then write each, in the brief's order, in one camera sentence - and a SUBTLE one (a push-in changes the frame by about 10%); never combine a camera move with a fast subject action in one short clip. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim. If static: state "frame never moves" AND list what should not happen.
 
 **A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
 camera pushes in slowly ..."). When the brief says `Movement: hold` (or `static`), use the static
-template above, including its "no zoom / no push / no pan" refusals. When the brief carries NO `Movement:` (absent, or `movement: none`),
+template above, including its "no zoom / no push / no pull out / no pan" refusals. When the brief carries NO `Movement:` (absent, or `movement: none`),
 state the framing from the brief (shot size, angle), add NO camera move of your own and no static refusal list, and keep ONE short sentence: "The camera stays at this framing." (Iron Law 3; only here - never next to a `Movement:` move). In a video continuation the prompt continues `<Video 1>` without a cut; the move
 continues or holds that of the prior clip.
 
@@ -387,7 +387,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 
 - [ ] Mode identified; correct template selected
 - [ ] i2va / fl2va / l2va: the instruction line is the first line, copied exactly (shot number `N`, duration `S.SS` with two decimals), then one blank line; the body starts with `integrated_multimodal_description: [Shot 1]`
-- [ ] Camera specified in every shot OR explicit static lock with refusal list stated (no push in, no zoom, no pan, no tilt, no reframing, no focus change)
+- [ ] Camera specified in every shot OR explicit static lock with refusal list stated (no push in, no pull out, no zoom, no pan, no tilt, no reframing, no focus change)
 - [ ] A brief with `camera_body:` gets the locked-head sentence and only the moves that line allows (never a translation); POV is never written as a move
 - [ ] Every camera move states what the frame shows when it ends; a new side of the subject only by Arc, a new camera height only by Pedestal / crane; a rack focus names where focus starts and ends
 - [ ] Only the beats the brief states — no padding behaviour
