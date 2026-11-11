@@ -18,6 +18,8 @@
 # Power Lora Loader (rgthree)     https://github.com/rgthree/rgthree-comfy
 # ComfyMathExpression             https://github.com/evanspearman/ComfyMath
 # RIFE VFI                        https://github.com/Fannovel16/ComfyUI-Frame-Interpolation
+# ComfySwitchNode                 built-in ComfyUI (lazy: the fps snap picks RIFE frames or the native
+#                                 frames and the encode rate; RIFE does not run at 24)
 # easy cleanGpuUsed / easy seed   https://github.com/yolain/ComfyUI-Easy-Use
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -200,7 +202,7 @@ ports:
       default: 864
     - name: fps
       kind: int
-      description: "Output (playback) frame rate. 48 is the model's native 24 fps through RIFE 2x and keeps the clip duration."
+      description: "Output (playback) frame rate, snapped in the graph to one of two values around the model's native 24 fps: above 24 the frames are RIFE 2x interpolated and encoded at 48; 24 or below RIFE is skipped and the native frames are encoded at 24. A value in between just picks a side (30 -> 48, 12 -> 24); the clip duration never changes. A continuation of this clip follows its rate by itself."
       binding: value@146
       constraints: { min: 1, max: 120 }
       required: false
@@ -248,7 +250,7 @@ ports:
   outputs:
     - name: output_video
       kind: video
-      description: "Final multi-shot video with audio, RIFE 2x interpolated, encoded at the fps param rate (default 48). The cuts sit at the guide frames."
+      description: "Final multi-shot video with audio, RIFE 2x interpolated and encoded at 48 when fps > 24 (default 48), else the native frames at 24. The cuts sit at the guide frames (counted at the native 24 fps either way)."
       node_id: "145"
       role: primary
 context: |

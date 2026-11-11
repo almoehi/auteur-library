@@ -156,7 +156,7 @@ ports:
       default: 864
     - name: fps
       kind: int
-      description: "Output (playback) frame rate. 48 is the model's native 24 fps through RIFE 2x and keeps the clip duration; a continuation must use the same value."
+      description: "Output (playback) frame rate, snapped in the graph to one of two values around the model's native 24 fps: above 24 the frames are RIFE 2x interpolated and encoded at 48; 24 or below RIFE is skipped and the native frames are encoded at 24. A value in between just picks a side (30 -> 48, 12 -> 24); the clip duration never changes. A continuation of this clip follows its rate by itself."
       binding: value@146
       constraints: { min: 1, max: 120 }
       required: false
@@ -204,7 +204,7 @@ ports:
   outputs:
     - name: output_video
       kind: video
-      description: "Final video with audio, RIFE 2x interpolated, encoded at the fps param rate (default 48)."
+      description: "Final video with audio, RIFE 2x interpolated and encoded at 48 when fps > 24 (default 48), else the native frames at 24."
       node_id: "145"
       role: primary
     - name: output_audio
@@ -249,8 +249,9 @@ context: |
   a skin-realism slider (0.5) and an anatomy LoRA (0.6). Do not select them on a port. lora_1-lora_4
   take act / detail adapters from the workspace lora catalog (modelFamily minimaxh3).
 
-  Resolution and chaining: width, height and fps are inherited by every continuation of this
-  clip - pick them once. Width and height are snapped to the nearest multiple of 32 in the graph
+  Resolution and chaining: width and height are inherited by every continuation of this clip -
+  pick them once; a continuation also keeps this clip's frame rate (24 or 48, the fps snap).
+  Width and height are snapped to the nearest multiple of 32 in the graph
   (size_w / size_h; e.g. 720 -> 704). Portrait 480x864 default, 864x480 landscape, 864x1536 for
   final quality.
 

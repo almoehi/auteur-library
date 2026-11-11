@@ -9,6 +9,8 @@
 # Power Lora Loader / Any Switch (rgthree) https://github.com/rgthree/rgthree-comfy (already in nodes.lock)
 # ComfyMathExpression                    https://github.com/evanspearman/ComfyMath (already in nodes.lock)
 # RIFEInterpolation                      https://github.com/Fannovel16/ComfyUI-Frame-Interpolation (already in nodes.lock)
+# ComfySwitchNode                        built-in ComfyUI (lazy: the fps snap picks RIFE frames or the native frames and
+#                                        the encode rate; RIFE does not run at 24. Replaced the rgthree switch 148 / 149)
 # easy cleanGpuUsed / easy seed          https://github.com/yolain/ComfyUI-Easy-Use (already in nodes.lock)
 # SpectrumApplyMiniMaxH3                 NOT included — workflow exported in EasyCache mode (use one or the other)
 #
@@ -50,7 +52,7 @@
 #
 
 name: minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit
-version: "1.6"
+version: "1.7"
 description: >
   TEXT-TO-VIDEO ONLY - despite "i2v_ref2v" in its name this workflow takes NO image or video
   inputs: it cannot use a start frame, a storyboard keyframe or character / outfit / location
@@ -89,7 +91,7 @@ ports:
       required: true
     - name: video_length
       kind: float
-      description: "Target video PLAYBACK duration in seconds. The frame count is derived from this value at the model's native 24 fps (padded to 17k+5 frames), then RIFE-doubled; at the default fps 48 the clip lasts this long."
+      description: "Target video PLAYBACK duration in seconds. The frame count is derived from this value at the model's native 24 fps (padded to 17k+5 frames), then RIFE-doubled when fps > 24; the clip lasts this long at any fps."
       binding: value@132
       constraints: { min: 1.0, max: 30.0 }
       required: false
@@ -111,7 +113,7 @@ ports:
       default: 864
     - name: fps
       kind: int
-      description: "Output (playback) frame rate in FPS. Controls the VHS container frame rate; default 48 = model native 24fps × RIFE 2× interpolation, preserving clip duration. Any other value changes the playback duration (60 plays the clip 20% shorter, 24 twice as long). A render profile's fps never overrides it."
+      description: "Output (playback) frame rate, snapped in the graph to one of two values around the model's native 24 fps: above 24 the frames are RIFE 2x interpolated and encoded at 48; 24 or below RIFE is skipped and the native frames are encoded at 24. A value in between just picks a side (30 -> 48, 12 -> 24); the clip duration never changes. A render profile's fps never overrides it."
       binding: value@146
       constraints: { min: 1, max: 120 }
       required: false
@@ -127,7 +129,7 @@ ports:
   outputs:
     - name: output_video
       kind: video
-      description: "RIFE 2× interpolated final output video with audio, encoded at the fps param rate (default 48 FPS)."
+      description: "Final output video with audio: RIFE 2x interpolated and encoded at 48 when fps > 24 (default 48), else the native frames at 24."
       node_id: "145"
       role: primary
 context: >
