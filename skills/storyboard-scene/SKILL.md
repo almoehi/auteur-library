@@ -446,7 +446,7 @@ check); they go to the clip prompt verbatim.
 - `Blocking:` places only people in frame plus a POV owner: "the camera is the viewer's eyes
   (seated); the viewer's forearms and hands enter the lower frame". Never call a POV owner whose
   limbs are in `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
-- `POV: <characterKey> (seated|standing|kneeling|lying|walking)` only for a first-person camera; the
+- `POV: <characterKey> (seated|standing|kneeling|lying|walking)` only for a first-person camera; take the owner and posture from the beat's `POV` column in the scene list (`<slug> (<posture>)`, the key is `character_<slug>`; `none` = third person, no `POV:` line); a beat without that column: the beat's Blocking says who the viewer is; the
   posture is REQUIRED (a `POV:` line without one, or with another, is refused - there is no default);
   the posture decides what the camera may do (the first-person camera table under "Camera moves"); the posture is said in words only ("first-person view,
   standing"). A first-person view shows only the viewer's own body seen from their eyes; the
