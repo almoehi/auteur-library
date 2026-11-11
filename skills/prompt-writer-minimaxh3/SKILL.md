@@ -215,7 +215,7 @@ The number of beats is whatever the brief states (its Action, Motion, Beat and D
 ```
 Static [wide/medium/close] shot. The frame never moves and keeps this framing to the end. No push in, no pull out, no widening or reveal of more than the frame shows, no zoom, no tilt, no pan, no reframing, no focus change.
 ```
-A hold means the framing size stays for the whole shot - pulling back is as forbidden as pushing in (a video model widens a close-up on its own and reveals what the shot never shows). The brief states it as `camera_hold:` (single clip) or the `continuity_constraints:` line `the camera holds ... framing` (bundle): copy it into the prompt verbatim. Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
+A hold means the framing size stays for the whole shot - pulling back is as forbidden as pushing in (a video model widens a close-up on its own and reveals what the shot never shows). The brief states it as `camera_hold:` (single clip) or the `continuity_constraints:` line `the camera holds ... framing` (bundle): use it as given (it is prose: write its meaning into the prompt, never a field name). Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
 
 **Dynamic shot template:**
 ```
