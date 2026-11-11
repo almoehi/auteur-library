@@ -65,8 +65,9 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 
 - ONE `create_task` call per round, each issued AFTER the previous call's result, in chain order; all four in the SAME turn.
 - NEVER put several `create_task` calls in one round (one response): a later call's `requires_*` names the task / artifact the earlier call creates, so it must exist first (a `create_scenes` issued before `character_table` exists fails with `requires.tasks references unknown task id`).
-- `requires_tasks` and `requires_artifacts` are MANDATORY in every call, exactly as in the templates (right after `id`): a task created without them starts at once, before its inputs exist, and fails or works from nothing.
+- `requires_tasks` and `requires_artifacts` are MANDATORY in every call, exactly as in the templates (right after the output arguments): a task created without them starts at once, before its inputs exist, and fails or works from nothing.
 - Each call creates the task, its output artifact (`output_artifact_name`, `output_files`) and its checks; no separate artifact call.
+- EVERY `create_task` call carries its template's `output_artifact_name` + `output_files` exactly as written (they sit right after `id`). A result containing `Note: this task has no output artifacts` means the call was wrong: `remove_task` that task and `create_task` it again WITH those arguments before making the next call.
 - NO text between calls — no announcements, no "let me verify", no progress notes (a text-only reply ends the turn and the rest of the chain is never created); do not re-read stored prompts. Only after the 4th result (or a stop on failure) may you write your single final report (section 5).
 - Use ids / keys from each result (`key: <key>`) in later `requires_*`; never assume or derive keys. On an `error:` result pick the right key from the listed known ones and correct the call; never retry an identical call.
 - Step fails twice -> stop; report which tasks were created (ids from results) and which failed (error text). Never claim a task `create_task` did not confirm.
@@ -76,9 +77,8 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 ### 4a. write_screenplay
 
 ```
-create_task({ id: "write_screenplay", requires_tasks: [], requires_artifacts: [], title: "Write screenplay", description: "Adapt the story plot into a screenplay",
-  agent: <writer>, policies: ["screenplay-quality"], prompt_block: "run-preproduction/write_screenplay",
-  output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"] })
+create_task({ id: "write_screenplay", output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"], requires_tasks: [], requires_artifacts: [], title: "Write screenplay", description: "Adapt the story plot into a screenplay",
+  agent: <writer>, policies: ["screenplay-quality"], prompt_block: "run-preproduction/write_screenplay" })
 ```
 Prompt block (passed by `prompt_block`, never copied):
 ```prompt write_screenplay
@@ -92,9 +92,8 @@ Nudity `allowed`: every sexual act, every moment of nudity and every climax the 
 ### 4b. character_table
 
 ```
-create_task({ id: "character_table", requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"], title: "Character table", description: "One profile file per cast role",
-  agent: <cast writer>, policies: ["cast-quality"], prompt_block: "run-preproduction/character_table",
-  output_artifact_name: "character_table", output_artifact_description: "Character Breakdown Table", output_files: [] })
+create_task({ id: "character_table", output_artifact_name: "character_table", output_artifact_description: "Character Breakdown Table", output_files: [], requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"], title: "Character table", description: "One profile file per cast role",
+  agent: <cast writer>, policies: ["cast-quality"], prompt_block: "run-preproduction/character_table" })
 ```
 Prompt block (passed by `prompt_block`, never copied):
 ````prompt character_table
@@ -142,9 +141,8 @@ Pre-completion audit: before `task_complete`, re-open every file; confirm all fi
 ### 4c. create_scenes
 
 ```
-create_task({ id: "create_scenes", requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"], title: "Scene list", description: "Scene table with outfits and beats",
-  agent: <director>, policies: ["scenes-quality","scenes-complete"], prompt_block: "run-preproduction/create_scenes",
-  output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"] })
+create_task({ id: "create_scenes", output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"], requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"], title: "Scene list", description: "Scene table with outfits and beats",
+  agent: <director>, policies: ["scenes-quality","scenes-complete"], prompt_block: "run-preproduction/create_scenes" })
 ```
 Prompt block (passed by `prompt_block`, never copied):
 ````prompt create_scenes
@@ -257,11 +255,9 @@ Pre-completion audit: before `task_complete`, confirm every scene of the screenp
 ### 4d. plan_designs
 
 ```
-create_task({ id: "plan_designs", requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list","screenplay"], title: "Plan and create designs", description: "Create the designs of the pre-production",
+create_task({ id: "plan_designs", output_artifact_name: "design_plan", output_artifact_description: "Design Plan", output_files: ["design_plan.json"], requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list","screenplay"], title: "Plan and create designs", description: "Create the designs of the pre-production",
   agent: <design planner>, policies: ["design-plan-covers-scenes","storyboards-cover-scenes"],
-  difficulty: "hard", can_create_tasks: true, prompt_block: "run-preproduction/plan_designs",
-  output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
-  output_files: ["design_plan.json"] })
+  difficulty: "hard", can_create_tasks: true, prompt_block: "run-preproduction/plan_designs" })
 ```
 The only output file is `design_plan.json` (the checks read the scene list from the `scene_list` input). The first prompt line is exact (the worker keys on it). Prompt block (passed by `prompt_block`, never copied):
 ```prompt plan_designs
@@ -278,7 +274,7 @@ If `plan_designs` ended (or was stopped) with designs of its plan missing, call 
 
 ## 5. Verify and reply
 
-- Call `task_index` once; all four tasks must exist with the expected `requires`. Create any missing one (section 4 rules), then re-check.
+- Call `task_index` once; all four tasks must exist with the expected `requires`, and each must show its output artifact (`screenplay`, `character_table`, `scene_list`, `design_plan` with `design_plan.json`). Create any missing one, and remove and create again any task without its output artifact (section 4 rules), then re-check.
 - No check-verification calls: each `create_task` result lists the attached checks ("(auto)" = auto-attached).
 - Reply in at most 4 short lines (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`); list only confirmed tasks and precisely what failed; do not use the success message for a chain that is incomplete:
   > Scheduled pre-production: task://<screenplay> -> task://<cast> -> task://<scene_list> -> task://<plan_designs>.
