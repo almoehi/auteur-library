@@ -6,7 +6,7 @@
 # ─── Custom Nodes ─────────────────────────────────────────────────────────────
 # MiniMaxH3ReferenceToVideo, CreateVideo, SaveVideo, VAEDecodeAudio — built-in ComfyUI (comfy_extras)
 # VHS_LoadVideoFFmpeg — ComfyUI-VideoHelperSuite (already in nodes.lock)
-# ComfyMathExpression — ComfyMath (already in nodes.lock)
+# ComfyMathExpression — built-in ComfyUI (comfy_extras/nodes_math)
 # VHS_VideoInfoLoaded  — ComfyUI-VideoHelperSuite (already in nodes.lock): width / height of
 #   the prior clip (clip_info -> clip_w / clip_h, snapped to a multiple of 32) set the output size
 # VHS_VideoInfoSource  — ComfyUI-VideoHelperSuite (already in nodes.lock): the prior clip's own frame

@@ -24,7 +24,7 @@
 # PathchSageAttentionKJ           https://github.com/kijai/ComfyUI-KJNodes
 # VHS_VideoCombine                https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
 # Power Lora Loader (rgthree)     https://github.com/rgthree/rgthree-comfy
-# ComfyMathExpression             https://github.com/evanspearman/ComfyMath
+# ComfyMathExpression             built-in ComfyUI (comfy_extras/nodes_math)
 # RIFE VFI                        https://github.com/Fannovel16/ComfyUI-Frame-Interpolation
 # ComfySwitchNode                 built-in ComfyUI (lazy: the fps snap picks RIFE frames or the native
 #                                 frames and the encode rate; RIFE does not run at 24)

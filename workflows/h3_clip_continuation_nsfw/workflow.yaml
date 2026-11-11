@@ -15,7 +15,7 @@
 # VHS_LoadVideoFFmpeg, VHS_VideoInfoLoaded, VHS_VideoInfoSource, VHS_VideoCombine  https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
 #   (VHS_VideoInfoSource reports prior_clip's own rate, parsed from ffmpeg - not the loader's force_rate 24)
 # Power Lora Loader / Any Switch (rgthree)  https://github.com/rgthree/rgthree-comfy
-# ComfyMathExpression             https://github.com/evanspearman/ComfyMath
+# ComfyMathExpression             built-in ComfyUI (comfy_extras/nodes_math)
 # RIFE VFI                        https://github.com/Fannovel16/ComfyUI-Frame-Interpolation
 # ComfySwitchNode                 built-in ComfyUI (lazy: prior_clip above 24 fps -> RIFE 2x frames at 48,
 #                                 else the native frames at 24; RIFE does not run for a 24 fps prior clip)

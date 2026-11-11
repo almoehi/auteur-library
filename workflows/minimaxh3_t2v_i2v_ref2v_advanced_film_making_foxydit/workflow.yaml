@@ -7,7 +7,7 @@
 # PathchSageAttentionKJ                  ComfyUI-KJNodes (already in nodes.lock)
 # VHS_VideoCombine                       https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite (already in nodes.lock)
 # Power Lora Loader / Any Switch (rgthree) https://github.com/rgthree/rgthree-comfy (already in nodes.lock)
-# ComfyMathExpression                    https://github.com/evanspearman/ComfyMath (already in nodes.lock)
+# ComfyMathExpression                    built-in ComfyUI (comfy_extras/nodes_math)
 # RIFEInterpolation                      https://github.com/Fannovel16/ComfyUI-Frame-Interpolation (already in nodes.lock)
 # ComfySwitchNode                        built-in ComfyUI (lazy: the fps snap picks RIFE frames or the native frames and
 #                                        the encode rate; RIFE does not run at 24. Replaced the rgthree switch 148 / 149)
