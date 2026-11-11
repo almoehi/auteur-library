@@ -714,6 +714,8 @@ check); they go to the clip prompt verbatim.
   keyframe renders ignore a LoRA of another family) and name the act and position exactly from the vocabulary in
   skill `explicit-acts`. If the catalog tags LoRAs with `sexActs` /
   `sexPositions`, the server adds a matching tagged LoRA when none of your listed ones covers the shot's act.
+- **A lead-up shot's `Motion:` beats describe the approach, never the act's own motion.** A shot whose act is NOT shown (no intimate `Contact:` entry) - the people approach, position themselves, undress, touch elsewhere - lists only that approach and the contacts it really has; no beat of it performs the act's own movement (the rhythmic, thrusting or stroking motion of the act's body parts), because the clip would play it against a partner who is not in frame. The act's own motion is a beat of the shot that SHOWS the act with its intimate `Contact:` entry. A shot that states a `Sex act:` while its `Visible:` frames the act's contact region (a person's groin, buttocks or breasts the act uses) without that intimate `Contact:` is refused at the write (rule R40): list the intimate `Contact:` and show the partner's part in `Visible:`, or frame the region out (a tighter `Camera:` size, or a `Visible:` extent that excludes it).
+- **A LoRA applies to a whole clip.** Consecutive shots are rendered as ONE multi-shot clip only when they request the same video LoRAs; a shot that does not request the act's LoRA (a lead-up) stays a clip of its own, so list a video LoRA only on the shots that need it.
 
 ### Writing rules per shot
 
