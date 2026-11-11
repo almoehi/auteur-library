@@ -171,7 +171,7 @@ ports:
       default: 288
     - name: duration_seconds
       kind: float
-      description: "Target clip playback duration in seconds: the sum of the shots' Durations, at most 15 (the trained length; longer clips break into unplanned cuts). Converted to the nearest valid MiniMax H3 frame count at the native 24 fps (15 s -> 15.06 s). Every guide frame must fall inside the clip."
+      description: "Rendered (real-time) clip duration in seconds - playback lasts duration_seconds x slow_motion (1.0 by default): the sum of the shots' Durations, at most 15 (the trained length; longer clips break into unplanned cuts). Converted to the nearest valid MiniMax H3 frame count at the native 24 fps (15 s -> 15.06 s). Every guide frame must fall inside the clip."
       binding: value@132
       constraints: { min: 5.0, max: 16.0 }
       required: false
@@ -207,12 +207,19 @@ ports:
       default: 864
     - name: fps
       kind: int
-      description: "Output (playback) frame rate, snapped in the graph to one of two values around the model's native 24 fps: above 24 the frames are RIFE 2x interpolated and encoded at 48; 24 or below RIFE is skipped and the native frames are encoded at 24. A value in between just picks a side (30 -> 48, 12 -> 24); the clip duration never changes. A continuation of this clip follows its rate by itself."
+      description: "Output (playback) frame rate, snapped in the graph to one of two values around the model's native 24 fps: above 24 the frames are RIFE 2x interpolated and encoded at 48; 24 or below RIFE is skipped and the native frames are encoded at 24. A value in between just picks a side (30 -> 48, 12 -> 24); the clip duration never changes with fps. While slow_motion > 1 fps is ignored: the rate is 48 / slow_motion. A continuation of this clip follows its rate by itself."
       binding: value@146
       constraints: { min: 1, max: 120 }
       required: false
       default: 48
       role: output-fps
+    - name: slow_motion
+      kind: float
+      description: "Slow-motion factor, 1.0-2.0 (default 1.0 = real time). Above 1 the frames are ALWAYS RIFE 2x interpolated and encoded at 48 / slow_motion (1.5 -> 32 fps), so playback is deliberately longer: duration_seconds is the RENDERED (real-time) length and the clip plays duration_seconds x slow_motion. fps is then ignored for the rate (it decides nothing else). At 1.0 the fps snap applies."
+      binding: value@slow_motion
+      constraints: { min: 1.0, max: 2.0 }
+      required: false
+      default: 1.0
     - name: sage_attention
       kind: string
       description: "SageAttention mode of the KJNodes patch. Leave at 'disabled' unless the compute image is known to carry SageAttention kernels for the card."
@@ -254,7 +261,7 @@ ports:
   outputs:
     - name: output_video
       kind: video
-      description: "Final multi-shot video with audio, RIFE 2x interpolated and encoded at 48 when fps > 24 (default 48), else the native frames at 24. The cuts sit at the guide frames (counted at the native 24 fps either way)."
+      description: "Final multi-shot video with audio, RIFE 2x interpolated and encoded at 48 when fps > 24 (default 48), else the native frames at 24; with slow_motion > 1 always RIFE 2x, encoded at 48 / slow_motion. The cuts sit at the guide frames (counted at the native 24 fps either way)."
       node_id: "145"
       role: primary
 context: |

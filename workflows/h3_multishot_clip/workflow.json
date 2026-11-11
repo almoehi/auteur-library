@@ -273,7 +273,7 @@
         0
       ],
       "frame_rate": [
-        "fps_rate",
+        "fps_out_rate",
         0
       ],
       "audio": [
@@ -738,7 +738,7 @@
     "class_type": "ComfySwitchNode",
     "inputs": {
       "switch": [
-        "fps_over_native",
+        "use_rife",
         2
       ],
       "on_false": [
@@ -772,6 +772,78 @@
     },
     "_meta": {
       "title": "Encode rate: 2N or N (lazy)"
+    }
+  },
+  "slow_motion": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 1.0
+    },
+    "_meta": {
+      "title": "Slow motion (1.0-2.0)"
+    }
+  },
+  "slow_on": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "a > 1",
+      "values.a": [
+        "slow_motion",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "slow_motion > 1?"
+    }
+  },
+  "use_rife": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "(a > 24) + (b > 1) > 0",
+      "values.a": [
+        "146",
+        0
+      ],
+      "values.b": [
+        "slow_motion",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "RIFE 2x? (fps > 24 or slow motion)"
+    }
+  },
+  "fps_slow_rate": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "48 / a",
+      "values.a": [
+        "slow_motion",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Slow-motion rate (48 / slow_motion)"
+    }
+  },
+  "fps_out_rate": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "slow_on",
+        2
+      ],
+      "on_false": [
+        "fps_rate",
+        0
+      ],
+      "on_true": [
+        "fps_slow_rate",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Encode rate: slow motion or the fps snap (lazy)"
     }
   }
 }
