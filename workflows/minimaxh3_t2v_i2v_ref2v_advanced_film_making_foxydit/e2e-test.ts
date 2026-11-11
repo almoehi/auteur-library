@@ -5,6 +5,9 @@
  *
  * T2V mode — no image/video fixture inputs, only a structured text prompt param.
  *
+ * Two renders check the fps snap of the graph: fps 24 (native frames, RIFE skipped) and fps 48 (RIFE 2x),
+ * both at an unchanged 5 s duration. E2E_RUNS=fps-24,fps-48 selects the runs.
+ *
  * Run inside the harness container (standard fat-image deployment):
  *   docker exec -it harness golem repl \
  *     --script-file /work/workflows/minimaxh3_t2v_i2v_ref2v_advanced_film_making_foxydit/e2e-test.ts --yes
@@ -73,6 +76,74 @@ const RENDER_PROFILE = {
   },
 };
 
+// ── MP4 timing probe ──────────────────────────────────────────────────────────
+// Frame rate and duration of the first video track of an mp4 buffer: the mdhd timescale /
+// duration and the stts sample count (the REPL host has no ffprobe).
+function mp4VideoTiming(
+  buf: Buffer,
+): { fps: number; durationSeconds: number; frames: number } | null {
+  const boxes = (start: number, end: number): [string, number, number][] => {
+    const out: [string, number, number][] = [];
+    let at = start;
+    while (at + 8 <= end) {
+      let size = buf.readUInt32BE(at);
+      let header = 8;
+      if (size === 1) {
+        size = Number(buf.readBigUInt64BE(at + 8));
+        header = 16;
+      } else if (size === 0) size = end - at;
+      if (size < header || at + size > end) break;
+      out.push([buf.toString("latin1", at + 4, at + 8), at + header, at + size]);
+      at += size;
+    }
+    return out;
+  };
+  const child = (box: [string, number, number] | undefined, type: string) =>
+    box ? boxes(box[1], box[2]).find((b) => b[0] === type) : undefined;
+  const moov = boxes(0, buf.length).find((b) => b[0] === "moov");
+  for (const trak of moov ? boxes(moov[1], moov[2]) : []) {
+    if (trak[0] !== "trak") continue;
+    const mdia = child(trak, "mdia");
+    const hdlr = child(mdia, "hdlr");
+    if (!hdlr || buf.toString("latin1", hdlr[1] + 8, hdlr[1] + 12) !== "vide") continue;
+    const mdhd = child(mdia, "mdhd");
+    const stts = child(child(child(mdia, "minf"), "stbl"), "stts");
+    if (!mdhd || !stts) return null;
+    const v1 = buf[mdhd[1]] === 1;
+    const timescale = buf.readUInt32BE(mdhd[1] + (v1 ? 20 : 12));
+    const duration = v1 ? Number(buf.readBigUInt64BE(mdhd[1] + 24)) : buf.readUInt32BE(mdhd[1] + 16);
+    let frames = 0;
+    for (let i = 0; i < buf.readUInt32BE(stts[1] + 4); i++) frames += buf.readUInt32BE(stts[1] + 8 + i * 8);
+    const durationSeconds = duration / timescale;
+    return { fps: frames / durationSeconds, durationSeconds, frames };
+  }
+  return null;
+}
+
+// Playback seconds of a MiniMax H3 clip of `seconds`: the graph's frame count at the native 24 fps
+// (max(5, round(s x 24)) padded to 17k+5). RIFE 2x (2n-1 frames at 48) plays 1/48 s shorter.
+function h3ClipSeconds(seconds: number): number {
+  const n = Math.max(5, Math.round(seconds * 24));
+  return (n + ((5 - (n % 17)) % 17 + 17) % 17) / 24;
+}
+
+// The fps snap of the graph: an output rate above 24 gives RIFE 2x frames at 48, 24 or below the
+// native frames at 24 - and the clip lasts the requested duration either way.
+function checkFpsSnap(label: string, buf: Buffer, expectFps: 24 | 48, seconds: number): void {
+  const t = mp4VideoTiming(buf);
+  check(
+    `${label}: output encoded at ${expectFps} fps (${expectFps === 48 ? "RIFE 2x" : "native frames, no RIFE"})`,
+    !!t && Math.abs(t.fps - expectFps) < 0.5,
+    JSON.stringify(t),
+  );
+  const expectSeconds = h3ClipSeconds(seconds);
+  check(
+    `${label}: duration unchanged by the rate (${expectSeconds.toFixed(3)} s +- 0.1)`,
+    !!t && Math.abs(t.durationSeconds - expectSeconds) < 0.1,
+    JSON.stringify(t),
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const _nodeFs = require("node:fs") as typeof import("node:fs");
 const failures: string[] = [];
@@ -113,7 +184,7 @@ async function pollUntilDone(agent: any, renderId: string): Promise<any> {
 }
 
 // ── Agent ─────────────────────────────────────────────────────────────────────
-const agent = await (globalThis as any).WorkflowAgent.get(
+const agent = await WorkflowAgent.get(
   WF_NAME,
   `e2e-${WF_NAME}-${Date.now()}`,
 );
@@ -271,38 +342,7 @@ try {
     .trim();
   check("prompt_positive.txt loaded", promptText.length > 0, `${promptText.length} chars`);
 
-  // 4. Submit render ─────────────────────────────────────────────────────────
-  console.log(
-    "\n── 4. Submit render ─────────────────────────────────────────────",
-  );
-  const renderId = await agent.run(
-    JSON.stringify(RENDER_PROFILE),
-    JSON.stringify({}),
-    JSON.stringify({
-      prompt_positive: promptText,
-      steps: 4,
-      video_length: 5.0,
-      width: 480,
-      height: 864,
-      fps: 48,
-    }),
-    undefined,
-  );
-  console.log(`  renderId=${renderId}`);
-  check("renderId non-empty", renderId.length > 0, renderId);
-
-  // 5. Poll to completion ────────────────────────────────────────────────────
-  console.log(
-    "\n── 5. Poll to completion ────────────────────────────────────────",
-  );
-  const result = await pollUntilDone(agent, renderId);
-  check(
-    "render succeeded",
-    result.phase === "succeeded",
-    `phase=${result.phase}`,
-  );
-
-  // 6. Verify output ─────────────────────────────────────────────────────────
+  // 4. Renders, one per output rate ─────────────────────────────────────────
   function _isMp4(b: Uint8Array): boolean {
     // ISO BMFF 'ftyp' box at offset 4
     return b.length >= 8 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70;
@@ -310,24 +350,52 @@ try {
   function _hexHead(b: Uint8Array, n = 8): string {
     return Array.from(b.slice(0, n)).map((x) => x.toString(16).padStart(2, "0")).join(" ");
   }
-
-  if (result.phase === "succeeded" && result.outputs?.length > 0) {
-    console.log(
-      "\n── 6. Verify output ─────────────────────────────────────────────",
+  const VIDEO_LENGTH = 5.0;
+  const RUNS: { label: string; fps: 24 | 48 }[] = [
+    { label: "fps-24", fps: 24 },
+    { label: "fps-48", fps: 48 },
+  ];
+  const wanted = (process.env.E2E_RUNS ?? RUNS.map((r) => r.label).join(",")).split(",");
+  for (const run of RUNS.filter((r) => wanted.includes(r.label))) {
+    console.log(`\n── 4. ${run.label} ─────────────────────────────────────────────`);
+    const renderId = await agent.run(
+      JSON.stringify(RENDER_PROFILE),
+      JSON.stringify({}),
+      JSON.stringify({
+        prompt_positive: promptText,
+        steps: 4,
+        video_length: VIDEO_LENGTH,
+        width: 480,
+        height: 864,
+        fps: run.fps,
+      }),
+      undefined,
+      undefined,
+      undefined, // loraJson
+      undefined, // notifyJson
     );
+    console.log(`  renderId=${renderId}`);
+    check(`${run.label}: renderId non-empty`, renderId.length > 0, renderId);
+    let result: any;
+    try {
+      result = await pollUntilDone(agent, renderId);
+    } catch (err) {
+      check(`${run.label}: render succeeded`, false, String(err));
+      continue;
+    }
+    check(`${run.label}: render succeeded`, result.phase === "succeeded", `phase=${result.phase}`);
+    if ((result.outputs?.length ?? 0) === 0) {
+      check(`${run.label}: outputs present`, false, JSON.stringify(result.outputs));
+      continue;
+    }
     for (const out of result.outputs) {
       console.log(`  ${out.filename ?? out.name ?? "output"}: ${out.url}`);
       const r = await fetch(out.url);
-      check(`${out.name ?? out.filename} accessible`, r.ok, `HTTP ${r.status}`);
-      const raw = new Uint8Array(await r.arrayBuffer());
-      check(`${out.name ?? out.filename} is MP4`, _isMp4(raw), `magic=${_hexHead(raw)}`);
+      check(`${run.label}: ${out.name ?? out.filename} accessible`, r.ok, `HTTP ${r.status}`);
+      const raw = Buffer.from(await r.arrayBuffer());
+      check(`${run.label}: ${out.name ?? out.filename} is MP4`, _isMp4(raw), `magic=${_hexHead(raw)}`);
+      checkFpsSnap(run.label, raw, run.fps, VIDEO_LENGTH);
     }
-  } else {
-    check(
-      "outputs present",
-      (result.outputs?.length ?? 0) > 0,
-      JSON.stringify(result.outputs),
-    );
   }
 
   console.log(

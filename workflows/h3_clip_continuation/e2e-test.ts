@@ -3,11 +3,14 @@
  *
  * Covers the manifest contract (prior_clip required, ref1-ref7, prior_clip_audio, end_frame and voice_ref_1 / voice_ref_2 optional, no
  * width/height params - the size comes from the prior clip, four opt-in lora ports) and three renders:
- *   1. "clip-only"  - prior_clip alone (no pictures, no prior_clip_audio).
- *   2. "clip+refs"  - prior_clip, prior_clip_audio, ref1, ref2 and both voice references (stereo 32 kHz wav).
- *   3. "clip+end_frame" - prior_clip, ref1 and end_frame (the last-frame pin).
+ *   1. "clip-only"  - prior_clip alone (no pictures, no prior_clip_audio); a 24 fps prior clip.
+ *   2. "clip+refs"  - a 48 fps prior_clip, prior_clip_audio, ref1, ref2 and both voice references (stereo 32 kHz wav).
+ *   3. "clip+end_frame" - prior_clip (30 fps, the original fixture), ref1 and end_frame (the last-frame pin).
  * Each checks the output is a video whose size is the prior clip's size snapped to a multiple of 32
- * (python round-half-even: 1280x720 -> 1280x704; 736 is also accepted and printed).
+ * (python round-half-even: 1280x720 -> 1280x704; 736 is also accepted and printed), and that its frame
+ * rate follows the prior clip (fps snap: above 24 -> RIFE 2x at 48, else the native frames at 24) at an
+ * unchanged duration: clip-only 24, clip+refs 48, clip+end_frame 48. E2E_RUNS=clip-only,clip+refs,clip+end_frame
+ * selects the runs. The 24 / 48 fps prior clips are 3 s cuts of prior_clip.mp4 at 864x480.
  *
  * NSFW bundles read their fixtures from the SFW sibling (workflows/h3_clip_continuation).
  *
@@ -253,6 +256,74 @@ function snap32(x: number): number {
   const r = q - f;
   const n = r > 0.5 ? f + 1 : r < 0.5 ? f : f % 2 === 0 ? f : f + 1;
   return n * 32;
+}
+
+// ── MP4 timing probe ──────────────────────────────────────────────────────────
+// Frame rate and duration of the first video track of an mp4 buffer: the mdhd timescale /
+// duration and the stts sample count (the REPL host has no ffprobe).
+function mp4VideoTiming(
+  buf: Buffer,
+): { fps: number; durationSeconds: number; frames: number } | null {
+  const boxes = (start: number, end: number): [string, number, number][] => {
+    const out: [string, number, number][] = [];
+    let at = start;
+    while (at + 8 <= end) {
+      let size = buf.readUInt32BE(at);
+      let header = 8;
+      if (size === 1) {
+        size = Number(buf.readBigUInt64BE(at + 8));
+        header = 16;
+      } else if (size === 0) size = end - at;
+      if (size < header || at + size > end) break;
+      out.push([buf.toString("latin1", at + 4, at + 8), at + header, at + size]);
+      at += size;
+    }
+    return out;
+  };
+  const child = (box: [string, number, number] | undefined, type: string) =>
+    box ? boxes(box[1], box[2]).find((b) => b[0] === type) : undefined;
+  const moov = boxes(0, buf.length).find((b) => b[0] === "moov");
+  for (const trak of moov ? boxes(moov[1], moov[2]) : []) {
+    if (trak[0] !== "trak") continue;
+    const mdia = child(trak, "mdia");
+    const hdlr = child(mdia, "hdlr");
+    if (!hdlr || buf.toString("latin1", hdlr[1] + 8, hdlr[1] + 12) !== "vide") continue;
+    const mdhd = child(mdia, "mdhd");
+    const stts = child(child(child(mdia, "minf"), "stbl"), "stts");
+    if (!mdhd || !stts) return null;
+    const v1 = buf[mdhd[1]] === 1;
+    const timescale = buf.readUInt32BE(mdhd[1] + (v1 ? 20 : 12));
+    const duration = v1 ? Number(buf.readBigUInt64BE(mdhd[1] + 24)) : buf.readUInt32BE(mdhd[1] + 16);
+    let frames = 0;
+    for (let i = 0; i < buf.readUInt32BE(stts[1] + 4); i++) frames += buf.readUInt32BE(stts[1] + 8 + i * 8);
+    const durationSeconds = duration / timescale;
+    return { fps: frames / durationSeconds, durationSeconds, frames };
+  }
+  return null;
+}
+
+// Playback seconds of a MiniMax H3 clip of `seconds`: the graph's frame count at the native 24 fps
+// (max(5, round(s x 24)) padded to 17k+5). RIFE 2x (2n-1 frames at 48) plays 1/48 s shorter.
+function h3ClipSeconds(seconds: number): number {
+  const n = Math.max(5, Math.round(seconds * 24));
+  return (n + ((5 - (n % 17)) % 17 + 17) % 17) / 24;
+}
+
+// The fps snap of the graph: an output rate above 24 gives RIFE 2x frames at 48, 24 or below the
+// native frames at 24 - and the clip lasts the requested duration either way.
+function checkFpsSnap(label: string, buf: Buffer, expectFps: 24 | 48, seconds: number): void {
+  const t = mp4VideoTiming(buf);
+  check(
+    `${label}: output encoded at ${expectFps} fps (${expectFps === 48 ? "RIFE 2x" : "native frames, no RIFE"})`,
+    !!t && Math.abs(t.fps - expectFps) < 0.5,
+    JSON.stringify(t),
+  );
+  const expectSeconds = h3ClipSeconds(seconds);
+  check(
+    `${label}: duration unchanged by the rate (${expectSeconds.toFixed(3)} s +- 0.1)`,
+    !!t && Math.abs(t.durationSeconds - expectSeconds) < 0.1,
+    JSON.stringify(t),
+  );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -646,11 +717,18 @@ try {
       "audio/wav",
     );
   }
-  const priorClipUrl = await ensureFixture(
-    `${S3_FIXTURE_PREFIX}/prior_clip.mp4`,
-    _path.join(MEDIA_FIXTURE_DIR, "prior_clip.mp4"),
-    "video/mp4",
-  );
+  // The prior clips: the original fixture (30 fps, 1280x720, ~16 s) and 3 s cuts of it at 24 and 48 fps
+  // (864x480) - the output rate of a continuation follows its prior clip.
+  const PRIOR_CLIPS = ["prior_clip.mp4", "prior_clip_24fps.mp4", "prior_clip_48fps.mp4"] as const;
+  type PriorClip = (typeof PRIOR_CLIPS)[number];
+  const priorUrls = {} as Record<PriorClip, string>;
+  for (const file of PRIOR_CLIPS) {
+    priorUrls[file] = await ensureFixture(
+      `${S3_FIXTURE_PREFIX}/${file}`,
+      _path.join(MEDIA_FIXTURE_DIR, file),
+      "video/mp4",
+    );
+  }
 
   const promptText = (
     require("node:fs") as typeof import("node:fs")
@@ -658,21 +736,23 @@ try {
     .readFileSync(_path.join(SHARED_FIXTURE_DIR, "prompt_positive.txt"), "utf-8")
     .toString()
     .trim();
-  // The fixture prior clip is 1280x720 at 30 fps (the loader forces 24); a real chain passes the prior clip's own
-  // fps (48 after RIFE). Width / height are not params: the workflow takes them from the prior clip.
-  const priorSize = mp4Size(
-    _nodeFs.readFileSync(_path.join(MEDIA_FIXTURE_DIR, "prior_clip.mp4")) as Buffer,
-  );
-  if (!priorSize) throw new Error("could not read the prior clip size");
-  const expectW = snap32(priorSize.width);
-  const expectHs = [Math.floor(priorSize.height / 32) * 32, Math.ceil(priorSize.height / 32) * 32];
-  console.log(`  prior clip ${priorSize.width}x${priorSize.height} -> expect ${expectW}x${expectHs.join("|")} (snapped: ${snap32(priorSize.height)})`);
+  // Width / height and the output rate are not params: the workflow takes them from the prior clip
+  // (the loader reads it at 24 fps; VHS_VideoInfoSource reports its own rate).
+  const priorSizeOf = (file: PriorClip) => {
+    const size = mp4Size(_nodeFs.readFileSync(_path.join(MEDIA_FIXTURE_DIR, file)) as Buffer);
+    if (!size) throw new Error(`could not read the size of ${file}`);
+    return size;
+  };
   const baseParams = {
     prompt_positive: promptText,
-    duration_seconds: 6.0,
-    prior_clip_start_time: 15.0, // the fixture clip is ~16 s: read only its last second
+    duration_seconds: 5.0,
     steps: 4, // fast draft
-    fps: 48,
+  };
+  // Read only the last second of each prior clip.
+  const START_TIME: Record<PriorClip, number> = {
+    "prior_clip.mp4": 15.0,
+    "prior_clip_24fps.mp4": 2.0,
+    "prior_clip_48fps.mp4": 2.0,
   };
 
   // A catalog-style lora that is NOT in this workflow's `models:` stanza: exercises the per-call
@@ -703,13 +783,27 @@ try {
   console.log(
     "\n── 4. Submit renders ────────────────────────────────────────────",
   );
-  const RUNS: { label: string; inputs: Record<string, string>; lora: boolean }[] = [
-    { label: "clip-only", inputs: { prior_clip: priorClipUrl }, lora: false },
+  const ALL_RUNS: {
+    label: string;
+    prior: PriorClip;
+    expectFps: 24 | 48;
+    inputs: Record<string, string>;
+    lora: boolean;
+  }[] = [
+    {
+      label: "clip-only",
+      prior: "prior_clip_24fps.mp4",
+      expectFps: 24,
+      inputs: { prior_clip: priorUrls["prior_clip_24fps.mp4"] },
+      lora: false,
+    },
     {
       label: "clip+refs",
+      prior: "prior_clip_48fps.mp4",
+      expectFps: 48,
       inputs: {
-        prior_clip: priorClipUrl,
-        prior_clip_audio: priorClipUrl,
+        prior_clip: priorUrls["prior_clip_48fps.mp4"],
+        prior_clip_audio: priorUrls["prior_clip_48fps.mp4"],
         ...refs([1, 2]),
         ...voiceUrls,
       },
@@ -718,16 +812,20 @@ try {
     // The last-frame pin: end_frame is wired into H3KeyframeInject.end_image (a picture of the clip's end).
     {
       label: "clip+end_frame",
-      inputs: { prior_clip: priorClipUrl, ref1: imageUrls[0], end_frame: imageUrls[1] },
+      prior: "prior_clip.mp4", // 30 fps: between the two rates, so it snaps to 48
+      expectFps: 48,
+      inputs: { prior_clip: priorUrls["prior_clip.mp4"], ref1: imageUrls[0], end_frame: imageUrls[1] },
       lora: false,
     },
   ];
+  const wanted = (process.env.E2E_RUNS ?? ALL_RUNS.map((r) => r.label).join(",")).split(",");
+  const RUNS = ALL_RUNS.filter((r) => wanted.includes(r.label));
   const renderIds: string[] = [];
   for (const run of RUNS) {
     const id = await agent.run(
       JSON.stringify(RENDER_PROFILE),
       JSON.stringify(run.inputs),
-      JSON.stringify(baseParams),
+      JSON.stringify({ ...baseParams, prior_clip_start_time: START_TIME[run.prior] }),
       undefined,
       undefined,
       run.lora && USE_LORA ? loraJson : undefined,
@@ -747,7 +845,7 @@ try {
   // A failed render is recorded as a failed check and the remaining renders still run: the
   // scenarios probe independent open questions (see the file header).
   for (let i = 0; i < RUNS.length; i++) {
-    const label = RUNS[i].label;
+    const { label, prior, expectFps } = RUNS[i];
     console.log(`\n── 5.${i + 1} ${label} ─────────────────────────────────────────`);
     let result: any;
     try {
@@ -771,13 +869,18 @@ try {
     check(`${label}: output accessible`, getResp.ok, `HTTP ${getResp.status}`);
     const ct = getResp.headers.get("content-type") ?? "";
     check(`${label}: output is video`, ct.startsWith("video/"), ct);
-    const size = mp4Size(Buffer.from(await getResp.arrayBuffer()));
-    console.log(`  output size: ${JSON.stringify(size)} (snapped expectation ${expectW}x${snap32(priorSize.height)})`);
+    const video = Buffer.from(await getResp.arrayBuffer());
+    const size = mp4Size(video);
+    const priorSize = priorSizeOf(prior);
+    const expectW = snap32(priorSize.width);
+    const expectHs = [Math.floor(priorSize.height / 32) * 32, Math.ceil(priorSize.height / 32) * 32];
+    console.log(`  output size: ${JSON.stringify(size)} (prior ${prior} ${priorSize.width}x${priorSize.height}, snapped expectation ${expectW}x${snap32(priorSize.height)})`);
     check(
       `${label}: output size is the prior clip size snapped to 32`,
       size?.width === expectW && !!size && expectHs.includes(size.height),
       JSON.stringify(size),
     );
+    checkFpsSnap(label, video, expectFps, baseParams.duration_seconds);
   }
 
   console.log(

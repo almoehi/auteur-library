@@ -9,7 +9,9 @@
  *   2. "bundle-2" - a 2-shot bundle: ref0 + key1 (cut at 4 s) + one identity reference + both voice references,
  *                   8 s. key2 / key3 are ABSENT, so this run needs the harness to bypass their MiniMaxH3AddGuide
  *                   nodes (prune-absent-inputs.ts) and to leave the ref_images slots 2 / 3 unwired.
- * Both check the output is a video of the requested width x height. E2E_RUNS=bundle-4,bundle-2 selects the runs.
+ * Both check the output is a video of the requested width x height, and the fps snap of the graph: "bundle-4"
+ * renders at fps 48 (RIFE 2x), "bundle-2" at fps 24 (native frames, RIFE skipped); both keep their duration
+ * (the guide frames count at 24 either way). E2E_RUNS=bundle-4,bundle-2 selects the runs.
  * Where the cuts really land (frame diff against the keyframes) is not checked here (the REPL host has no
  * ffprobe / ffmpeg); it was measured with the spike tools, see the bundle's yaml header.
  *
@@ -257,6 +259,74 @@ function snap32(x: number): number {
   const r = q - f;
   const n = r > 0.5 ? f + 1 : r < 0.5 ? f : f % 2 === 0 ? f : f + 1;
   return n * 32;
+}
+
+// ── MP4 timing probe ──────────────────────────────────────────────────────────
+// Frame rate and duration of the first video track of an mp4 buffer: the mdhd timescale /
+// duration and the stts sample count (the REPL host has no ffprobe).
+function mp4VideoTiming(
+  buf: Buffer,
+): { fps: number; durationSeconds: number; frames: number } | null {
+  const boxes = (start: number, end: number): [string, number, number][] => {
+    const out: [string, number, number][] = [];
+    let at = start;
+    while (at + 8 <= end) {
+      let size = buf.readUInt32BE(at);
+      let header = 8;
+      if (size === 1) {
+        size = Number(buf.readBigUInt64BE(at + 8));
+        header = 16;
+      } else if (size === 0) size = end - at;
+      if (size < header || at + size > end) break;
+      out.push([buf.toString("latin1", at + 4, at + 8), at + header, at + size]);
+      at += size;
+    }
+    return out;
+  };
+  const child = (box: [string, number, number] | undefined, type: string) =>
+    box ? boxes(box[1], box[2]).find((b) => b[0] === type) : undefined;
+  const moov = boxes(0, buf.length).find((b) => b[0] === "moov");
+  for (const trak of moov ? boxes(moov[1], moov[2]) : []) {
+    if (trak[0] !== "trak") continue;
+    const mdia = child(trak, "mdia");
+    const hdlr = child(mdia, "hdlr");
+    if (!hdlr || buf.toString("latin1", hdlr[1] + 8, hdlr[1] + 12) !== "vide") continue;
+    const mdhd = child(mdia, "mdhd");
+    const stts = child(child(child(mdia, "minf"), "stbl"), "stts");
+    if (!mdhd || !stts) return null;
+    const v1 = buf[mdhd[1]] === 1;
+    const timescale = buf.readUInt32BE(mdhd[1] + (v1 ? 20 : 12));
+    const duration = v1 ? Number(buf.readBigUInt64BE(mdhd[1] + 24)) : buf.readUInt32BE(mdhd[1] + 16);
+    let frames = 0;
+    for (let i = 0; i < buf.readUInt32BE(stts[1] + 4); i++) frames += buf.readUInt32BE(stts[1] + 8 + i * 8);
+    const durationSeconds = duration / timescale;
+    return { fps: frames / durationSeconds, durationSeconds, frames };
+  }
+  return null;
+}
+
+// Playback seconds of a MiniMax H3 clip of `seconds`: the graph's frame count at the native 24 fps
+// (max(5, round(s x 24)) padded to 17k+5). RIFE 2x (2n-1 frames at 48) plays 1/48 s shorter.
+function h3ClipSeconds(seconds: number): number {
+  const n = Math.max(5, Math.round(seconds * 24));
+  return (n + ((5 - (n % 17)) % 17 + 17) % 17) / 24;
+}
+
+// The fps snap of the graph: an output rate above 24 gives RIFE 2x frames at 48, 24 or below the
+// native frames at 24 - and the clip lasts the requested duration either way.
+function checkFpsSnap(label: string, buf: Buffer, expectFps: 24 | 48, seconds: number): void {
+  const t = mp4VideoTiming(buf);
+  check(
+    `${label}: output encoded at ${expectFps} fps (${expectFps === 48 ? "RIFE 2x" : "native frames, no RIFE"})`,
+    !!t && Math.abs(t.fps - expectFps) < 0.5,
+    JSON.stringify(t),
+  );
+  const expectSeconds = h3ClipSeconds(seconds);
+  check(
+    `${label}: duration unchanged by the rate (${expectSeconds.toFixed(3)} s +- 0.1)`,
+    !!t && Math.abs(t.durationSeconds - expectSeconds) < 0.1,
+    JSON.stringify(t),
+  );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -658,8 +728,9 @@ try {
     steps: 4, // fast draft
     width: 480,
     height: 864,
-    fps: 48,
   };
+  // Output rate per run: one above the native 24 (RIFE 2x at 48), one at it (RIFE skipped).
+  const RUN_FPS: Record<string, 24 | 48> = { "bundle-4": 48, "bundle-2": 24 };
   // The cut times of the prompt are the guide frames / 24 (computed by the server in production).
   const bundleParams = {
     "bundle-4": { duration_seconds: 12, guide1_frame: 72, guide2_frame: 144, guide3_frame: 216 },
@@ -708,7 +779,7 @@ try {
     const id = await agent.run(
       JSON.stringify(RENDER_PROFILE),
       JSON.stringify(inputs),
-      JSON.stringify({ ...baseParams, ...extraParams }),
+      JSON.stringify({ ...baseParams, ...extraParams, fps: RUN_FPS[label] }),
       undefined,
       undefined,
       lora && USE_LORA ? loraJson : undefined,
@@ -740,12 +811,14 @@ try {
     check(`${label}: output accessible`, getResp.ok, `HTTP ${getResp.status}`);
     const ct = getResp.headers.get("content-type") ?? "";
     check(`${label}: output is video`, ct.startsWith("video/"), ct);
-    const size = mp4Size(Buffer.from(await getResp.arrayBuffer()));
+    const video = Buffer.from(await getResp.arrayBuffer());
+    const size = mp4Size(video);
     check(
       `${label}: output size is ${baseParams.width}x${baseParams.height}`,
       size?.width === baseParams.width && size?.height === baseParams.height,
       JSON.stringify(size),
     );
+    checkFpsSnap(label, video, RUN_FPS[label], extraParams.duration_seconds);
     return result;
   };
 

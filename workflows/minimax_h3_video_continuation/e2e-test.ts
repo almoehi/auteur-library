@@ -1,6 +1,10 @@
 /**
  * WorkflowAgent E2E — minimax_h3_video_continuation
  *
+ * Two renders continue a 24 fps and a 48 fps prior clip (3 s cuts of prior_clip.mp4 at 864x480) and check the
+ * fps snap of the graph: the output rate follows the prior clip (above 24 -> RIFE 2x at 48, else the native
+ * frames at 24) at an unchanged duration. E2E_RUNS=prior-24,prior-48 selects the runs.
+ *
  * Run inside the harness container (standard fat-image deployment):
  *   docker exec -it harness golem repl \
  *     --script-file /work/workflows/minimax_h3_video_continuation/e2e-test.ts --yes
@@ -196,6 +200,74 @@ async function ensureFixture(
   return _s3PresignGet(s3Key);
 }
 
+// ── MP4 timing probe ──────────────────────────────────────────────────────────
+// Frame rate and duration of the first video track of an mp4 buffer: the mdhd timescale /
+// duration and the stts sample count (the REPL host has no ffprobe).
+function mp4VideoTiming(
+  buf: Buffer,
+): { fps: number; durationSeconds: number; frames: number } | null {
+  const boxes = (start: number, end: number): [string, number, number][] => {
+    const out: [string, number, number][] = [];
+    let at = start;
+    while (at + 8 <= end) {
+      let size = buf.readUInt32BE(at);
+      let header = 8;
+      if (size === 1) {
+        size = Number(buf.readBigUInt64BE(at + 8));
+        header = 16;
+      } else if (size === 0) size = end - at;
+      if (size < header || at + size > end) break;
+      out.push([buf.toString("latin1", at + 4, at + 8), at + header, at + size]);
+      at += size;
+    }
+    return out;
+  };
+  const child = (box: [string, number, number] | undefined, type: string) =>
+    box ? boxes(box[1], box[2]).find((b) => b[0] === type) : undefined;
+  const moov = boxes(0, buf.length).find((b) => b[0] === "moov");
+  for (const trak of moov ? boxes(moov[1], moov[2]) : []) {
+    if (trak[0] !== "trak") continue;
+    const mdia = child(trak, "mdia");
+    const hdlr = child(mdia, "hdlr");
+    if (!hdlr || buf.toString("latin1", hdlr[1] + 8, hdlr[1] + 12) !== "vide") continue;
+    const mdhd = child(mdia, "mdhd");
+    const stts = child(child(child(mdia, "minf"), "stbl"), "stts");
+    if (!mdhd || !stts) return null;
+    const v1 = buf[mdhd[1]] === 1;
+    const timescale = buf.readUInt32BE(mdhd[1] + (v1 ? 20 : 12));
+    const duration = v1 ? Number(buf.readBigUInt64BE(mdhd[1] + 24)) : buf.readUInt32BE(mdhd[1] + 16);
+    let frames = 0;
+    for (let i = 0; i < buf.readUInt32BE(stts[1] + 4); i++) frames += buf.readUInt32BE(stts[1] + 8 + i * 8);
+    const durationSeconds = duration / timescale;
+    return { fps: frames / durationSeconds, durationSeconds, frames };
+  }
+  return null;
+}
+
+// Playback seconds of a MiniMax H3 clip of `seconds`: the graph's frame count at the native 24 fps
+// (max(5, round(s x 24)) padded to 17k+5). RIFE 2x (2n-1 frames at 48) plays 1/48 s shorter.
+function h3ClipSeconds(seconds: number): number {
+  const n = Math.max(5, Math.round(seconds * 24));
+  return (n + ((5 - (n % 17)) % 17 + 17) % 17) / 24;
+}
+
+// The fps snap of the graph: an output rate above 24 gives RIFE 2x frames at 48, 24 or below the
+// native frames at 24 - and the clip lasts the requested duration either way.
+function checkFpsSnap(label: string, buf: Buffer, expectFps: 24 | 48, seconds: number): void {
+  const t = mp4VideoTiming(buf);
+  check(
+    `${label}: output encoded at ${expectFps} fps (${expectFps === 48 ? "RIFE 2x" : "native frames, no RIFE"})`,
+    !!t && Math.abs(t.fps - expectFps) < 0.5,
+    JSON.stringify(t),
+  );
+  const expectSeconds = h3ClipSeconds(seconds);
+  check(
+    `${label}: duration unchanged by the rate (${expectSeconds.toFixed(3)} s +- 0.1)`,
+    !!t && Math.abs(t.durationSeconds - expectSeconds) < 0.1,
+    JSON.stringify(t),
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const failures: string[] = [];
 
@@ -235,7 +307,7 @@ async function pollUntilDone(agent: any, renderId: string): Promise<any> {
 }
 
 // ── Agent ─────────────────────────────────────────────────────────────────────
-const agent = await (globalThis as any).WorkflowAgent.get(
+const agent = await WorkflowAgent.get(
   WF_NAME,
   `e2e-${WF_NAME}-${Date.now()}`,
 );
@@ -400,11 +472,14 @@ try {
   console.log(
     "\n── 3. Stage fixture files in S3 ─────────────────────────────────",
   );
-  const priorClipUrl = await ensureFixture(
-    `${S3_FIXTURE_PREFIX}/prior_clip.mp4`,
-    _path.join(FIXTURE_DIR, "prior_clip.mp4"),
-    "video/mp4",
-  );
+  const priorUrls: Record<string, string> = {};
+  for (const file of ["prior_clip_24fps.mp4", "prior_clip_48fps.mp4"]) {
+    priorUrls[file] = await ensureFixture(
+      `${S3_FIXTURE_PREFIX}/${file}`,
+      _path.join(FIXTURE_DIR, file),
+      "video/mp4",
+    );
+  }
   const charSheetUrl = await ensureFixture(
     `${S3_FIXTURE_PREFIX}/character_sheet.png`,
     _path.join(FIXTURE_DIR, "char_sheet.png"),
@@ -418,62 +493,55 @@ try {
     _path.join(FIXTURE_DIR, "ref_image_pose.png"),
   );
 
-  // 4. Submit render ─────────────────────────────────────────────────────────
-  console.log(
-    "\n── 4. Submit render ─────────────────────────────────────────────",
-  );
-  const renderId = await agent.run(
-    JSON.stringify(RENDER_PROFILE),
-    JSON.stringify({
-      prior_clip: priorClipUrl,
-      character_sheet: charSheetUrl,
-      environment_plate: scenePlateUrl,
-      ref_picture_3: refPicture3Url,
-      // ref_picture_4 and ref_picture_5 intentionally omitted to cover optional-port path
-    }),
-    JSON.stringify({
-      prompt_positive: E2E_PROMPT,
-      steps: 4, // fast draft
-      fps: 24,
-      duration_seconds: 6.0,
-      prior_clip_start_time: 0.0,
-    }),
-    undefined,
-  );
-  console.log(`  renderId=${renderId}`);
-  check("renderId non-empty", renderId.length > 0, renderId);
-
-  // 5. Poll to completion ────────────────────────────────────────────────────
-  console.log(
-    "\n── 5. Poll to completion ────────────────────────────────────────",
-  );
-  const result = await pollUntilDone(agent, renderId);
-  check(
-    "render succeeded",
-    result.phase === "succeeded",
-    `phase=${result.phase}`,
-  );
-
-  // 6. Verify output ─────────────────────────────────────────────────────────
-  if (result.phase === "succeeded" && result.outputs?.length > 0) {
-    console.log(
-      "\n── 6. Verify output ─────────────────────────────────────────────",
+  // 4. Renders, one per prior clip rate ──────────────────────────────────────
+  const DURATION_SECONDS = 5.0;
+  const RUNS: { label: string; prior: string; expectFps: 24 | 48 }[] = [
+    { label: "prior-24", prior: "prior_clip_24fps.mp4", expectFps: 24 },
+    { label: "prior-48", prior: "prior_clip_48fps.mp4", expectFps: 48 },
+  ];
+  const wanted = (process.env.E2E_RUNS ?? RUNS.map((r) => r.label).join(",")).split(",");
+  for (const run of RUNS.filter((r) => wanted.includes(r.label))) {
+    console.log(`\n── 4. ${run.label}: continue ${run.prior} ──────────────────────────`);
+    const renderId = await agent.run(
+      JSON.stringify(RENDER_PROFILE),
+      JSON.stringify({
+        prior_clip: priorUrls[run.prior],
+        character_sheet: charSheetUrl,
+        environment_plate: scenePlateUrl,
+        ref_picture_3: refPicture3Url,
+        // ref_picture_4 and ref_picture_5 intentionally omitted to cover optional-port path
+      }),
+      JSON.stringify({
+        prompt_positive: E2E_PROMPT,
+        steps: 4, // fast draft
+        duration_seconds: DURATION_SECONDS,
+        prior_clip_start_time: 2.0, // the 3 s fixture: read only its last second
+      }),
+      undefined,
+      undefined,
+      undefined, // loraJson
+      undefined, // notifyJson
     );
-    for (const out of result.outputs) {
-      console.log(`  ${out.name ?? "output"}: ${out.url}`);
+    console.log(`  renderId=${renderId}`);
+    check(`${run.label}: renderId non-empty`, renderId.length > 0, renderId);
+    let result: any;
+    try {
+      result = await pollUntilDone(agent, renderId);
+    } catch (err) {
+      check(`${run.label}: render succeeded`, false, String(err));
+      continue;
     }
-    const outputUrl = result.outputs[0].url;
-    const getResp = await fetch(outputUrl);
-    check("output accessible", getResp.ok, `HTTP ${getResp.status}`);
+    check(`${run.label}: render succeeded`, result.phase === "succeeded", `phase=${result.phase}`);
+    if ((result.outputs?.length ?? 0) === 0) {
+      check(`${run.label}: outputs present`, false, JSON.stringify(result.outputs));
+      continue;
+    }
+    for (const out of result.outputs) console.log(`  ${out.name ?? "output"}: ${out.url}`);
+    const getResp = await fetch(result.outputs[0].url);
+    check(`${run.label}: output accessible`, getResp.ok, `HTTP ${getResp.status}`);
     const ct = getResp.headers.get("content-type") ?? "";
-    check("output is video", ct.startsWith("video/"), ct);
-    await getResp.arrayBuffer();
-  } else {
-    check(
-      "outputs present",
-      (result.outputs?.length ?? 0) > 0,
-      JSON.stringify(result.outputs),
-    );
+    check(`${run.label}: output is video`, ct.startsWith("video/"), ct);
+    checkFpsSnap(run.label, Buffer.from(await getResp.arrayBuffer()), run.expectFps, DURATION_SECONDS);
   }
 
   console.log(
