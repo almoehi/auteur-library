@@ -12,10 +12,13 @@
 #   pack's h3_advanced.py: it forces the reference to stereo 32 kHz and its first max_seconds)
 # SolAttnPatch                    https://github.com/kijai/ComfyUI-SolAttn_triton
 # PathchSageAttentionKJ           https://github.com/kijai/ComfyUI-KJNodes
-# VHS_LoadVideoFFmpeg, VHS_VideoInfoLoaded, VHS_VideoCombine  https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+# VHS_LoadVideoFFmpeg, VHS_VideoInfoLoaded, VHS_VideoInfoSource, VHS_VideoCombine  https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+#   (VHS_VideoInfoSource reports prior_clip's own rate, parsed from ffmpeg - not the loader's force_rate 24)
 # Power Lora Loader / Any Switch (rgthree)  https://github.com/rgthree/rgthree-comfy
 # ComfyMathExpression             https://github.com/evanspearman/ComfyMath
 # RIFE VFI                        https://github.com/Fannovel16/ComfyUI-Frame-Interpolation
+# ComfySwitchNode                 built-in ComfyUI (lazy: prior_clip above 24 fps -> RIFE 2x frames at 48,
+#                                 else the native frames at 24; RIFE does not run for a 24 fps prior clip)
 # easy seed                       https://github.com/yolain/ComfyUI-Easy-Use
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -173,12 +176,11 @@ ports:
       default: -1
     - name: fps
       kind: int
-      description: "Output (playback) frame rate. 48 is the model's native 24 fps through RIFE 2x; must equal the frame rate of the clip being continued."
-      binding: frame_rate@176
+      description: "Ignored: the output rate follows prior_clip (24 or 48) - the graph reads prior_clip's own frame rate and encodes RIFE 2x frames at 48 when it is above 24, else the native frames at 24, so the join always matches. Declared only because the workflow loader requires an fps param on every video workflow."
+      binding: value@fps_declared
       constraints: { min: 1, max: 120 }
       required: false
       default: 48
-      role: output-fps
     - name: sage_attention
       kind: string
       description: "SageAttention mode of the KJNodes patch. Leave at 'disabled' unless the compute image is known to carry SageAttention kernels for the card."
@@ -221,15 +223,16 @@ ports:
   outputs:
     - name: output_video
       kind: video
-      description: "Continuation video with audio, RIFE 2x interpolated, encoded at the fps param rate (default 48)."
+      description: "Continuation video with audio at prior_clip's rate: RIFE 2x interpolated and encoded at 48 when prior_clip is above 24 fps, else the native frames at 24."
       node_id: "176"
       role: primary
 context: |
   Seam: the new clip starts on the exact last frame of prior_clip (pinned as a frame-0 keyframe),
   and reads prior_clip from prior_clip_start_time onward as the motion reference. Read only the
   last second or so of a long clip; pass the same clip as prior_clip_audio so the voices carry
-  over. Width and height are taken from the prior clip (snapped to a multiple of 32); fps must
-  equal the prior clip's.
+  over. Width and height are taken from the prior clip (snapped to a multiple of 32) and so is
+  the output rate: a prior clip above 24 fps gives a 48 fps clip (RIFE 2x), one at 24 fps or below
+  a 24 fps clip (no interpolation) - the duration is the same either way.
 
   Pictures: <Picture 1> is always the last frame of prior_clip - the first frame of the new clip -
   added automatically (pass nothing for it); it is also what h3_single_cut_clip_nsfw calls <Picture 1>
@@ -272,7 +275,7 @@ context: |
 
   Known failure modes: quality drops when a section is missing; the subject drifts across a chain
   when the character sheet or the identity block is dropped; a <Picture N> cited without a
-  definition is ignored; an fps different from the prior clip breaks the join.
+  definition is ignored.
 
   GPU / VRAM: 40 GB minimum. First run downloads ~43 GB of models. A 10-second continuation at
   8 steps takes several minutes on a100. Shares its models with h3_single_cut_clip_nsfw.

@@ -9,6 +9,11 @@
 # ComfyMathExpression — ComfyMath (already in nodes.lock)
 # VHS_VideoInfoLoaded  — ComfyUI-VideoHelperSuite (already in nodes.lock): width / height of
 #   the prior clip (clip_info -> clip_w / clip_h, snapped to a multiple of 32) set the output size
+# VHS_VideoInfoSource  — ComfyUI-VideoHelperSuite (already in nodes.lock): the prior clip's own frame
+#   rate (parsed from ffmpeg, not the loader's force_rate 24) sets the output rate (fps snap)
+# RIFE VFI — https://github.com/Fannovel16/ComfyUI-Frame-Interpolation (already in nodes.lock)
+# ComfySwitchNode — built-in ComfyUI (lazy: a prior clip above 24 fps -> RIFE 2x frames at 48, else the
+#   native frames at 24; RIFE does not run for a 24 fps prior clip)
 #
 # ─── Append to nodes.lock ─────────────────────────────────────────────────────
 # (none — all custom nodes already in nodes.lock)
@@ -54,7 +59,7 @@ ports:
   inputs:
     - name: prior_clip
       kind: video
-      description: "The rendered video clip immediately preceding this segment. The model reads from prior_clip_start_time onward and continues seamlessly from that frame. Must be 24 FPS MP4. For chaining: feed the previous output directly here."
+      description: "The rendered video clip immediately preceding this segment. The model reads from prior_clip_start_time onward and continues seamlessly from that frame. Any frame rate (it is read at 24 fps; the output takes its rate, 24 or 48). For chaining: feed the previous output directly here."
       binding: video@177
       required: true
     - name: character_sheet
@@ -127,15 +132,14 @@ ports:
       default: 20
     - name: fps
       kind: int
-      description: "Output (playback) video frame rate in FPS. Default 24 matches the model's native generation rate and must stay equal to it for the clip to last duration_seconds: frames are generated at 24 fps and encoded as-is (no RIFE interpolation), so playback duration = frames / fps. A render profile's fps never overrides it."
-      binding: fps@150
+      description: "Ignored: the output rate follows prior_clip (24 or 48) - the graph reads prior_clip's own frame rate and encodes RIFE 2x frames at 48 when it is above 24, else the native frames at 24, so the join always matches. Declared only because the workflow loader requires an fps param on every video workflow."
+      binding: value@fps_declared
       constraints: { min: 1, max: 120 }
-      required: true
-      default: 24
-      role: output-fps
+      required: false
+      default: 48
     - name: duration_seconds
       kind: float
-      description: "Target clip PLAYBACK duration in seconds. Converted to the nearest valid frame count at the model's native 24 fps (padded to 17k+5 frames; minimum 5 frames), so the clip lasts this long at the default fps 24. Default 10 seconds produces a ~10-second continuation."
+      description: "Target clip PLAYBACK duration in seconds. Converted to the nearest valid frame count at the model's native 24 fps (padded to 17k+5 frames; minimum 5 frames), so the clip lasts this long at either output rate. Default 10 seconds produces a ~10-second continuation."
       binding: value@158
       constraints: { min: 1.0 }
       required: false
@@ -151,7 +155,7 @@ ports:
   outputs:
     - name: output_video
       kind: video
-      description: "Generated continuation video with synchronized audio at native 24 FPS."
+      description: "Generated continuation video with synchronized audio at prior_clip's rate: RIFE 2x interpolated and encoded at 48 when prior_clip is above 24 fps, else the native frames at 24."
       node_id: "176"
       role: primary
 context: |
@@ -356,3 +360,10 @@ models:
       - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors
         filename: h3/minimax_h3_fl2va_int8_convrot.safetensors
         sha256: 7ad4c73e6e378b822ffd1629f27f632d3787d95f5e468e3af958f98c58df96a5
+
+  - name: rife49
+    type: rife
+    files:
+      - url: https://huggingface.co/marduk191/rife/resolve/main/rife49.pth
+        filename: rife49.pth
+        sha256: e55fd00f3cc184e3c65961f4bb827a9da022e78eed36b055242c0ac30000d533

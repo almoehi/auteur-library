@@ -261,14 +261,17 @@
     "class_type": "VHS_VideoCombine",
     "inputs": {
       "images": [
-        "our_rife",
+        "fps_frames",
         0
       ],
       "audio": [
         "138",
         0
       ],
-      "frame_rate": 48,
+      "frame_rate": [
+        "fps_rate",
+        0
+      ],
       "loop_count": 0,
       "filename_prefix": "h3_continuation",
       "format": "video/h264-mp4",
@@ -626,6 +629,98 @@
     },
     "_meta": {
       "title": "end frame (last-frame anchor)"
+    }
+  },
+  "prior_info_src": {
+    "class_type": "VHS_VideoInfoSource",
+    "inputs": {
+      "video_info": [
+        "177",
+        3
+      ]
+    },
+    "_meta": {
+      "title": "Prior clip info (source rate)"
+    }
+  },
+  "fps_declared": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 48
+    },
+    "_meta": {
+      "title": "fps param (ignored: the rate follows prior_clip)"
+    }
+  },
+  "fps_over_native": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "a > 24",
+      "values.a": [
+        "prior_info_src",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "prior clip fps > 24?"
+    }
+  },
+  "fps_native": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 24
+    },
+    "_meta": {
+      "title": "Native FPS (24)"
+    }
+  },
+  "fps_doubled": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 48
+    },
+    "_meta": {
+      "title": "RIFE 2x FPS (48)"
+    }
+  },
+  "fps_frames": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "fps_over_native",
+        2
+      ],
+      "on_false": [
+        "139",
+        0
+      ],
+      "on_true": [
+        "our_rife",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Frames: RIFE 2x or native (lazy)"
+    }
+  },
+  "fps_rate": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "fps_over_native",
+        2
+      ],
+      "on_false": [
+        "fps_native",
+        0
+      ],
+      "on_true": [
+        "fps_doubled",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Encode rate: 2N or N (lazy)"
     }
   }
 }
