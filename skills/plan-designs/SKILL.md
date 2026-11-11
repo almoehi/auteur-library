@@ -122,8 +122,9 @@ Build every entry with its FINAL key; nothing is decided later.
 6. `sets` and `designs` (THE work list: every key in creation order - characters, set anchors and standalone places, set members, outfits, storyboards by scene) are filled in by `write_design`; never write them yourself.
 7. Write `design_plan.json` ONLY with `write_design` - ONE entry per call, a few calls per reply, in creation order (a link must name an entry already written). Never write it with `sandbox_write_file`, and never copy `scene_list.md` (the checks read the `scene_list` input).
    - An entry = the design's creation arguments (`kind`, `display_name`, `key_slug`, `character_type`, `attributes`, `links`, `distinct_place`; no `start`, no `loras`) plus `scenes` and, for an outfit, `character_slug` and `look_slug`.
+   - An `outfit` entry ALWAYS carries `links: [{ "role": "character", "key": "character_<character_slug>" }]` (its character's entry written first), plus `character_slug` and `look_slug`.
    - A set member may omit `set` / `set_style`: they are copied from its anchor (one text per set).
-   - A refusal (`design <key> was NOT saved ...`) lists that entry's problems and their fix: fix exactly those and send that entry again; other entries stay. A wrong entry already written: send it again (same `kind` + `key_slug` replaces it) or `remove: true`.
+   - A refusal (`design <key> was NOT saved ...`) lists that entry's problems and their fix: add or change exactly what it names (e.g. a missing `{ role, key }` link) and send that entry again; never send the same arguments again unchanged. Other entries stay. A wrong entry already written: send it again (same `kind` + `key_slug` replaces it) or `remove: true`.
    - Success reads `design <key> written (<counts> in design_plan.json)`.
 
 Example calls (one production; a few per reply):
