@@ -242,6 +242,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
+  A `cut` right after another shot at the same place, showing the same people in the same framing size, where neither shot has `Motion:` beats, reads as the same picture twice (advisory note R39, never a refusal): vary the framing size (a cut is a new view), or merge the two shots into one.
   A `continue` shot changes framing (rule R16), and its clip must PERFORM that change: `Movement:` is a
   move that can REACH the new framing (the "Camera moves" table below; handheld, pan, tilt,
   truck, follow and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
