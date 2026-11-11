@@ -31,6 +31,7 @@ The task names the storyboard(s) or scene(s). If it names none, a storyboard's `
   take's main file is the first of `takes[].files`; `checkOutcome {passed, hardFail, decisive[]}`,
   `suggestedEdit`, `repair`) and `shotPicks[]` (the picked take per shot). Read the scene's row and
   Beats table in `scene_list.md`.
+- **Continuous coverage (a number, per scene)**: from the shotlist's `Beat:` + `Transition:` lines and the scene list's `Continuity` column, count the shots whose beat is `continuous` and how many of them are `Transition: continue`: `continue share = continue / continuous-beat shots`. A shot of a `new moment` / `parallel` beat is never counted. A low share (about under half, when the scene list is mostly `continuous`) means the scene is cut shot by shot: the clips start on new keyframes, the people and set drift between them, and the scene loses its flow. Fix in this order: (1) the SCENE LIST first - the `Framing` of consecutive `continuous` beats differs (a first-person scene must keep the size within a continuous run; a third-person one needs a `Camera move` that performs each step); a storyboard can only open each beat's shot with the beat's size (R36), so rewrite those beats with `write_beats` (a task that owns the scene list) or hand the exact beat edits to the person; (2) only then the storyboard: a third-person `continuous` beat written as a `cut` whose change a reliable move performs becomes a `continue` with that move (same angle words in both `Camera:` lines); a first-person one becomes a held `continue` (same framing, the people move). Report the share per scene in the final table.
 - Look once at the pictures of every design the shots name (character / outfit / location main
   picture or the `view_*` the line chooses): identity, garments and set are judged against them.
 
@@ -130,6 +131,6 @@ lines describe - fix the lines instead. Only plan Describe notes for rows that w
 Before `task_complete`: every shot of every named storyboard has a verdict from a picture you looked
 at; every take id in the plan exists in `design.json`; every tool result you rely on is quoted; the
 plan claims nothing you did not do. Then reply with, per storyboard: a line `Storyboard <key>: <n>
-shots - <good> good, <minor> minor, <wrong> wrong`, the 2-3 recurring patterns, a table
+shots - <good> good, <minor> minor, <wrong> wrong`, the 2-3 recurring patterns, the continue share per scene (step 1), a table
 `Shot | Verdict | Defects | Better take | Fix`, then the repair plan, what you changed yourself, and
 what only the person can do.
