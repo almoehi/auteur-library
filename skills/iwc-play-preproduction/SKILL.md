@@ -95,12 +95,16 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
   become location slugs.
   **The plan's `set_style` decides the KIND of set** (the production style's `set` label):
   `persona room` - her own styled space, as below; `real place` - the play's story location(s) as
-  real places, dressed and lit by the same rules; `abstract` - NO real room: the place is a
-  backdrop of darkness or a deep colour field with light as its subject (a halo or light ring
-  behind her, a colour wash, a glow or light pattern) and one simple dressed surface she kneels or
-  sits on; no walls, windows, furniture or room props, and the practicals are light shapes, not
-  lamps. Every rule below still applies to its stage, backdrop, light and palette (an abstract set
-  is never plain or black: it reads at every look's framing).
+  real places, dressed and lit by the same rules; `abstract` - a CHROMA-KEY set (the plan's
+  `render.chroma_key`): the place is a seamless, evenly lit chroma-key green cyclorama behind and
+  under her and nothing else - no walls, windows, furniture, props, practicals or coloured light;
+  a seat or block she needs is covered in the same green; soft, even, neutral light on her, kept
+  clear of the green (no spill, no shadows on the green). The abstract look itself (darkness, light
+  rings, spirals, colour washes) is NEVER rendered - the video model does not hold a light-only
+  backdrop (it turned grey or changed colour mid-clip) - it is composited in post: write it per set
+  as `post_backdrop` (the plan's `render.post_backdrop` in the persona's palette and the kink's
+  mood, e.g. a slow violet spiral with pulsing magenta light rings in deep indigo darkness). The
+  rules below then apply only to her light and palette (outfit and accents carry the persona).
   **The set is HER space, dressed for her audience** - an attractive set that fits the
   episode's kinks and tone and the persona (play.md sections 1-3: her bio, style, epithets,
   signature colours and accessories), never a bare, empty, plain or anonymous one (a hotel-like
@@ -289,8 +293,8 @@ camera), `set_id`, `outfit_id`, `body_pose` (the plan's), `anchor_contact`, `ite
 `kink_focus`, `reinforcement` and its stills with `hands`, `face` and `pose_reference` (an
 import whose title / why match the still's support, torso and arms, or `"none"` with the reason)
 and its `garment_state` (per its exposure slot, on a body part the framing shows) and the plan's
-`body_state` unchanged; every set follows the plan's `set_style` (an abstract set names no room,
-wall or furniture); no outfit text
+`body_state` unchanged; every set follows the plan's `set_style` (an abstract set is the green
+cyclorama only, names no room, wall or furniture, and has its `post_backdrop`); no outfit text
 names a body part or exposure; no outfit search or `garment_reference`; `clips` is unchanged; at
 most 2 sets and 2 outfits; every set has `room`, `room_id`, `view` (one `main` per room_id);
 outfit and set ids are snake_case; no outfit lists a brand mark; no description names camera

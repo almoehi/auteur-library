@@ -43,7 +43,10 @@ the RENDER clock (0-D s). The phase marks below are for any D: the hold to 0.14 
   multishot (section 2c). Never change the plan's fps.
 `<camera rule>` below is `render.camera_rule` word for word; `<tempo words>` is `render.tempo_words`
 (no `render.camera_rule`: "a fixed camera on a tripod: no handheld movement, no shake, no pan, no
-zoom, no cut, no reframing"; no `tempo_words`: "at a natural tempo").
+zoom, no cut, no reframing"; no `tempo_words`: "at a natural tempo"). `<set lock>` is
+`render.set_lock` when the plan has one (a chroma-key set: the flat green background, keyed in
+post), else "the set behind her stays exactly as in the start frame for the whole video: nothing
+added, nothing recoloured".
 
 **What the pilots taught** (built into the template below):
 - the end-frame pin holds the framing: without it, clips cropped in or pulled back to a wide shot
@@ -156,9 +159,7 @@ v5) -, `ref3` = the room plate (a nude look: `ref2`).
 `verbatim_phrases` (kept word for word by code; one the writer drops becomes a line of
 `continuity_constraints`): "<camera rule>", "ONE clearly visible gesture in place <tempo words>;
 she stays in the same body pose at the same distance from the camera; she never leans toward the
-lens", "the
-set behind her stays exactly as in the start frame for the whole video: nothing added, nothing
-recoloured"
+lens", "<set lock>"
 (the writer dropped this lock in 3 of 4 drafts, and every clip whose room drifted lacked it - v7),
 and the garment state sentence of item 4 and the body state sentence of item 4b.
 
@@ -247,7 +248,7 @@ video) is submitted once more; a finished render is delivered as it is.
 `look<N>_clips.json` (for post-production; one `sandbox_exec` python3 snippet): one entry per clip
 in plan order - `id`, `slot` (`start`, `end` from the plan), `still` (id, beat, shot, frame
 file), `gesture`, `garment_state`, `body_state`, `file`, `prompt_id`, `seed`, `fps`,
-`playback_rate`; a reveal or state change also `kind`, `from_still` (id, beat, shot, frame file)
+`playback_rate`, `chroma_key` (the plan's `render.chroma_key`, for keying; none for a real set); a reveal or state change also `kind`, `from_still` (id, beat, shot, frame file)
 and `workflow` (a state change `fluid`); a multishot clip `shots` (per shot: still, frame file,
 gesture, start s) and `workflow`; a clip left out by the continuity gate `not_rendered` with the
 reason.
