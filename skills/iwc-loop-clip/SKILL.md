@@ -234,7 +234,9 @@ storyboard frame (found as in step 1.5).
 
 `wf_<render.workflow>` with `ref0`-`ref3` as above, `prompt_ids`, `duration_seconds` = D, `fps` =
 `render.fps` (the slow style's 32 is its slow motion: never 48 there), `seed` = the clip's `seed`, no `steps` (the workspace profile sets
-6), LoRAs: only the shot's `LoRAs:` names of the minimaxh3 family (no act LoRA). Never pass width
+6), LoRAs: a clip with `loras` in the plan (a fluid's state-change clip, e.g. `h3_squirt`) takes
+exactly those and nothing else (they load alone); every other clip only the shot's `LoRAs:` names of
+the minimaxh3 family (no act LoRA). Never pass width
 / height (the still's 16:9 shape decides). Output → `/workspace/<artifact id>/<clip id>.mp4`
 (`output_video`); the audio output is not kept. One render per clip, no retries; the clips are
 independent: submit them one after another, then collect. A render that FAILS (an error, no

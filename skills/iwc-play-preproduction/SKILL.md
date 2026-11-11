@@ -172,7 +172,7 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
   layer (a robe off the shoulders) counts once at most. Never a state the flag does not allow
   (`none`: always `worn`).
 - **Stills** (`stills[]`): COPY the look's stills (`id`, `beat`, `detail`, `exposure`,
-  `exposure_part`, `body_state`, `fluids`, `phase` where set) and add
+  `exposure_part`, `body_state`, `fluids`, `phase`, `loras` where set) and add
   per still `garment_state` (above), `hands` and `face`: split the plan's `detail` into the hands / arms state (`hands` - a body
   state: `one hand resting on her collarbone, the other on her thigh`) and the expression and gaze
   (`face` - `lips slightly parted, eyes on the lens`). Never change the body pose, camera, set or
