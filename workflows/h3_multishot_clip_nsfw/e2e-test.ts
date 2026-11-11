@@ -11,7 +11,9 @@
  *                   nodes (prune-absent-inputs.ts) and to leave the ref_images slots 2 / 3 unwired.
  * Both check the output is a video of the requested width x height, and the fps snap of the graph: "bundle-4"
  * renders at fps 48 (RIFE 2x), "bundle-2" at fps 24 (native frames, RIFE skipped); both keep their duration
- * (the guide frames count at 24 either way). E2E_RUNS=bundle-4,bundle-2 selects the runs.
+ * (the guide frames count at 24 either way). A third run, "slow" (5 s, ref0 + key1 + ref1, slow_motion 1.5), checks
+ * the slow-motion input: always RIFE 2x, encoded at 32 fps, playing 1.5x the rendered length.
+ * E2E_RUNS=bundle-4,bundle-2,slow selects the runs.
  * Where the cuts really land (frame diff against the keyframes) is not checked here (the REPL host has no
  * ffprobe / ffmpeg); it was measured with the spike tools, see the bundle's yaml header.
  *
@@ -327,16 +329,17 @@ function h3ClipSeconds(seconds: number): number {
 
 // The fps snap of the graph: an output rate above 24 gives RIFE 2x frames at 48, 24 or below the
 // native frames at 24 - and the clip lasts the requested duration either way.
-function checkFpsSnap(label: string, buf: Buffer, expectFps: 24 | 48, seconds: number): void {
+// slowMotion > 1: RIFE 2x encoded at 48 / slowMotion, playing seconds x slowMotion.
+function checkFpsSnap(label: string, buf: Buffer, expectFps: number, seconds: number, slowMotion = 1): void {
   const t = mp4VideoTiming(buf);
   check(
-    `${label}: output encoded at ${expectFps} fps (${expectFps === 48 ? "RIFE 2x" : "native frames, no RIFE"})`,
+    `${label}: output encoded at ${expectFps} fps (${expectFps === 24 ? "native frames, no RIFE" : "RIFE 2x"})`,
     !!t && Math.abs(t.fps - expectFps) < 0.5,
     JSON.stringify(t),
   );
-  const expectSeconds = h3ClipSeconds(seconds);
+  const expectSeconds = h3ClipSeconds(seconds) * slowMotion;
   check(
-    `${label}: duration unchanged by the rate (${expectSeconds.toFixed(3)} s +- 0.1)`,
+    `${label}: ${slowMotion > 1 ? `playback = rendered x ${slowMotion}` : "duration unchanged by the rate"} (${expectSeconds.toFixed(3)} s +- 0.1)`,
     !!t && Math.abs(t.durationSeconds - expectSeconds) < 0.1,
     JSON.stringify(t),
   );
@@ -743,11 +746,14 @@ try {
     height: 864,
   };
   // Output rate per run: one above the native 24 (RIFE 2x at 48), one at it (RIFE skipped).
-  const RUN_FPS: Record<string, 24 | 48> = { "bundle-4": 48, "bundle-2": 24 };
+  const RUN_FPS: Record<string, 24 | 48> = { "bundle-4": 48, "bundle-2": 24, slow: 48 };
+  // slow_motion per run (default 1): "slow" plays 1.5x slower, at 48 / 1.5 = 32 fps.
+  const RUN_SLOW: Record<string, number> = { slow: 1.5 };
   // The cut times of the prompt are the guide frames / 24 (computed by the server in production).
   const bundleParams = {
     "bundle-4": { duration_seconds: 12, guide1_frame: 72, guide2_frame: 144, guide3_frame: 216 },
     "bundle-2": { duration_seconds: 8, guide1_frame: 96 },
+    slow: { duration_seconds: 5, guide1_frame: 60, slow_motion: 1.5 },
   };
 
   // A catalog-style lora that is NOT in this workflow's `models:` stanza: exercises the per-call
@@ -781,7 +787,7 @@ try {
   console.log(
     "\n── 4. Renders ───────────────────────────────────────────────────",
   );
-  const wanted = (process.env.E2E_RUNS ?? "bundle-4,bundle-2").split(",");
+  const wanted = (process.env.E2E_RUNS ?? "bundle-4,bundle-2,slow").split(",");
   const renderIds: string[] = [];
   const runRender = async (
     label: string,
@@ -831,7 +837,8 @@ try {
       size?.width === baseParams.width && size?.height === baseParams.height,
       JSON.stringify(size),
     );
-    checkFpsSnap(label, video, RUN_FPS[label], extraParams.duration_seconds);
+    const slowMotion = RUN_SLOW[label] ?? 1;
+    checkFpsSnap(label, video, slowMotion > 1 ? 48 / slowMotion : RUN_FPS[label], extraParams.duration_seconds, slowMotion);
     return result;
   };
 
@@ -850,6 +857,9 @@ try {
       bundleParams["bundle-2"],
       false,
     );
+  }
+  if (wanted.includes("slow")) {
+    await runRender("slow", refs(["ref0", "key1", "ref1"]), bundleParams["slow"], false);
   }
   check(
     "renderIds are distinct (inputs and lora selections are hashed into the id)",
