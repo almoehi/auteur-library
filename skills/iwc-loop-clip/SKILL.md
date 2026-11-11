@@ -2,11 +2,14 @@
 name: iwc-loop-clip
 description: >
   Use when the task prompt says "Load and use skill: iwc-loop-clip", or asks to render the montage
-  CLIPS of one look of an iWantClips episode from its finished storyboard: each clip starts AND ends
-  on its still's storyboard frame (h3_loop_clip_nsfw, slow motion: 7.3 s rendered, played 10.9 s),
-  with the character's face view, the outfit picture and the room plate as named references; ONE
-  in-place gesture per clip from the plan; a REVEAL clip (`kind: reveal`) runs from the look's worn
-  still to its exposed still instead (h3_start_end_clip_nsfw); a clip list for post-production. Do NOT invoke for
+  CLIPS of one look of an iWantClips episode from its finished storyboard, with the render settings
+  of the plan's `render` (the episode's production style): a loop clip starts AND ends on its still's
+  storyboard frame (h3_loop_clip_nsfw; the slow style renders 7.3 s played as 10.9 s), with the
+  character's face view, the outfit picture and the room plate as named references; ONE in-place
+  gesture per clip from the plan; a REVEAL clip (`kind: reveal`) or a fluid STATE-CHANGE clip
+  (`kind: state_change`) runs from an earlier still to its still (h3_start_end_clip_nsfw); a fast
+  style's MULTISHOT clip (`kind: multishot`) cuts between 3-4 stills in real time
+  (h3_multishot_clip_nsfw); a clip list for post-production. Do NOT invoke for
   planning (iwc-play-preproduction), scheduling the look tasks (iwc-schedule-loops), storyboards
   (storyboard-scene), scene clips of the film pipeline (shoot-clip) or editing the montage with the
   episode audio (post-production).
@@ -28,11 +31,19 @@ clip that ends on its still can also be repeated seamlessly. Read `workflow-call
 `prompt-writer-minimaxh3` via `draft_prompt` (pass `prompt_ids`, never typed text). No clip
 checks and no retries: the prompt carries the quality (one render per clip).
 
-**Slow motion** (cost test 2026-11-09): every clip is rendered SHORT at a natural tempo and
-played 1.5× slower: `duration_seconds` = 7.3 with `fps` = 32 (the graph's RIFE 2× makes 48 frames
-per rendered second; 32 fps plays them 1.5× slower), so it plays 10.9 s at about 0.54× the cost of
-a full-length render (the workspace profile sets 6 steps). The prompt's seconds are on the RENDER
-clock (0-7.3 s).
+**Render settings** come from the plan's `render` (written by the montage planner from the
+episode's production style), never from this skill: `workflow`, `duration_seconds` (= D below),
+`fps`, `playback_rate`, `shots_per_clip`, `camera_rule` and `tempo_words`. The prompt's seconds are on
+the RENDER clock (0-D s). The phase marks below are for any D: the hold to 0.14 D, the gesture to
+0.75 D, the return to D (D = 7.3: 0-1 s, 1-5.5 s, 5.5-7.3 s; D = 10: 0-1.4, 1.4-7.5, 7.5-10).
+- Slow style (cost test 2026-11-09): rendered SHORT at a natural tempo and played 1.5× slower:
+  `duration_seconds` 7.3 with `fps` 32 (the graph's RIFE 2× makes 48 frames per rendered second; 32
+  fps plays them 1.5× slower) = 10.9 s on screen at about 0.54× the cost of a full-length render.
+- Medium and fast styles play in REAL TIME: `fps` 48, no slowdown; a fast style's clips are
+  multishot (section 2c). Never change the plan's fps.
+`<camera rule>` below is `render.camera_rule` word for word; `<tempo words>` is `render.tempo_words`
+(no `render.camera_rule`: "a fixed camera on a tripod: no handheld movement, no shake, no pan, no
+zoom, no cut, no reframing"; no `tempo_words`: "at a natural tempo").
 
 **What the pilots taught** (built into the template below):
 - the end-frame pin holds the framing: without it, clips cropped in or pulled back to a wide shot
@@ -46,8 +57,9 @@ clock (0-7.3 s).
   or the model pulls the garment back on mid-clip;
 - ONE gesture in place; nothing toward or away from the lens.
 
-The footage is 16:9 landscape from a FIXED camera on a tripod: never handheld movement, shake, pan,
-orbit, zoom or reframing.
+The footage is 16:9 landscape; its camera is `<camera rule>` (the slow style: a FIXED camera on a
+tripod - never handheld movement, shake, pan, orbit, zoom or reframing). A loop clip never moves
+toward or away from her, whatever the camera rule.
 
 ## 1. Preflight
 
@@ -55,15 +67,17 @@ Fields: `look` (the look id), `scene` (N), `clips` (optional: only these clip id
 `c01, c05`), `storyboard` (default `storyboard_scene_<N>`), `character` (the character design
 key), `outfit` (the outfit design key; `none` for a nude look), `location` (the location design
 key), `plan` (default `visual_plan`), `inputs` (default `episode_inputs`).
-1. `task_failed(reason)` if the tool `wf_h3_loop_clip_nsfw` is missing ("load the
-   h3_loop_clip_nsfw workflow"), or - when a clip of this look is `kind: reveal` -
-   `wf_h3_start_end_clip_nsfw` is ("load the h3_start_end_clip_nsfw workflow").
+1. `task_failed(reason)` if the tool of a workflow this look's clips need is missing ("load the
+   <name> workflow"): `wf_<render.workflow>` for its plain clips, `wf_h3_start_end_clip_nsfw` for a
+   `reveal` / `state_change` clip, `wf_h3_multishot_clip_nsfw` for a `multishot` clip.
 2. `artifact_index`: the storyboard artifact must be finished (approved); else
    `task_failed("<storyboard> is not finished yet - finish it in the design studio and retry")`.
-3. `read_artifact` `visual_plan.json`: `looks[<look>]` (`camera`, `body_pose`, `stills` with `id`,
-   `beat`, `hands`, `face`, `garment_state`, `exposure_part`) and the clips whose `look` is this look
-   (each with `gesture`, `prompt_line`, `seed`; a reveal also `kind`, `from_still`) (in plan
-   order; with a `pilot` block: only the clips it lists; with the `clips` field: only those).
+3. `read_artifact` `visual_plan.json`: `render`, `looks[<look>]` (`camera`, `body_pose`, `stills`
+   with `id`, `beat`, `hands`, `face`, `garment_state`, `exposure_part`, `body_state`, `items`) and
+   the clips whose `look` is this look (each with `gesture`, `prompt_line`, `seed`; a reveal or
+   state change also `kind`, `from_still` (a state change `fluid`); a multishot clip `shots`,
+   `gestures`, `prompt_lines`, `shot_seconds`) (in plan order; with a `pilot` block: only the clips
+   it lists; with the `clips` field: only those).
 4. `read_artifact` the storyboard: `design.json` (`notes`; `published.outputs`: entries of group
    `frame` with `file`, `shot`, `edits`) and `shotlist.md`.
 5. **The still frames**: the storyboard `notes` (= scene N's Summary) START with `Montage stills:
@@ -87,7 +101,8 @@ key), `plan` (default `visual_plan`), `inputs` (default `episode_inputs`).
 7. **The start pose as DRAWN** (one `describe_image` per still frame of this task, before any
    drafting): "In this frame, state in one short line each: her hands and arms; her head (angle,
    tilt); her gaze (on the lens or where); each garment and how it is worn (on, pulled down,
-   lifted, off the shoulders, removed)." The frame is the clip's first AND last picture, so this
+   lifted, off the shoulders, removed); any fluid on her skin or hair (oil, saliva, sweat, water,
+   slime, semen) and where." The frame is the clip's first AND last picture, so this
    drawn pose is the start pose the prompt states - a frame can differ from its plan (a hand
    placed elsewhere, a garment further off than planned). Keep the answer per still.
 
@@ -110,12 +125,13 @@ shows the garments fully worn; kept `fully_preserved`, it pulled a garment back 
 v5) -, `ref3` = the room plate (a nude look: `ref2`).
 
 **`context`** - only what the platform cannot know, in this order:
-1. The clip: "One continuous take from a fixed camera on a tripod, 16:9 landscape, framed <the look's
-   camera line>. ONE <gesture name> in place, then a return to the exact pose of the start frame."
-2. The phases on the render clock: "0-1 s: she holds the pose of the start frame: <the DRAWN
-   start pose of step 1.7 - hands, head, gaze>. 1-5.5 s: <the clip's prompt_line, its tempo words made natural (not slow - the playback is
-   slowed), the movement full and clearly visible>. 5.5-7.3 s: she returns exactly to the pose of
-   the start frame - hands, head, gaze and garments as at the start - eyes on the lens."
+1. The clip: "One continuous take, <camera rule>, 16:9 landscape, framed <the look's camera
+   line>. ONE <gesture name> in place, then a return to the exact pose of the start frame."
+2. The phases on the render clock (marks for D as above): "0-1 s: she holds the pose of the start
+   frame: <the DRAWN start pose of step 1.7 - hands, head, gaze>. 1-5.5 s: <the clip's
+   prompt_line with <tempo words> (with a slowed playback never "slow": the playback slows it),
+   the movement full and clearly visible>. 5.5-7.3 s: she returns exactly to the pose of the start
+   frame - hands, head, gaze and garments as at the start - eyes on the lens."
 3. The shot's `Action`, `Pose`, `Contact` and `Camera` lines verbatim (NEVER its `Location`,
    `Frame` or `Lighting` lines, never the plan's set or outfit text) and the frame's `edits`
    trail ("the frame was edited: <edits> - keep those changes"); where a line contradicts the
@@ -128,6 +144,9 @@ v5) -, `ref3` = the room plate (a nude look: `ref2`).
    pulled down, a robe off the shoulders) plus "the outfit picture `artifact://<outfit>/full_body_shot.<ext>`
    gives only the garments' colours, materials and details; how they are worn comes only from the
    start frame".
+4b. The body state: a still with a `body_state` (fluids, as DRAWN where the frame differs): "her
+   <body_state, comma-separated> stay as in the start frame for the whole video" (a fluid that
+   vanishes mid-clip is a jump in the montage); none: nothing.
 5. NOTHING about the room in words: no furniture, lamp, colour or light (a room text that differed
    from the picture made the model repaint the room and widen the shot, pilot v5) - the room lock
    is a verbatim phrase (below).
@@ -135,22 +154,22 @@ v5) -, `ref3` = the room plate (a nude look: `ref2`).
    music. Quiet room tone."
 
 `verbatim_phrases` (kept word for word by code; one the writer drops becomes a line of
-`continuity_constraints`): "a fixed camera on a tripod: no handheld movement, no shake, no pan, no
-zoom, no cut, no reframing", "ONE clearly visible gesture in place at a natural tempo; she stays in
-the same body pose at the same distance from the camera; she never leans toward the lens", "the
+`continuity_constraints`): "<camera rule>", "ONE clearly visible gesture in place <tempo words>;
+she stays in the same body pose at the same distance from the camera; she never leans toward the
+lens", "the
 set behind her stays exactly as in the start frame for the whole video: nothing added, nothing
 recoloured"
 (the writer dropped this lock in 3 of 4 drafts, and every clip whose room drifted lacked it - v7),
-and the garment state sentence of item 4.
+and the garment state sentence of item 4 and the body state sentence of item 4b.
 
-**Drafting**: `draft_prompt` for `wf_h3_loop_clip_nsfw` with `duration_seconds` = 7.3,
+**Drafting**: `draft_prompt` for `wf_<render.workflow>` with `duration_seconds` = D,
 `image_inputs`, `context` and `verbatim_phrases` as above. One `review_prompt` (the picture and
 retention sections and the locked phrases are code's - not part of the review): the summary's
 `[keyframe completion]` tag, a `detailed_description` with the timestamped phases ending in the
-return to the start frame, the gesture, the garment state, and no room, furniture, lamp or colour
+return to the start frame, the gesture, the garment and body state, and no room, furniture, lamp or colour
 described in words; a missing one is a significant gap: one `enhance_prompt` naming it.
 
-## 2b. Reveal clips (`kind: reveal`)
+## 2b. Reveal and state-change clips (`kind: reveal`, `kind: state_change`)
 
 A reveal shows the garment change itself, once per look: it starts on the frame of `from_still`
 (a worn still) and ends on the frame of `still` (the exposed still), both of this look - the same
@@ -159,26 +178,62 @@ framing, set and body pose. Find both frames as in step 1.5 and describe both as
   frame), `ref1` = the face view, `ref2` = the outfit's `full_body_shot` with `retention:
   attribute_transfer`, `ref3` = the room plate. The END frame is not an image input of the prompt
   (no picture line): it goes only on the render's `end_frame` port.
-- `context`: 1. "One continuous take from a fixed camera on a tripod, 16:9 landscape, framed <the
-  look's camera line>: ONE garment change in place, from the start frame's state to the end
-  state." 2. The phases: "0-1.5 s: she holds the start pose: <the DRAWN pose of the start frame>.
+- `context`: 1. "One continuous take, <camera rule>, 16:9 landscape, framed <the look's camera
+  line>: ONE garment change in place, from the start frame's state to the end state." 2. The phases: "0-1.5 s: she holds the start pose: <the DRAWN pose of the start frame>.
   1.5-5.5 s: with her own hands she <the change: the garment that differs between the two stills'
   `garment_state` (as drawn), from its start state to its end state, e.g. slides the robe off both
   shoulders, pulls the cups of her bra down, lifts her top>, at a natural tempo, the movement full
   and clearly visible. 5.5-7.3 s: she holds the end state: <the DRAWN pose of the end frame>, eyes on
   the lens." 3. The start still's shot lines as in item 3 above. 5. and 6. as above (no room in
   words, no speech).
-- `verbatim_phrases`: the fixed-camera and set phrases above, "she stays in the same body pose at
+- `verbatim_phrases`: the camera and set phrases above, "she stays in the same body pose at
   the same distance from the camera; she never leans toward the lens", and the end state: "at the
   end <the garment> is <its end state>, and it stays so".
 - Render: `wf_h3_start_end_clip_nsfw` with `ref0`-`ref3`, `end_frame` = `artifact://<storyboard>/<the
-  still's frame file>`, `prompt_ids`, `duration_seconds` = 7.3, `fps` = 32, the clip's `seed`;
-  otherwise as in section 3.
+  still's frame file>`, `prompt_ids`, `duration_seconds` = D, `fps` = `render.fps`, the clip's
+  `seed`; otherwise as in section 3.
+
+A STATE CHANGE (`kind: state_change`, `fluid`) performs a fluid's first appearance the same way: from
+the `from_still` frame (without the fluid) to the `still` frame (with it), both of this look. Its
+change is the clip's `prompt_line` (she applies it: pours the oil and spreads it, lets saliva fall,
+pours the slime), not a garment: phase 2 is "1.5-5.5 s: <the prompt_line, as an action from the start
+state>", phase 3 holds the end frame's body state as DRAWN. The look's `items` name the prop the
+action uses (a small bottle, a bowl, a glass); say where it is at the start ("a small bottle of oil
+in her right hand"). The garments stay as both frames show them (item 4 for the start frame; a
+garment that differs between the two frames: `task_failed` naming both stills - a state change
+never hides a garment change). `verbatim_phrases`: the camera and set phrases, "she stays in the
+same body pose at the same distance from the camera; she never leans toward the lens", and "at the
+end <the end still's body_state> stays on her skin". Render as a reveal.
+
+## 2c. Multishot clips (`kind: multishot`, a fast style)
+
+One clip = 3-4 HARD-CUT shots of this look in real time: `shots` lists one still per shot (shot k
+plays `gestures[k]` / `prompt_lines[k]` for `shot_seconds`). Each shot's keyframe is that still's
+storyboard frame (found as in step 1.5).
+- **Continuity gate** (before drafting): describe each keyframe as drawn (step 1.7). The shots of a
+  clip are ONE continuous moment: the same room, outfit and identity, and the garment and body state
+  never go backwards between shots (a garment back on after it was off, a fluid gone). A keyframe
+  that breaks this: leave the clip out (no render) and list it in the reply as `not rendered:
+  keyframe continuity (<shot>: <what differs>)`.
+- `image_inputs` (ports of `wf_h3_multishot_clip_nsfw`, without gaps): `ref0` = shot 1's keyframe,
+  `key1`-`key3` = the keyframes of shots 2-4 (as many as the clip has), `ref1` = the face view,
+  `ref2` = the outfit's `full_body_shot` (`attribute_transfer` when a shot's still is `partly` /
+  `removed`), `ref3` = the room plate (a nude look: `ref2`).
+- `context`: 1. "<shots> shots with hard cuts, real time, <camera rule>, 16:9 landscape." 2. One
+  block per shot k (t = (k - 1) × `shot_seconds`): "[Shot k] At <t> s, hard cut: <the shot's
+  still's camera line>; <the DRAWN pose of its keyframe>; <prompt_lines[k] with <tempo words>, ONE
+  action, the movement full and clearly visible>. End state: <where her hands and head end>." (shot
+  1 without "hard cut"). 3.-6. as for a loop clip (garment and body state per shot as drawn).
+- `verbatim_phrases`: "<camera rule>", the set phrase, "every cut is a hard cut to the next
+  keyframe; no zoom or push-in inside a shot".
+- Render: `wf_h3_multishot_clip_nsfw` with the ports above, `prompt_ids`, `duration_seconds` = D,
+  `fps` = `render.fps`, `guide<k>_frame` = round(k × `shot_seconds` × 24) for k = 1 .. shots - 1
+  (the cut times of the prompt × 24), the clip's `seed`; otherwise as in section 3.
 
 ## 3. Render (per clip, in plan order)
 
-`wf_h3_loop_clip_nsfw` with `ref0`-`ref3` as above, `prompt_ids`, `duration_seconds` = 7.3, `fps`
-= 32 (slow motion; never 48), `seed` = the clip's `seed`, no `steps` (the workspace profile sets
+`wf_<render.workflow>` with `ref0`-`ref3` as above, `prompt_ids`, `duration_seconds` = D, `fps` =
+`render.fps` (the slow style's 32 is its slow motion: never 48 there), `seed` = the clip's `seed`, no `steps` (the workspace profile sets
 6), LoRAs: only the shot's `LoRAs:` names of the minimaxh3 family (no act LoRA). Never pass width
 / height (the still's 16:9 shape decides). Output → `/workspace/<artifact id>/<clip id>.mp4`
 (`output_video`); the audio output is not kept. One render per clip, no retries; the clips are
@@ -189,8 +244,11 @@ video) is submitted once more; a finished render is delivered as it is.
 
 `look<N>_clips.json` (for post-production; one `sandbox_exec` python3 snippet): one entry per clip
 in plan order - `id`, `slot` (`start`, `end` from the plan), `still` (id, beat, shot, frame
-file), `gesture`, `garment_state`, `file`, `prompt_id`, `seed`; a reveal also `kind: "reveal"`,
-`from_still` (id, beat, shot, frame file) and `workflow`.
+file), `gesture`, `garment_state`, `body_state`, `file`, `prompt_id`, `seed`, `fps`,
+`playback_rate`; a reveal or state change also `kind`, `from_still` (id, beat, shot, frame file)
+and `workflow` (a state change `fluid`); a multishot clip `shots` (per shot: still, frame file,
+gesture, start s) and `workflow`; a clip left out by the continuity gate `not_rendered` with the
+reason.
 
 ## 5. Reply
 

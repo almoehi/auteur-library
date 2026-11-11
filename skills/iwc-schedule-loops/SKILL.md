@@ -25,7 +25,7 @@ Fields: `plan` (default `visual_plan`), `design_plan` (default `design_plan`), `
 numbers to schedule, e.g. `[1]`; default all looks of the plan), `inputs` (default
 `episode_inputs`).
 1. `read_artifact` `visual_plan.json` (`looks`: each with `scene`, `outfit_id`, `set_id`, its
-   `clips` ids; `sets`: `room_id`) and `design_plan.json` (the design keys: `character_<slug>`,
+   `clips` ids; `sets`: `room_id`; `render`: `workflow`, `fps`) and `design_plan.json` (the design keys: `character_<slug>`,
    `outfit_<slug>_<look>`, `location_<room_id>`, `storyboard_scene_<n>`).
 2. `task_index` once: find the storyboard design task of each scene (key `storyboard_scene_<N>`;
    a suffixed key counts when its number matches) and any existing `shoot_look<N>`.
@@ -40,7 +40,7 @@ ONE `create_task` per look, then its `create_artifact` right after, then the nex
 create_task({
   id: "shoot_look<N>",
   title: "Shoot look <N> (<look id>)",
-  description: "Render the <clip count> montage clips of look <N> (<look id>) from the stills of storyboard_scene_<N> (h3_loop_clip_nsfw: the still is the first and last frame, slow motion)",
+  description: "Render the <clip count> montage clips of look <N> (<look id>) from the stills of storyboard_scene_<N> (per the plan's `render`: <render.workflow>, <render.fps> fps)",
   agent: "generic",
   requires_artifacts: ["storyboard_scene_<N>"],
   prompt: "Load and use skill: iwc-loop-clip\nlook: <look id>\nscene: <N>\nstoryboard: storyboard_scene_<N>\ncharacter: character_<slug>\noutfit: <outfit design key, or none for a nude look>\nlocation: location_<room_id>\nplan: visual_plan\ninputs: episode_inputs"
