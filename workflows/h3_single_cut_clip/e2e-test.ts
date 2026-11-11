@@ -56,6 +56,19 @@ const missing = [
 if (missing.length)
   throw new Error(`Missing required env vars: ${missing.join(", ")}`);
 
+// ── golem-ts-bridge //v1 double-slash workaround ──────────────────────────────
+// The golem CLI's `-E release` (custom server) config normalizes the server URL
+// with a trailing slash (e.g. "http://localhost:9881/"); golem-ts-bridge's
+// createAgent()/invokeAgent() concatenate `${baseUrl}/v1/...` verbatim, producing
+// "http://localhost:9881//v1/agents/create-agent". The fat-image container has no
+// nginx in front of golem to normalize this (unlike the docker-compose dev stack),
+// so every agent RPC 404s with "Not Found, not found". Patch it at the fetch layer.
+const _origFetch = globalThis.fetch;
+(globalThis as any).fetch = (input: any, init?: any) => {
+  if (typeof input === "string") input = input.replace(/([^:])\/\/v1\//, "$1/v1/");
+  return _origFetch(input, init);
+};
+
 // ── FIXTURE FILES — colocated with this script in workflows/<name>/ ─────────
 const _path = require("node:path") as typeof import("node:path");
 // /work is the bind-mount of $PWD inside the harness container (run.sh mounts $PWD/workflows
