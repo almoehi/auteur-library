@@ -182,6 +182,7 @@ ports:
       constraints: { min: 1.0, max: 2.0 }
       required: false
       default: 1.0
+      role: playback-speed
     - name: sage_attention
       kind: string
       description: "SageAttention mode of the KJNodes patch. Leave at 'disabled' unless the compute image is known to carry SageAttention kernels for the card."
