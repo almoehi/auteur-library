@@ -12,6 +12,8 @@
 # easy int                                      https://github.com/yolain/ComfyUI-Easy-Use @ 595e0738a9e3f8d0d9c4d875461b2d2c9e7559c7
 # KSampler Config (rgthree)                     https://github.com/rgthree/rgthree-comfy @ 6b76ee6f2c5a007710b5a16f97c94330d6ecc871
 # VHS_VideoCombine                              https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite @ 4ee72c065db22c9d96c2427954dc69e7b908444b
+# ComfyMathExpression, ComfySwitchNode          built-in ComfyUI (fps snap: fps > 16 -> RIFE 2x frames at 32, else the
+#                                               native frames at 16; the switch is lazy, so RIFE does not run at 16)
 # LayerUtility: PurgeVRAM                       https://github.com/chflame163/ComfyUI_LayerStyle @ 64f976fec8492ea4930c0e30c32369573189b23d
 # ImageResize+                                  https://github.com/cubiq/ComfyUI_essentials @ 9d9f4bedfc9f0321c19faf71855e228c93bd0dc9
 # GetImageSize+                                 https://github.com/cubiq/ComfyUI_essentials @ 9d9f4bedfc9f0321c19faf71855e228c93bd0dc9
@@ -120,21 +122,21 @@ ports:
       default: 845444788612421
     - name: fps
       kind: int
-      description: "Native model frame rate in FPS. The secondary output (video_combined) encodes at this rate; the primary HFPS output (output_video) encodes at fps×2 via RIFE 2× interpolation. Default 16 is Wan 2.2's native generation rate."
+      description: "Output (playback) frame rate of output_video, snapped in the graph to one of two values around Wan 2.2's native 16 fps: above 16 the frames are RIFE 2x interpolated and encoded at 32; 16 or below RIFE is skipped and the native frames are encoded at 16. A value in between just picks a side (24 -> 32, 12 -> 16); the clip duration never changes. video_combined is always the native frames at 16."
       binding: value@657:648
       constraints: { min: 8, max: 60 }
       required: false
-      default: 16
+      default: 32
       role: output-fps
   outputs:
     - name: output_video
       kind: video
-      description: "Final 2-segment video with RIFE 2× interpolated frames, encoded at fps×2 (default 32 FPS)."
+      description: "Final 2-segment video: RIFE 2x interpolated and encoded at 32 when fps > 16 (default 32), else the native frames at 16."
       node_id: "212"
       role: primary
     - name: video_combined
       kind: video
-      description: "Combined 2-segment video at standard frame rate (same content as output_video, without HFPS)."
+      description: "Combined 2-segment video: the native frames at 16 fps (same content as output_video, never interpolated)."
       node_id: "204"
     - name: preview_seg2
       kind: video
@@ -216,8 +218,9 @@ context: >
     length=81  → 157 total frames ≈ 10 s  (default)
     length=121 → 237 total frames ≈ 15 s
     length=161 → 317 total frames ≈ 20 s
-  The HFPS primary output applies RIFE 2× frame interpolation, doubling the
-  frame count and output FPS to 32 — duration is unchanged.
+  The primary output follows the fps snap: fps above 16 (default 32) applies RIFE
+  2x frame interpolation, doubling the frame count and encoding at 32; fps 16 or below
+  skips RIFE and encodes the native frames at 16 — duration is unchanged either way.
 
   Critical rule — 4n+1: video length must follow the 4n+1 rule (length − 1
   must be divisible by 4): valid values are 5, 9, 13, 17, 21, 25, … 81, …

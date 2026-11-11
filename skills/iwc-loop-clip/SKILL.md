@@ -37,10 +37,11 @@ episode's production style), never from this skill: `workflow`, `duration_second
 the RENDER clock (0-D s). The phase marks below are for any D: the hold to 0.14 D, the gesture to
 0.75 D, the return to D (D = 7.3: 0-1 s, 1-5.5 s, 5.5-7.3 s; D = 10: 0-1.4, 1.4-7.5, 7.5-10).
 - Slow style (cost test 2026-11-09): rendered SHORT at a natural tempo and played 1.5× slower:
-  `duration_seconds` 7.3 with `fps` 32 (the graph's RIFE 2× makes 48 frames per rendered second; 32
-  fps plays them 1.5× slower) = 10.9 s on screen at about 0.54× the cost of a full-length render.
-- Medium and fast styles play in REAL TIME: `fps` 48, no slowdown; a fast style's clips are
-  multishot (section 2c). Never change the plan's fps.
+  `duration_seconds` 7.3 with `slow_motion` 1.5 and `fps` 48 (the graph's RIFE 2× makes 48 frames per
+  rendered second and plays them at 32 fps, 1.5× slower) = 10.9 s on screen at about 0.54× the cost of a
+  full-length render.
+- Medium and fast styles play in REAL TIME: `fps` 48, no `slow_motion`; a fast style's clips are
+  multishot (section 2c). Never change the plan's fps or playback_rate.
 `<camera rule>` below is `render.camera_rule` word for word; `<tempo words>` is `render.tempo_words`
 (no `render.camera_rule`: "a fixed camera on a tripod: no handheld movement, no shake, no pan, no
 zoom, no cut, no reframing"; no `tempo_words`: "at a natural tempo"). `<set lock>` is
@@ -191,8 +192,8 @@ framing, set and body pose. Find both frames as in step 1.5 and describe both as
   the same distance from the camera; she never leans toward the lens", and the end state: "at the
   end <the garment> is <its end state>, and it stays so".
 - Render: `wf_h3_start_end_clip_nsfw` with `ref0`-`ref3`, `end_frame` = `artifact://<storyboard>/<the
-  still's frame file>`, `prompt_ids`, `duration_seconds` = D, `fps` = `render.fps`, the clip's
-  `seed`; otherwise as in section 3.
+  still's frame file>`, `prompt_ids`, `duration_seconds` = D, `fps` and `slow_motion` as in section 3,
+  the clip's `seed`; otherwise as in section 3.
 
 A STATE CHANGE (`kind: state_change`, `fluid`) performs a fluid's first appearance the same way: from
 the `from_still` frame (without the fluid) to the `still` frame (with it), both of this look. Its
@@ -228,13 +229,13 @@ storyboard frame (found as in step 1.5).
 - `verbatim_phrases`: "<camera rule>", the set phrase, "every cut is a hard cut to the next
   keyframe; no zoom or push-in inside a shot".
 - Render: `wf_h3_multishot_clip_nsfw` with the ports above, `prompt_ids`, `duration_seconds` = D,
-  `fps` = `render.fps`, `guide<k>_frame` = round(k × `shot_seconds` × 24) for k = 1 .. shots - 1
+  `fps` and `slow_motion` as in section 3, `guide<k>_frame` = round(k × `shot_seconds` × 24) for k = 1 .. shots - 1
   (the cut times of the prompt × 24), the clip's `seed`; otherwise as in section 3.
 
 ## 3. Render (per clip, in plan order)
 
-`wf_<render.workflow>` with `ref0`-`ref3` as above, `prompt_ids`, `duration_seconds` = D, `fps` =
-`render.fps` (the slow style's 32 is its slow motion: never 48 there), `seed` = the clip's `seed`, no `steps` (the workspace profile sets
+`wf_<render.workflow>` with `ref0`-`ref3` as above, `prompt_ids`, `duration_seconds` = D, `fps` 48,
+`slow_motion` = `render.playback_rate` when it is above 1 (the slow style's 1.5; omit it otherwise), `seed` = the clip's `seed`, no `steps` (the workspace profile sets
 6), LoRAs: a clip with `loras` in the plan (a fluid's state-change clip, e.g. `h3_squirt`) takes
 exactly those and nothing else (they load alone); every other clip only the shot's `LoRAs:` names of
 the minimaxh3 family (no act LoRA). Never pass width

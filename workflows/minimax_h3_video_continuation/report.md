@@ -12,7 +12,7 @@
 | load_image_scene_no_chars     | image  | input                                 | image@170 | ⚠ TODO: fill description |
 | load_image_optional           | image  | input                                 | image@187 | ⚠ TODO: fill description |
 | steps                         | int    | param (default: 20)                   | steps@141 | ✓                        |
-| fps                           | int    | param (default: 24)                   | fps@150   | ✓                        |
+| fps                           | int    | param, ignored (#229: the output rate follows prior_clip) | value@fps_declared | ✓ |
 | input_text_prompt             | string | param (default: How the reference vi) | value@182 | ✓                        |
 | save_video                    | video  | output (primary)                      | 176       | ✓                        |
 
