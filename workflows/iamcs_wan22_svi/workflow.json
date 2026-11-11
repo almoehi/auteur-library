@@ -56,76 +56,6 @@
       "title": "Duration in Seconds"
     }
   },
-  "662:651": {
-    "inputs": {
-      "images": [
-        "329",
-        0
-      ]
-    },
-    "class_type": "VHS_GetImageCount",
-    "_meta": {
-      "title": "Get Image Count \ud83c\udfa5\ud83c\udd65\ud83c\udd57\ud83c\udd62"
-    }
-  },
-  "662:657": {
-    "inputs": {
-      "prefix": "",
-      "suffix": "",
-      "input": [
-        "662:651",
-        0
-      ]
-    },
-    "class_type": "SomethingToString",
-    "_meta": {
-      "title": "Something To String"
-    }
-  },
-  "662:653": {
-    "inputs": {
-      "prefix": "",
-      "suffix": "",
-      "input": [
-        "662:652",
-        1
-      ]
-    },
-    "class_type": "SomethingToString",
-    "_meta": {
-      "title": "Something To String"
-    }
-  },
-  "662:652": {
-    "inputs": {
-      "expression": "a/b",
-      "a": [
-        "662:651",
-        0
-      ],
-      "b": [
-        "657:669",
-        0
-      ]
-    },
-    "class_type": "MathExpression|pysssss",
-    "_meta": {
-      "title": "Math Expression \ud83d\udc0d"
-    }
-  },
-  "662:669": {
-    "inputs": {
-      "expression": "a*2",
-      "a": [
-        "657:669",
-        0
-      ]
-    },
-    "class_type": "MathExpression|pysssss",
-    "_meta": {
-      "title": "Math Expression \ud83d\udc0d"
-    }
-  },
   "661": {
     "inputs": {
       "text": [
@@ -172,23 +102,11 @@
   },
   "657:648": {
     "inputs": {
-      "value": 16
+      "value": 32
     },
     "class_type": "easy int",
     "_meta": {
       "title": "Int"
-    }
-  },
-  "657:669": {
-    "inputs": {
-      "a": [
-        "657:648",
-        0
-      ]
-    },
-    "class_type": "CM_IntToFloat",
-    "_meta": {
-      "title": "IntToFloat"
     }
   },
   "657:657": {
@@ -213,7 +131,7 @@
         0
       ],
       "b": [
-        "657:648",
+        "fps_native",
         0
       ]
     },
@@ -310,11 +228,11 @@
       "pingpong": false,
       "save_output": true,
       "images": [
-        "329",
+        "fps_frames",
         0
       ],
       "frame_rate": [
-        "662:669",
+        "fps_rate",
         0
       ],
       "pix_fmt": "yuv420p",
@@ -564,7 +482,7 @@
         2
       ],
       "frame_rate": [
-        "657:669",
+        "fps_native",
         0
       ],
       "pix_fmt": "yuv420p",
@@ -1243,6 +1161,77 @@
     "class_type": "WanMotionProTrimmer",
     "_meta": {
       "title": "WanMotionProTrimmer seg1"
+    }
+  },
+  "fps_over_native": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "a > 16",
+      "values.a": [
+        "657:648",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "fps > 16 (native)?"
+    }
+  },
+  "fps_native": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 16
+    },
+    "_meta": {
+      "title": "Native FPS (16)"
+    }
+  },
+  "fps_doubled": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 32
+    },
+    "_meta": {
+      "title": "RIFE 2x FPS (32)"
+    }
+  },
+  "fps_frames": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "fps_over_native",
+        2
+      ],
+      "on_false": [
+        "1808",
+        2
+      ],
+      "on_true": [
+        "329",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Frames: RIFE 2x or native (lazy)"
+    }
+  },
+  "fps_rate": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "fps_over_native",
+        2
+      ],
+      "on_false": [
+        "fps_native",
+        0
+      ],
+      "on_true": [
+        "fps_doubled",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Encode rate: 2N or N (lazy)"
     }
   }
 }
