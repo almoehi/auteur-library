@@ -213,9 +213,9 @@ The number of beats is whatever the brief states (its Action, Motion, Beat and D
 
 **Static shot template** — ONLY when the brief says `Movement: hold` (or `static`):
 ```
-Static [wide/medium/close] shot. The frame never moves and keeps this framing to the end. No push in, no pull out, no widening or reveal of more than the frame shows, no zoom, no tilt, no pan, no reframing, no focus change.
+Static [wide/medium/close] shot. The frame keeps this framing to the end and may only ease at most one framing size wider or tighter, so slightly it hardly reads as a move. No push in or pull out beyond that, no reveal of more of a person than the frame shows, no zoom, no tilt, no pan, no reframing to another subject, no focus change.
 ```
-A hold means the framing size stays for the whole shot - pulling back is as forbidden as pushing in (a video model widens a close-up on its own and reveals what the shot never shows). The brief states it as `camera_hold:` (single clip) or the `continuity_constraints:` line `the camera holds ... framing` (bundle): use it as given (it is prose: write its meaning into the prompt, never a field name). Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
+A hold keeps the opening framing but may drift by at most one framing size, wider or tighter - never two (a video model widens a close-up on its own and reveals what the shot never shows; a one-step ease is accepted, a bigger one is not). When the brief states the range (`camera_hold:` for a single clip, the `continuity_constraints:` line `the camera holds ... framing` for a bundle), use it as given (it is prose: write its meaning into the prompt, never a field name). Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
 
 **Dynamic shot template:**
 ```
@@ -257,7 +257,7 @@ Rules: ONE camera move per shot - unless the brief's `Movement:` names several (
 **A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
 write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
 camera pushes in slowly ..."). When the brief says `Movement: hold` (or `static`), use the static
-template above, including its "no zoom / no push / no pull out / no pan" refusals. When the brief carries NO `Movement:` (absent, or `movement: none`),
+template above, including its "no zoom / no larger push or pull out / no pan" refusals. When the brief carries NO `Movement:` (absent, or `movement: none`),
 state the framing from the brief (shot size, angle), add NO camera move of your own and no static refusal list, and keep ONE short sentence: "The camera stays at this framing." (Iron Law 3; only here - never next to a `Movement:` move). In a video continuation the prompt continues `<Video 1>` without a cut; the move
 continues or holds that of the prior clip.
 
@@ -387,7 +387,7 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 
 - [ ] Mode identified; correct template selected
 - [ ] i2va / fl2va / l2va: the instruction line is the first line, copied exactly (shot number `N`, duration `S.SS` with two decimals), then one blank line; the body starts with `integrated_multimodal_description: [Shot 1]`
-- [ ] Camera specified in every shot OR explicit static lock with refusal list stated (no push in, no pull out, no zoom, no pan, no tilt, no reframing, no focus change)
+- [ ] Camera specified in every shot OR explicit static lock with refusal list stated (at most one framing size of drift, no larger push in or pull out, no zoom, no pan, no tilt, no reframing to another subject, no focus change)
 - [ ] A brief with `camera_body:` gets the locked-head sentence and only the moves that line allows (never a translation); POV is never written as a move
 - [ ] Every camera move states what the frame shows when it ends; a new side of the subject only by Arc, a new camera height only by Pedestal / crane; a rack focus names where focus starts and ends
 - [ ] Only the beats the brief states — no padding behaviour
