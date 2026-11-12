@@ -27,7 +27,7 @@ Use this skill when asked to write or enhance a prompt targeting:
 
 1. **Never alter the scene, subjects, or core action.** Add structure — do not redirect.
 2. **No invented elements.** Do not add characters, props, or events not in the input.
-3. **Always specify camera.** H3 defaults to continuous drift and reframing when nothing is stated.
+3. **Always specify camera.** H3 reframes on its own when nothing is stated, so every shot states its camera: the brief's `movement:` move, `drift` (the default: the camera follows the action with a gentle drift) or a written `hold`.
 4. **Observable behavior, not emotions.** Describe what a camera can see — not what characters feel. Vocal delivery is observable (audible) and is NOT covered by this ban: when the brief gives a spoken line's delivery (volume, pace, breath, pitch, a named emotion of the VOICE such as "whispered, trembling"), write it with the line (Step 6).
 5. **Audio is mandatory.** MiniMax H3 generates stereo audio natively. Every brief must include `overall_soundscape` and `non_diegetic_music` fields, even if set to `"N/A"`.
 6. **Use structured brief format.** Free-form prose is not accepted — output must use Template A or Template B.
@@ -165,6 +165,10 @@ For audio:
 
 ## Step 3 — Write the Timeline Body
 
+### Layered prompt shape (the order the model weights)
+
+Inside the integrated description write the blocks in this order: (1) GLOBAL STYLE - medium, look, lens / aspect, grain: what kind of film this is; (2) ASSET TAGS - ONE short line per reference image, taken from the `picture_map:` ("<Picture 2> defines <NAME> (build and wardrobe only)"), never a description of what the image already shows (describing it pulls the actor away from the environment and flattens the look); a tiled character sheet line of the map ("one character per column, each column the face above the outfit in three-quarter view; left to right: <Name A>, <Name B>") is copied as that picture's tag and every later mention of those people uses those names; (3) SEQUENCE CONTEXT - only when the brief states a sequence type (it sets the pacing), else omit; (4) the timed SHOT LIST - `[mm:ss - mm:ss]` lines in film language (size, angle, move, the action, a cut when the shot changes); (5) LIGHTING last, naming real sources. Who is where, facing which way and how much of them shows is stated once, where the timed shot list needs it - never a separate still-description paragraph.
+
 ### Shot and Cut Syntax
 
 ```
@@ -176,14 +180,14 @@ Rules:
 - `[Shot 1]` has NO timestamp
 - All subsequent shots: `[Shot N] At MM:SS.mmm, ...` — timestamps strictly increasing, all within target duration
 - A cut introduces new information: subject, space, state, viewpoint, or time
-- Inside a clip the framing changes ONLY through the brief's `Movement:`; a distance or angle change the brief gives no movement for is not written into this prompt at all (it is a cut between clips, planned by the caller)
+- Inside a clip the framing travels ONLY through the brief's `movement:`; never invent a move the brief does not name. The start frame is the OPENING framing: a framing travel the `movement:` writes (push in, pull out, arc, follow) is performed in full, to the end state it names. With `movement: drift` the camera follows the action gently and the framing stays near the opening one.
 - Budget ~4 seconds for prop changes, handoffs, or complex actions
 - Write ONLY the beats the brief states. Never add behaviour (blinks, breaths, glances, weight shifts, props, small gestures) to fill time or to reach a beat count: a short action in a long clip is stated once, and the clip simply continues from its end state.
 - **The clip ends with the shot's last Motion beat.** Its end state is the clip's last state: never write what happens after it - not the next shot's action (a step, a jump, a dive, an exit, an arrival), not as "then …", not as "as the camera …". A beat that ends "her weight shifting toward the pool" ends there; the jump is the next clip.
-- **The clip's last timestamp segment holds the end state.** The brief's end hold (the `end_hold:` line of a single clip, a bundle shot's `motion ... everyone: holds the end pose ...` line) is the timeline's final segment: write it as the last timed sentence at its time, in the clip's own words - "At 00:06.000, she stands still at the pool edge, her back to the camera; nothing moves; the camera holds its final framing." - the end state of the last beat, held, and nobody starting anything new. It counts as within the target duration (it runs to the end of the clip, the render may be a little longer). Never fill it with motion, never leave it out.
-- **One camera sentence, and it agrees with `Movement:`.** A brief that names a move gets that move and nothing that contradicts it - never "The camera stays at this framing" (or "static", "locked") next to a pull-out, push-in, arc or pan. The "stays at this framing" sentence is ONLY for a brief with no `Movement:`.
+- **The clip's end follows the brief's `clip_end:`.** `settles` (the brief's `end_hold:` line, or a bundle shot's `motion ... everyone: holds the end pose ...` line): write it as the last timed sentence at its time, in the clip's own words - "At 00:06.000, she stands still at the pool edge, her back to the camera; nothing moves." - the end state of the last beat, held, nobody starting anything new. `in-motion` (a cut or coverage shot follows; no `end_hold:` line): the last timed sentence is the last beat still in progress, ending inside the movement the next shot picks up - no frozen tail, nothing after it. Never fill the end with new motion, never add a hold the brief does not give.
+- **One camera sentence, and it agrees with `movement:`.** A brief that names a move gets that move and nothing that contradicts it - never a static or locked-off sentence next to a pull-out, push-in, arc or pan. `movement: drift` gets one sentence of gentle drift following the action; `movement: hold` gets the static template (Step 4). A `movement_adjusted:` line is the server's note: state the `movement:` as given and mention nothing else.
 - **An act that is not in frame is not performed.** A brief line `act_not_shown:` (single clip) or a `continuity_constraints:` line `the shot's act (...) goes on out of frame` names body parts that make NO motion of the act: write no rhythmic, thrusting or stroking movement, no act sounds of those parts, toward a partner who is not in frame; the people move only as the shot's timed Motion beats list. State the constraint once, in the brief's meaning (the bundle line is copied verbatim like every constraint).
-- **Keep every hold, facing and out-of-frame line.** Each line of the brief that says what stays (`back to camera`, `faces away`, `never turns toward the camera`, `no part of the viewer is visible`, `nobody else`, the `Visible:` extent, the `POV:` / `camera_body:` lines) appears in the prompt - never dropped to save words (a prompt without "back to camera" turned her to the lens; one without "no part of the viewer visible" showed the viewer's legs). Restating what the start frame shows is fine.
+- **Keep every hold, facing and out-of-frame line.** Each line of the brief that says what stays (`back to camera`, `faces away`, `never turns toward the camera`, `no part of the viewer is visible`, `nobody else`, the `Visible:` extent, the `POV:` / `camera_body:` lines) appears in the prompt - never dropped to save words (a prompt without "back to camera" turned her to the lens; one without "no part of the viewer visible" showed the viewer's legs). Restating what the start frame shows is not needed - keep the line, not a description of the picture.
 - The server reads every clip prompt back against these lines before it renders; a prompt that breaks one comes back to you ONCE as a correction naming the finding and the shot lines - fix exactly those points and keep the rest.
 
 ### Bundle mode (a multi-shot brief)
@@ -212,18 +216,20 @@ The number of beats is whatever the brief states (its Action, Motion, Beat and D
 
 ## Step 4 — Specify Camera in Every Shot
 
-**Static shot template** — ONLY when the brief says `Movement: hold` (or `static`):
+**Static shot template** - ONLY when the brief says `movement: hold` (or `static`), written positively as what the camera does:
 ```
-Static [wide/medium/close] shot. The frame keeps this framing to the end and may only ease at most one framing size wider or tighter, so slightly it hardly reads as a move. No push in or pull out beyond that, no reveal of more of a person than the frame shows, no zoom, no tilt, no pan, no reframing to another subject, no focus change.
+Locked-off static [wide/medium/close] shot: the camera stays fixed on this framing from the first frame to the last.
 ```
-A hold keeps the opening framing but may drift by at most one framing size, wider or tighter - never two (a video model widens a close-up on its own and reveals what the shot never shows; a one-step ease is accepted, a bigger one is not). When the brief states the range (`camera_hold:` for a single clip, the `continuity_constraints:` line `the camera holds ... framing` for a bundle), use it as given (it is prose: write its meaning into the prompt, never a field name). Never apply this template next to a camera move, and never to a shot whose brief carries no `Movement:` (see below).
+When the brief carries `camera_hold:` (a written hold only), use its words as given (prose: write its meaning, never a field name). Never apply this template next to a camera move, and never to a shot whose brief says `movement: drift`. Never write what the camera must not do - a hold is the sentence above, nothing negated.
+
+**Drift (the default)** - `movement: drift`: ONE sentence, "The camera follows the action with a gentle drift, keeping the subject in frame." No target, no reframing the brief does not name.
 
 **Dynamic shot template:**
 ```
 The camera [movement] [toward/around/across] [target element], [ending on / to reveal] [what the frame shows when the move ends].
 ```
 
-Speed is carried by the shot's duration and the beat times, never by an amplitude / speed filler ("with moderate amplitude at medium speed" adds nothing); one plain adverb ("slowly") is enough. Never combine `handheld` / shake wording with the static template; handheld is ONE short sway clause on a dynamic move.
+Speed and size are carried by the shot's duration, the beat times and the NAMED END STATE; amplitude words are unreliable in both directions ("large amplitude" did nothing, "small amplitude" came out large, a move plus a subject step in the same direction compounds into a travelling shot) - name the end framing and keep the subject beat short; one plain adverb ("slowly") is enough. Never combine `handheld` / shake wording with the static template; handheld is ONE short sway clause on a dynamic move.
 
 Always write the RESULT of the move: what the frame shows when it ends ("The camera pans left slowly to reveal the green café door", "The camera arcs 45 degrees to the right around her, ending on a three-quarter view of her face"). Take the target from the brief's `Movement:` (`pan left to reveal the door`) or, without one, from the shot's own framing; never invent a target the brief does not name.
 
@@ -248,23 +254,24 @@ What each move does (keep them apart - each is a different picture):
 - **Zoom** - there is no lens zoom on MiniMax H3: a zoom renders like a push-in (spike 2026-11-02). Write "pushes in" / "pulls out" for a size change; never promise a flattened background or a dolly-zoom effect.
 - **Pan Left / Right, Tilt Up / Down** - the camera turns IN PLACE: other things come into frame, but the side of the subject it sees does not change (spike: "pans right, ending on a three-quarter view" stayed frontal). Never write a pan or tilt to reach a new side or a new camera height.
 - **Truck Left / Right** - the camera slides sideways: the subject crosses the frame, near things faster than far ones.
-- **Arc Left / Arc Right** - the camera travels around the subject: the ONLY move that turns a front view into a three-quarter or side view (spike: a 45-degree arc landed on three-quarter). Convention: "arcs left" = the camera travels to ITS OWN left (counter-clockwise from above), which from a frontal camera reveals the subject's right side. State left / right, 15-45 degrees per clip (front -> side 90 degrees is a cut or two clips) and the side it ends on.
+- **Arc Left / Arc Right** - the camera travels around the subject: the ONLY move that turns a front view into a three-quarter or side view (spike: a 45-degree arc landed on three-quarter). Convention: "arcs left" = the camera travels to ITS OWN left (counter-clockwise from above), which from a frontal camera reveals the subject's right side. State left / right, 15-45 degrees per clip and the side it ends on. **Large orbit (beyond 45 degrees) - MEASURE in the step-1 gate before relying on it:** the comma-list form "camera motion, <subject>, <scene>, slow orbit to the <side> around <subject> with large amplitude, from <start view> to <end view>" drove a full ~180-degree orbit on plain H3 (set and identity held) where the structured "arcs 45 degrees" sentence gave 30-45; use it only where the brief's `movement:` asks for more than 45 degrees, and keep the structured form for arcs up to 45.
 - **Follow / Lead** - the camera travels with a moving subject and keeps its framing (there is no "Tracking Shot": write "follows <subject>", or "trucks left / right" for plain sideways travel).
 - **Pedestal Up / Down** (or crane) - the camera rises / lowers: the only move that changes the camera height (eye level -> low / high angle); pair it with the tilt that keeps the subject in frame and state the angle it ends at. Its effect is small in one clip.
-- **Rack focus** (no camera move): name BOTH ends - "Focus starts on [near thing], [subject] soft; then racks to [subject]; at the end [subject] is sharp and [near thing] blurred." (spike: performed). A rack focus is not a camera move: the frame stays still. Write it with the static frame ("The frame never moves. No push in, no pull out, no zoom, no pan, no tilt, no reframing.") and WITHOUT "no focus change".
+- **Rack focus** (no camera move): name BOTH ends - "Focus starts on [near thing], [subject] soft; then racks to [subject]; at the end [subject] is sharp and [near thing] blurred." (spike: performed). A rack focus is not a camera move: write it with the locked-off static frame sentence.
 
-Rules: ONE camera move per shot - unless the brief's `Movement:` names several (e.g. `push-in and arc right`, one per framing change): then write each, in the brief's order, in one camera sentence - and a SUBTLE one (a push-in changes the frame by about 10%); never combine a camera move with a fast subject action in one short clip. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim. If static: state "frame never moves" AND list what should not happen.
+Rules: write the moves the brief's `movement:` names, in the brief's order, in one camera sentence (one move, or several when it names several, one per framing change); never combine a camera move with a fast subject action in one short clip. When the brief carries a `Lighting (scene, keep)` line, keep its phrase verbatim.
 
-**A given movement wins.** When the brief carries a `Movement:` (a shotlist/beat camera move),
-write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The
-camera pushes in slowly ..."). When the brief says `Movement: hold` (or `static`), use the static
-template above, including its "no zoom / no larger push or pull out / no pan" refusals. When the brief carries NO `Movement:` (absent, or `movement: none`),
-state the framing from the brief (shot size, angle), add NO camera move of your own and no static refusal list, and keep ONE short sentence: "The camera stays at this framing." (Iron Law 3; only here - never next to a `Movement:` move). In a video continuation the prompt continues `<Video 1>` without a cut; the move
-continues or holds that of the prior clip.
+**A given movement wins.** `movement: <move>` (a shotlist / beat camera move): write exactly that move with the dynamic template, verbatim in meaning (`slow push-in` -> "The camera pushes in slowly ..."), to the end state it names. `movement: hold` (or `static`): the static template above. `movement: drift` (nothing written - the default): the drift sentence above. Never add a move of your own. In a video continuation the prompt continues `<Video 1>` without a cut; the move continues or holds that of the prior clip.
+
+**Reveal.** A brief line `reveal_space:` says the move shows set the start frame does not (approach, follow, arc, truck, pan, crane) and names the place picture: write the revealed place from that picture, state what the frame shows when the move ends, and never invent set the picture does not show (an unpictured space comes out as invented rooms).
+
+**Over-the-shoulder shots** (the `Camera:` line is over a person's shoulder) render as a locked-off or gently drifting frame, never a push-in: the foreground person is lost within seconds. The brief already carries `movement: drift` for them (`movement_adjusted:` is the server's note); a size change there is a separate shot, planned by the caller.
+
+**Exits.** A take never lets its subject leave the frame completely - the model cuts on its own when it does. An exit is written as the step out of frame with the clip ending on it (the next shot picks the movement up).
 
 **A first-person camera is the viewer's head (brief line `camera_body:`).** `POV` in the vocabulary above names a viewpoint, never a camera move: do not write "POV" as a move. When the brief carries `camera_body: the viewer's eyes (<posture>[, attached to <person>]) - <what it may do>`, the camera is the viewer's eyes and the clip obeys that line: write ONE locked-camera sentence after the camera sentence, driven by it - "The camera is locked to the viewer's head and never leaves it; it may only turn." when the line says `turns only, never translates` (a lying viewer, any viewer attached to a person, or any viewer whose shot holds the camera - the brief never offers a step or a lean next to a hold), "... it may only turn and lean in or back a little." for `leans in or back`, "... turn and step in or back." for `steps`, "... turn and walk forward." for `walks or follows`. Then state the move the brief's `Movement:` names (a turn is "The camera turns slowly to the left, ending on ..."), never a push-in, pull-out, arc, pedestal, truck, track or zoom, and never anything that shows the viewer's head or face, breaks a held contact or turns the subject: a first-person clip has no such move (the plan makes that framing change a cut). Copy `camera_body:` into the section of locked lines like any other brief constraint.
 
-**The start-frame picture is the target framing.** When `<Picture 1>` is the storyboard keyframe of this shot (the picture lines say so), its framing IS this shot's framing: write that framing, and never describe a different framing as a camera move (no "pulls out to a wide", "pushes in to a close-up" unless the brief's `Movement:` says it). A change of framing between shots is a cut, not a move inside one clip.
+**The start-frame picture is the opening framing.** When `<Picture 1>` is the storyboard keyframe of this shot (the picture lines say so), its framing IS this shot's opening framing: write that framing as the opening, and describe a different framing only as the result of the brief's `movement:`.
 
 ---
 
@@ -317,6 +324,8 @@ Valid language tags: `Arabic` | `Chinese` | `English` | `French` | `German` | `I
 [Shot 3] At 00:05.000, ... <scenetrans>(S1) continues: <d>[English] live free.</d>
 ```
 State the audio continues: "continues seamlessly across the cut" / "carries over from the previous shot."
+
+**Timing and mid-act lines.** A spoken line starts early in the take: a line late in a long take pulled a hard cut in a spike. A brief `dialogue_note:` names a late line - write it at the time the brief gives, never moved, and keep it a clean spoken moment (the speaker's mouth free of the act). A line spoken during an act is a short utterance of at least the workflow's minimum words with the speaker's mouth outside the act, or an off-screen voiceover over the take (below).
 
 **Preserve every word and punctuation mark verbatim inside `<d>` tags.** Each spoken line of the brief appears **exactly once** in the prompt: copy its words once, never add a word, repeat a word or a phrase (a stutter, an echo, a second take of the line), change a word or leave one out, and never write a spoken line the brief's shot does not have. A line sits in ITS OWN shot at the time the brief gives it (a bundle: bundle time), never in another shot's window.
 
@@ -380,7 +389,7 @@ Position: `centered` | `lower third` | `upper center` | `overlaid full-frame`
 | Keyframe completion | 350–600 words |
 | ref2va | 400–800 words |
 
-Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — never omit audio or camera fields.
+Hard upper limit: 7,000 characters and a budget of about 2,500 tokens: cut restated stills (appearance, blocking, framing the pictures already show) first, then beat descriptions - never audio or camera fields. One generation of a complicated shot stays within 15 seconds (only held conversations go longer); a longer brief is the caller's to split.
 
 ---
 
@@ -388,17 +397,17 @@ Hard upper limit: 7,000 characters. At 800+ words, prune beat descriptions — n
 
 - [ ] Mode identified; correct template selected
 - [ ] i2va / fl2va / l2va: the instruction line is the first line, copied exactly (shot number `N`, duration `S.SS` with two decimals), then one blank line; the body starts with `integrated_multimodal_description: [Shot 1]`
-- [ ] Camera specified in every shot OR explicit static lock with refusal list stated (at most one framing size of drift, no larger push in or pull out, no zoom, no pan, no tilt, no reframing to another subject, no focus change)
+- [ ] Camera specified in every shot: the brief's move, the drift sentence, or the positive static lock - no negated camera wording anywhere
 - [ ] Every spoken line appears exactly once, word for word, in its own shot at its brief time; no beat moved out of its shot's window
 - [ ] A brief with `act_not_shown:` (or the `goes on out of frame` constraint) has no motion of that act in the prompt
 - [ ] A brief with `camera_body:` gets the locked-head sentence and only the moves that line allows (never a translation); POV is never written as a move
-- [ ] Every camera move states what the frame shows when it ends; a new side of the subject only by Arc, a new camera height only by Pedestal / crane; a rack focus names where focus starts and ends
+- [ ] `reveal_space:` brief: the place written from its picture; every camera move states what the frame shows when it ends; a new side of the subject only by Arc, a new camera height only by Pedestal / crane; a rack focus names where focus starts and ends
 - [ ] Only the beats the brief states — no padding behaviour
 - [ ] Every beat ends with an observable end state
 - [ ] Every garment and accessory named for all characters
 - [ ] Non-diegetic music described without mood words
 - [ ] On-screen text typed exactly with typography and position
-- [ ] Timestamps strictly increasing; all within target duration (4–15 integer seconds); the last segment is the brief's end hold (the end state held, nothing moves)
+- [ ] Timestamps strictly increasing; all within target duration (4–15 integer seconds); the last segment follows `clip_end:` (`settles`: the end state held; `in-motion`: the last beat still in progress, no hold)
 - [ ] Diegetic sounds in timeline body; ambient/physical in `overall_soundscape`; score in `non_diegetic_music`
 - [ ] `overall_soundscape` names an audible ambient bed in natural-level words (no "quiet" / "faint" / "silent" bed)
 - [ ] Speaker IDs established on first appearance; dialogue verbatim in language tags
@@ -442,7 +451,7 @@ Observable positioning: describe physical spatial relationship to environment �
 
 ## Shot facts are kept
 
-When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible`, `Sex act` or `Sex position` text (legacy `Act`), carry it into the prompt in the same meaning and, for the sex act and position, in the same plain words (verbatim; no euphemism, no softening, nothing added). For an explicit act, name the visible genitals, any visible body fluids and the act's motion in plain anatomical words, as the brief's `Visible anatomy (must show)` and `State (...)` lines say - never euphemisms like "joined" or "groin to groin". Who is where, facing which way, the pose and the left / centre / right placement stay as written; who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe the action of the clip as stated (a still keyframe is one instant; the clip is the motion from its start state to its end state). Carry the brief's `Expression (<name>): … (must show)` lines into the prompt verbatim.
+When the brief carries a shot's `Blocking`, `Pose`, `Frame`, `Visible`, `Sex act` or `Sex position` text (legacy `Act`), carry what the clip needs into the timed shot list ONCE, in the same meaning: who is where, facing which way, how much of them shows (the `Visible:` extent) and - for the sex act and position - the same plain words (verbatim; no euphemism, no softening, nothing added). For an explicit act, name the visible genitals, any visible body fluids and the act's motion in plain anatomical words, as the brief's `Visible anatomy (must show)` and `State (...)` lines say - never euphemisms like "joined" or "groin to groin". Do NOT restate what the start frame and the pictures already show (a still-description paragraph per shot dilutes the motion text and pulls the actor away from the environment); who is NOT visible stays out of the frame (a POV shot shows hands or forearms only). Phrases listed as `verbatim_phrases` must appear unchanged. The caller supplies the "Picture N is <name>" lines (from `image_inputs`): use exactly those lines and numbers, never renumber them and never invent a Picture line. A frame's removed element (a frame edit such as "remove the car") is never put back. Describe the action of the clip as stated (a still keyframe is one instant; the clip is the motion from its start state to its end state). Carry the brief's `Expression (<name>): … (must show)` lines into the prompt verbatim.
 
 ## Fidelity
 

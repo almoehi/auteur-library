@@ -33,7 +33,7 @@ limits:
   - class: medium-transition  # a body entering or leaving another medium fails inside one clip
     note: "Entering or leaving water (or another medium) inside one clip fails: cut at take-off and start the next clip already in the new medium."
   - class: micro-motion  # small motions render static
-    note: "Micro-motions (fingertips, blinks) stay static: write a larger visible motion or a close insert of the thing."
+    note: "A micro-motion renders only when it is visible at the frame size: face >= 1/6 and hand >= 1/8 of the frame height, the beat starting within the first ~3 s. Smaller than that stays static: write a larger visible motion of the same action, or a crop insert (the storyboard's `Insert:` line)."
   - class: late-interaction  # hand-offs drift late in the clip
     note: "Hand-offs and contact later than about 3 s into the clip drift: put the interaction early and keep it short."
     max_start_seconds: 3
