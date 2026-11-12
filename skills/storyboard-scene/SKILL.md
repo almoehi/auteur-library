@@ -697,7 +697,7 @@ check); they go to the clip prompt verbatim.
   hidden. A shot with a `Sex act:` always has a `Contact:` line naming the contact points.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
   depicted are adults: copy the beat's columns (names: skill `explicit-acts`, `load_skill` it first - it also says how `anatomy` and outfit `gear`, a strap-on included, decide who does what); both
-  `none` or both set (a `massage` act needs no position: its `Body pose:` is `prone massage`). ONE position per shot - with optional
+  `none` or both set (a massage is no act: its `Body pose:` is `prone massage`). ONE position per shot - with optional
   modifiers in parentheses from the entry's fixed list (`explicit-acts`, "Modifiers"), a solo act on a `solo ...` position; when the beat's position does not match the staging
   (a lift against the vanity coded `standing face to face`), use the position whose support matches
   (`standing carry`, `edge of surface`, ...) - the server states it limb by limb in every shot of the

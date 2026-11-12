@@ -227,7 +227,7 @@ Beats (sent with each scene's `write_scene`)
     - Names exactly as listed in skill `explicit-acts`, or `other (<plain words>)`.
     - Value: `none`, or `<name>[ + <name>]*[: <detail>]`. `Sex act` may combine acts with ` + `; `Sex position` names exactly ONE position (a position change is a new beat).
     - `<detail>` = who does what to whom and the contact points, plain explicit words, no euphemisms (e.g. `Sex act: <act>: <A> <does what> to <B>, <contact points>`, `Sex position: <position name>: <B's posture and support>, <A's posture and support>`).
-    - `Sex act` is `none` exactly when `Sex position` is `none` (except a `massage` beat, which needs no position). A position may carry modifiers in parentheses (`explicit-acts`, "Modifiers"); a solo act takes a `solo ...` position.
+    - `Sex act` is `none` exactly when `Sex position` is `none`. A position may carry modifiers in parentheses (`explicit-acts`, "Modifiers"); a solo act takes a `solo ...` position.
     - The `Action` shows the act the cell names, in the act's own plain words ("<A> strokes <B>'s <body part>" for a `<act>`, never only a covered or implied version); an `Action` that shows penetration or another act has that act in `Sex act`, never `none`.
     - Nudity alone, undressing, posing nude, kissing, hugging, caressing and touching are NOT a sex act (both `none`; nudity is the `Outfits` look, touch is `Contact`).
     - Never an act for a depicted minor.
