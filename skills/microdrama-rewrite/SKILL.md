@@ -344,7 +344,7 @@ Heard or mentioned only: <names, or none>
 - Key lines: "...", "..."
 - Turning point: <its number in series.md>: <one line>
 - Sex act: <names joined by " + ">: <who does what to whom>
-- Sex position: <ONE name>: <who is where>
+- Sex position: <ONE name>[ (<modifiers>)]: <who is where>
 - Scenes: S<n> <place> - <one line>; S<n+1> <place> - <one line>
 
 ## Drama arc

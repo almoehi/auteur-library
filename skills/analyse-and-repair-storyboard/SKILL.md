@@ -51,7 +51,7 @@ naming the panels. Per shot ask:
   garment absent (straps too)? every `partly:` garment where the line puts it?
 - **Pose, position, contact**: standing / seated / kneeling / lying as stated? what exactly each hand
   touches? which hand (<A>'s left or right)?
-- **The act** (`Sex act:` / `Sex position:`): shown, in that position, with the stated detail?
+- **The act** (`Sex act:` / `Sex position:`): shown, in that position - including every modifier in parentheses (a leg, hold or fixture it states) - with the stated detail?
 - **Place**: the set the `Location:` line names, not another surface or a place the `Out of frame:` line excludes?
 - **Identity, anatomy, artefacts**: same person as the reference? extra or merged fingers, hands,
   limbs? text or watermark?

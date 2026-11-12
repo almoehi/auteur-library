@@ -481,7 +481,9 @@ check); they go to the clip prompt verbatim.
   <carried>`), one entry per pose, each person in at most ONE entry, ONE `Body pose:` line per shot.
   Prefer the closest catalog name over `other (<words>)` (only a catalog name is stated limb by limb):
   a lift is `carried kiss` / `bridal carry` / `piggyback` by how the legs are held. Never beside
-  `Sex position:` (the explicit position already poses its people). Each person's `Pose:` line must
+  `Sex position:` (the explicit position already poses its people). A cuddle, a lying embrace or a massage
+  after / without an act is a `Body pose:` too (`spooning`, `lying on top`, `head in lap`, `lying side by side
+  facing`, `prone massage`; the first, second and last are also explicit position names). Each person's `Pose:` line must
   agree with the named pose (the same support, facing and limbs: `tiptoe kiss` = she is on tiptoe,
   arms around his neck); a pose changes = a new shot.
 - `Pose reference: artifact://<key>` (optional; only when `catalog_index()` lists a catalog whose kinds include
@@ -689,7 +691,8 @@ check); they go to the clip prompt verbatim.
   hidden. A shot with a `Sex act:` always has a `Contact:` line naming the contact points.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
   depicted are adults: copy the beat's columns (names: skill `explicit-acts`, `load_skill` it first); both
-  `none` or both set. ONE position per shot; when the beat's position does not match the staging
+  `none` or both set (a `massage` act needs no position: its `Body pose:` is `prone massage`). ONE position per shot - with optional
+  modifiers in parentheses from the entry's fixed list (`explicit-acts`, "Modifiers"), a solo act on a `solo ...` position; when the beat's position does not match the staging
   (a lift against the vanity coded `standing face to face`), use the position whose support matches
   (`standing carry`, `edge of surface`, ...) - the server states it limb by limb in every shot of the
   act, so the `Pose:` lines must agree with it (who stands, who is lifted, what each faces). Otherwise omit both. A split beat's act goes on every shot whose frame shows
