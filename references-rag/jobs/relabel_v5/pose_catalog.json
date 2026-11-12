@@ -1575,45 +1575,45 @@
       "content": "both",
       "people": 2,
       "roles": {
-        "a": "lying on the back",
-        "b": "lying on top, chest to chest"
+        "a": "lying on top, chest to chest",
+        "b": "lying on the back"
       },
       "postures": {
         "a": "lying",
         "b": "lying"
       },
-      "above": "b",
-      "arrangement": "person A lies on the back, person B lies on top of person A, full length, chest to chest",
+      "above": "a",
+      "arrangement": "person B lies on the back, person A lies on top of person B, full length, chest to chest",
       "supports": [
         {
           "essential": true,
-          "sentence": "person A lies on the back",
+          "sentence": "person B lies on the back",
           "parts": [
-            "A:back"
+            "B:back"
           ]
         },
         {
           "essential": true,
-          "sentence": "person B's chest rests on person A's chest, bodies pressed together",
+          "sentence": "person A's chest rests on person B's chest, bodies pressed together",
           "parts": [
-            "B:chest",
-            "A:chest"
+            "A:chest",
+            "B:chest"
           ]
         },
         {
           "essential": true,
-          "sentence": "person B's hips lie over person A's hips",
+          "sentence": "person A's hips lie over person B's hips",
           "parts": [
-            "B:hips",
-            "A:hips"
+            "A:hips",
+            "B:hips"
           ]
         },
         {
           "essential": false,
-          "sentence": "person B's head is beside or just above person A's face",
+          "sentence": "person A's head is beside or just above person B's face",
           "parts": [
-            "B:head",
-            "A:face"
+            "A:head",
+            "B:face"
           ]
         }
       ]
@@ -2983,44 +2983,44 @@
       "content": "sfw",
       "people": 2,
       "roles": {
-        "a": "seated",
-        "b": "lying, head in the lap"
+        "a": "lying, head in the lap",
+        "b": "seated"
       },
       "postures": {
-        "a": "seated",
-        "b": "lying"
+        "a": "lying",
+        "b": "seated"
       },
       "above": null,
-      "arrangement": "person A sits upright, person B lies with person B's head resting in person A's lap",
+      "arrangement": "person B sits upright, person A lies with person A's head resting in person B's lap",
       "supports": [
         {
           "essential": true,
-          "sentence": "person A sits upright on a seat or the floor",
+          "sentence": "person B sits upright on a seat or the floor",
           "parts": [
-            "A:buttocks"
+            "B:buttocks"
           ]
         },
         {
           "essential": true,
-          "sentence": "person B's head rests in person A's lap",
+          "sentence": "person A's head rests in person B's lap",
           "parts": [
-            "B:head",
-            "A:lap"
+            "A:head",
+            "B:lap"
           ]
         },
         {
           "essential": true,
-          "sentence": "person B lies stretched out on the back or the side",
+          "sentence": "person A lies stretched out on the back or the side",
           "parts": [
-            "B:back"
+            "A:back"
           ]
         },
         {
           "essential": false,
-          "sentence": "person A's hand rests on or strokes person B's head",
+          "sentence": "person B's hand rests on or strokes person A's head",
           "parts": [
-            "A:hands",
-            "B:head"
+            "B:hands",
+            "A:head"
           ]
         }
       ]

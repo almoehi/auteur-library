@@ -303,12 +303,12 @@ POSES: tuple[PoseSpec, ...] = (
         },
     ),
     PoseSpec(
-        # Step 1d catalog entry `head in lap` (sfw): person A sits upright, person B lies with the head in A's lap.
+        # Step 1d catalog entry `head in lap` (sfw): person A lies with the head in B's lap, person B sits upright.
         slug="head_in_lap",
         title="She sits upright on the floor, he lies on his back with his head in her lap",
         position="head in lap",
         series="duo",
-        roles={"a": "the woman", "b": "the man"},
+        roles={"a": "the man", "b": "the woman"},
         extra=(
             "She sits upright on the floor, her back straight, her legs folded crossed in front of her, her lap forming a "
             "cushion. He lies stretched out on his back on the floor, his legs straight and extended away from her, his head "
