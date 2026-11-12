@@ -1,0 +1,76 @@
+{
+  "_comment": "Server catalog position (video-harness src/design/pose-catalog.ts, step 1d) -> library items, checked by eye against the line art (2026-11-12). Needed because the `sex_positions` label cannot carry these: the SexPosition vocabulary (src/refsrag/vocab.py) has no entry for the one-person, SFW and step-1d names, and labels are 'duo only'. `fit`: exact = the item shows the entry; partial = same family, differs in a stated way; modifier = fits the base entry with the named modifier of pose-modifiers.ts; none = no library item. `generated`: the pose_gen slug (library_items.json once a person approved it), never indexed before review. Items are ids of jobs/pose_vision/results.jsonl.",
+  "entries": {
+    "solo seated": {
+      "route": "a (solo pose transfer)",
+      "items": [
+        {"id": "full_body_sexy/P018", "fit": "exact", "note": "seated, knees wide apart, leaning back on the hands"},
+        {"id": "full_body_sexy/P022", "fit": "exact", "note": "seated wide-legged, leaning back on straight arms"},
+        {"id": "full_body_sexy/P028", "fit": "exact", "note": "reclining sit, one knee up, legs open"},
+        {"id": "full_body_sexy/P020", "fit": "partial", "note": "legs in a wide split forward, not knees bent"},
+        {"id": "full_body_sexy/P065", "fit": "partial", "note": "reclined sit, one knee raised, the other leg extended"}
+      ]
+    },
+    "solo lying": {
+      "route": "a (solo pose transfer)",
+      "items": [
+        {"id": "full_body_sexy/P059", "fit": "exact", "note": "on the back, knees raised and bent, hands behind the head; the only item with both knees up"},
+        {"id": "full_body_sexy/P055", "fit": "partial", "note": "legs raised in a V, not knees apart"},
+        {"id": "full_body_sexy/P062", "fit": "partial", "note": "legs raised straight up"}
+      ]
+    },
+    "solo standing": {
+      "route": "a (solo pose transfer)",
+      "items": [
+        {"id": "full_body_sexy/P006", "fit": "partial", "note": "palms pushing against a wall, bent forward; no item with the back against the wall"}
+      ],
+      "gap": "no standing item braced with the BACK against a wall or furniture"
+    },
+    "lying on top": {
+      "items": [
+        {"id": "duo/P057", "fit": "partial", "note": "she is curled on her side against a man lying on his back, head on his chest: the cuddle half; not full length, not chest to chest"}
+      ],
+      "gap": "no full-length, chest-to-chest item; P011 (head between his knees), P021 (side by side seated) and P046 (astride his hips) were checked and do NOT fit"
+    },
+    "spooning": {
+      "items": [],
+      "generated": "spooning_cuddle",
+      "gap": "no spooning item (P057 is not spooning; P020 / P047 / P056 side-lying items show a kneeling partner)"
+    },
+    "legs on shoulders": {
+      "items": [
+        {"id": "duo/P043", "fit": "modifier", "modifier": "knees to chest / hips raised", "note": "on her back, legs lifted and held by the kneeling man"},
+        {"id": "duo/P060", "fit": "exact", "note": "legs raised high over his shoulders, he kneels at her hips"},
+        {"id": "duo/P004", "fit": "exact", "note": "legs raised against his chest"}
+      ]
+    },
+    "missionary": {
+      "items": [
+        {"id": "duo/P059", "fit": "partial", "note": "legs spread in a V, he kneels between holding her knees"},
+        {"id": "duo/P026", "fit": "partial", "note": "ONE knee raised: not the 'hips raised' modifier the gaps doc assumed"},
+        {"id": "duo/P022", "fit": "none", "note": "man kneeling over her, her knees bent; wrists above the head are NOT readable in the front view, so no 'wrists above head' modifier is claimed"}
+      ]
+    },
+    "doggy style": {
+      "items": [
+        {"id": "duo/P014", "fit": "partial", "note": "wheelbarrow: her hands on the floor, he holds her legs; not 'chest down'"},
+        {"id": "duo/P013", "fit": "exact", "note": "all fours, he kneels upright behind her"},
+        {"id": "duo/P041", "fit": "exact", "note": "all fours, he kneels upright behind her"}
+      ]
+    },
+    "kneeling behind bent over": {
+      "items": [],
+      "generated": "kneeling_behind_bent_over",
+      "gap": "P007 / P013 / P045 / P061 show the partner standing or kneeling UPRIGHT behind her, not with his head at her buttocks"
+    },
+    "standing over seated": {
+      "items": [
+        {"id": "duo/P005", "fit": "partial", "note": "standing over a KNEELING partner, one leg on his shoulder; she is not seated below"}
+      ],
+      "generated": "standing_over_seated"
+    },
+    "prone massage": {"items": [], "generated": "prone_massage"},
+    "head in lap": {"items": [], "generated": "head_in_lap"},
+    "lying side by side facing": {"items": [], "generated": "lying_side_by_side_facing"}
+  }
+}
