@@ -228,6 +228,151 @@ POSES: tuple[PoseSpec, ...] = (
             "back": f"View from directly behind her, her back toward the camera. {SOLO_FRAMING}",
         },
     ),
+    PoseSpec(
+        # Step 1d catalog entry `kneeling behind bent over` (POSE_CATALOG_GAPS 2.1): she is bent forward bracing on a
+        # low block (bed / tub edge), he kneels right behind her with his head level with her buttocks.
+        slug="kneeling_behind_bent_over",
+        title="Bent forward over a low bed edge, he kneels right behind her, his face at her buttocks",
+        position="kneeling behind bent over",
+        series="duo",
+        roles={"a": "the man", "b": "the woman"},
+        extra=(
+            "She stands bent forward at the hips, her legs straight and slightly apart, both feet flat on the floor, her torso "
+            "nearly horizontal, both hands flat on the top of the block, her buttocks raised and pushed back. He kneels on both "
+            "knees on the floor right behind her, his chest upright, his head at exactly the height of her buttocks, his face "
+            "close to them, his hands holding her hips. He is not standing and not bent forward."
+        ),
+        furniture="She braces on a plain low rectangular bed block of the same matte grey material, about hip height, in front of her.",
+        camera={
+            "front": "Three-quarter view at hip height from behind and to the side of the man, so that her face and torso over the "
+            f"block, her raised buttocks and the kneeling man's head at her buttocks are all visible. {FRAMING}",
+            "low": f"Worm's-eye low-angle view from the side, the camera on the floor pointing up at the pair. {FRAMING}",
+            "high": f"High-angle view from above and to the side, looking down at the pair. {FRAMING}",
+            "side": f"Exact side profile view of the pair and the block at hip height. {FRAMING}",
+            "diag": f"Three-quarter view at hip height. {FRAMING}",
+            "back": f"View from directly behind the kneeling man at hip height, his back toward the camera, her buttocks and back beyond him. {FRAMING}",
+        },
+    ),
+    PoseSpec(
+        # Step 1d catalog entry `standing over seated`: she sits low, he stands over her, her face at his hips.
+        slug="standing_over_seated",
+        title="Seated on the floor, face at his hips, he stands over her with a hand on her head",
+        position="standing over seated",
+        series="duo",
+        roles={"a": "the woman", "b": "the man"},
+        acts=("blowjob",),
+        extra=(
+            "She sits on the floor right in front of him, her back straight, both knees bent and apart, both feet flat on the "
+            "floor, leaning slightly back on one hand, her face tipped up at the height of his hips, close to his groin. He "
+            "stands upright on both feet, both legs straight, facing her, one hand resting on top of her head, the other "
+            "hand at his side. He does not kneel and does not bend."
+        ),
+        furniture="",
+        camera={
+            "front": "Three-quarter view at the height of her seated head from 45 degrees to his side: her face, chest and "
+            f"knees face the camera and her face at his hips is visible beside his hip; he is seen from his side. {FRAMING}",
+            "low": f"Worm's-eye low-angle view from the floor beside her, pointing up at the pair. {FRAMING}",
+            "high": f"High-angle view from above, as the standing man sees her: looking down at the seated woman. {FRAMING}",
+            "side": f"Exact side profile view of the pair at hip height. {FRAMING}",
+            "diag": f"Three-quarter view at hip height. {FRAMING}",
+            "back": f"View from behind the seated woman, her back toward the camera, the man facing the camera. {FRAMING}",
+        },
+    ),
+    PoseSpec(
+        # Step 1d catalog entry `prone massage` (content both): person B prone on a table, person A at the side.
+        slug="prone_massage",
+        title="Lying face down on a massage table, he stands at her side with both hands on her back",
+        position="prone massage",
+        series="duo",
+        roles={"a": "the man", "b": "the woman"},
+        extra=(
+            "She lies flat on her belly on the table, her face turned to the side, her arms resting along her body, her legs "
+            "straight together. He stands upright on both feet at the long side of the table, level with her mid back, bending "
+            "slightly forward, both of his hands pressing flat on her back, one on the shoulder blades and one on the lower back."
+        ),
+        furniture="The table is a plain long rectangular massage table block of the same matte grey material, about hip height, "
+        "with a slim flat top.",
+        camera={
+            "front": "Three-quarter view at standing eye level from the foot end and the man's side of the table, so that the "
+            f"whole length of her back and both of his hands on it are visible. {FRAMING}",
+            "low": f"Low-angle view from beside the table at table-top height, pointing slightly up at the pair. {FRAMING}",
+            "high": f"High-angle view from above, looking down onto her back and his hands. {FRAMING}",
+            "side": f"Exact side profile view of the table, her body along it and the standing man beside it. {FRAMING}",
+            "diag": f"Three-quarter view at eye level. {FRAMING}",
+            "back": f"View from the head end of the table at eye level, her head nearest the camera, the man beyond her. {FRAMING}",
+        },
+    ),
+    PoseSpec(
+        # Step 1d catalog entry `head in lap` (sfw): person A lies with the head in B's lap, person B sits upright.
+        slug="head_in_lap",
+        title="She sits upright on the floor, he lies on his back with his head in her lap",
+        position="head in lap",
+        series="duo",
+        roles={"a": "the man", "b": "the woman"},
+        extra=(
+            "She sits upright on the floor, her back straight, her legs folded crossed in front of her, her lap forming a "
+            "cushion. He lies stretched out on his back on the floor, his legs straight and extended away from her, his head "
+            "resting in her lap, his face turned up toward hers. One of her hands rests on his head, stroking his hair, the "
+            "other rests on his chest."
+        ),
+        furniture="",
+        camera={
+            "front": "Three-quarter view at low eye level from the side of his feet and her front, so that her face, her lap "
+            f"and his head and whole body stretched out beside her are visible. {FRAMING}",
+            "low": f"Low-angle view at floor level from the side, pointing slightly up at the pair. {FRAMING}",
+            "high": f"High-angle view from above, looking down at the pair on the floor. {FRAMING}",
+            "side": f"Exact side profile view of the pair at floor level. {FRAMING}",
+            "diag": f"Three-quarter view at eye level. {FRAMING}",
+            "back": f"View from behind her back at low eye level, his legs stretched out beyond her. {FRAMING}",
+        },
+    ),
+    PoseSpec(
+        # Step 1d catalog entry `lying side by side facing` (sfw).
+        slug="lying_side_by_side_facing",
+        title="Lying on their sides on a bed, facing each other, close, her arm over his waist",
+        position="lying side by side facing",
+        series="duo",
+        roles={"a": "the woman", "b": "the man"},
+        extra=(
+            "They lie on their sides on the bed, one in front of the other, face to face, close but only the arms touching: "
+            "her arm rests over his waist, his arm rests under his own head. Both have the lower legs slightly bent. Their "
+            "heads are at the same end of the bed, at the same height."
+        ),
+        furniture="They lie on a plain large flat rectangular bed slab of the same matte grey material, about knee height.",
+        camera={
+            "front": "High three-quarter view from about 45 degrees above, from beside the bed at the foot end, so that both "
+            f"figures, their faces turned to each other and her arm over his waist are visible. {FRAMING}",
+            "low": f"Low-angle view at bed-top height from the foot end, pointing along the bed. {FRAMING}",
+            "high": f"Top-down view from directly above the bed. {FRAMING}",
+            "side": f"Exact side view at bed-top height, from the side of the bed. {FRAMING}",
+            "diag": f"Three-quarter view slightly above bed level. {FRAMING}",
+            "back": f"View from the head end of the bed at bed-top height. {FRAMING}",
+        },
+    ),
+    PoseSpec(
+        # Step 1d: the catalog `spooning` is content `both`; the library has no spooning item (mapping 2026-11-12).
+        slug="spooning_cuddle",
+        title="Spooning on a bed, he lies behind her, his arm over her waist",
+        position="spooning",
+        series="duo",
+        roles={"a": "the man", "b": "the woman"},
+        extra=(
+            "They lie on their sides on the bed, both facing the same way, both with the knees slightly bent, he right behind "
+            "her, his chest against her back, the front of his thighs against the back of hers. His upper arm lies over her "
+            "waist, his hand resting flat on her stomach, his other arm under his own head. Her head rests on the pillow end "
+            "of the bed, one of her hands rests on his hand."
+        ),
+        furniture="They lie on a plain large flat rectangular bed slab of the same matte grey material, about knee height.",
+        camera={
+            "front": "High three-quarter view from about 45 degrees above, from the front of the woman at the foot end, so that "
+            f"her face, his face behind her shoulder and his arm over her waist are visible. {FRAMING}",
+            "low": f"Low-angle view at bed-top height from the foot end, pointing along the bed. {FRAMING}",
+            "high": f"Top-down view from directly above the bed. {FRAMING}",
+            "side": f"Exact side view at bed-top height, from the side of the bed her front faces. {FRAMING}",
+            "diag": f"Three-quarter view slightly above bed level. {FRAMING}",
+            "back": f"View from behind the man at bed-top height. {FRAMING}",
+        },
+    ),
 )
 POSE_BY_SLUG = {p.slug: p for p in POSES}
 
