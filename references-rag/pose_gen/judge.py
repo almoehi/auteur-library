@@ -57,13 +57,14 @@ def structural(spec: PoseSpec, entry: dict, facts: dict) -> tuple[bool, str]:
 
 def judge(spec: PoseSpec, path: Path, api_key: str) -> dict:
     entry = CATALOG[spec.position]
+    # audit.catalog_text lists nsfw entries only: judge an sfw / both entry (head in lap, spooning) as if it were nsfw
     people_hint = "a solo female figure" if spec.solo else "a duo: a woman and a man"
     images = image_parts(path)
     facts, _ = audit.ask(api_key, audit.BLIND_PROMPT.format(people_hint=people_hint, supports=", ".join(audit.SUPPORTS)), images)
     ans, _ = audit.ask(
         api_key,
         audit.PROMPT.format(
-            catalog=audit.catalog_text([entry], include_proposed=True), id=path.stem, series=spec.series, people_hint=people_hint,
+            catalog=audit.catalog_text([{**entry, "content": "nsfw"}], include_proposed=True), id=path.stem, series=spec.series, people_hint=people_hint,
             facts=audit.facts_text(facts), tags=spec.position, supports=", ".join(audit.SUPPORTS),
         ),
         images,
