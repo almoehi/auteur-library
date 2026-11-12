@@ -105,11 +105,22 @@ ports:
       kind: string
       description: "MiniMax H3 keyframe-completion prompt in English (prompt-writer-minimaxh3, full-reference brief). Sections in order: subject_definitions (<Picture 1> = the start frame, then one line per supplied reference, <Subject N> for characters), summary starting with [keyframe completion], retention_analysis, detailed_description (style first, then [Shot 1] opening with 'For the target video, at 0.00 seconds, <Picture 1> is fully referenced.', later shots timestamped, dialogue in <d>...</d>), overall_soundscape, non_diegetic_music. Only cite <Picture N> for references that were supplied. When voice_ref_k is supplied, add the line '<Audio k> is the voice-timbre reference for <Subject n> (S#).' to subject_definitions."
       binding: value@138
-      append_section: detailed_description
+      append_section: continuity_constraints
+      # Template B (prompt-writer-minimaxh3): code inserts a missing section at its place, writes the
+      # picture lines of subject_definitions and the retention lines from the call's image_inputs,
+      # and adds a dropped locked phrase as a line of continuity_constraints.
+      sections: [subject_definitions, summary, retention_analysis, continuity_constraints, detailed_description, overall_soundscape, non_diegetic_music]
+      body_section: detailed_description
+      picture_sections:
+        definitions: subject_definitions
+        retention: retention_analysis
+        label_format: "<{label}>"
+        default_retention: fully_preserved
+        retention_levels: [fully_preserved, partially_preserved, attribute_transfer, weak_reference]
       required: true
     - name: duration_seconds
       kind: float
-      description: "Target clip playback duration in seconds. Converted to the nearest valid MiniMax H3 frame count at the native 24 fps."
+      description: "Rendered (real-time) clip duration in seconds - playback lasts duration_seconds x slow_motion (1.0 by default). Converted to the nearest valid MiniMax H3 frame count at the native 24 fps."
       binding: value@132
       constraints: { min: 1.0, max: 30.0 }
       required: false
@@ -145,12 +156,20 @@ ports:
       default: 864
     - name: fps
       kind: int
-      description: "Output (playback) frame rate. 48 is the model's native 24 fps through RIFE 2x and keeps the clip duration; a continuation must use the same value."
+      description: "Output (playback) frame rate, snapped in the graph to one of two values around the model's native 24 fps: above 24 the frames are RIFE 2x interpolated and encoded at 48; 24 or below RIFE is skipped and the native frames are encoded at 24. A value in between just picks a side (30 -> 48, 12 -> 24); the clip duration never changes with fps. While slow_motion > 1 fps is ignored: the rate is 48 / slow_motion. A continuation of this clip follows its rate by itself."
       binding: value@146
       constraints: { min: 1, max: 120 }
       required: false
       default: 48
       role: output-fps
+    - name: slow_motion
+      kind: float
+      description: "Slow-motion factor, 1.0-2.0 (default 1.0 = real time). Above 1 the frames are ALWAYS RIFE 2x interpolated and encoded at 48 / slow_motion (1.5 -> 32 fps), so playback is deliberately longer: duration_seconds is the RENDERED (real-time) length and the clip plays duration_seconds x slow_motion. fps is then ignored for the rate (it decides nothing else). At 1.0 the fps snap applies."
+      binding: value@slow_motion
+      constraints: { min: 1.0, max: 2.0 }
+      required: false
+      default: 1.0
+      role: playback-speed
     - name: sage_attention
       kind: string
       description: "SageAttention mode of the KJNodes patch. Leave at 'disabled' unless the compute image is known to carry SageAttention kernels for the card."
@@ -193,7 +212,7 @@ ports:
   outputs:
     - name: output_video
       kind: video
-      description: "Final video with audio, RIFE 2x interpolated, encoded at the fps param rate (default 48)."
+      description: "Final video with audio, RIFE 2x interpolated and encoded at 48 when fps > 24 (default 48), else the native frames at 24; with slow_motion > 1 always RIFE 2x, encoded at 48 / slow_motion."
       node_id: "145"
       role: primary
     - name: output_audio
@@ -238,8 +257,9 @@ context: |
   a skin-realism slider (0.5) and an anatomy LoRA (0.6). Do not select them on a port. lora_1-lora_4
   take act / detail adapters from the workspace lora catalog (modelFamily minimaxh3).
 
-  Resolution and chaining: width, height and fps are inherited by every continuation of this
-  clip - pick them once. Width and height are snapped to the nearest multiple of 32 in the graph
+  Resolution and chaining: width and height are inherited by every continuation of this clip -
+  pick them once; a continuation also keeps this clip's frame rate (24 or 48, the fps snap).
+  Width and height are snapped to the nearest multiple of 32 in the graph
   (size_w / size_h; e.g. 720 -> 704). Portrait 480x864 default, 864x480 landscape, 864x1536 for
   final quality.
 

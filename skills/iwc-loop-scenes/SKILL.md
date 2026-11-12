@@ -25,7 +25,8 @@ set-up), and each STILL beat is one held rest state that becomes one storyboard 
 frame of that still's clips (`iwc-loop-clip` maps still k of the look to the frame of the shot
 whose `Beat:` is the k-th still beat named in the Summary).
 
-The footage is 16:9 landscape (1920x1080) from a FIXED camera on a tripod. Lessons of the pilots:
+The footage is 16:9 landscape (1920x1080); every still of a look is ONE camera set-up (the clips'
+camera is the plan's `render.camera_rule`). Lessons of the pilots:
 - a still framed limbs-only (a first-person view of her lap) is useless: every framing shows her
   face and eyes;
 - a Blocking that named the camera, tripod or phone made the image model draw the equipment:
@@ -76,6 +77,8 @@ Row:
   `Montage stills: beats N.a-N.b. Exactly ONE shot per still beat (no second or tighter shot of a beat), no establishing shot, 16:9 landscape, fixed camera, every shot's Camera = its beat's Framing with her face and eyes in frame, catalog Body pose <body_pose> in every shot, the furniture contact in Contact: <anchor_contact>. The stills differ only in hands, head and expression. Corner: <set name> (<view: main picture | location view '<view phrase>'>). Look <look id>: <the look's name>.`
   With an outfit-change beat, append: `Beat N.1 is one short beat of the look change from <old look> into <new look> and is never a still.`
   Always append the per-still wardrobe: `Wardrobe (one line per still shot): beat N.x -> Wardrobe: character_<slug> (wearing: <garments>; partly: <garment (end state)>; removed: <garments>); beat N.y -> ...` from each still's `garment_state` (omit an empty list; a fully worn still is `wearing:` only; each garment in exactly ONE list - a `partly:` / `removed:` garment is never also in `wearing:`, the storyboard's check refuses it) - the storyboard writes the line on that still's shot.
+  When any still of the look has a non-empty `body_state`, append: `State (one line per still shot): beat N.x -> State: character_<slug> (<the still's body_state, comma-separated>); beat N.y -> ...` listing every still beat (`(none)` for a still with an empty body_state) - the storyboard writes the line on that still's shot (storyboard `State:`: fluids are the body, never wardrobe).
+  When any still has a non-empty `loras` (the keyframe LoRAs of the fluids it shows, e.g. `flux2_nsfw_cum`), append: `Fluid LoRAs (one line per still shot, rank them first on its LoRAs line): beat N.x -> <loras, comma-separated>; beat N.y -> ...` listing only the still beats that have them.
   When any still of the look has a `pose_reference` (not `"none"`), append: `Pose references (one line per still shot, same camera line as the import): beat N.x -> Pose reference: <artifact ref>; beat N.y -> ...` listing every still beat with its still's reference (`none` for a still without one) - the storyboard writes the line on that still's shot, never on an outfit-change shot.
 - `characters_present` = the character slug; `outfits` = the union of the beats' looks
   (`<slug>:<outfit_id>`; with an outfit-change beat both pairs); `audio` = the room's atmosphere in
@@ -94,7 +97,7 @@ N.(a+k-1)):
   edge of the mattress, sitting back on her heels, one hand resting on her collarbone, the other on
   her thigh, the lace bralette cups pulled down below her bare breasts`; a `worn` still: `both
   bralette straps on her shoulders`). The same posture, support and outfit in every still beat; the
-  hands and the garment state differ. Keep gaze, lips, breath, eyes, smile, skin and voice words OUT of the action (a
+  hands and the garment state differ. Keep gaze, lips, breath, eyes, smile, skin, fluids and voice words OUT of the action (a
   sensation signal inside a body-state action is refused).
 - `location` = the row's `location_slug`; `outfits` = `<slug>:<outfit_id>`.
 - `framing` = the look's `camera.line`, IDENTICAL in every still beat. A `close-up` or `medium
@@ -139,7 +142,8 @@ look's camera line as `framing` (her face and eyes in frame), the same posture a
 hands, a body-state-only `action`, `contact` holding only contacts the framing shows (`none` when
 nothing touches in frame) and `sex_act` / `sex_position` both
 `none`; no `blocking` names camera equipment; every summary STARTS with `Montage stills: beats
-N.a-N.b.` naming exactly the still beats, lists each still beat's Wardrobe from its garment_state, and
+N.a-N.b.` naming exactly the still beats, lists each still beat's Wardrobe from its garment_state
+and (when the look has any) its State from its body_state, and
 lists each still beat's pose reference when the look has any; every beat's `outfits` stays the
 look's outfit (a partly-off garment keeps the outfit look); the row's `outfits` equals the union of the beats'
 pairs; every `location_slug` is a room id with exactly one Places row; one `location` name per

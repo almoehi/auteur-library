@@ -57,6 +57,7 @@ A SET = the locations of ONE property (a house with its terrace, garden and driv
 ## Phase 0 — Preflight
 
 1. `artifact_index`: `character_table` and `scene_list` must exist, be approved and readable. Note your own output artifact id.
+   If `write_design` or `create_designs_from_plan` is not among your tools, this task declares no `design_plan.json` output: call `task_failed("plan_designs has no design_plan output artifact (design_plan.json); recreate the task with output_artifact_name design_plan, output_files [design_plan.json]")` at once; never substitute `create_task`, `create_artifact`, `create_design`, `agent_oneshot` or `sandbox_write_file` for them.
 2. `read_artifact(artifactId="scene_list")`: scene table columns `Scene #`, `Episode` (micro-drama briefs only), `INT/EXT`, `Location`, `location_slug`, `Time of day`, `Lighting`, `Summary`, `Characters present`, `Outfits`; a Beats section (beat, action, framing, camera move, continuity, `Outfits`, `Location`) follows.
    - A `## Places` table follows the scene table: `location_slug`, `set`, `space`, `connections`. Missing or incomplete -> `task_failed` naming it (`run-preproduction`'s `create_scenes` writes it).
    - A beat whose `Location` differs from its row's slug (`parallel`) is an extra location of the scene.
@@ -121,8 +122,9 @@ Build every entry with its FINAL key; nothing is decided later.
 6. `sets` and `designs` (THE work list: every key in creation order - characters, set anchors and standalone places, set members, outfits, storyboards by scene) are filled in by `write_design`; never write them yourself.
 7. Write `design_plan.json` ONLY with `write_design` - ONE entry per call, a few calls per reply, in creation order (a link must name an entry already written). Never write it with `sandbox_write_file`, and never copy `scene_list.md` (the checks read the `scene_list` input).
    - An entry = the design's creation arguments (`kind`, `display_name`, `key_slug`, `character_type`, `attributes`, `links`, `distinct_place`; no `start`, no `loras`) plus `scenes` and, for an outfit, `character_slug` and `look_slug`.
+   - An `outfit` entry ALWAYS carries `links: [{ "role": "character", "key": "character_<character_slug>" }]` (its character's entry written first), plus `character_slug` and `look_slug`.
    - A set member may omit `set` / `set_style`: they are copied from its anchor (one text per set).
-   - A refusal (`design <key> was NOT saved ...`) lists that entry's problems and their fix: fix exactly those and send that entry again; other entries stay. A wrong entry already written: send it again (same `kind` + `key_slug` replaces it) or `remove: true`.
+   - A refusal (`design <key> was NOT saved ...`) lists that entry's problems and their fix: add or change exactly what it names (e.g. a missing `{ role, key }` link) and send that entry again; never send the same arguments again unchanged. Other entries stay. A wrong entry already written: send it again (same `kind` + `key_slug` replaces it) or `remove: true`.
    - Success reads `design <key> written (<counts> in design_plan.json)`.
 
 Example calls (one production; a few per reply):

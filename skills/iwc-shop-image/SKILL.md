@@ -4,7 +4,8 @@ description: >
   Use when the task prompt says "Load and use skill: iwc-shop-image", or asks for candidate store
   thumbnails (shop images) of an episode: 3 candidates, each a picture composed from the
   finished character / outfit / set designs (flux2_reference_compose_nsfw) plus its hook-word
-  lettering set in code in the sandbox (Pillow), following the play's "7. Shop image" brief and rules.
+  lettering set in code in the sandbox (Pillow), following the play's "7. Shop image" brief and rules;
+  the pick is delivered plain (no text) and with the text overlay.
   Do NOT invoke for designs (plan-designs), storyboards (storyboard-scene) or loop clips
   (iwc-loop-clip), or the GIF teaser.
 agentType: worker
@@ -119,8 +120,10 @@ Append the results to `candidates.md`. Per candidate, record:
 - the base check result and any retry;
 - files.
 
-End with a short recommendation of which candidate to pick and why. Copy the recommended candidate to `shop_image.png` and its 400x225 version to `shop_image_400.png`.
+End with a short recommendation of which candidate to pick and why. The pick is delivered in BOTH versions - the final with its text overlay and the plain picture without any text (post-production and other stores reuse the clean picture with their own lettering):
+- `shop_image.png` (the lettered candidate) and `shop_image_400.png` (its 400x225);
+- `shop_image_plain.png` (the candidate's `candidate_<N>_base.png`, unchanged) and `shop_image_plain_400.png` (its 400x225).
 
 ## 6. Hand-over (llm+hitl)
 
-This task ends with a person's review. They keep the recommendation or name another candidate, or ask for "redo N: <note>". On a redo, re-run step 3 and the lettering for that candidate only, at most 2 redos, and re-copy the pick. In the final reply, list each file with one line and every check that missed and what was retried; then `task_complete`.
+This task ends with a person's review. They keep the recommendation or name another candidate, or ask for "redo N: <note>". On a redo, re-run step 3 and the lettering for that candidate only, at most 2 redos, and re-copy the pick - all four `shop_image*` files, plain and lettered. In the final reply, list each file with one line and every check that missed and what was retried; then `task_complete`.

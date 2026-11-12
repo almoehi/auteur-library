@@ -65,8 +65,9 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 
 - ONE `create_task` call per round, each issued AFTER the previous call's result, in chain order; all four in the SAME turn.
 - NEVER put several `create_task` calls in one round (one response): a later call's `requires_*` names the task / artifact the earlier call creates, so it must exist first (a `create_scenes` issued before `character_table` exists fails with `requires.tasks references unknown task id`).
-- `requires_tasks` and `requires_artifacts` are MANDATORY in every call, exactly as in the templates (right after `id`): a task created without them starts at once, before its inputs exist, and fails or works from nothing.
+- `requires_tasks` and `requires_artifacts` are MANDATORY in every call, exactly as in the templates (right after the output arguments): a task created without them starts at once, before its inputs exist, and fails or works from nothing.
 - Each call creates the task, its output artifact (`output_artifact_name`, `output_files`) and its checks; no separate artifact call.
+- EVERY `create_task` call carries its template's `output_artifact_name` + `output_files` exactly as written (they sit right after `id`). A result containing `Note: this task has no output artifacts` means the call was wrong: `remove_task` that task and `create_task` it again WITH those arguments before making the next call.
 - NO text between calls — no announcements, no "let me verify", no progress notes (a text-only reply ends the turn and the rest of the chain is never created); do not re-read stored prompts. Only after the 4th result (or a stop on failure) may you write your single final report (section 5).
 - Use ids / keys from each result (`key: <key>`) in later `requires_*`; never assume or derive keys. On an `error:` result pick the right key from the listed known ones and correct the call; never retry an identical call.
 - Step fails twice -> stop; report which tasks were created (ids from results) and which failed (error text). Never claim a task `create_task` did not confirm.
@@ -76,9 +77,8 @@ Chain: `write_screenplay` -> `character_table` -> `create_scenes` -> `plan_desig
 ### 4a. write_screenplay
 
 ```
-create_task({ id: "write_screenplay", requires_tasks: [], requires_artifacts: [], title: "Write screenplay", description: "Adapt the story plot into a screenplay",
-  agent: <writer>, policies: ["screenplay-quality"], prompt_block: "run-preproduction/write_screenplay",
-  output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"] })
+create_task({ id: "write_screenplay", output_artifact_name: "screenplay", output_artifact_description: "Screenplay", output_files: ["screenplay.md"], requires_tasks: [], requires_artifacts: [], title: "Write screenplay", description: "Adapt the story plot into a screenplay",
+  agent: <writer>, policies: ["screenplay-quality"], prompt_block: "run-preproduction/write_screenplay" })
 ```
 Prompt block (passed by `prompt_block`, never copied):
 ```prompt write_screenplay
@@ -92,9 +92,8 @@ Nudity `allowed`: every sexual act, every moment of nudity and every climax the 
 ### 4b. character_table
 
 ```
-create_task({ id: "character_table", requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"], title: "Character table", description: "One profile file per cast role",
-  agent: <cast writer>, policies: ["cast-quality"], prompt_block: "run-preproduction/character_table",
-  output_artifact_name: "character_table", output_artifact_description: "Character Breakdown Table", output_files: [] })
+create_task({ id: "character_table", output_artifact_name: "character_table", output_artifact_description: "Character Breakdown Table", output_files: [], requires_tasks: ["write_screenplay"], requires_artifacts: ["screenplay"], title: "Character table", description: "One profile file per cast role",
+  agent: <cast writer>, policies: ["cast-quality"], prompt_block: "run-preproduction/character_table" })
 ```
 Prompt block (passed by `prompt_block`, never copied):
 ````prompt character_table
@@ -142,9 +141,8 @@ Pre-completion audit: before `task_complete`, re-open every file; confirm all fi
 ### 4c. create_scenes
 
 ```
-create_task({ id: "create_scenes", requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"], title: "Scene list", description: "Scene table with outfits and beats",
-  agent: <director>, policies: ["scenes-quality","scenes-complete"], prompt_block: "run-preproduction/create_scenes",
-  output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"] })
+create_task({ id: "create_scenes", output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"], requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"], title: "Scene list", description: "Scene table with outfits and beats",
+  agent: <director>, policies: ["scenes-quality","scenes-complete"], prompt_block: "run-preproduction/create_scenes" })
 ```
 Prompt block (passed by `prompt_block`, never copied):
 ````prompt create_scenes
@@ -163,7 +161,7 @@ Output
 - First `write_places` with every Places row (section "Places table" below).
 - Then ONE `write_scene` per scene, in scene order: `scene` (its number), `row` (the scene-table cells) and `beats` (every beat of the scene, in order). Each scene is checked alone: a refusal lists only that scene's problems and saves nothing; an accepted scene replaces any earlier version of it, other scenes are never touched.
 - FIXES go through `write_beats({ scene, beats, remove? })`: send ONLY the beats you change (with their `beat` ids; a new id inserts a beat), never the whole scene again - a refusal or a check finding names the beats to fix. `write_scene` again only to rewrite a scene from scratch.
-- Argument fields = the column names below in snake_case: row `episode`, `int_ext`, `location`, `location_slug`, `time_of_day`, `lighting`, `summary`, `characters_present`, `outfits`, `audio`; beat `beat`, `action`, `location`, `outfits`, `framing`, `camera_move`, `continuity`, `blocking`, `contact`, `sex_act`, `sex_position`; place `location_slug`, `set`, `space`, `connections`. Cell values are plain text on one line (no `|`); write a spoken line in 'single quotes' (or typographic quotes), never straight double quotes - they break the call's JSON.
+- Argument fields = the column names below in snake_case: row `episode`, `int_ext`, `location`, `location_slug`, `time_of_day`, `lighting`, `summary`, `characters_present`, `outfits`, `audio`; beat `beat`, `action`, `location`, `outfits`, `framing`, `camera_move`, `continuity`, `blocking`, `pov`, `contact`, `sex_act`, `sex_position`; place `location_slug`, `set`, `space`, `connections`. Cell values are plain text on one line (no `|`); write a spoken line in 'single quotes' (or typographic quotes), never straight double quotes - they break the call's JSON.
 
 Frame
 - Production canvas: {workspace.profiles.master.video.width} x {workspace.profiles.master.video.height} (width x height). Portrait = the height is larger than the width (e.g. 9:16); otherwise, or when empty, landscape.
@@ -220,6 +218,7 @@ Beats (sent with each scene's `write_scene`)
     - `parallel` = happens at the same time somewhere ELSE; MUST give its place in `Location` (reuse a table slug or define a new stable slug of lowercase a-z0-9 words joined by `_`, e.g. `driveway`; inventing a place slug is allowed).
     - `new moment` = a jump in time, place or subject, or an insert. The first beat of a scene is `new moment`, UNLESS the screenplay marks the scene CONTINUOUS at the same place as the previous scene: then it is `continuous` and the scene's first beats carry on the state the previous scene ended in (positions, contacts, a joined act).
   - `Contact` PERSISTS: a contact is stated in every beat until a beat's `Action` ends it. Example (any genre): <A>'s hand on <B>'s shoulder in beat 3 stays in `Contact` for beats 4, 5, ... until a beat says <A> lets go or steps away; a beat that silently drops it is wrong, and so is one that keeps it after the release. Under nudity `allowed` the same holds for a joined act: while the bodies stay joined, `Sex act` + `Sex position` are stated in every beat until the beat that separates them, also as a motionless pause after a climax beat (`Sex act: <act>: <A> stays <joined to> <B>, motionless`).
+  - `POV` (right after `Blocking`): `none`, or the character whose eyes the camera is and the posture of their own body: `<character_slug> (<posture>)` with the posture one of `seated`, `standing`, `kneeling`, `lying`, `walking` (the storyboard's `POV:` vocabulary), e.g. `<a> (seated)`. Written for EVERY beat: the owner and posture in a first-person scene (the same owner and posture while they stay put - change the posture only in the beat whose Action changes it), `none` in a third-person one. The slug is a character-table slug and the posture is never left out; the server refuses any other value. The storyboard's `POV:` line is taken from this column, and the advisory about a framing change in a `continuous` run reads it.
   - `Blocking`: who is where, facing which way; in a conversation name each person's screen side (left / right of frame), kept for the whole scene.
   - `Contact`: who touches whom or what, and where on the body or object, in plain body-part words
     (hands, mouth, shoulders, waist, lap, groin, …): the storyboard turns it into the shot's
@@ -234,7 +233,8 @@ Beats (sent with each scene's `write_scene`)
     - Never an act for a depicted minor.
 - A beat is ONE moment: one beat per distinct action or happening; each entrance, exit and picture-changing dialogue line is its own beat. Two successive verbs ("sits down and opens the laptop") = two beats, unless they are ONE continuous action the storyboard will time as consecutive motion beats of a single shot ("rises and crosses to the window" without a pause or a cut): then one beat may hold them; simultaneous actions ("as" / "while") share one. The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows never appear in a beat's `Action` or `Framing` — the storyboard refuses them in its shots, so a beat holding one is split here, in order. One beat = one place and one opening framing; split a beat that packs two places or two framings.
 - A beat with a `Sex act` holds only that act (its lead-up — undressing, climbing on, straddling — is an earlier beat, `none`), so the shot that shows the act carries it whole.
-- POV beats: name the POV character in `Blocking` ("POV: <character_slug>"); that character is the camera and shows only their own limbs (hands, forearms, knees, feet), only when in frame, never a full-body figure.
+- POV beats: state the POV character and posture in the `POV` column (`<character_slug> (<posture>)`), and say in `Blocking` where they sit or stand; that character is the camera and shows only their own limbs (hands, forearms, knees, feet), only when in frame, never a full-body figure.
+- Coverage that can run continuous (the storyboard turns a `continuous` beat into a `continue` shot only when its framing change can be performed): FIRST PERSON (a scene whose beats name a POV owner in the `POV` column) - the camera is the viewer's eyes and cannot push, pull or zoom; within a run of `continuous` beats keep the SAME `Framing` size as the previous beat unless the viewer's body moves (a turn, or a lean / step the viewer's posture allows) or the beat is a `new moment`; variety comes from the PEOPLE moving closer or further and from the viewer turning, not from new camera sizes, and the `Camera move` column names only moves the viewer's body can make (`look left`, `turn head`, a small `lean in` seated, `step in` standing; `hold` otherwise) - never `push in`, `pull out`, `arc`, `crane`, `truck` or zoom. THIRD PERSON - consecutive `continuous` beats may change the `Framing` by a size step or an angle change a reliable move performs, and the `Camera move` then names that move (`push in` / `pull out` for a size step, `arc` for a new side, `crane` / `pedestal` for a new height). `write_scene` answers a `continuous` beat whose POV owner and posture match the previous beat's and whose size changed with a not-blocking note.
 - A beat's `Outfits` is the look AT THAT BEAT, never the scene's end state. A character who changes look during the scene (changes clothes, takes the last garment off) keeps the look they arrived in in EVERY beat before the beat whose `Action` shows the change; the new look (`nude` included) starts at that beat. The change is never the character's first beat in the scene: at least one beat before it shows them in the earlier look (split the opening action if needed), so the row's `Outfits` union holds BOTH looks and the storyboard gets the earlier outfit's picture. Example:
 
   | Beat # | Action | Outfits |
@@ -255,11 +255,9 @@ Pre-completion audit: before `task_complete`, confirm every scene of the screenp
 ### 4d. plan_designs
 
 ```
-create_task({ id: "plan_designs", requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list","screenplay"], title: "Plan and create designs", description: "Create the designs of the pre-production",
+create_task({ id: "plan_designs", output_artifact_name: "design_plan", output_artifact_description: "Design Plan", output_files: ["design_plan.json"], requires_tasks: ["create_scenes","character_table"], requires_artifacts: ["character_table","scene_list","screenplay"], title: "Plan and create designs", description: "Create the designs of the pre-production",
   agent: <design planner>, policies: ["design-plan-covers-scenes","storyboards-cover-scenes"],
-  difficulty: "hard", can_create_tasks: true, prompt_block: "run-preproduction/plan_designs",
-  output_artifact_name: "design_plan", output_artifact_description: "Design Plan",
-  output_files: ["design_plan.json"] })
+  difficulty: "hard", can_create_tasks: true, prompt_block: "run-preproduction/plan_designs" })
 ```
 The only output file is `design_plan.json` (the checks read the scene list from the `scene_list` input). The first prompt line is exact (the worker keys on it). Prompt block (passed by `prompt_block`, never copied):
 ```prompt plan_designs
@@ -276,7 +274,7 @@ If `plan_designs` ended (or was stopped) with designs of its plan missing, call 
 
 ## 5. Verify and reply
 
-- Call `task_index` once; all four tasks must exist with the expected `requires`. Create any missing one (section 4 rules), then re-check.
+- Call `task_index` once; all four tasks must exist with the expected `requires`, and each must show its output artifact (`screenplay`, `character_table`, `scene_list`, `design_plan` with `design_plan.json`). Create any missing one, and remove and create again any task without its output artifact (section 4 rules), then re-check.
 - No check-verification calls: each `create_task` result lists the attached checks ("(auto)" = auto-attached).
 - Reply in at most 4 short lines (see "Concise replies and task/artifact URIs" in `workflow-calling-conventions`); list only confirmed tasks and precisely what failed; do not use the success message for a chain that is incomplete:
   > Scheduled pre-production: task://<screenplay> -> task://<cast> -> task://<scene_list> -> task://<plan_designs>.

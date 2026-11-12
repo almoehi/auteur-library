@@ -145,6 +145,9 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - A `continue` shot changes framing clearly: at least one size step or a visible angle change (more than about 30 degrees), performed by its `Movement:` (R25); a change no move performs is a `cut`. The one exception is a first-person `continue` (below): it may keep the framing (R16).
 - A continuous moment (its beat is `continuous`) is covered as `continue` shots, not as cuts: plan its framings so each step is one the clip workflow can perform - a size step (`push in` / `pull out`) or an `arc` within the workflow's `max_arc_degrees` (read `camera:` from `workflow_index`; 45 for MiniMax H3) - instead of jumping to the other side of the people. A jump of more than that (left side -> right side, front -> behind) is a `cut` and starts a new keyframe; keep such jumps for a new beat, a reaction or a real change of view. Write `cut — … on the same moment` only when no performable framing tells the moment.
 - Both `Camera:` lines of a `continue` pair name the same angle words: camera height (`eye level` / `high angle` / `low angle`) AND direction (`from the front` / `three-quarter angle from her left side` / `from behind`), each in both lines, even when unchanged. The clip planner compares only what both lines state; a height in one line and a direction in the other cannot be measured, and the clip is then shot as a cut.
+  Valid third-person `continue` pair (any genre; `<A>` the subject):
+  `s2-01`: `Camera: medium, eye level, from the front` / `Transition: cut — first shot of the scene`;
+  `s2-02`: `Camera: close-up, eye level, from the front` / `Movement: push in, slow, from medium to close-up, ending on <A>'s face` / `Transition: continue — same moment, closer on <A>`. Same place key, same angle words in both lines, a size step, the move that performs it. When the scene list's beat is `continuous` and a reliable move performs its framing change, write this - not a cut. First person keeps the held take below: same framing, the people move.
 - Keep each beat's `Framing` size and `Contact` on the shot that shows it: a beat none of whose shots opens `Camera:` with the beat's size is refused (R36; extra coverage shots of the beat may use other sizes). The scene list's `Camera move` column is the beat's intended camera move: it goes in `Movement:` (or a `camera` Motion beat) only, never into `Action:`, `Pose:` or a person's Motion. Every `Contact:` body part of a whole-body person (`full figure` / `back` / `upper body`) must lie inside the `Camera:` size (R34, refused at write time - by `write_shot` and by a `plan_shot` of the shot, a re-plan of an older shot included; the same holds for R37 and the `Reflection:` line): the chest `medium close-up` or wider, the waist, belly and hips `medium` or wider, the thighs `medium full` or wider, legs and feet `full`; <A>'s hand on <B>'s waist in a `medium close-up` is refused when you write it - open wider, show <B> as `lower body`, or drop the contact.
 - `Frame:` states the composition at t=0 (the keyframe is the opening frame): which third the subject sits in, foreground / midground / background, room in the direction they face; and it agrees with the light of the shot (its `Lighting:` line, else the scene's `Lighting` phrase from the scene table; never contradicts it).
 - `Duration:` guide (3-10 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
@@ -242,6 +245,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   `cut — <reason>`, e.g. `Transition: cut — later that afternoon`. The reason says WHY in your own
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
+  A `cut` right after another shot at the same place, showing the same people in the same framing size, where neither shot has `Motion:` beats, reads as the same picture twice (advisory note R39, never a refusal): vary the framing size (a cut is a new view), or merge the two shots into one.
   A `continue` shot changes framing (rule R16), and its clip must PERFORM that change: `Movement:` is a
   move that can REACH the new framing (the "Camera moves" table below; handheld, pan, tilt,
   truck, follow and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
@@ -442,7 +446,7 @@ check); they go to the clip prompt verbatim.
 - `Blocking:` places only people in frame plus a POV owner: "the camera is the viewer's eyes
   (seated); the viewer's forearms and hands enter the lower frame". Never call a POV owner whose
   limbs are in `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
-- `POV: <characterKey> (seated|standing|kneeling|lying|walking)` only for a first-person camera; the
+- `POV: <characterKey> (seated|standing|kneeling|lying|walking)` only for a first-person camera; take the owner and posture from the beat's `POV` column in the scene list (`<slug> (<posture>)`, the key is `character_<slug>`; `none` = third person, no `POV:` line); a beat without that column: the beat's Blocking says who the viewer is; the
   posture is REQUIRED (a `POV:` line without one, or with another, is refused - there is no default);
   the posture decides what the camera may do (the first-person camera table under "Camera moves"); the posture is said in words only ("first-person view,
   standing"). A first-person view shows only the viewer's own body seen from their eyes; the
@@ -713,6 +717,8 @@ check); they go to the clip prompt verbatim.
   keyframe renders ignore a LoRA of another family) and name the act and position exactly from the vocabulary in
   skill `explicit-acts`. If the catalog tags LoRAs with `sexActs` /
   `sexPositions`, the server adds a matching tagged LoRA when none of your listed ones covers the shot's act.
+- **A lead-up shot's `Motion:` beats describe the approach, never the act's own motion.** A shot whose act is NOT shown (no intimate `Contact:` entry) - the people approach, position themselves, undress, touch elsewhere - lists only that approach and the contacts it really has; no beat of it performs the act's own movement (the rhythmic, thrusting or stroking motion of the act's body parts), because the clip would play it against a partner who is not in frame. The act's own motion is a beat of the shot that SHOWS the act with its intimate `Contact:` entry. A shot that states a `Sex act:` while its `Visible:` frames the act's contact region (a person's groin, buttocks or breasts the act uses) without that intimate `Contact:` is refused at the write (rule R40): list the intimate `Contact:` and show the partner's part in `Visible:`, or frame the region out (a tighter `Camera:` size, or a `Visible:` extent that excludes it).
+- **A LoRA applies to a whole clip.** Consecutive shots are rendered as ONE multi-shot clip only when they request the same video LoRAs; a shot that does not request the act's LoRA (a lead-up) stays a clip of its own, so list a video LoRA only on the shots that need it.
 
 ### Writing rules per shot
 
@@ -979,5 +985,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - "Another angle for shot 4" / a different pose: change the shot's lines, send it with
   `write_shot`, plan it with `plan_shot`, call `draft_storyboard()`. Never `wf_*` for a shot take.
 - Who is visible follows the shot lines: change `Visible:` / `Characters:` / `Outfits:` first.
+- A shot the person skipped is named in the tool answers ("skipped by the user - not rendered"). Leave it alone: do
+  not fix, re-plan or re-render it, and do not ask for its pick - it is absent from the published storyboard. The
+  person includes it again in the studio if they want it back.
 - Reply in one short line naming what THIS turn wrote or handed over, then stop; never claim a
   change you did not make. Never pick, discard or finish — point to the studio.

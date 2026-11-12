@@ -257,11 +257,11 @@
       "pingpong": false,
       "save_output": true,
       "images": [
-        "147",
+        "fps_frames",
         0
       ],
       "frame_rate": [
-        "146",
+        "fps_out_rate",
         0
       ],
       "audio": [
@@ -610,6 +610,149 @@
     "class_type": "SaveAudio",
     "_meta": {
       "title": "Save the clip soundtrack (voice sample)"
+    }
+  },
+  "fps_over_native": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "a > 24",
+      "values.a": [
+        "146",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "fps > 24 (native)?"
+    }
+  },
+  "fps_native": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 24
+    },
+    "_meta": {
+      "title": "Native FPS (24)"
+    }
+  },
+  "fps_doubled": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 48
+    },
+    "_meta": {
+      "title": "RIFE 2x FPS (48)"
+    }
+  },
+  "fps_frames": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "use_rife",
+        2
+      ],
+      "on_false": [
+        "122",
+        0
+      ],
+      "on_true": [
+        "147",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Frames: RIFE 2x or native (lazy)"
+    }
+  },
+  "fps_rate": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "fps_over_native",
+        2
+      ],
+      "on_false": [
+        "fps_native",
+        0
+      ],
+      "on_true": [
+        "fps_doubled",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Encode rate: 2N or N (lazy)"
+    }
+  },
+  "slow_motion": {
+    "class_type": "PrimitiveFloat",
+    "inputs": {
+      "value": 1.0
+    },
+    "_meta": {
+      "title": "Slow motion (1.0-2.0)"
+    }
+  },
+  "slow_on": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "a > 1",
+      "values.a": [
+        "slow_motion",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "slow_motion > 1?"
+    }
+  },
+  "use_rife": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "(a > 24) + (b > 1) > 0",
+      "values.a": [
+        "146",
+        0
+      ],
+      "values.b": [
+        "slow_motion",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "RIFE 2x? (fps > 24 or slow motion)"
+    }
+  },
+  "fps_slow_rate": {
+    "class_type": "ComfyMathExpression",
+    "inputs": {
+      "expression": "48 / a",
+      "values.a": [
+        "slow_motion",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Slow-motion rate (48 / slow_motion)"
+    }
+  },
+  "fps_out_rate": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "slow_on",
+        2
+      ],
+      "on_false": [
+        "fps_rate",
+        0
+      ],
+      "on_true": [
+        "fps_slow_rate",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Encode rate: slow motion or the fps snap (lazy)"
     }
   }
 }

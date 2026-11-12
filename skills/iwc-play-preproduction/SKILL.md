@@ -15,9 +15,10 @@ agentType: worker
 # Play pre-production: montage plan → visual plan
 
 The episode is an AUDIO clip (her voice over the whole runtime). The visuals are a cam-girl style
-MONTAGE of ONE adult woman (the play's character): many short clips, each ONE slow gesture in
-place, cut hard every 10-15 s across a few LOOKS (camera set-ups: framing, height, direction, body
-pose). Each clip starts from a STILL (a storyboard frame); a look has several stills that differ
+MONTAGE of ONE adult woman (the play's character): many short clips cut hard across a few LOOKS
+(camera set-ups: framing, height, direction, body pose), at the pace of the episode's production
+style (`production_style`, `render` of the montage plan): a slow style = each clip ONE gesture in
+place, a cut every 10-15 s; a fast style = clips of 3-4 hard-cut shots in real time. Each clip starts from a STILL (a storyboard frame); a look has several stills that differ
 only in small things (hands, expression, head).
 
 **The clip list is already planned.** `montage_plan.json` (an input, made by a script from the
@@ -31,8 +32,12 @@ the play's kinks. Nothing is rendered here.
 still from the `refs` catalog. NEVER the `outfit` kind and never a `garment_reference`: the
 outfits stay text (more variety).
 
-**Format and camera.** 16:9 landscape, 1080p, a FIXED camera on a tripod: at most a very slow,
-subtle push in or out; never handheld-style movement, shake, pan, orbit, zoom jumps or reframing.
+**Format and camera.** 16:9 landscape, 1080p. The camera is the plan's `render.camera_rule`
+(copied into `format`, never changed). With a fixed camera (the slow style): a tripod that never
+moves - no push in or out, no handheld-style movement, shake, pan, orbit, zoom or reframing (each
+clip starts and ends on the same still, so a camera move can only go out and come back - the clips
+read as jumps). Push-ins are a post-production effect on the finished clips. Any camera rule: a
+look's stills share ONE camera set-up, and nothing moves toward or away from her inside a clip.
 
 `play.md` is the AUTHORITATIVE source of the production. There is no screenplay adaptation: the
 only "screenplay" is play.md copied verbatim (step 4b).
@@ -48,7 +53,9 @@ Task prompt fields: `inputs` (the episode inputs artifact, default `episode_inpu
 `read_artifact` the inputs: `play.md`, `play.srt` and `montage_plan.json` (`looks` in plan order,
 each with `name`, `role`, `camera`, `body_pose`, `family`, `stills[]` (`id`, `beat`, `detail`),
 `whitelist`, `clips`; `clips[]` with `id`, `look`, `start`, `end`, `still`, `gesture`,
-`prompt_line`, `seed`; `render`, `nudity`, `tempo`). `task_failed(reason)` if a file is missing or
+`prompt_line`, `seed`, `kind` (`reveal`, `state_change`, `multishot`); `render`, `production_style`
+(labels: style, pace, camera, set, fluids), `set_style`, `nudity`, `tempo`; a still may carry
+`body_state`, `fluids`, `phase`). `task_failed(reason)` if a file is missing or
 the plan has no looks.
 
 Look n = the n-th key of `looks` (plan order); it becomes scene n.
@@ -57,11 +64,12 @@ Look n = the n-th key of `looks` (plan order); it becomes scene n.
 
 Read play.md sections 1-2 (featured kinks, goal / feeling, listener journey). For each central kink
 write in `kinks[]` how it is SHOWN on camera:
-- `motions`: the body language that reads as this kink, as slow in-place gestures (gooning: slow
+- `motions`: the body language that reads as this kink, as in-place gestures at the episode's pace (gooning: slow
   hypnotic rhythm, glazed half-lidded eyes; denial / edging: a hand lifted away, a knowing smile;
   chastity / key: the key pendant lifted and shown; JOI: counting on fingers, a rhythm hand);
 - `outfit`: the outfit details that signal it;
-- `set`: the set elements that serve it (a bed to kneel on, a chair to straddle);
+- `set`: the set elements that serve it (a bed to kneel on, a chair to straddle) - the set
+  dressing itself (section 3) is always there: an attractive set in her style;
 - `items`: worn accessories belong to the outfit; HANDHELD items are props (only what play.md's
   kinks, script or persona call for, never decoration);
 - `camera`: why the plan's angles serve it (a low camera looking up when she dominates).
@@ -83,9 +91,39 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
   never a first-person view. Write `why` (the kink focus and power dynamic it serves).
 - **Set** (`set_id`): where the look plays. At most 2 sets for the whole episode (a montage cuts
   between looks every few seconds: one room keeps it one continuous session). A second set only
-  where the play calls for it. Describe each set concretely: room type, the surface she uses as
-  the stage, light (key light, practicals, colour accents), 3-5 background props, mood. Set ids
-  are lowercase snake_case space words (`bed_corner`): they become location slugs.
+  where the play calls for it. Set ids are lowercase snake_case space words (`bed_corner`): they
+  become location slugs.
+  **The plan's `set_style` decides the KIND of set** (the production style's `set` label):
+  `persona room` - her own styled space, as below; `real place` - the play's story location(s) as
+  real places, dressed and lit by the same rules; `abstract` - a CHROMA-KEY set (the plan's
+  `render.chroma_key`): the place is a seamless, evenly lit chroma-key green cyclorama behind and
+  under her and nothing else - no walls, windows, furniture, props, practicals or coloured light;
+  a seat or block she needs is covered in the same green; soft, even, neutral light on her, kept
+  clear of the green (no spill, no shadows on the green). The abstract look itself (darkness, light
+  rings, spirals, colour washes) is NEVER rendered - the video model does not hold a light-only
+  backdrop (it turned grey or changed colour mid-clip) - it is composited in post: write it per set
+  as `post_backdrop` (the plan's `render.post_backdrop` in the persona's palette and the kink's
+  mood, e.g. a slow violet spiral with pulsing magenta light rings in deep indigo darkness). The
+  rules below then apply only to her light and palette (outfit and accents carry the persona).
+  **The set is HER space, dressed for her audience** - an attractive set that fits the
+  episode's kinks and tone and the persona (play.md sections 1-3: her bio, style, epithets,
+  signature colours and accessories), never a bare, empty, plain or anonymous one (a hotel-like
+  room). A viewer should want to be there and should read who she is from it. Describe
+  concretely, whatever the place (a bedroom, a living room, a bathroom, an office, outdoors):
+  - the place and its style in HER taste, taken from the persona (its era, mood and signature
+    colours decide the materials, e.g. velvet and candlelight, pastel and plush, chrome and neon,
+    linen and daylight);
+  - the stage she uses (what she kneels, sits or leans on) and how it is dressed - layered,
+    textured and inviting (cushions, throws, upholstery, fabrics), never a single plain surface;
+  - the backdrop behind her, which IS the background of every look (its colour, texture and what
+    is on it) - at a close-up it is soft bokeh behind her head, at a wide or low angle it fills
+    the frame around her: it must read at every look's framing;
+  - the light: a soft flattering key on her, 2-3 practicals in the background (lamps, candles,
+    string lights, a window) and ONE colour accent (a glow, a small neon, a coloured lamp) in the
+    persona's palette - the background stays readable, never falling into black;
+  - 4-6 background props that say who she is - styled and tidy, never clutter, no text, logos or
+    screens;
+  - the palette (2-3 colours plus her signature colour) and the mood.
 - **Room** (`sets[].room`, `room_id`, `view`): `room: shared` - a corner of ONE room shared with
   other sets (same `room_id`, one location design; the room's first set `view: main`, every other
   corner `view: "<what the camera faces> (left 45°|left 90°|right 45°|right 90°)"`, at most a
@@ -125,20 +163,33 @@ its clips' slots (the cues of `play.srt` inside each clip's `start`-`end`):
   body. A `close-up` / `extreme close-up` look is face-only: its stills are always `worn` (the
   platform refuses a garment state on a face-only shot; its exposure slots move to another look of
   the episode).
+  **The bared part** (`exposure_part`, set by the montage plan on every `partly` / `removed`
+  still: `chest`, `ass` or `hips`): the garment state bares exactly that part - the clips of the
+  still play with it (their gestures come from that part's family: a chest still's clips cup,
+  squeeze or bounce the bared chest). Displace the garment that covers that part, so its skin is
+  visible in the framing; an outer layer alone (a robe or jacket off the shoulders) does not bare
+  it. Copy `exposure_part` into the still.
   **Vary them and make them count:** no two looks use the same partly / removed state, and the
   states escalate with the episode's `nudity` flag - with `conditional` or `full`, at least one
   state per episode bares skin under the lingerie where the framing shows it (`lace bralette
   (cups pulled down below her breasts)`, `lace bralette (pushed up above her breasts)`); an outer
   layer (a robe off the shoulders) counts once at most. Never a state the flag does not allow
   (`none`: always `worn`).
-- **Stills** (`stills[]`): COPY the look's stills (`id`, `beat`, `detail`, `exposure`) and add
+- **Stills** (`stills[]`): COPY the look's stills (`id`, `beat`, `detail`, `exposure`,
+  `exposure_part`, `body_state`, `fluids`, `phase`, `loras` where set) and add
   per still `garment_state` (above), `hands` and `face`: split the plan's `detail` into the hands / arms state (`hands` - a body
   state: `one hand resting on her collarbone, the other on her thigh`) and the expression and gaze
   (`face` - `lips slightly parted, eyes on the lens`). Never change the body pose, camera, set or
   outfit between the stills of a look: they differ only in hands, head tilt, expression and the
   garment state.
 - **Items** (`items`): handheld props of the look from `kinks[]` (or `none`), each with where it
-  is in the stills. An item exists only as words (no design, no item check).
+  is in the stills. A look with a `state_change` clip also holds the prop its `prompt_line` uses
+  (a small bottle of oil, a bowl, a glass of water): at hand beside her in the stills before it,
+  set aside after. An item exists only as words (no design, no item check).
+- **Body state** (`body_state`, from the montage plan per still): the fluids on her skin or hair
+  (her storyboard `State:`) - COPY as is (also `fluids`, `phase`). Never in an outfit, `hands` or
+  `face`; a fluid on a garment is still the body state. The plan escalates them through the
+  episode and performs each first appearance in a `state_change` clip: never move or add one.
 - **Act-free stills**: no sex act is in progress in any still (no hand inside the panties, no toy
   in use). A gesture may start one only where its `prompt_line` says so.
 - **Kink focus** (`kink_focus`, `reinforcement`): the kink(s) the look serves and ONE line per
@@ -195,7 +246,7 @@ single write under ~2500 characters (a longer tool call arrives cut off and empt
   plan's string as `camera_plan`), `set_id`, `set_reason`, `furniture_use`, `outfit_id`,
   `anchor_contact`, `items`, `kink_focus`, `reinforcement`, `stills` (with `hands`, `face` and
   `pose_reference` added). Never touch `clips`, `render`, `counts`, `pilot`.
-- `visual_plan.md`: a summary (looks, clip count, the render settings), the kinks, sets, outfits,
+- `visual_plan.md`: a summary (looks, clip count, the production style and render settings), the kinks, sets, outfits,
   and per look its scene number, camera line, set, outfit, body pose, contact, stills table (id |
   beat | hands | face) and its clips (id | slot | still | gesture). First `sandbox_write_file`,
   then append each section with `sandbox_exec` (`cat >> <file> <<'EOF' … EOF`).
@@ -205,7 +256,7 @@ single write under ~2500 characters (a longer tool call arrives cut off and empt
 
 **visual_plan.json** (added fields, besides the copied plan):
 ```json
-{"mode": "montage", "format": "16:9 landscape 1920x1080, fixed tripod camera",
+{"mode": "montage", "format": "16:9 landscape 1920x1080, <render.camera_rule>",
  "kinks": [{"name": "JOI", "motions": "…", "outfit": "…", "set": "…", "items": "…", "camera": "…"}],
  "sets": [{"id": "bed_corner", "name": "…", "room": "shared", "room_id": "bedroom",
            "room_name": "Vesper's bedroom", "view": "main", "description": "…",
@@ -241,7 +292,9 @@ Before `task_complete`: every look of the plan has `scene`, `camera` (its line e
 camera), `set_id`, `outfit_id`, `body_pose` (the plan's), `anchor_contact`, `items`,
 `kink_focus`, `reinforcement` and its stills with `hands`, `face` and `pose_reference` (an
 import whose title / why match the still's support, torso and arms, or `"none"` with the reason)
-and its `garment_state` (per its exposure slot, on a body part the framing shows); no outfit text
+and its `garment_state` (per its exposure slot, on a body part the framing shows) and the plan's
+`body_state` unchanged; every set follows the plan's `set_style` (an abstract set is the green
+cyclorama only, names no room, wall or furniture, and has its `post_backdrop`); no outfit text
 names a body part or exposure; no outfit search or `garment_reference`; `clips` is unchanged; at
 most 2 sets and 2 outfits; every set has `room`, `room_id`, `view` (one `main` per room_id);
 outfit and set ids are snake_case; no outfit lists a brand mark; no description names camera
