@@ -265,7 +265,8 @@ POSES: tuple[PoseSpec, ...] = (
             "She sits on the floor right in front of him, her back straight, both knees bent and apart, both feet flat on the "
             "floor, leaning slightly back on one hand, her face tipped up at the height of his hips, close to his groin. He "
             "stands upright on both feet, both legs straight, facing her, one hand resting on top of her head, the other "
-            "hand at his side. He does not kneel and does not bend."
+            "hand at his side. He does not kneel and does not bend. His crotch is a smooth plain mannequin surface like a "
+            "doll: no genitals, no penis, nothing protrudes or hangs."
         ),
         furniture="",
         camera={
@@ -320,7 +321,9 @@ POSES: tuple[PoseSpec, ...] = (
             "front": "Three-quarter view at low eye level from the side of his feet and her front, so that her face, her lap "
             f"and his head and whole body stretched out beside her are visible. {FRAMING}",
             "low": f"Low-angle view at floor level from the side, pointing slightly up at the pair. {FRAMING}",
-            "high": f"High-angle view from above, looking down at the pair on the floor. {FRAMING}",
+            "high": "High-angle view from directly above the pair on the floor. Seen from above, the lying man shows his FRONT: his chest, "
+            "belly, the front of his thighs and the tops of both feet face up toward the camera, his face looks up at the "
+            f"woman's face; nothing of his back is visible. Both of the woman's feet are normal, with five toes each. {FRAMING}",
             "side": f"Exact side profile view of the pair at floor level. {FRAMING}",
             "diag": f"Three-quarter view at eye level. {FRAMING}",
             "back": f"View from behind her back at low eye level, his legs stretched out beyond her. {FRAMING}",
@@ -329,24 +332,24 @@ POSES: tuple[PoseSpec, ...] = (
     PoseSpec(
         # Step 1d catalog entry `lying side by side facing` (sfw).
         slug="lying_side_by_side_facing",
-        title="Lying on their sides on a bed, facing each other, close, her arm over his waist",
+        title="Lying on their sides on the floor, facing each other, close, her arm over his waist",
         position="lying side by side facing",
         series="duo",
         roles={"a": "the woman", "b": "the man"},
         extra=(
-            "They lie on their sides on the bed, one in front of the other, face to face, close but only the arms touching: "
+            "They lie on their sides on the bare floor, one in front of the other, face to face, close but only the arms touching: "
             "her arm rests over his waist, his arm rests under his own head. Both have the lower legs slightly bent. Their "
             "heads are at the same end of the bed, at the same height."
         ),
-        furniture="They lie on a plain large flat rectangular bed slab of the same matte grey material, about knee height.",
+        furniture="",  # review 2026-11-12: no table / bed - they lie on the plain floor
         camera={
-            "front": "High three-quarter view from about 45 degrees above, from beside the bed at the foot end, so that both "
+            "front": "High three-quarter view from about 45 degrees above, from beside the pair at their feet, so that both "
             f"figures, their faces turned to each other and her arm over his waist are visible. {FRAMING}",
-            "low": f"Low-angle view at bed-top height from the foot end, pointing along the bed. {FRAMING}",
-            "high": f"Top-down view from directly above the bed. {FRAMING}",
-            "side": f"Exact side view at bed-top height, from the side of the bed. {FRAMING}",
-            "diag": f"Three-quarter view slightly above bed level. {FRAMING}",
-            "back": f"View from the head end of the bed at bed-top height. {FRAMING}",
+            "low": f"Low-angle view at floor level from their feet, pointing along the pair. {FRAMING}",
+            "high": f"Top-down view from directly above the pair on the floor. {FRAMING}",
+            "side": f"Exact side view at floor level, from their side. {FRAMING}",
+            "diag": f"Three-quarter view slightly above floor level. {FRAMING}",
+            "back": f"View from behind their heads at floor level. {FRAMING}",
         },
     ),
     PoseSpec(

@@ -33,7 +33,7 @@
       "gap": "no full-length, chest-to-chest item; P011 (head between his knees), P021 (side by side seated) and P046 (astride his hips) were checked and do NOT fit"
     },
     "spooning": {
-      "items": [],
+      "items": [{"id": "duo/P070", "fit": "exact", "note": "generated 2026-11-12 (spooning_cuddle), reviewed and accepted"}],
       "generated": "spooning_cuddle",
       "gap": "no spooning item (P057 is not spooning; P020 / P047 / P056 side-lying items show a kneeling partner)"
     },
@@ -59,7 +59,7 @@
       ]
     },
     "kneeling behind bent over": {
-      "items": [],
+      "items": [{"id": "duo/P069", "fit": "exact", "note": "generated 2026-11-12 (kneeling_behind_bent_over), reviewed and accepted"}],
       "generated": "kneeling_behind_bent_over",
       "gap": "P007 / P013 / P045 / P061 show the partner standing or kneeling UPRIGHT behind her, not with his head at her buttocks"
     },
