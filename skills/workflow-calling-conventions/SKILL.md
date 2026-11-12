@@ -37,7 +37,8 @@ THE definition of LoRA selection; `storyboard-scene` (per shot) and `design-asse
 - **When**: before the first `wf_xxx` render of a shot, design or clip, call `lora_index()` once (reuse the result for the whole scene / design). It lists each LoRA's name, description, `modelFamily`, strength and triggers (some catalogs add `sexActs` / `sexPositions` hints). Infer from each LoRA's NAME and DESCRIPTION what it serves; tags, when present, are only hints. Skip only when the catalog is empty.
 - **How many**: pick the up to 8 LoRAs most relevant to THIS shot / design, ranked most relevant first (fewer is fine; never pad). A LoRA is relevant when it serves anything the shot or design shows: the production's style and look (`{workspace.story.style}`) and setting (`{workspace.story.setting}`), the characters pictured (character LoRAs), outfits, clothing and fabrics, props, the location or environment, camera / lens / lighting / film look, poses and actions, anatomy and body detail, skin and realism - and an explicit act or position only when the shot has one (acts are one category among many). Examples: a noir style LoRA for a moody street scene, a character LoRA for a pictured heroine, a trench-coat clothing LoRA, an anamorphic-lens camera LoRA, a blowjob LoRA for a shot with that act. Rank what the frame depends on most first; also weigh trigger words that appear in the prompt. Obey each LoRA's description (usage rules, required phrases, strength).
 - **Which**: exact catalog names only, never invented. A LoRA only loads on a workflow of its own `modelFamily`: design renders - you pick the tool's family; storyboards - curate the RENDER families only (the keyframe compose workflow's and the masked-inpaint workflow's; see "Storyboard shots"), a LoRA of another family never loads. Do not worry about a LoRA the workflow already loads in its own graph: the render binding skips it (and a repeated one) automatically. Never add a LoRA just because the catalog has one.
-- **Pass it on every render**: the curated list goes on EVERY `wf_xxx` render of the shot / design (first renders, retries, edits, variations), not only the first. For a `wf_xxx` call: the curated LoRAs of the tool's family in rank order, one per LoRA slot (`lora_1`, `style_lora`, …), up to the number of slots; strength only when the task or catalog sets one; the `design.json.loras` that match the family are part of the list: the person's explicit studio picks rank FIRST, then your curated additions in rank order (the same order the server uses for storyboard shots: picks, optional act safety net, curated list; the port cap cuts your curated tail first). A family mismatch is rejected at call time. An unset slot is always safe.
+- **Render-kind LoRAs**: a LoRA whose description restricts it to one KIND of render (a text-to-image or reference-compose render but no edit - e.g. a camera height / angle LoRA; one dedicated panorama render; a specific workflow) is curated for exactly those renders and left off every other render of the shot / design, however relevant its subject: on the wrong kind it has no effect or deforms the picture, and its description says which. The same holds for its prompt rule (e.g. "the angle phrase first"): follow it on that render.
+- **Pass it on every render**: the curated list goes on EVERY `wf_xxx` render of the shot / design (first renders, retries, edits, variations), not only the first - except a render-kind LoRA, which goes only on the renders of its kind. For a `wf_xxx` call: the curated LoRAs of the tool's family in rank order, one per LoRA slot (`lora_1`, `style_lora`, …), up to the number of slots; strength only when the task or catalog sets one; the `design.json.loras` that match the family are part of the list: the person's explicit studio picks rank FIRST, then your curated additions in rank order (the same order the server uses for storyboard shots: picks, optional act safety net, curated list; the port cap cuts your curated tail first). A family mismatch is rejected at call time. An unset slot is always safe.
 - **Act shots** (a shot or render with a sex act): the workflow has few LoRA slots (often 2) and only the top of the list loads, so rank for the act first: (1) the LoRA serving that act / position (a specific one, else a general sex LoRA of the family), (2) the anatomy / detail LoRA of the body parts in contact (e.g. a penis or vulva detail LoRA for penetration, oral or genital contact), then (3) everything else - realism, skin, face / expression (orgasm face, ahegao), style, camera. Never rank realism or a face LoRA above the act and anatomy LoRAs of an act shot; per family, the first two of this order are what renders.
 - **Trigger words**: drafted prompt -> in the writer's `context`; the person's verbatim text -> at its very start or end.
 - **Storyboard shots**: write the list on the shot's `LoRAs:` line (rule R15: at most 8, none twice, catalog names; any LoRA relevant to the shot - style, characters, outfits, camera, pose, act ... - of the RENDER families: the keyframe compose workflow's and the masked-inpaint workflow's `model_family`; a shot with a shown `Sex act:` is refused at the write unless the list holds a LoRA of the keyframe family while the catalog has one, and its act-detail LoRAs of that family rank first, e.g. `LoRAs: flux2_nsfw_penis, flux2_nsfw_vulva, flux2_nsfw_sex_aio, flux2_nsfw_realism` on a flux2 storyboard); the server loads it on every take render and repair of the shot in rank order (family + catalog filter, de-duplication, cut to the workflow's LoRA ports). Only when the catalog tags LoRAs with `sexActs` / `sexPositions` does the server also add a matching act LoRA if none of the listed ones covers the shot's act or position.
@@ -108,7 +109,8 @@ There is no `prompt_route` argument: code routes every prompted wf_xxx call. Its
 - Check every design-asset take you render with `check_take(file, request, references?)`, a
   round's checks in one response. Never re-check a take you did not render (studio buttons and
   the storyboard drafts are rendered and checked by the server); sandbox-derived files (crop,
-  conversion, sheet) are not checked. Storyboard shot takes are never rendered or checked by an
+  conversion, sheet) are not checked - except the per-direction crops of a location panorama
+  ("Turning the camera"), which are checked like a composed view. Storyboard shot takes are never rendered or checked by an
   agent (`storyboard-scene`: `draft_storyboard`).
   - `request` (required): what the take had to show — the brief lines or the person's
     instruction; designs by display name, never keys.
@@ -200,9 +202,26 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
   - Any other direction, or no `camera-turn` workflow: reference-compose with the place as Picture 1
     (plus the set anchor's picture for a set member, "Sets" in `plan-designs`), the prompt naming
     the new direction and what lies there per the design's `connections`.
+  - Several directions of ONE place at once, when `lora_index` holds a 360-degree / equirectangular
+    PANORAMA LoRA of the reference-compose workflow's family (infer it from name and description):
+    render ONE panorama with that LoRA - the reference-compose workflow at 2048x1024 (width 2048,
+    height 1024), the place's main picture as Picture 1, the LoRA on a lora port, its trigger phrase
+    FIRST in the prompt, then "an equirectangular 360 degree panorama of <the place>, the camera
+    standing in the middle of the room at eye level: <the place's inventory from its attributes and
+    description>, no people" (an empty place, Phase 2 step 5 of `design-asset`) - then crop each
+    needed direction out of it with the sandbox: `ffmpeg -i <panorama> -vf
+    "v360=input=equirect:output=flat:h_fov=90:v_fov=<fov for the view's aspect>:yaw=<degrees>:pitch=0:w=<width>:h=<height>" <take_view-<id>.png>`
+    (yaw 0 = the direction Picture 1 looks in, +90 = the wall to its right, -90 = to its left; the
+    view's size = the design's take size). Use only the crops toward Picture 1's own direction and
+    toward the side walls (yaw between -90 and +90): the direction facing AWAY from Picture 1 is
+    where the panorama invents (furniture the place never had) and where its seam lies - never crop
+    it (a reverse is a sibling location, below). The panorama itself is a working file, not a take:
+    never name it `take_*`; `check_take` every crop like a composed view (the one sandbox-derived
+    file that IS checked: a crop is a new picture of the place, judged as the same place seen from
+    that direction). The panorama LoRA goes on NO other render ("Render-kind LoRAs" above).
   - A reverse (about 180°, "the other side of the property") is not a turn: it is a SIBLING
-    location of the same set. Never fake it with a turn; report it as a gap when no such location
-    exists.
+    location of the same set. Never fake it with a turn or a panorama crop; report it as a gap
+    when no such location exists.
 - Changing a person's pose or expression = image edit of their picture (face, body, garments kept).
 
 ## NSFW-marked workflows
