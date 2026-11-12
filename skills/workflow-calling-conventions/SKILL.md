@@ -210,9 +210,12 @@ For each character in a shot's `Characters:`, by their `Visible:` extent:
     standing in the middle of the room at eye level: <the place's inventory from its attributes and
     description>, no people" (an empty place, Phase 2 step 5 of `design-asset`) - then crop each
     needed direction out of it with the sandbox: `ffmpeg -i <panorama> -vf
-    "v360=input=equirect:output=flat:h_fov=90:v_fov=<fov for the view's aspect>:yaw=<degrees>:pitch=0:w=<width>:h=<height>" <take_view-<id>.png>`
-    (yaw 0 = the direction Picture 1 looks in, +90 = the wall to its right, -90 = to its left; the
-    view's size = the design's take size). Use only the crops toward Picture 1's own direction and
+    "v360=input=equirect:output=flat:h_fov=<deg>:v_fov=<deg>:yaw=<degrees>:pitch=0:w=<width>:h=<height>" <take_view-<id>.png>`
+    (the view's size = the design's take size; the LONGER side gets a 90-degree field of view, the
+    shorter side `2 * atan(short / long)` in degrees - 58 for a 1376x768 or 768x1376 view; yaw 0 = the
+    direction Picture 1 looks in, +90 / -90 = the walls to its right / left: confirm the sign on the
+    first crop - what Picture 1 shows at its right edge must come to the middle of the +90 crop; if
+    it is the left edge, mirror every yaw). Use only the crops toward Picture 1's own direction and
     toward the side walls (yaw between -90 and +90): the direction facing AWAY from Picture 1 is
     where the panorama invents (furniture the place never had) and where its seam lies - never crop
     it (a reverse is a sibling location, below). The panorama itself is a working file, not a take:
