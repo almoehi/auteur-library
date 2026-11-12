@@ -652,6 +652,12 @@ check); they go to the clip prompt verbatim.
   the clip is a `Motion:` beat, not a second `Expression:`. Crying is an expression (`teary eyes`,
   `glistening eyes`), never fluid on the skin: "tear tracks" / "tear-streaked" render as thick streaks;
   name no body fluid a shot does not explicitly need.
+- `Watcher:` (optional) = a person who is PRESENT and only watches, `<characterKey> (<posture>[, gaze at <characterKey | thing>])`, `;` between at most 2 watchers
+  (e.g. `Watcher: <C's key> (seated, gaze at <A's key>)`): `<posture>` one of `seated | standing | kneeling | lying | walking`; the person is in `Characters:` / `Visible:`
+  / `Outfits:` like any figure, but is never the POV owner and never in an act role (not the toucher or the touched person of an
+  intimate `Contact:`, so no touching anyone in the act); a watcher needs no `Blocking:` entry (this line places them). Use it for the
+  onlooker of a pair (a person who sees, directs, reacts, waits) instead of dressing them as an actor; where they look goes after `gaze at`
+  (a person's key, or a thing: `the window`), not in `Pose:`. The keyframe brief states it and a judge item checks posture, gaze and that they only watch.
 - `State:` = transient, VISIBLE appearance of a person shown as a figure, `<characterKey> (<state>, <state>, …)`,
   `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
   `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
@@ -688,7 +694,7 @@ check); they go to the clip prompt verbatim.
   from behind; `full figure` everything — widen the extent (or reframe) when a touched part is
   hidden. A shot with a `Sex act:` always has a `Contact:` line naming the contact points.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
-  depicted are adults: copy the beat's columns (names: skill `explicit-acts`, `load_skill` it first); both
+  depicted are adults: copy the beat's columns (names: skill `explicit-acts`, `load_skill` it first - it also says how `anatomy` and outfit `gear`, a strap-on included, decide who does what); both
   `none` or both set. ONE position per shot; when the beat's position does not match the staging
   (a lift against the vanity coded `standing face to face`), use the position whose support matches
   (`standing carry`, `edge of surface`, ...) - the server states it limb by limb in every shot of the
