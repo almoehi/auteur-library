@@ -65,12 +65,13 @@
     },
     "standing over seated": {
       "items": [
-        {"id": "duo/P005", "fit": "partial", "note": "standing over a KNEELING partner, one leg on his shoulder; she is not seated below"}
+        {"id": "duo/P005", "fit": "partial", "note": "standing over a KNEELING partner, one leg on his shoulder; she is not seated below"},
+        {"id": "duo/P071", "fit": "exact", "note": "generated 2026-11-12 (standing_over_seated), reviewed and accepted"}
       ],
       "generated": "standing_over_seated"
     },
-    "prone massage": {"items": [], "generated": "prone_massage"},
+    "prone massage": {"items": [{"id": "duo/P073", "fit": "exact", "note": "generated 2026-11-12 (prone_massage), reviewed and accepted"}], "generated": "prone_massage"},
     "head in lap": {"items": [], "generated": "head_in_lap"},
-    "lying side by side facing": {"items": [], "generated": "lying_side_by_side_facing"}
+    "lying side by side facing": {"items": [{"id": "duo/P072", "fit": "exact", "note": "generated 2026-11-12 (lying_side_by_side_facing), reviewed and accepted"}], "generated": "lying_side_by_side_facing"}
   }
 }

@@ -40,6 +40,21 @@
      "title": "Spooning on a bed, he lies behind her, his arm over her waist",
      "sex_positions": [], "typical_acts": [], "support": "lying",
      "views": {"front": "front", "side": "side", "diag": "diag", "high": "high"},
-     "notes": "step-1d catalog position `spooning` (not in the SexPosition vocabulary: see catalog_position_map.json); high line art is a PLAIN trace; side style edit fidelity 0.56, accepted by the reviewer; no back, no low"}
+     "notes": "step-1d catalog position `spooning` (not in the SexPosition vocabulary: see catalog_position_map.json); high line art is a PLAIN trace; side style edit fidelity 0.56, accepted by the reviewer; no back, no low"},
+    {"slug": "standing_over_seated", "id": "duo/P071", "folder": "duo/oral", "file_prefix": "pair60",
+     "title": "Seated on the floor, face at his hips, he stands over her with a hand on her head",
+     "sex_positions": [], "typical_acts": ["blowjob"], "support": "standing",
+     "views": {"front": "front", "side": "side", "diag": "diag", "high": "high"},
+     "notes": "step-1d catalog position `standing over seated` (not in the SexPosition vocabulary); man's groin smoothed by an image edit (review 2026-11-12); a table stands beside them in some views; high line art is a PLAIN trace; no back, no low"},
+    {"slug": "lying_side_by_side_facing", "id": "duo/P072", "folder": "duo/side_lying", "file_prefix": "pair60",
+     "title": "Lying on their sides on the floor, facing each other, close, her arm over his waist",
+     "sex_positions": [], "typical_acts": [], "support": "lying",
+     "views": {"side": "side", "diag": "diag", "high": "high"},
+     "notes": "step-1d catalog position `lying side by side facing` (not in the SexPosition vocabulary); table removed by an image edit (review 2026-11-12); high line art is a PLAIN trace; no front, back or low"},
+    {"slug": "prone_massage", "id": "duo/P073", "folder": "duo/lying", "file_prefix": "pair60",
+     "title": "Lying face down on a massage table, he stands at her side with both hands on her back",
+     "sex_positions": [], "typical_acts": [], "support": "lying",
+     "views": {"side": "side", "back": "back", "diag": "diag", "front": "front"},
+     "notes": "step-1d catalog position `prone massage` (not in the SexPosition vocabulary); back view redone 2026-11-12; no high, no low"}
   ]
 }
