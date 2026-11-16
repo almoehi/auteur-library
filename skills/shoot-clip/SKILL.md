@@ -76,7 +76,7 @@ Follow "Prompt route" of `workflow-calling-conventions` (`load_skill` it).
   - the brief's `Visible anatomy (must show)` line VERBATIM when it has one (the genitals and join the act must display), with the shot's `State:` fluids (`shot_block`): the writer names them in plain anatomical words;
   - the brief's `Lighting (scene, keep)` line VERBATIM when it has one (the writer keeps the phrase);
   - the brief's `Expression (<name>): … (must show)` lines VERBATIM when it has them;
-  - `beat` VERBATIM (the scene-list beat text: Action, Blocking, Camera move …), and for a `continue` the `seam_state` (`adjusted`) or `prior_shot_facts` (`as-planned`);
+  - `beat` VERBATIM (the scene-list beat text: Action, Blocking, and the optional Camera move intent when present …), and for a `continue` the `seam_state` (`adjusted`) or `prior_shot_facts` (`as-planned`);
   - `movement` VERBATIM, canonical ids only - a legacy `zoom` / `dolly` / `track` / `orbit` is rewritten to `push in` / `pull out` / `truck` or `follow` / `arc` before it goes to the writer ("hold" = locked-off frame; no `movement` = the framing of `camera`, no camera move added);
   - `cut` with a start frame: describe only the motion from that frame;
   - `style` verbatim (a clip in another medium is a miss); the optional `setting` line is the era / place of the story - no prop, device, vehicle or garment of the clip may contradict it;
