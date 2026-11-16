@@ -138,7 +138,7 @@ Keep the moves apart - each is a different picture:
 
 Lens: `medium focal length` (default) | `telephoto` | `shallow depth of field` | `anamorphic bokeh`
 
-A `Movement:` from the brief (shotlist / beat) IS the camera instruction: use that move, not a different one. `Movement: hold` (or `static`) is written as a locked-off static frame. With no `Movement:` (the default is `drift`) write one gentle sentence of the camera following the action; never invent a move and never name what the camera must not do. With a first-person `camera_body:` line a `drift` is a gentle head sway that only turns, never a follow-the-action sentence.
+A `Movement:` from the brief (shotlist / beat) IS the camera instruction: use that move, not a different one. `Movement: hold` (or `static`) is written as a locked-off static frame. With no `Movement:` (the default is `drift`) write one sentence of the camera staying near its opening framing with a slight, slow drift; never invent a move and never name what the camera must not do. With a first-person `camera_body:` line a `drift` is a gentle head sway that only turns, never a follow-the-action sentence; keep the people where they are unless the beats move them.
 
 Contradictions to avoid: `drone shot` + `extreme close-up` / `static shot` + `slow pan` / `dolly in` + `pull back`
 
