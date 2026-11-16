@@ -321,7 +321,7 @@ POSES: tuple[PoseSpec, ...] = (
             "front": "Three-quarter view at low eye level from the side of his feet and her front, so that her face, her lap "
             f"and his head and whole body stretched out beside her are visible. {FRAMING}",
             "low": f"Low-angle view at floor level from the side, pointing slightly up at the pair. {FRAMING}",
-            "high": "Top-down view from directly above, the picture vertical. The woman sits cross-legged at the TOP of the picture; the man "
+            "high": "Top-down view from directly above, the picture vertical. The woman kneels at the TOP of the picture sitting back on her heels, shins folded under her thighs, knees together (not cross-legged); the man "
             "lies below her, perfectly straight on his back along the vertical axis, his head in her lap, his chest, belly, hips, "
             "knees and the tops of both feet all facing up toward the camera, his legs straight and together pointing to the "
             f"bottom edge, no twist at the waist. {FRAMING}",
