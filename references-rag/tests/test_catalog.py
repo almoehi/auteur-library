@@ -87,6 +87,6 @@ def test_real_library_catalog() -> None:
     if root is None or not root.is_dir():
         pytest.skip("REFS_LIBRARY_ROOT not available")
     outfits, poses = load_outfits(root), load_poses(root)
-    assert (len(outfits), len(poses)) == (1407, 300)  # 288 + 12 generated (pose_gen)
+    assert (len(outfits), len(poses)) == (1407, 301)  # 288 + 13 generated (pose_gen)
     assert all((root / f).is_file() for f in library_files(outfits, poses))
     assert not NON_ENGLISH.search(repr((outfits, poses)))
