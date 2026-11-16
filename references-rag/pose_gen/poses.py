@@ -304,6 +304,33 @@ POSES: tuple[PoseSpec, ...] = (
         },
     ),
     PoseSpec(
+        # Redo of `prone massage` (2026-11-16): the first version (prone_massage) showed her bent over a table block with
+        # her legs standing on the floor in every view. Here her WHOLE body lies on a long massage table.
+        slug="prone_massage_table",
+        title="Lying flat on her front on a massage table, he stands at the side of the table, hands on her upper back",
+        position="prone massage",
+        series="duo",
+        roles={"a": "the man", "b": "the woman"},
+        extra=(
+            "She lies completely flat on her belly along the top of a long massage table: her whole body, from her head to her "
+            "feet, rests on the tabletop, her legs straight and together, both feet on the table, her face turned to one side "
+            "on the tabletop, her arms relaxed along her body. Her legs never hang off the table and never touch the floor. "
+            "He stands upright on the floor at the long side of the table, level with her shoulders and upper back, beside her "
+            "and never at her hips or feet, leaning slightly forward, both hands pressing flat on her upper back and shoulder blades."
+        ),
+        furniture="The table is a plain long narrow rectangular massage table of the same matte grey material, about hip height, "
+        "with a slim flat padded top, longer than her whole body, standing on slim legs on the floor.",
+        camera={
+            "front": "Three-quarter view at standing eye level from the man's side of the table, slightly toward the foot end, so "
+            f"that her whole body lying along the table from head to feet and his hands on her upper back are visible. {FRAMING}",
+            "low": f"Low-angle view from beside the table at tabletop height, pointing slightly up at the pair. {FRAMING}",
+            "high": f"High-angle view from directly above the table, looking down onto her whole body and his hands. {FRAMING}",
+            "side": f"Exact side profile view of the table, her whole body lying along it and the man standing beside it. {FRAMING}",
+            "diag": f"Three-quarter view from above eye level toward the foot end of the table. {FRAMING}",
+            "back": f"View from the head end of the table at eye level, her head nearest the camera, her whole body lying along the table away from the camera, the man standing at the side. {FRAMING}",
+        },
+    ),
+    PoseSpec(
         # Step 1d catalog entry `head in lap` (sfw): person A lies with the head in B's lap, person B sits upright.
         slug="head_in_lap",
         title="She sits upright on the floor, he lies on his back with his head in her lap",
