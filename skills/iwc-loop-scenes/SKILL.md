@@ -97,8 +97,8 @@ N.(a+k-1)):
   edge of the mattress, sitting back on her heels, one hand resting on her collarbone, the other on
   her thigh, the lace bralette cups pulled down below her bare breasts`; a `worn` still: `both
   bralette straps on her shoulders`). The same posture, support and outfit in every still beat; the
-  hands and the garment state differ. Keep gaze, lips, breath, eyes, smile, skin, fluids and voice words OUT of the action (a
-  sensation signal inside a body-state action is refused).
+  hands and the garment state differ. Keep gaze, lips, breath, eyes, smile, skin, fluids and voice words OUT of the action (a still beat shows body
+  state only; a signal belongs to the loop clip, never to the still).
 - `location` = the row's `location_slug`; `outfits` = `<slug>:<outfit_id>`.
 - `framing` = the look's `camera.line`, IDENTICAL in every still beat. A `close-up` or `medium
   close-up` look frames her face and chest: say in `blocking` which body parts are out of frame

@@ -191,17 +191,25 @@ Never pad the source and never drop an event of it. Work in this order:
   stays off the Cast table, section 9). At most ONE new character, only for the obstacle, named by
   a role word, never a first name. Merge
   to at most 4 places unless a directive says otherwise; each episode 1-3 scenes, each scene ONE
-  place and ONE continuous time. A directive's cap (scenes, characters, places) wins: episodes then
+  place and ONE continuous time. Pre-production supports at most 6 characters on screen in the whole
+  drama (a present non-actor who watches counts) and at most 3 bodies in contact in one scene: simplify
+  here, in the adaptation - merge or cut the surplus characters, and let a scene with more bodies show
+  at most three of them in contact - never leave it for pre-production. A directive's cap (scenes, characters, places) wins: episodes then
   reuse scene numbers - never drop a turning point to meet it.
 
 ## 6. Prose to screen
 
 - Every inner thought becomes something seen or heard: a line, a text message shown on screen,
   an overheard secret, a hesitation, breathing, hands, an object.
-- Voice-over at most one line per episode (keep a narrator the directives ask for).
+- Voice-over at most one line per episode (keep a narrator the directives ask for). Write each voice-over
+  line verbatim in its episode's `VO:` line (layout below): pre-production carries it unchanged into the
+  scene list, and post-production lays it; it is never a scene or a picture of its own.
 - Dialogue carries the escalation: short lines, subtext; keep the source's best lines when they
   work spoken - but never a line that breaks section 7.
-- 9:16 frame: close-ups, two-shots, single bodies; no wide group scenes.
+- 9:16 frame: favour single bodies, close-ups and two-shots; a group is fine, staged in depth.
+- Camera: each scene is first person or third person. A directive such as "POV throughout" makes every
+  scene `first-person <the owner's name>`; a scene that alternates is `mixed`; otherwise `third person`.
+  State it per scene (`Scenes:` line, layout below), the value pre-production copies into the scene list.
 
 ## 7. Hard rules (any mode, beat every directive and user wish)
 
@@ -345,7 +353,8 @@ Heard or mentioned only: <names, or none>
 - Turning point: <its number in series.md>: <one line>
 - Sex act: <names joined by " + ">: <who does what to whom>
 - Sex position: <ONE name>[ (<modifiers>)]: <who is where>
-- Scenes: S<n> <place> - <one line>; S<n+1> <place> - <one line>
+- VO: <speaker>: "<line>" [@start | @on the line | @after the line | @end]; ... (only when the episode has voice-over; "none" otherwise)
+- Scenes: S<n> <place> [camera: first-person <name> | third person | mixed] - <one line>; S<n+1> <place> [camera: ...] - <one line>
 
 ## Drama arc
 <payoff episode, the consequence after it, the hook into the next drama>
@@ -362,6 +371,9 @@ Heard or mentioned only: <names, or none>
   after drama 1's last; pre-production and the episode cuts keep these numbers.
 - `Scenes`: numbers `S1, S2, ...` run across the drama (each drama starts again at S1); an episode that goes on in the previous
   episode's place and moment REUSES the number. `Scenes total` counts the distinct numbers.
+- `VO`: the voice-over lines of the episode, verbatim (quoted), each with the moment it lands.
+  `camera` of a `Scenes` entry: `first-person <Cast name>` (the viewer's eyes belong to that cast
+  member), `third person` or `mixed`; every entry states it.
 - `Places`: on-screen places only.
 - Names: the source's own; never rename a character except to fix a rule of section 7. A
   character the source names only by role or label ("Subject 1 (the sister)") is named by the
@@ -391,6 +403,6 @@ the `Dramas:` line of `series.md` states the Dramas table's drama count and the 
 each drama's title line is `# <Series title>, drama <k> of <number of dramas>: <drama title>` and its
 `Format:` line is `vertical 9:16 (portrait), <N> episodes x ~<L> s, total ~<T>` with N = its episode
 count and L within 45-120 s, T = N x L; the `Dramas:` total of `series.md` is the sum of the drama
-files' totals; no drama ends on a climax or a sex act. Fix, then write. Call `task_complete` only
+files' totals; no drama ends on a climax or a sex act; every `Scenes` entry states its camera, an episode with voice-over has its `VO:` line verbatim, a drama's Cast has at most 6 rows and no scene has more than 3 bodies in contact. Fix, then write. Call `task_complete` only
 when EVERY file the Dramas table names is in the artifact directory (`series.md` written, each
 `drama_<k>.md` joined there); a file still missing -> write it first.
