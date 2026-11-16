@@ -3,6 +3,12 @@
 Kink / scenario concepts are NOT here: they are mined from the content lake into vocab.yaml and
 lexicon.json (mine_lexicon.py), so they can change without touching code or re-reading images.
 Sex positions and acts are the exact names of auteur-library ``skills/explicit-acts/SKILL.md``.
+``SexPosition`` mirrors the two-person nsfw entries of the server pose catalog
+(jobs/relabel_v5/pose_catalog.json) plus the two-person "both" entries that are sexual positions (spooning,
+lying on top). The SFW and the non-sexual "both" poses (lying side by side facing, head in lap, prone
+massage) carry no sex position: they are found through their text, support and mood, and mapped to their
+catalog entry by ``pose_gen/catalog_position_map.json``. Solo catalog entries are not labels
+(``sex_positions`` is duo only).
 """
 
 from __future__ import annotations
@@ -36,7 +42,7 @@ SexPosition = Literal[
     "reverse cowgirl", "squatting", "face sitting", "lotus", "lap sitting", "chair facing",
     "reverse chair", "scissoring", "standing face to face", "standing carry", "against the wall",
     "standing one leg raised", "edge of surface", "bent over surface", "standing from behind",
-    "against the wall from behind",
+    "against the wall from behind", "kneeling behind bent over", "standing over seated", "lying on top",
 ]  # fmt: skip
 SexAct = Literal[
     "vaginal penetration", "anal penetration", "double penetration", "blowjob", "deepthroat",

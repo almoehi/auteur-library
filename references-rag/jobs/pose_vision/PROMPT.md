@@ -44,7 +44,12 @@ Write ONE JSON array to the batch's `output` path: one object per item, every it
   reverse cowgirl, squatting, face sitting, lotus, lap sitting, chair facing, reverse chair,
   scissoring, standing face to face, standing carry, against the wall, standing one leg raised,
   edge of surface, bent over surface, standing from behind, against the wall from behind
-  (she faces a wall, chest pressed to it, palms flat on it above her head, he stands behind her).
+  (she faces a wall, chest pressed to it, palms flat on it above her head, he stands behind her),
+  kneeling behind bent over (she is bent forward over a low support, he kneels right behind her with
+  his face at her buttocks), standing over seated (she sits or kneels low with her face at his hips,
+  he stands over her), lying on top (he lies full length on her, chest to chest).
+  Non-sexual poses (a cuddle on the side without a sexual position, lying side by side facing,
+  a massage, a head in a lap) get NO position: leave `sex_positions` empty and describe them.
 - `typical_acts` - exact names: vaginal penetration, anal penetration, double penetration,
   blowjob, deepthroat, cunnilingus, 69, rimming, handjob, fingering, titjob, footjob, masturbation.
 - `notes`: mislabelled angles, occlusion, anything uncertain.
