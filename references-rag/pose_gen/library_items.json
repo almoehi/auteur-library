@@ -55,6 +55,11 @@
      "title": "Lying face down on a massage table, he stands at her side with both hands on her back",
      "sex_positions": [], "typical_acts": [], "support": "lying",
      "views": {"side": "side", "back": "back", "diag": "diag", "front": "front"},
-     "notes": "step-1d catalog position `prone massage` (not in the SexPosition vocabulary); back view redone 2026-11-12; no high, no low"}
+     "notes": "step-1d catalog position `prone massage` (not in the SexPosition vocabulary); back view redone 2026-11-12; no high, no low"},
+    {"slug": "head_in_lap", "id": "duo/P074", "folder": "duo/lying", "file_prefix": "pair60",
+     "title": "She kneels upright on her heels, he lies on his back with his head in her lap",
+     "sex_positions": [], "typical_acts": [], "support": "lying",
+     "views": {"side": "side", "diag": "diag", "high": "high"},
+     "notes": "step-1d catalog position `head in lap` (not in the SexPosition vocabulary); diag: her right foot repainted by an image edit; high: new top-down t2i render (seed 7301), PLAIN line art; no front, back or low"}
   ]
 }

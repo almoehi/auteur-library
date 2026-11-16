@@ -71,7 +71,7 @@
       "generated": "standing_over_seated"
     },
     "prone massage": {"items": [{"id": "duo/P073", "fit": "exact", "note": "generated 2026-11-12 (prone_massage), reviewed and accepted"}], "generated": "prone_massage"},
-    "head in lap": {"items": [], "generated": "head_in_lap"},
+    "head in lap": {"items": [{"id": "duo/P074", "fit": "exact", "note": "generated 2026-11-12 (head_in_lap), reviewed and accepted"}], "generated": "head_in_lap"},
     "lying side by side facing": {"items": [{"id": "duo/P072", "fit": "exact", "note": "generated 2026-11-12 (lying_side_by_side_facing), reviewed and accepted"}], "generated": "lying_side_by_side_facing"}
   }
 }
