@@ -58,6 +58,9 @@
         {"id": "duo/P041", "fit": "exact", "note": "all fours, he kneels upright behind her"}
       ]
     },
+    "bent over surface": {
+      "items": [{"id": "duo/P073", "fit": "exact", "note": "generated 2026-11-12 as prone massage, reclassified 2026-11-16: bent over a table, torso flat, legs on the floor, he stands behind her"}]
+    },
     "kneeling behind bent over": {
       "items": [{"id": "duo/P069", "fit": "exact", "note": "generated 2026-11-12 (kneeling_behind_bent_over), reviewed and accepted"}],
       "generated": "kneeling_behind_bent_over",
@@ -70,7 +73,7 @@
       ],
       "generated": "standing_over_seated"
     },
-    "prone massage": {"items": [{"id": "duo/P073", "fit": "exact", "note": "generated 2026-11-12 (prone_massage), reviewed and accepted"}], "generated": "prone_massage"},
+    "prone massage": {"items": [], "gap": "no item: duo/P073 was generated as prone massage but shows her bent over a table (reclassified as bent over surface)"},
     "head in lap": {"items": [{"id": "duo/P074", "fit": "exact", "note": "generated 2026-11-12 (head_in_lap), reviewed and accepted"}], "generated": "head_in_lap"},
     "lying side by side facing": {"items": [{"id": "duo/P072", "fit": "exact", "note": "generated 2026-11-12 (lying_side_by_side_facing), reviewed and accepted"}], "generated": "lying_side_by_side_facing"}
   }
