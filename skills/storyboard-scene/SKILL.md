@@ -14,6 +14,8 @@ agentType: worker
 
 # Storyboard Scene — plan, hand over
 
+> This version writes the `Grammar: takes` shot grammar only and needs a workspace with `spec.storyboard.grammar: takes` (the task Attributes then list `Shot grammar: takes`). It is not meant for storyboards of the older grammar.
+
 Analyze once, write `shotlist.md` shot by shot with `write_shot`, plan each shot with `plan_shot`, hand the plans over with
 `draft_storyboard()`, complete. The server
 renders several candidates per shot, checks them, repairs what it can and records the best takes;
@@ -94,7 +96,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 
 ## 2 Plan — `shotlist.md`
 
-The file is the header below plus one section per shot. Write the header (title + `Format:` + `Grammar: takes` when the task Attributes list `Shot grammar: takes` + `Timing: beats` when the shots become clips) with
+The file is the header below plus one section per shot. Write the header (title + `Format:` + `Grammar: takes` when the task Attributes list `Shot grammar: takes` + `Timing: beats`, always with the take grammar) with
 `sandbox_write_file` (only while the file has no shots yet), then each shot section with `write_shot`, in order (each followed by its `plan_shot`).
 
 ```
@@ -147,14 +149,14 @@ The header is the title line, `Format: portrait|landscape`, `Grammar: takes` (wr
 - **Length:** a shot lasts 3 s up to the clip workflow's declared maximum (at most 15 s). `Beat:` may list several beats; a shot is not one verb.
 - **Shot count follows the sequence type, not the beat count.** State the type per scene: action ~10 short shots; dialogue ~5 (singles, over-the-shoulder, reactions); b-roll 2-3; insert-heavy 3-4 inserts per sequence. Inserts are first-class (acting, establishing a prop, foreshadowing), never filler.
 - **Performer travel:** a size change inside a shot is performed by the performer relative to the lens, as `Motion:` beats with an end size (`approach`, `lean in`, `back away`) - the way a first-person shot changes size. In third person the camera travels WITH a walker (`follow`; do not rely on `lead`, it is untested). Do not use `truck`: in a narrow space plan a cut or an `arc` instead.
-- **Heat is acting:** a beat's `Heat` level (`none | teasing | aroused | intense | climax`) becomes performer actions in `Motion:` that escalate and relax with the level; the viewer's hands / forearms are actors too (`limbs`). `Expression:` stays the face at t=0. Per level: `teasing` - self-touch, a held look, eye contact with the lens; `aroused` - guiding the viewer's hand, looking back over the shoulder, a bitten lip; `intense` - hips lifting, a spoken plea, the breath quickening; `climax` - the body tightening, then slackening, a last held look. A workspace whose nudity policy is not `allowed` uses an emotion vocabulary instead (a hand to the mouth, turning away, a held look, a breath, a smile that fades). Explicit detail per level: `explicit-acts`.
+- **Heat is acting:** a beat's `Heat` level (`none | teasing | aroused | intense | climax`) becomes performer actions in `Motion:` that escalate and relax with the level; the viewer's hands / forearms are actors too (`limbs`). `Expression:` stays the face at t=0. Default vocabulary (every workspace): `teasing` - a held look, eye contact with the lens, a hand to the mouth; `aroused` - turning away then back, a breath drawn in, a smile that fades; `intense` - the breath quickening, a hand gripping the nearest edge, closing the eyes; `climax` - the body tightening, then slackening, a last held look. Where the workspace's nudity policy is `allowed`, `load_skill explicit-acts` for the explicit per-level actions.
 
 ### Cinematography (the shot rules below, R1-R20 and the POV / act rules R4 / R20 / R24 take precedence)
 
 - Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide (`Format: portrait`: one vertical establishing frame instead, see below).
 - Shot size follows intensity: wide -> medium -> close as it rises; never the same size three shots in a row; an insert only for an object the story needs.
 - Keep each person's screen side from the scene's `Blocking` (left / right of frame) for the whole scene; over-the-shoulder shots keep the same shoulder; never mirror a person between shots unless they move.
-- A continuous moment (its beat is `continuous`) is covered as `continue` shots, not as cuts; a jump to the other side of the people (left -> right, front -> behind) or to another place is a `cut` and starts a new keyframe - keep such jumps for a new beat, a reaction or a real change of view. Read the clip workflow's `camera:` (`max_arc_degrees`, reliable moves) from `workflow_index` before writing an `arc`.
+- A continuous moment (its beat is `continuous`) is ONE shot with several beats while one viewpoint holds; when the viewpoint changes inside it, cover it with `continue` shots, not cuts; a jump to the other side of the people (left -> right, front -> behind) or to another place is a `cut` and starts a new keyframe - keep such jumps for a new beat, a reaction or a real change of view. Read the clip workflow's `camera:` (`max_arc_degrees`, reliable moves) from `workflow_index` before writing an `arc`.
 - Keep each beat's `Framing` size and `Contact` on the shot that shows it: the beat's `Framing` (when present) is a hint, not a requirement: a shot opens at the framing it needs. The scene list's `Camera move` column, when present, is the beat's intended camera move: it goes in `Movement:` (or a `camera` Motion beat) only, never into `Action:`, `Pose:` or a person's Motion. Every `Contact:` body part of a whole-body person (`full figure` / `back` / `upper body`) must lie inside the `Camera:` size (R34, refused at write time - by `write_shot` and by a `plan_shot` of the shot, a re-plan of an older shot included; the same holds for R37 and the `Reflection:` line): the chest `medium close-up` or wider, the waist, belly and hips `medium` or wider, the thighs `medium full` or wider, legs and feet `full`; <A>'s hand on <B>'s waist in a `medium close-up` is refused when you write it - open wider, show <B> as `lower body`, or drop the contact.
 - `Frame:` states the composition at t=0 (the keyframe is the opening frame): which third the subject sits in, foreground / midground / background, room in the direction they face; and it agrees with the light of the shot (its `Lighting:` line, else the scene's `Lighting` phrase from the scene table; never contradicts it).
 - `Duration:` guide (3 s up to the clip workflow's maximum, at most 15 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
@@ -244,6 +246,7 @@ The header is the title line, `Format: portrait|landscape`, `Grammar: takes` (wr
             [, following <key> | , to reveal <thing> | , ending on <thing>]
   <move> := hold | pan | tilt | roll | push in | pull out | truck | follow | lead | pedestal | crane | arc
             | whip pan | dolly zoom | rack focus
+  (`truck` is parsed; do not write it - plan a cut or an `arc`)
   <dir>  := left | right | up | down       <frame> := a framing size and/or camera-angle words
   ```
 
@@ -251,6 +254,8 @@ The header is the title line, `Format: portrait|landscape`, `Grammar: takes` (wr
   `arc right 45°, from from the front to three-quarter, ending on her profile`;
   `pedestal down, slow, from eye level to low angle; tilt up, ending on her face`;
   `follow, slow, following character_wife, handheld subtle`; `rack focus from the glass to her face`.
+
+  Reference only - how a clip performs each framing change (the server no longer refuses a `continue` for lacking it; do not plan shots around it, prefer performer travel or a cut):
 
   | Framing change | Move that performs it |
   |---|---|
@@ -290,7 +295,7 @@ The clip is rendered by a video model with declared limits (`limits:` in `workfl
 
 ### Timed motion (header `Timing: beats`)
 
-Write `Timing: beats` under `Format:` whenever the shots become CLIPS. The keyframe stays a still of
+Write `Timing: beats` under `Format:` (always, with `Grammar: takes`). The keyframe stays a still of
 ONE instant; the clip carries the action. `Action:` is then the state at **0 s** (the keyframe),
 `Motion:` the action **in progress** from there, per subject, with timing. `Motion:`, `Dialogue:`
 and `Audio:` never reach the keyframe (the server leaves them out of the picture and of the stale
@@ -345,7 +350,7 @@ check); they go to the clip prompt verbatim.
   speak or hold themselves while speaking ("speaks over her shoulder without turning"), the `Dialogue:`
   line carries the words and voice delivery.
 - Two verbs = two beats of ONE shot ("stands, then crosses" is `0-2 s … rises` and `2-5 s … crosses`),
-  never two shots, when the beat is one continuous action; a new place, framing or moment is still a new shot.
+  never two shots, when the beat is one continuous action; a new place or a new moment is a new shot; a size change by performer travel stays inside the shot (see "Take grammar").
 - Never cut at a sub-second instant: every beat is at least 1 s (rule R22). A beat the clip cannot
   show in 1 s is merged into its neighbour.
 - `Duration:` (3 s up to the clip workflow's maximum, at most 15 s) is sized from the beats, the dialogue and a settle: sum what the beats need
