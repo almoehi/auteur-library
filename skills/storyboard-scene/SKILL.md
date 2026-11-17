@@ -193,7 +193,7 @@ The header is the title line, `Format: portrait|landscape`, `Grammar: takes` (wr
     "pace building").
   - Visible only: no motives or camera motion. Speech goes on its own `Dialogue:` line (with
     `Timing: beats`: `<t0>-<t1> s <character_key> (<delivery>): "<words>"`), never in `Action:` (Action shows only the visible part: mouth open, calling).
-  - Bad → good: "Wife sighs and says it is late, closes the laptop and gets up" → ONE shot: `Action: Wife, seated at the table, sighing` + `Dialogue: 1-2.5 s character_wife (tired, soft): "It's late"` + `Motion:` beats `2.5-4 s character_wife: closes the laptop` / `4-6 s character_wife: rises from her chair`.
+  - Bad → good: "<Character> sighs, says a line, handles a prop and gets up" → ONE shot: `Action: <Character>, seated, sighing` + `Dialogue: 1-2.5 s <characterKey> (tired, soft): "<short line>"` + `Motion:` beats `2.5-4 s <characterKey>: <handles the prop>` / `4-6 s <characterKey>: rises from the seat`.
 - `Beat:` = the `Beat #` of the scene-list beat the shot shows, copied exactly (`Beat: 1.9`); every
   shot has one, every shot of a split beat carries the same beat, and every beat of the scene has
   at least one shot (all checked at the write: `beat 1.3: no shot shows it`).
