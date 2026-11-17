@@ -37,7 +37,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 - Write only `shotlist.md` into `/workspace/<artifact id>/`. `<shotId>` = `s<scene>-<nn>` (`s3-01`).
 - Write `shotlist.md` in this order, nothing else: (1) a short beat → shot-id map only (one line
   per shot: id, beat, place, who is in frame) — never validate every shot in your reasoning first;
-  (2) `sandbox_write_file` the HEADER only — the title line and the `Format:` line, no shots —
+  (2) `sandbox_write_file` the HEADER only — the title line and the `Format:` line (and `Grammar:` / `Timing:`, see "Grammar"), no shots —
   ONLY while `shotlist.md` has no shots yet (a retry or a later message never rewrites the file:
   `read_artifact` it and continue with the first missing shot; a whole-file write that drops accepted
   shots is refused);
@@ -94,12 +94,13 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
 
 ## 2 Plan — `shotlist.md`
 
-The file is the header below plus one section per shot. Write the header (title + `Format:` + `Timing: beats` when the shots become clips) with
+The file is the header below plus one section per shot. Write the header (title + `Format:` + `Grammar: takes` when the task Attributes list `Shot grammar: takes` + `Timing: beats` when the shots become clips) with
 `sandbox_write_file` (only while the file has no shots yet), then each shot section with `write_shot`, in order (each followed by its `plan_shot`).
 
 ```
 # Scene <n> shot list
 Format: portrait
+Grammar: takes
 Timing: beats
 
 ## s3-01 — Short title
@@ -137,25 +138,32 @@ plan of step 3 only adds placement, facing and the compose prompt.
 
 BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conventions` for it: call `lora_index()` once per scene (reuse the result for every later shot), then pick the up to 8 LoRAs most relevant to THIS shot, ranked most relevant first, inferred from each LoRA's name and description: everything the shot shows - the production's style and look, the pictured characters (character LoRAs), outfits and clothing, props, the place, camera / lens / lighting, pose and action, anatomy and detail - and the act and position only when the shot has a `Sex act:` / `Sex position:` whose act is SHOWN - an intimate `Contact:` entry in frame; an act that goes on out of frame loads no act LoRA, so name none (rank the LoRA serving a shown act high). Write them on the shot's `LoRAs:` line (`LoRAs: <name>, <name>, ...`, exact catalog names, comma-separated, ONE line) or `LoRAs: none` when nothing fits or the catalog is empty. Curate LoRAs of the storyboard's RENDER families only: the family of the keyframe (compose) workflow and of the masked-inpaint workflow that paints an act into it (read `model_family` of the workflows in the workflow index / workspace facts and `modelFamily` per LoRA in `lora_index`) - a LoRA of any other family NEVER loads on these renders (the write tool notes it as "never loaded"). For a shot whose `Sex act:` is SHOWN include that family's ACT-DETAIL LoRAs and rank them FIRST - the genital / anatomy detail LoRAs of the body parts the act shows and the act / position LoRA, inferred from each LoRA's name and description - because the inpaint workflow has only 4 LoRA ports and the tail is cut; a shot whose shown act lists no LoRA of the keyframe family is REFUSED at the write (when the catalog has one). Anatomy-detail LoRAs (a body part's detail) only where the OPENING frame shows that body part (it is in a `Visible:` extent that shows it and in `Contact:`/`Pose:`, not only reached by a later Motion beat); both parts' LoRAs when the join between them is the subject; none when a part is out of frame or the act is stated only by a Motion beat. Example, a flux2 storyboard, vaginal penetration from behind: `LoRAs: flux2_nsfw_penis, flux2_nsfw_vulva, flux2_nsfw_sex_aio, flux2_nsfw_realism` (never `krea2_nsfw_penis` there). No need to avoid a LoRA the workflow already loads (the render skips it). Never list a render-kind LoRA ("Render-kind LoRAs" in `workflow-calling-conventions`: one whose description restricts it to a dedicated render such as a panorama, or to text-to-image / compose renders only) - the line loads on repairs and edits too (while `spec.keyframes.loraDecider` is off; with the decider on it is only a hint), where such a LoRA has no effect or deforms the picture. Without a LoRA decider (`spec.keyframes.loraDecider` off) the server loads this list on EVERY take render and repair of the shot, after the design's explicit studio picks (which rank first; the port cap cuts your tail); with the decider on, the decision model picks each render's LoRAs from the catalog and this line is only a hint to it - a listed LoRA may not load; the line is checked at the write (at most 8, no duplicates, names must be in the catalog - rule R15; a shown act needs a LoRA of the keyframe workflow's family when the catalog has one). The accepted `write_shot` result lists what will load per render, so you see the port cut.
 
-### Cinematography (the shot rules below, R1-R29 and the POV / act rules R4 / R20 / R24 / R29 take precedence)
+### Grammar
+
+The header is the title line, `Format: portrait|landscape`, `Grammar: takes` (written exactly when the task Attributes list `Shot grammar: takes`; otherwise no such line) and `Timing: beats`. Under `Grammar: takes` a shot is one viewpoint / take that covers one or several beats, not one verb.
+
+### Take grammar (shot length, count, travel, heat)
+
+- **Length:** a shot lasts 3 s up to the clip workflow's declared maximum (at most 15 s). `Beat:` may list several beats; a shot is not one verb.
+- **Shot count follows the sequence type, not the beat count.** State the type per scene: action ~10 short shots; dialogue ~5 (singles, over-the-shoulder, reactions); b-roll 2-3; insert-heavy 3-4 inserts per sequence. Inserts are first-class (acting, establishing a prop, foreshadowing), never filler.
+- **Performer travel:** a size change inside a shot is performed by the performer relative to the lens, as `Motion:` beats with an end size (`approach`, `lean in`, `back away`) - the way a first-person shot changes size. In third person the camera travels WITH a walker (`follow`; do not rely on `lead`, it is untested). Do not use `truck`: in a narrow space plan a cut or an `arc` instead.
+- **Heat is acting:** a beat's `Heat` level (`none | teasing | aroused | intense | climax`) becomes performer actions in `Motion:` that escalate and relax with the level; the viewer's hands / forearms are actors too (`limbs`). `Expression:` stays the face at t=0. Per level: `teasing` - self-touch, a held look, eye contact with the lens; `aroused` - guiding the viewer's hand, looking back over the shoulder, a bitten lip; `intense` - hips lifting, a spoken plea, the breath quickening; `climax` - the body tightening, then slackening, a last held look. A workspace whose nudity policy is not `allowed` uses an emotion vocabulary instead (a hand to the mouth, turning away, a held look, a breath, a smile that fades). Explicit detail per level: `explicit-acts`.
+
+### Cinematography (the shot rules below, R1-R20 and the POV / act rules R4 / R20 / R24 take precedence)
 
 - Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide (`Format: portrait`: one vertical establishing frame instead, see below).
 - Shot size follows intensity: wide -> medium -> close as it rises; never the same size three shots in a row; an insert only for an object the story needs.
 - Keep each person's screen side from the scene's `Blocking` (left / right of frame) for the whole scene; over-the-shoulder shots keep the same shoulder; never mirror a person between shots unless they move.
-- A `continue` shot changes framing clearly: at least one size step or a visible angle change (more than about 30 degrees), performed by its `Movement:` (R25); a change no move performs is a `cut`. The one exception is a first-person `continue` (below): it may keep the framing (R16).
-- A continuous moment (its beat is `continuous`) is covered as `continue` shots, not as cuts: plan its framings so each step is one the clip workflow can perform - a size step (`push in` / `pull out`) or an `arc` within the workflow's `max_arc_degrees` (read `camera:` from `workflow_index`; 45 for MiniMax H3) - instead of jumping to the other side of the people. A jump of more than that (left side -> right side, front -> behind) is a `cut` and starts a new keyframe; keep such jumps for a new beat, a reaction or a real change of view. Write `cut — … on the same moment` only when no performable framing tells the moment.
-- Both `Camera:` lines of a `continue` pair name the same angle words: camera height (`eye level` / `high angle` / `low angle`) AND direction (`from the front` / `three-quarter angle from her left side` / `from behind`), each in both lines, even when unchanged. The clip planner compares only what both lines state; a height in one line and a direction in the other cannot be measured, and the clip is then shot as a cut.
-  Valid third-person `continue` pair (any genre; `<A>` the subject):
-  `s2-01`: `Camera: medium, eye level, from the front` / `Transition: cut — first shot of the scene`;
-  `s2-02`: `Camera: close-up, eye level, from the front` / `Movement: push in, slow, from medium to close-up, ending on <A>'s face` / `Transition: continue — same moment, closer on <A>`. Same place key, same angle words in both lines, a size step, the move that performs it. When the scene list's beat is `continuous` and a reliable move performs its framing change, write this - not a cut. First person keeps the held take below: same framing, the people move.
-- Keep each beat's `Framing` size and `Contact` on the shot that shows it: the beat's `Framing` (when present) is a hint, not a requirement: a shot opens at the framing it needs, and a beat none of whose shots opens at that size only gets an advisory note (R36). The scene list's `Camera move` column, when present, is the beat's intended camera move: it goes in `Movement:` (or a `camera` Motion beat) only, never into `Action:`, `Pose:` or a person's Motion. Every `Contact:` body part of a whole-body person (`full figure` / `back` / `upper body`) must lie inside the `Camera:` size (R34, refused at write time - by `write_shot` and by a `plan_shot` of the shot, a re-plan of an older shot included; the same holds for R37 and the `Reflection:` line): the chest `medium close-up` or wider, the waist, belly and hips `medium` or wider, the thighs `medium full` or wider, legs and feet `full`; <A>'s hand on <B>'s waist in a `medium close-up` is refused when you write it - open wider, show <B> as `lower body`, or drop the contact.
+- A continuous moment (its beat is `continuous`) is covered as `continue` shots, not as cuts; a jump to the other side of the people (left -> right, front -> behind) or to another place is a `cut` and starts a new keyframe - keep such jumps for a new beat, a reaction or a real change of view. Read the clip workflow's `camera:` (`max_arc_degrees`, reliable moves) from `workflow_index` before writing an `arc`.
+- Keep each beat's `Framing` size and `Contact` on the shot that shows it: the beat's `Framing` (when present) is a hint, not a requirement: a shot opens at the framing it needs. The scene list's `Camera move` column, when present, is the beat's intended camera move: it goes in `Movement:` (or a `camera` Motion beat) only, never into `Action:`, `Pose:` or a person's Motion. Every `Contact:` body part of a whole-body person (`full figure` / `back` / `upper body`) must lie inside the `Camera:` size (R34, refused at write time - by `write_shot` and by a `plan_shot` of the shot, a re-plan of an older shot included; the same holds for R37 and the `Reflection:` line): the chest `medium close-up` or wider, the waist, belly and hips `medium` or wider, the thighs `medium full` or wider, legs and feet `full`; <A>'s hand on <B>'s waist in a `medium close-up` is refused when you write it - open wider, show <B> as `lower body`, or drop the contact.
 - `Frame:` states the composition at t=0 (the keyframe is the opening frame): which third the subject sits in, foreground / midground / background, room in the direction they face; and it agrees with the light of the shot (its `Lighting:` line, else the scene's `Lighting` phrase from the scene table; never contradicts it).
-- `Duration:` guide (3-10 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
+- `Duration:` guide (3 s up to the clip workflow's maximum, at most 15 s): establishing 4-6 s, action 3-6 s, emotional beat 6-10 s, reaction 2-4 s.
 - `Format: portrait` (a vertical frame shows little side to side; these override the size and establishing-wide rules of this skill):
-  - Size mix led by `close-up`, `medium close-up` and two-shots (a two-shot = a `medium close-up` or `medium` with both people in frame); "shot size follows intensity" runs medium -> medium close-up -> close-up -> extreme close-up.
+  - Prefer close framings (`close-up`, `medium close-up`) with ONE establishing frame; "shot size follows intensity" runs medium -> medium close-up -> close-up -> extreme close-up.
+  - A two-shot is stacked in depth (one person behind the other, eye line about 28 % from the top, the lower third clear for captions). ONE ensemble frame per new configuration (a group of people) is allowed, framed the same way.
   - A beat's optional `Signal` (the detail that carries a sensation) stays inside the beat's shots; it may be carried by a post-production cut-in / punch-in note instead of a still of its own.
   - Two people side by side or one behind the other, close (within arm's reach), never at opposite edges of the frame.
-  - The widest shot is ONE person `full shot`; never a `wide` with more than one full figure. A new place's establishing image is one vertical frame (a doorway, a corridor, a window), not a `wide` of the room.
+  - A new place's establishing image is one vertical frame (a doorway, a corridor, a window), not a `wide` of the room.
 
 ### Shots
 
@@ -178,32 +186,18 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - `Action:` = the ONE instant as a state, with participles: "Wife, standing, presses …";
   "Wife mid-stride toward the table, reaching for her laptop".
   - The sequence words `then`, `after`, `before`, `followed by`, `cut to` and arrows (`→`, `->`)
-    are REFUSED in `Action:` and `Camera:` (rule R9, any case, whole words) and in a plan prompt.
-    Never rephrase a sequence around them: it is fixed only by splitting it into shots. A word
-    used for PLACE, not time, is reworded instead: "kneels before him" -> "kneels in front of him".
-  - Two successive verbs ("stands and presses", "enters and crosses") = separate shots too, one per
-    action, in order (not checked by the server - your job). With `Timing: beats` one continuous
-    action stays ONE shot: its verbs are successive `Motion:` beats (see "Timed motion").
+    are REFUSED in `Action:` and `Camera:` (rule R9, any case, whole words) and in a plan prompt: the sequence goes in `Motion:` beats. A word used for PLACE, not time, is reworded instead: "kneels before him" -> "kneels in front of him".
+  - Successive verbs are successive `Motion:` beats of ONE shot (see "Timed motion").
   - One shot: simultaneous actions joined by "as" / "while" (both happen in the same instant);
     speech, breath or a sound together with one action; a progressing state ("thrusting faster",
     "pace building").
   - Visible only: no motives or camera motion. Speech goes on its own `Dialogue:` line (with
     `Timing: beats`: `<t0>-<t1> s <character_key> (<delivery>): "<words>"`), never in `Action:` (Action shows only the visible part: mouth open, calling).
-  - Bad → good: "Wife sighs and says it is late, closes the laptop and gets up" → s3-01
-    `Action: Wife, seated at the table, sighing` + `Dialogue: 1-2.5 s character_wife (tired, soft): "It's late"`; s3-02
-    `Action: Wife, laptop closed, rising from her chair`.
-    "Wife stands, moves to his chair, hands him the letter" → three shots: `Wife, rising from her
-    chair` / `Wife, mid-stride toward his chair, letter in hand` / `Wife, beside his chair, holding
-    out the letter`.
-- Split every multi-action beat into one shot per action, in order — never one shot that lists
-  them. Count actions, not beats: 4 beats can need 7 shots.
+  - Bad → good: "Wife sighs and says it is late, closes the laptop and gets up" → ONE shot: `Action: Wife, seated at the table, sighing` + `Dialogue: 1-2.5 s character_wife (tired, soft): "It's late"` + `Motion:` beats `2.5-4 s character_wife: closes the laptop` / `4-6 s character_wife: rises from her chair`.
 - `Beat:` = the `Beat #` of the scene-list beat the shot shows, copied exactly (`Beat: 1.9`); every
   shot has one, every shot of a split beat carries the same beat, and every beat of the scene has
   at least one shot (all checked at the write: `beat 1.3: no shot shows it`).
-- A sequence is fixed ONLY by splitting it into shots, never by rephrasing it into one sentence
-  (participles or "as" around successive actions are still a sequence).
-- Typically 4–10 shots covering the whole scene in story order, an establishing wide first when
-  the place is new (`Format: portrait`: one vertical establishing frame, see Cinematography) (scene 1: after its hook, see Cinematography). Sections follow story order; a split keeps its id for the first part.
+- Shot count follows the scene's sequence type (see "Take grammar"). Sections follow story order; an establishing wide first when the place is new (`Format: portrait`: one vertical establishing frame, see Cinematography) (scene 1: after its hook, see Cinematography). A split keeps its id for the first part.
 - A `parallel` beat = its own cutaway shot at its place, its characters from that beat:
   `Transition: cut — cutaway (parallel action)`; the main action resumes in a later shot
   (`cut — back to …`).
@@ -222,12 +216,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
 - `Movement:` = the beat's `Camera move` intent when the scene list gives one, otherwise the move the storyboard chooses, in the canonical grammar of "Camera moves" below; the `from` / `to` frames follow the `Transition:` rule there.
 - `Lens:` (optional, keyframe-relevant): `Lens: <wide|normal|long> [<N>mm][, <deep|shallow> focus][, focus on <thing>]`. Classes: wide <= 28 mm (default 24), normal 35-50 mm (default 35), long >= 85 mm (default 85); an explicit N must fit the class. It sets perspective and depth of field of the keyframe, never movement; leave it out when the scene's look needs nothing special.
 - `Lighting:` (optional, keyframe- and clip-relevant): this shot's light and set state in one short phrase: visible light sources and their state (on / off / dimmed, direction, colour), daylight or weather, screens or fire, and the state of openings and coverings (doors, windows, curtains) where it changes the look. It REPLACES the scene's `Lighting` phrase for this shot and wins over the light shown in the location picture. The scene list's `Lighting` is how the scene ends lit (its main state): write `Lighting:` on every shot before or after a change of that state, and omit it on shots that keep the scene's. Never contradict it in `Action:` / `Frame:`.
-- Coverage of one moment: consecutive `continue` shots change the framing size or the angle
-  (wide from behind → medium close-up of her face over her shoulder → close-up of his hands on her
-  hips). A continue shot with the SAME framing size, angle and `Location:` as the previous one is
-  refused (rule R16): the renderer copies the previous frame, so it would be the same picture.
-  Beats that would look the same as a still are ONE shot — its clip carries them (`Action:` the
-  state, the progression in `Movement:` / `Duration:`), never two identical keyframes.
+- Coverage of one moment: consecutive `continue` shots may change framing size or angle (wide from behind → medium close-up of her face over her shoulder → close-up of his hands on her hips). Beats that would look the same as a still are ONE shot - its clip carries them in `Motion:`, never two identical keyframes.
 - A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. A `partly:` garment must be restated wherever this shot's extent shows it — the viewer's own too (the hem of their own jacket still open in a `lower body` shot); where the extent does not show it (a close-up above the waist, a `limbs` viewer) leave it out — it is not in frame, and R19 refuses it there.
 - A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the water).
 - `Transition:` says how THIS shot follows the PREVIOUS one (the cut or continuation INTO this shot) —
@@ -246,13 +235,6 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   words — never the Continuity word itself (`cut — continuous` is a contradiction: write
   `continue — …`). The first shot is `cut — first shot of the scene`.
   A `cut` right after another shot at the same place, showing the same people in the same framing size, where neither shot has `Motion:` beats, reads as the same picture twice (advisory note R39, never a refusal): vary the framing size (a cut is a new view), or merge the two shots into one.
-  A `continue` shot changes framing (rule R16), and its clip must PERFORM that change: `Movement:` is a
-  move that can REACH the new framing (the "Camera moves" table below; handheld, pan, tilt,
-  truck, follow and `hold` do NOT count); with `Timing: beats` the `camera` beats in `Motion:` perform it. When no
-  move can reach the new framing, write `Transition: cut — …` instead (the clip then starts on the
-  new keyframe). The write is refused (rule R25) when a changed dimension has no move of its row in
-  `Movement:` (or a `camera` beat) — several changed need one move each; a push-in cannot turn an
-  eye-level shot into a low-angle one, and a pan cannot turn a front view into a three-quarter one.
 
   **Camera moves** (THE vocabulary and grammar of `Movement:`, parsed and checked by the server):
 
@@ -268,7 +250,7 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   Examples: `hold`; `push in, slow, from medium to close-up, ending on her face`;
   `arc right 45°, from from the front to three-quarter, ending on her profile`;
   `pedestal down, slow, from eye level to low angle; tilt up, ending on her face`;
-  `truck left, slow, following character_wife, handheld subtle`; `rack focus from the glass to her face`.
+  `follow, slow, following character_wife, handheld subtle`; `rack focus from the glass to her face`.
 
   | Framing change | Move that performs it |
   |---|---|
@@ -278,8 +260,8 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
   | dutch angle | `roll` (checked only when both `Camera:` lines name a dutch angle) |
   | POV / no POV | none: always a `cut` |
 
-  - **Arc convention**: `arc left` = the camera travels to ITS OWN left (counter-clockwise seen from above); from a frontal camera it reveals the subject's RIGHT side. About 45° = front -> three-quarter, about 90° = front -> side (profile); stay at 15-45° per clip on MiniMax H3. Only an arc changes the side seen: pan / tilt / truck never do.
-  - `pan` / `tilt` (turn in place), `truck left|right` (travel sideways), `follow <key>` / `lead <key>` (travel with a moving subject, framing kept) reframe WITHIN the same view: allowed as a shot's move, never a framing change. Never write `track` (ambiguous): use `truck`, `follow` / `lead` or `push in`.
+  - **Arc convention**: `arc left` = the camera travels to ITS OWN left (counter-clockwise seen from above); from a frontal camera it reveals the subject's RIGHT side. About 45° = front -> three-quarter, about 90° = front -> side (profile); stay at 15-45° per clip on MiniMax H3. Only an arc changes the side seen: pan / tilt never do.
+  - `pan` / `tilt` (turn in place) and `follow <key>` (travel with a moving walker, framing kept) reframe WITHIN the same view: allowed as a shot's move, never a framing change. Never write `track` (ambiguous) or `truck` (unused: plan a cut or an `arc`); `lead` is untested - do not rely on it.
   - `handheld` / `steadicam` / `gimbal` are MODIFIERS of the whole `Movement:` (after the last step), never a move; "drift" is not a move. `dolly zoom` is size-neutral (performs no size change).
   - `hold` = strictly static: no move, no zoom, no focus change. A focus shift is `rack focus from <near thing> to <subject>` (both ends named; the frame stays still).
   - Speed words (`slow` = spans the clip, `medium` = about half, `fast` = <= 1 s) carry no guarantee; `Duration:` and the beat times carry the speed.
@@ -287,20 +269,11 @@ BEFORE you write a shot's lines, run "Curated LoRAs" of `workflow-calling-conven
     - `Transition: continue`: `from` = the PREVIOUS shot's `Camera:`, `to` = THIS shot's `Camera:` — the move reaches this shot's keyframe (`push in, slow, from medium to close-up`, this shot's `Camera:` opening with `close-up`).
     - `Transition: cut` (and the first shot): `from` = THIS shot's own `Camera:` (the opening), `to` = the framing at the END of the clip (free) — the move happens during this shot (`arc right 45°, from from the front to three-quarter`).
     `Camera:` itself is always the opening frame of THIS shot; a move that "starts at A" on a cut shot is `Camera:` A plus the move.
-  - **A first-person camera is the viewer's EYES** (rule R29, refused at the write on a `cut` shot as much as a `continue` shot; R25 reads the same table). The `Movement:` of a `POV:` shot - and its `camera` beats - may only name what the viewer's body does, by their posture and whether they are attached (a `Contact:` joins them to another person; a contact with a thing does not attach them):
-
-    | Viewer | Free | Attached (a `Contact:` with a person) |
-    |---|---|---|
-    | `lying` | turn: `look <dir> [N°]`, `turn head` | turn only |
-    | `seated` / `kneeling` | turn + a small `lean in` / `lean back` | turn only |
-    | `standing` | turn + `step in` / `step back` | turn only |
-    | `walking` | turn + `walk`, `walk after <key>` (never `follow` in a POV shot) | turn only |
-
-    Never arc, crane / pedestal, truck, push in / pull out or zoom for a first-person shot: the viewer's head does not travel (a pull back from a lying viewer leaves the viewer's head, shows the face, breaks the contact or turns the subject). So a NEW framing for a seated, lying or attached viewer is a `cut`: write `Transition: cut — <reason>` and give the next shot its own framing. **A continuous moment of a first-person scene is a `continue` that KEEPS the framing** (R16 allows it for the same `POV:` owner in the same posture): the same `Camera:` line, `Movement: hold` (or a look / turn, or the lean / step / walk its row allows, when the workflow declares that move reliable), and the change is in the people - the `Pose:` or `Contact:` line differs from the previous shot's (an unchanged pair is refused, R16), driven by the shot's `Motion:` beats. Reach for it whenever the scene list's beat is `continuous` and only the people move - a held first-person take is how a POV scene flows; cut only for a new framing, a posture change or a new moment.
+  - **A first-person camera is the viewer's EYES.** A `Movement:` on a `POV:` shot is written as the move you want (`push in`, `pull out`, `arc`); the clip step translates it into what the viewer's body can do (lean, step, turn) - the server does not refuse it. The keyframe shows only the viewer's hands / forearms entering from the bottom edge, never the viewer's head; a natural head sway is asked for in words in `Motion:`. Plan a viewpoint change at least every about 15-20 s of first-person (a third-person angle of the same moment, an insert, or a watcher's angle); the server adds a non-blocking note for a longer first-person-only run.
   - Keyframe prompts (`plan_shot` prompt, image writers) NEVER carry movement words: a keyframe is one instant.
   - Read the clip workflow's declared `camera:` (reliable moves, `max_arc_degrees`, unreliable moves) and `limits:` from `workflow_index` BEFORE writing `Movement:` / `Motion:`: a move the workflow cannot perform reliably makes a `continue` a cut (write `cut`), and a beat that matches a limit class is designed around it (see "Shot design for video models").
 
-- `Duration:` 3–10 s. Ids consecutive from `01`; a changed shot keeps its id
+- `Duration:` 3 s up to the clip workflow's maximum (at most 15 s; rule R22). Ids consecutive from `01`; a changed shot keeps its id
   (new / split shots get ids after the highest).
 - `Format:` on the line after the title, always: the `format` attribute, else the production
   canvas `{workspace.profiles.master.video.width} x {workspace.profiles.master.video.height}` (`portrait` when the height is larger than the width, e.g. 9:16), else `landscape`.
@@ -313,7 +286,7 @@ The clip is rendered by a video model with declared limits (`limits:` in `workfl
 - **Interactions early and short.** Hand-offs, contact and exchanges belong in the first 3 s of a clip; late interactions drift. Split a long interaction across shots rather than stretching it.
 - **Micro-actions need size.** Fingertips, blinks, a flicker of a smile stay static in a clip: write them as a larger visible motion (the whole hand, a head turn) or as a close insert of the thing (`insert` = a close-up of a thing).
 - **Spoken lines read best with at least 3 words** (a one-word whisper is hard to hear): a shorter line is only a non-blocking note on the saved shot; lengthen it or fold it into a longer line when you can.
-- Camera moves come only from the workflow's reliable list and within `max_arc_degrees`; otherwise `cut`.
+- Camera moves come from the workflow's reliable list and within `max_arc_degrees`; otherwise plan a cut, or let the performer travel (see "Take grammar").
 
 ### Timed motion (header `Timing: beats`)
 
@@ -362,7 +335,7 @@ check); they go to the clip prompt verbatim.
   frame holds when the last beat ends ("ending on <A> standing at the table"), never on where the next
   action will happen. The server also adds a final hold segment to every clip brief (from the last beat to
   the end of the clip nobody moves), so never pad a beat to fill the clip.
-- Rule R26 (clip rule, refused at the write like R25, never part of the keyframe gate): a `Wardrobe:` or
+- Rule R26 (clip rule, refused at the write, never part of the keyframe gate): a `Wardrobe:` or
   `State:` entry that differs between shot k and shot k+1 must be PERFORMED by a `Motion:` beat of shot k
   that names the garment (or state) and where it ends up; shot k+1's `Wardrobe:` / `State:` show the RESULT.
   A beat of shot k+1 does not count: its own picture lines would already show the end state of what its own
@@ -375,7 +348,7 @@ check); they go to the clip prompt verbatim.
   never two shots, when the beat is one continuous action; a new place, framing or moment is still a new shot.
 - Never cut at a sub-second instant: every beat is at least 1 s (rule R22). A beat the clip cannot
   show in 1 s is merged into its neighbour.
-- `Duration:` (3–10 s) is sized from the beats, the dialogue and a settle: sum what the beats need
+- `Duration:` (3 s up to the clip workflow's maximum, at most 15 s) is sized from the beats, the dialogue and a settle: sum what the beats need
   (a mechanic with several steps takes its real time), the dialogue at its pace, then a settle so the
   end state is visible; the last word ends at least 0.5 s before the shot ends. Never pad a short
   action to a round length.
@@ -398,7 +371,7 @@ check); they go to the clip prompt verbatim.
   combination (the write is refused): pick the WIDEST part of them in frame (`face and upper body`
   → `upper body`); nudity is not an extent, it goes in `Outfits:` (`<characterKey>:nude`), so
   `full figure, nude` → `(full figure)` + `<characterKey>:nude`; a change during the shot
-  (`back then upper body`) is two moments → split it into two shots. Detail states counts
+  (`back then upper body`) is a `Motion:` beat; `Visible:` states the opening frame. Detail states counts
   (`limbs: one pair of hands`) and, when it matters, a hand's side in the fixed vocabulary: `left` /
   `right` right before the arm or hand word (`limbs: right hand and forearm`), `both hands`, or no side
   word when the side does not matter (`limbs: one hand and forearm`). Use `left` / `right` (seen from the person) or `both hands` whenever the side matters. This is advisory (R38), not a refusal: a side-open qualifier (`near` / `far` / `other` / `free` / `dominant` hand) is accepted, but the shot then gets no hand-side check and the `write_shot` answer carries a non-blocking note - so avoid them, the side would depend on the camera. The last segment is the
@@ -448,7 +421,7 @@ check); they go to the clip prompt verbatim.
   limbs are in `Visible:` "off-frame"; "(off-frame)" is only for someone with nothing in frame.
 - `POV: <characterKey> (seated|standing|kneeling|lying|walking)` only for a first-person camera; take the owner and posture from the beat's `POV` column in the scene list (`<slug> (<posture>)`, the key is `character_<slug>`; `none` = third person, no `POV:` line); a beat without that column: the beat's Blocking says who the viewer is; the
   posture is REQUIRED (a `POV:` line without one, or with another, is refused - there is no default);
-  the posture decides what the camera may do (the first-person camera table under "Camera moves"); the posture is said in words only ("first-person view,
+  the posture decides the extent and the angles (R4, R20); the posture is said in words only ("first-person view,
   standing"). A first-person view shows only the viewer's own body seen from their eyes; the
   posture decides the extent in frame (rule R4): seated / kneeling / standing `limbs` or `lower body`
   (lap, thighs — and the hands resting there); lying also `upper body` (the chest seen from above) —
@@ -485,7 +458,7 @@ check); they go to the clip prompt verbatim.
   after / without an act is a `Body pose:` too (`spooning`, `lying on top`, `head in lap`, `lying side by side
   facing`, `prone massage`; the first, second and last are also explicit position names). Each person's `Pose:` line must
   agree with the named pose (the same support, facing and limbs: `tiptoe kiss` = she is on tiptoe,
-  arms around his neck); a pose changes = a new shot.
+  arms around his neck); a pose change during the shot is a `Motion:` beat.
 - `Pose reference: artifact://<key>` (optional; only when `catalog_index()` lists a catalog whose kinds include
   `pose` - see the fallback below). A library pose the server renders the shot's pose from. The server REFUSES an
   ineligible line at `write_shot` and names the fix (import the matching view, use a wider `Camera:`, drop the
@@ -760,19 +733,14 @@ send that shot again:
   spot, the `Contact:` is within reach, a `continue` shot keeps the previous positions, every
   `Visible:` extent fits the `Camera:` size, and a limbs-only person has no `Wardrobe:` / torso wording;
   a POV owner in frame is `limbs` / `lower body` (lying: also `upper body`);
-- every `Action:` and `Camera:` is ONE moment: no two successive verbs, no `then` / `after` /
-  `before` / `followed by` / `cut to` / arrows; a sequence is split into more shots (never
-  rephrased); every action of every beat has a shot;
+- every `Action:` and `Camera:` is the instant at 0 s: no `then` / `after` / `before` / `followed by` / `cut to` / arrows (the sequence lives in `Motion:` beats); every action of every beat is covered by a shot;
 - every shot has `Beat:`; every beat has a shot; every beat's `Contact` is on a shot's `Contact:`
   whose touched parts the `Visible:` extents show (the viewer's lap / groin = `lower body`);
 - partial undress of an outfit = the outfit key + `Wardrobe:` (`removed:` fully off, `partly:` still on
   but displaced) — also inside an undressing beat while a garment is still shown; `:nude` only when
   nothing is worn; `:none` on a clothed person is a defect named in the summary, its garments that
   come off still in `Wardrobe:`;
-- `Camera:` is the opening framing only and opens with a standard framing size; the shot holds
-  one place; a `continue` shot keeps the previous shot's `Location:` and changes the framing size
-  or angle (R16), and its `Movement:` performs that change — a move of the "Camera moves" row of each
-  changed dimension (size: push in / pull out; side: arc; height: crane / pedestal), else `cut` (R25);
+- `Camera:` is the opening framing only and opens with a standard framing size; the shot holds one place; a `continue` shot keeps the previous shot's `Location:`;
 - `(view <id>)` on `Location:` / `Outfits:` / `Characters:` only with a listed view id; the shot's `Blocking:` /
   `Frame:` match the chosen picture's layout;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
@@ -927,17 +895,11 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 ## 4 Audit and hand over
 
 - [ ] every shot of `shotlist.md` has a `plan_shot` plan and the hand-over was accepted (re-read the file)
-- [ ] ONE moment and ONE framing per shot (no `then` / `after` / `before` / `followed by` /
-      `cut to` / arrows, no two successive verbs; every multi-action beat split into one shot per
-      action, never rephrased)
+- [ ] ONE viewpoint per shot (`Camera:` = the opening frame; sequence words only in `Motion:` beats); the shot count follows the scene's sequence type and each shot lasts 3 s up to the clip workflow's maximum
 - [ ] every `Transition:` describes the step FROM the previous shot INTO this one (shot 1 `cut`; no
       "end of scene"; the first shot of a `new moment` / `parallel` beat is a `cut`)
-- [ ] a continuous moment is `continue` shots with performable steps (size step or an arc within `max_arc_degrees`), and both `Camera:` lines of each pair state height AND direction
+- [ ] a continuous moment is `continue` shots (same place, people, moment); a jump to another side or place is a `cut`; a size change inside a shot is a performer-travel `Motion:` beat
 - [ ] a marking (tattoo, scar) appears in `State:` only where its body area is bare in frame - never "under sleeve" / "covered"
-- [ ] every `Transition: continue` shot has a `Movement:` (and, with `Timing: beats`, `camera` beats) that
-      performs its framing change (push in / pull out for size; arc for the side; crane /
-      pedestal for the height; never pan / tilt / truck / follow / handheld / hold); otherwise
-      it is a `cut`
 - [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
 - [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at
       least 1 s, every figure and the camera covered, ending at `Duration:`), each `Dialogue:` line has a
@@ -948,10 +910,7 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
       first beat (R27), and every shot ends on a held state: the last beat finishes the action and
       settles, a move toward the next action starts the next shot, the camera move ends on what the
       frame holds at the end, never on where the next action happens (R33)
-- [ ] every `POV:` line names a posture; every first-person shot's `Movement:` / `camera` beats only name
-      what the viewer's posture allows (R29 table); a new framing for a seated, lying or attached
-      viewer is a `cut`; a `continuous` beat where only the people move is a `continue` that keeps the
-      framing with a changed `Pose:` / `Contact:`
+- [ ] every `POV:` line names a posture; a first-person keyframe shows the viewer's hands / forearms entering from the bottom edge, never their head; a first-person-only run of more than about 15-20 s has a viewpoint change (a third-person angle of the same moment, an insert or a watcher's angle)
 - [ ] the POV owner is only "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` and the
       prompt (no name, key, placeholder or figure); no prompt copies another shot's people
 - [ ] every POV owner's `Visible:` extent covers each part of their own body that `Pose:` /
