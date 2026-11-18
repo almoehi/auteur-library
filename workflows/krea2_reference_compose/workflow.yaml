@@ -18,7 +18,11 @@
 #   krea2_camera_angles, loaded by the keyframe renderer): a real but MODEST lowering of the camera in the same
 #   room with the same person (low angle: lens at tabletop height). Words alone moved the camera far less.
 # - The angle phrase leads the prompt (`low angle shot, ...`, `high angle shot from behind, ...`): the LoRA's caption order.
-# - A pure edit graph (no empty latent) pins Picture 1's camera - that is why this is a separate bundle.
+# - The graph is the SAME as krea2_image_edit's (its sampler also starts from an empty latent); the spike's "no effect"
+#   result was an edit of an existing keyframe, not this graph. The bundle exists for its DECLARATION: `ref2i` (the server
+#   reads it as reference-compose = a NEW image: Picture 1 is bound as the place / subject, the LoRA decider treats the
+#   render as new) and the tag capability `coverage-angle` (the keyframe renderer picks it for the angle route only and
+#   every role ranking puts it after every other candidate).
 # - Krea 2 Identity Edit takes ONE identity picture: two people as one side-by-side Picture 2 work for simple scenes only;
 #   a shot with more people belongs to flux2_reference_compose.
 # - The Camera Angles LoRA is RentCivit-only (licence): a production use needs the author's permission.
@@ -35,6 +39,7 @@ description: >
   shot at the place picture's own camera (use flux2_reference_compose), text-to-image without a place or video.
 url: workflow.json
 workflow_type: ref2i
+capabilities: [coverage-angle]
 model_family: krea2
 gpu_types: [l40s, a100, h100]
 ports:

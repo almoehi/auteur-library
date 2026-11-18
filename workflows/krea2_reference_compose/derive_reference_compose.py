@@ -2,13 +2,13 @@
 
 The compose bundles are the SAME graph as krea2_image_edit / krea2_image_edit_nsfw (the sampler starts from an empty
 latent of width x height, Picture 1 / Picture 2 are conditioning only), declared as `workflow_type: ref2i` (which makes it a
-`reference-compose` workflow, no capabilities line): the storyboard keyframe's coverage ANGLE route (a shot whose camera height / angle differs
+`reference-compose` workflow) plus the TAG capability `coverage-angle` (the only capabilities line): the storyboard keyframe's coverage ANGLE route (a shot whose camera height / angle differs
 from the place picture's) binds it so the place plate stays Picture 1 while the camera is free. Only the declaration,
 the wording and the output name differ. Re-run after every change to either edit bundle:
 
     python3 workflows/krea2_reference_compose/derive_reference_compose.py workflows
 
-(`krea2_reference_compose_nsfw` is derived from `krea2_image_edit_nsfw`, never from the SFW compose bundle; the
+(declared `ref2i` + the tag capability `coverage-angle`; `krea2_reference_compose_nsfw` is derived from `krea2_image_edit_nsfw`, never from the SFW compose bundle; the
 e2e-test.ts files are hand-written and not touched.)
 """
 import json
@@ -36,7 +36,11 @@ FINDINGS = """# ─── Findings (LORA_SPIKE.md #7, 2026-11) ─────�
 #   krea2_camera_angles, loaded by the keyframe renderer): a real but MODEST lowering of the camera in the same
 #   room with the same person (low angle: lens at tabletop height). Words alone moved the camera far less.
 # - The angle phrase leads the prompt (`low angle shot, ...`, `high angle shot from behind, ...`): the LoRA's caption order.
-# - A pure edit graph (no empty latent) pins Picture 1's camera - that is why this is a separate bundle.
+# - The graph is the SAME as krea2_image_edit's (its sampler also starts from an empty latent); the spike's "no effect"
+#   result was an edit of an existing keyframe, not this graph. The bundle exists for its DECLARATION: `ref2i` (the server
+#   reads it as reference-compose = a NEW image: Picture 1 is bound as the place / subject, the LoRA decider treats the
+#   render as new) and the tag capability `coverage-angle` (the keyframe renderer picks it for the angle route only and
+#   every role ranking puts it after every other candidate).
 # - Krea 2 Identity Edit takes ONE identity picture: two people as one side-by-side Picture 2 work for simple scenes only;
 #   a shot with more people belongs to flux2_reference_compose.
 # - The Camera Angles LoRA is RentCivit-only (licence): a production use needs the author's permission.
@@ -105,12 +109,15 @@ for name, base in BASES.items():
         y, "description: >", "url: workflow.json",
         DESC.format(stack_short="NSFW realism (nudity allowed)" if nsfw else "realism", edit=edit, flux=flux),
     )
-    y = must_replace(y, "workflow_type: i2i\n", "workflow_type: ref2i\n")
-    # `reference-compose` is not a declarable capability: a ref2i workflow IS one (`effectiveCapabilities()`), so no line
+    # the TAG capability: the angle route selects it, generic role ranking demotes it (`rankWorkflowsForRole()`)
+    y = must_replace(y, "workflow_type: i2i\n", "workflow_type: ref2i\ncapabilities: [coverage-angle]\n")
+    # `reference-compose` is not a declarable capability: a ref2i workflow IS one (`effectiveCapabilities()`); the edit
+    # bundles' own capability lines go, the compose bundles declare only the `coverage-angle` tag
     y = y.replace("capabilities: [multi-reference-edit, staging-draft]\n", "")
     y = y.replace("capabilities: [multi-reference-edit]\n", "")
-    if "capabilities:" in y:
-        raise SystemExit("capabilities line left over")
+    if y.count("capabilities:") != 1:
+        raise SystemExit("capabilities lines not as expected")
+    y = y.replace("in an edit - use them with krea2_base_realism_nsfw", "here - use them with krea2_base_realism_nsfw")
     p1_start, p1_end = "      description: \"Picture 1, the image to edit", "\"\n      binding: image@20"
     y = replace_span(
         y, p1_start, p1_end,

@@ -64,8 +64,10 @@ const _https  = require('node:https')  as typeof import('node:https');
 const _nodeFs = require('node:fs')     as typeof import('node:fs');
 
 const WORK_DIR          = process.env.WORK_DIR ?? '/work';
-const FIXTURE_DIR       = _path.join(WORK_DIR, 'workflows', WF_NAME);
-const S3_FIXTURE_PREFIX = `e2e-fixtures/${WF_NAME}`;
+const FIXTURE_DIR       = _path.join(WORK_DIR, 'workflows', WF_NAME);   // bundle files + saved outputs
+// the fixtures are krea2_image_edit's (same plate and character; not duplicated in this bundle)
+const FIXTURE_SRC_DIR   = _path.join(WORK_DIR, 'workflows', 'krea2_image_edit');
+const S3_FIXTURE_PREFIX = 'e2e-fixtures/krea2_image_edit';
 
 const WIDTH  = 1344;
 const HEIGHT = 768;
@@ -302,7 +304,7 @@ try {
   console.log('\n── 3. Stage fixtures + submit renders ───────────────────────────');
   const fixtureUrls: Record<string, string> = {};
   const stage = async (file: string): Promise<string> =>
-    (fixtureUrls[file] ??= await ensureFixture(`${S3_FIXTURE_PREFIX}/${file}`, _path.join(FIXTURE_DIR, file)));
+    (fixtureUrls[file] ??= await ensureFixture(`${S3_FIXTURE_PREFIX}/${file}`, _path.join(FIXTURE_SRC_DIR, file)));
   const renderIds: string[] = [];
   for (const sc of SCENARIOS) {
     const inputs: Record<string, string> = { image_1: await stage(sc.image1) };
