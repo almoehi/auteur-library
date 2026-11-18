@@ -45,9 +45,10 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   shots is refused);
   (3) `write_shot` ONCE PER SHOT, in order, about 3 shots per MESSAGE of tool calls — `text` is that shot's
   complete section, starting with its `## <shotId> — <title>` heading — and `plan_shot` for the same shot
-  right after its `write_shot` was accepted (one plan per call, see section 3); (4) `draft_storyboard()`
+  right after its `write_shot` was accepted (one plan per call, see section 3; NOT for a `Transition: continue`
+  shot - it extends the running take, has no keyframe and needs no plan, see "Continue shots"); (4) `draft_storyboard()`
   with NO arguments.
-  `write_shot` checks only that shot (unlinked keys, R1–R20, with `Timing: beats` also R21–R23, unreadable lines). A refused shot is
+  `write_shot` checks only that shot (unlinked keys, R1–R20, with `Timing: beats` also R21–R23, unreadable lines; a `continue` shot is checked on its lines AFTER inheriting the running take's). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
   `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
@@ -151,6 +152,17 @@ The header is the title line, `Format: portrait|landscape`, `Grammar: takes` (wr
 - **Performer travel:** a size change inside a shot is performed by the performer relative to the lens, as `Motion:` beats with an end size (`approach`, `lean in`, `back away`) - the way a first-person shot changes size. In third person the camera travels WITH a walker (`follow`; do not rely on `lead`, it is untested). Do not use `truck`: in a narrow space plan a cut or an `arc` instead.
 - **Heat is acting:** a beat's `Heat` level (`none | teasing | aroused | intense | climax`) becomes performer actions in `Motion:` that escalate and relax with the level; the viewer's hands / forearms are actors too (`limbs`). `Expression:` stays the face at t=0. Default vocabulary (every workspace): `teasing` - a held look, eye contact with the lens, a hand to the mouth; `aroused` - turning away then back, a breath drawn in, a smile that fades; `intense` - the breath quickening, a hand gripping the nearest edge, closing the eyes; `climax` - the body tightening, then slackening, a last held look. Where the workspace's nudity policy is `allowed`, `load_skill explicit-acts` for the explicit per-level actions.
 
+### Continue shots (they extend the running take)
+
+A `Transition: continue` shot is NOT a new keyframe: it is the next stretch of the SAME take. Write it with only what it adds:
+
+- It states `Transition:`, `Duration:`, `Beat:`, `Motion:` (with the `camera` beats), `Dialogue:`, `Audio:` and `Movement:` when the camera moves - and ONLY the picture lines that CHANGE since the running take: another `Camera:` size or angle, a new `Contact:`, a `Wardrobe:` / `State:` / `Expression:` change, another `Sex position:`. Every line you leave out is inherited from the running take (the previous shot, resolved the same way, back to the shot that has a keyframe): `Action:`, `Blocking:`, `Pose:`, `Frame:`, `Visible:`, `Characters:`, `Outfits:`, `Location:`, `POV:`, `LoRAs:` and the rest. Never copy the previous shot's lines "to be safe": a restated line that differs from its source is a contradiction, and the write checks the shot on the inherited lines too (R1-R20 read the RESOLVED shot, so a missing `Blocking:` is not a defect on a continue). A line you do state replaces the inherited one for this shot and for the continues after it; `none` clears an inherited list (`Contact: none` when the hands let go).
+- It has no keyframe, so it gets NO `plan_shot` call and no take: the server never renders it and the published storyboard has no frame for it (the filmstrip shows it as "extends shot N"). The shot that OPENS the take (a `cut`, or a `continue` at another place) is the keyframed one: it carries the full lines and the `plan_shot`.
+- R17 / R18 (restating a removed garment / a `State:` after a `continue`) do not apply: inheritance replaces restatement. State a `Wardrobe:` / `State:` line only when it changes.
+- A `continue` stays at its running take's place: stating another `Location:` makes the shot a keyframed one of its own (write it as a `cut`).
+- **Chain limit (K1):** at most 2 consecutive `continue` shots at one position (the same `Sex position:` / two-person `Body pose:`, or no act) before a cut. A take that long drifts; the third one is refused at the write. Re-anchor with a `cut` to a new viewpoint (a new keyframe, planned like any cut) and continue from there.
+- Use a continue when the viewpoint holds or changes by performer travel / camera move inside the same moment; use a `cut` for a new viewpoint, side or place. The first shot of a scene is never a `continue`.
+
 ### Cinematography (the shot rules below, R1-R20 and the POV / act rules R4 / R20 / R24 take precedence)
 
 - Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide (`Format: portrait`: one vertical establishing frame instead, see below).
@@ -219,8 +231,7 @@ The header is the title line, `Format: portrait|landscape`, `Grammar: takes` (wr
 - `Lens:` (optional, keyframe-relevant): `Lens: <wide|normal|long> [<N>mm][, <deep|shallow> focus][, focus on <thing>]`. Classes: wide <= 28 mm (default 24), normal 35-50 mm (default 35), long >= 85 mm (default 85); an explicit N must fit the class. It sets perspective and depth of field of the keyframe, never movement; leave it out when the scene's look needs nothing special.
 - `Lighting:` (optional, keyframe- and clip-relevant): this shot's light and set state in one short phrase: visible light sources and their state (on / off / dimmed, direction, colour), daylight or weather, screens or fire, and the state of openings and coverings (doors, windows, curtains) where it changes the look. It REPLACES the scene's `Lighting` phrase for this shot and wins over the light shown in the location picture. The scene list's `Lighting` is how the scene ends lit (its main state): write `Lighting:` on every shot before or after a change of that state, and omit it on shots that keep the scene's. Never contradict it in `Action:` / `Frame:`.
 - Coverage of one moment: consecutive `continue` shots may change framing size or angle (wide from behind → medium close-up of her face over her shoulder → close-up of his hands on her hips). Beats that would look the same as a still are ONE shot - its clip carries them in `Motion:`, never two identical keyframes.
-- A `continue` shot that keeps an outfit whose garments the previous shot removed or left partly off (`Wardrobe: … removed:` / `partly:`) restates a `Wardrobe:` entry for that character (the same state, now removed, or worn again) — otherwise refused (rule R17): the renderer would re-dress the person. A `partly:` garment must be restated wherever this shot's extent shows it — the viewer's own too (the hem of their own jacket still open in a `lower body` shot); where the extent does not show it (a close-up above the waist, a `limbs` viewer) leave it out — it is not in frame, and R19 refuses it there.
-- A `continue` shot that shows a person the previous shot gave a `State:` (wet hair, sweaty …) restates a `State:` entry for that person (the same states while they last, or what changed — preferably explicit, `dry hair` after toweling, else `(none)`) — otherwise refused (rule R18): the renderer would draw them as designed (dry hair after the jump into the water).
+- A `continue` shot INHERITS the running take's `Wardrobe:` and `State:` (see "Continue shots"): state them only when they change - a garment taken off, put back on or displaced, a state that began or ended (`dry hair` after toweling). The restatement rules R17 / R18 are off under the take grammar; a `cut` that keeps an outfit whose garments the previous shot removed or left partly off, or a person the previous shot gave a `State:`, restates it itself (not checked - the renderer would re-dress the person / draw them as designed). A `partly:` garment is stated wherever the shot's extent shows it — the viewer's own too; where the extent does not show it leave it out, R19 refuses it there.
 - `Transition:` says how THIS shot follows the PREVIOUS one (the cut or continuation INTO this shot) —
   never how it leads to the next. Shot 1 is always `cut — first shot of the scene`; the last shot's line
   is about the shot before it (never "end of scene"). Write it from THIS shot's first beat's Continuity:
@@ -566,10 +577,10 @@ check); they go to the clip prompt verbatim.
     (`Out of frame: <surface>`); never write "the camera in the <surface>" or a person "in the glass" in
     `Frame:` / `Action:` / `Pose:`. Without a `Reflection:` line the angle shows no reflection.
     The location's mention lines list its `reflective surfaces` per picture (the main picture and each view; a mirror, window, glass, screen, water, polished metal with where it is): write a `Reflection:` only in a surface of the picture the shot's `Location:` line binds - another view that lists the surface, or another location, when the bound picture lists none (`none` = the picture shows no reflective surface). A `Reflection:` in a surface the bound picture does not list is answered with an advisory note (the keyframe would invent the surface); a picture whose line is absent states nothing, so check by the layout text.
-  - A `continue` shot keeps everyone's spot and posture, the viewer's included, from the previous shot
-    — copy the previous `Blocking:` positions and change only what the new `Action:` moves, and say
-    so in `Action:` ("<B> has risen"). A person who moved in the story but not in the lines
-    teleports in the render. A change of the viewer's posture is stated in `Action:` too ("the viewer
+  - A `continue` shot keeps everyone's spot and posture, the viewer's included, from the running take
+    (inherited - do not restate `Blocking:`); when someone moves, show it as a `Motion:` beat; a `Blocking:` / `Action:`
+    line you do state is the changed state at this shot ("<B> has risen"). A person who moved in the story but not in
+    the lines teleports in the render. A change of the viewer's posture is stated in `Action:` too ("the viewer
     now lies back on the bench") with the new `POV:` posture: the renderer then drops the previous
     frame (its viewpoint is the old eyes) and carries the state in words.
   - `Visible:` extents must fit `Camera:`'s framing size: `full figure` needs `full` / `wide`,
@@ -644,8 +655,8 @@ check); they go to the clip prompt verbatim.
   the POV owner or a `limbs` person — they are words only). Write it in the first shot AFTER the action
   that changes such a state (<A>'s beat "climbs out of the water" is in shot k → shot k+1 has `State:
   <A's key> (wet hair, wet skin)`; shot k itself, which starts before <A> climbs out, does not) and
-  in EVERY later shot of the scene that shows the person while it lasts — a `continue` shot must restate
-  it (rule R18); a `cut` shot later in the same moment should repeat it too (not checked — your job).
+  in EVERY later keyframed shot of the scene that shows the person while it lasts — a `continue` shot inherits it
+  (state only what changes); a `cut` shot later in the same moment should repeat it (not checked — your job).
   A distinctive marking in the character's digest (tattoo, scar, birthmark) is permanent, but it is written
   as a `State:` entry ONLY in a shot that shows that body area BARE: side + body part (`tattoo left upper arm`,
   at most 40 characters), so it lands on the right arm and the right person. Where clothing covers it, or the
@@ -660,7 +671,7 @@ check); they go to the clip prompt verbatim.
   When it ends, say so, preferably as the explicit new state (`dry hair`, `dry skin`): the judge checks
   a named state best. `(none)` means back to the design's own look (the server then states "no longer:
   <the previous shot's states>"); write it alone, never mixed with states. The server states each state
-  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale trousers; removed: yellow jacket)`); a `continue` shot restates it (R17).
+  as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale trousers; removed: yellow jacket)`); a `continue` shot inherits it (R17 applies to a `cut`).
 - `Contact:` = every touch the frame shows at ONE instant (never a motion path of successive contacts - that is
   `Motion:`), `<characterKey> (<body part>) on <characterKey> (<body part>)`
   or `<characterKey> (<body part>) on <thing>`, `;`-separated (`none` / omit = no touch). A thing is
@@ -688,8 +699,8 @@ check); they go to the clip prompt verbatim.
   shot during it - the shot keeps the act's `Sex act:` / `Sex position:` and its `Contact:` points
   (the groin contact included), even when its beat's act is over or its `Action:` is about
   something else. Set `none` and drop the contact only in the shot where they visibly separate (or
-  a cutaway that shows neither of them). A `continue` shot during an act copies the previous shot's
-  act lines unless its `Action:` separates them - words like "mid-thrust" next to `Sex act: none`
+  a cutaway that shows neither of them). A `continue` shot during an act inherits the running take's
+  act lines (state them again only when they change) unless its `Action:` separates them - words like "mid-thrust" next to `Sex act: none`
   are a contradiction the renderer resolves by showing NO act.
   The server shows the act ("must show") only when a `Contact:` entry touches an intimate part
   (groin, buttocks, breasts). A close-up whose contacts are hands on shoulders or fingers on a thigh
@@ -726,16 +737,16 @@ send that shot again:
     negated, not "behind the camera"): it is on `Out of frame:` only, and never a person;
 - `Wardrobe:` `wearing:` / `removed:` items are plain garment nouns, comma-separated, no descriptions;
   a garment still on but displaced is `partly: <garment> (<end state>)`, in one list only, its extent
-  shows where it is worn (R19), and a `continue` shot restates it where its extent shows it (R17, the viewer's own too);
+  shows where it is worn (R19), and a `continue` shot inherits it (a `cut` restates it where its extent shows it - your job);
 - `State:`: every person whose visible state the action changed (wet, sweaty, messy) has it here and
-  in every later shot that shows them while it lasts; a `continue` shot restates the previous shot's
-  `State:` of everyone it shows (R18), or says what changed (an explicit `dry hair` rather than `(none)`);
+  in every later keyframed shot that shows them while it lasts; a `continue` shot inherits it and says only
+  what changed (an explicit `dry hair` rather than `(none)`), a `cut` restates it (your job);
 - every `Visible:` entry has ONE extent (no "and", "then" or ", nude" inside the parentheses);
 - geometry: everyone in frame is placed in `Blocking:` (spot + relative to the others and the viewer),
   the camera is at the viewer's eyes and its angle fits their posture (R20: lying never high angle /
   top-down, seated / kneeling never top-down), the viewer's `Visible:` detail is what `Blocking:` /
   `Pose:` show of them, a posture change is said in `Action:`, everything in one view is visible from the camera's
-  spot, the `Contact:` is within reach, a `continue` shot keeps the previous positions, every
+  spot, the `Contact:` is within reach, a `continue` shot keeps the running take's positions, every
   `Visible:` extent fits the `Camera:` size, and a limbs-only person has no `Wardrobe:` / torso wording;
   a POV owner in frame is `limbs` / `lower body` (lying: also `upper body`);
 - every `Action:` and `Camera:` is the instant at 0 s: no `then` / `after` / `before` / `followed by` / `cut to` / arrows (the sequence lives in `Motion:` beats); every action of every beat is covered by a shot;
@@ -745,7 +756,7 @@ send that shot again:
   but displaced) — also inside an undressing beat while a garment is still shown; `:nude` only when
   nothing is worn; `:none` on a clothed person is a defect named in the summary, its garments that
   come off still in `Wardrobe:`;
-- `Camera:` is the opening framing only and opens with a standard framing size; the shot holds one place; a `continue` shot keeps the previous shot's `Location:`;
+- `Camera:` is the opening framing only and opens with a standard framing size; the shot holds one place; a `continue` shot keeps the running take's `Location:` (inherited);
 - `(view <id>)` on `Location:` / `Outfits:` / `Characters:` only with a listed view id; the shot's `Blocking:` /
   `Frame:` match the chosen picture's layout;
 - the POV owner is "the viewer" in `Action:` / `Blocking:` / `Pose:` / `Frame:` — never by name,
@@ -755,7 +766,7 @@ send that shot again:
 
 ## 3 Plan each shot, then hand over — `plan_shot`, `draft_storyboard()`
 
-One `plan_shot` call per shot, right after that shot's `write_shot` was accepted (the plan is built
+One `plan_shot` call per KEYFRAMED shot (every shot except a `Transition: continue` shot, which has no keyframe: planning it is refused), right after that shot's `write_shot` was accepted (the plan is built
 from the shot's lines): `plan_shot` takes ONE plan - the fields below at the top level - checks it
 alone and stores it; a repeat for the same shot id replaces the stored plan. A refusal lists only that
 shot's problems (an enum field names its allowed values): fix THAT plan and send it again, never
@@ -769,8 +780,9 @@ When your tools include `run_checks`, call it once after the last `write_shot` w
 fix every shot a rejected check names (`write_shot`, then `plan_shot` again for it, then
 `run_checks` again) BEFORE `draft_storyboard`: the server renders as soon as the plans are handed
 over, so a contradiction found later costs a full re-render. Then call `draft_storyboard()` with NO
-arguments: it hands over the stored plans. The first call must have a plan for EVERY shot of
-`shotlist.md` (a shot without one is refused by id - plan it and call again). Per shot, the arguments
+arguments: it hands over the stored plans. The first call must have a plan for EVERY keyframed shot of
+`shotlist.md` (a shot without one is refused by id - plan it and call again); a `continue` shot needs none and the
+answer lists them ("No plan needed"). Per shot, the arguments
 of `plan_shot` (the example shot s3-01 above):
 
 ```
@@ -846,7 +858,7 @@ Other shapes: a crowd beside a principal = `{ "kind": "person", "count": 3, "ext
 - The POV owner (`POV:`) is the camera. When their limbs are in frame (they are in `Characters:`):
   an entity with `region.depth: "frame-edge"` and `limbs` (matching their `Visible:` detail) — never
   a full person. With nothing of them in frame they are not in `Characters:` and get no entity.
-- Pictures: the place; for a `continue` shot ALSO the previous shot's frame; then one picture
+- Pictures: the place; then one picture
   per figure (words-only people — the POV owner, limbs-only — take none). A shot needing more than
   the render workflow's image slots is not refused: the server leaves out the lowest-priority
   person and names them in words. To keep everyone pictured, split such a shot in `shotlist.md` by
@@ -899,11 +911,11 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 
 ## 4 Audit and hand over
 
-- [ ] every shot of `shotlist.md` has a `plan_shot` plan and the hand-over was accepted (re-read the file)
+- [ ] every KEYFRAMED shot of `shotlist.md` (all but the `continue` shots) has a `plan_shot` plan and the hand-over was accepted (re-read the file)
 - [ ] ONE viewpoint per shot (`Camera:` = the opening frame; sequence words only in `Motion:` beats); the shot count follows the scene's sequence type and each shot lasts 3 s up to the clip workflow's maximum
 - [ ] every `Transition:` describes the step FROM the previous shot INTO this one (shot 1 `cut`; no
       "end of scene"; the first shot of a `new moment` / `parallel` beat is a `cut`)
-- [ ] a continuous moment is `continue` shots (same place, people, moment); a jump to another side or place is a `cut`; a size change inside a shot is a performer-travel `Motion:` beat
+- [ ] a continuous moment is `continue` shots (same place, people, moment) that state only their motion and what changes, at most 2 in a row per position before a cut that re-anchors; a jump to another side or place is a `cut`; a size change inside a shot is a performer-travel `Motion:` beat
 - [ ] a marking (tattoo, scar) appears in `State:` only where its body area is bare in frame - never "under sleeve" / "covered"
 - [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
 - [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at
@@ -936,7 +948,7 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - `task_complete(summary="Storyboard scene <n>: <N> shots handed to the server; open: …")` (1–3
   lines). The takes land afterwards; this hands the design to the person, it does not finish it.
 - Retry drafting: keep the existing `shotlist.md`; `plan_shot` the shots the stop reason names -
-  every shot when no plan was accepted before (the first accepted hand-over must cover them all) -
+  every keyframed shot when no plan was accepted before (the first accepted hand-over must cover them all) -
   then `draft_storyboard()`, then `task_complete`.
 
 ## Chat (after hand-over)
