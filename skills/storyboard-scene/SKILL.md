@@ -89,7 +89,7 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   - Pick the location (and the view `(view <id>)`) whose picture holds what the shot shows; a shot that looks at a neighbouring space which is a linked location uses that location's own picture for it.
   - A direction that is no listed view and no linked location (typically the reverse, 180° from the main picture - no reverse view exists) is a different set location or a gap: a reverse is a CUT to a linked location, or reframe the shot; a shot whose direction no view and not the main picture shows says so in words in `Action:` (and in the summary). Never invent the missing side or its connections.
 - Note: the POV owner, `continuous` chains, beats holding several actions, shots with many people
-  (the server binds the place, for a continued shot also the parent frame, and one picture per
+  (the server binds the place and one picture per
   figure; when the workflow has too few image slots it leaves out the lowest-priority person and
   names them in words only - split a crowded shot by who is in frame to keep everyone pictured).
 - Preflight — on any gap call `task_failed(reason)` naming it, plan nothing: the scene row; ≥1
