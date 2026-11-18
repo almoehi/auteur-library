@@ -177,6 +177,7 @@ Motion:
 - Same support = a Motion beat in the SAME take: rolling onto the other side, one body turning over, a leg raised or lowered, kneeling to sitting on the same bed, a lap sat on the other way round. State only the new position in the beat; name a catalog position (the same names the line takes; `Body pose: <pose>: <key>[, <key>]` for an everyday pose, naming the people), never `other (...)` - its support is unknown.
 - A support change is a CUT with its own keyframe: from lying on the bed to a standing lift, from a chair to the floor, a body joining or leaving, a restraint applied. End the shot before it and open the next shot with the new position in its own line. A beat that changes the support is refused at the write.
 - A `continue` shot has no keyframe, so it changes position only the same way: the continue's `Motion:` beat performs the change (`Sex position: ...`); restating a changed `Sex position:` line on a continue without performing it, or changing the support, is refused. A continue cannot add or drop a position.
+- Three bodies: in the per-pair form a beat names the pair it changes (`Sex position: <keyA>-<keyB>: <position>`); a pair or a body the opening does not hold (someone joining) is a cut, and a three-person position keeps its three bodies.
 - A position named in a beat needs the shot to open with a position of that kind. The keyframe judge checks the OPENING position; do not plan the keyframe's pose around a later beat.
 - Under a workspace whose nudity policy is not `allowed`, only everyday poses (`Body pose:`) are written in a beat; an explicit position is never written there.
 
@@ -514,7 +515,7 @@ check); they go to the clip prompt verbatim.
   is one of the catalog poses (`workflow-calling-conventions`, "Body poses"): sitting, kneeling,
   leaning, walking - and ALWAYS when two people kiss, embrace, carry or dance. Keys are `Characters:`
   keys in the pose's role order (two-person poses: the one who acts first - `carried kiss: <carrier>,
-  <carried>`), one entry per pose, each person in at most ONE entry, ONE `Body pose:` line per shot.
+  <carried>`; a three-person pose, `lying with two partners: <side>, <middle>, <side>`), one entry per pose, each person in at most ONE entry, ONE `Body pose:` line per shot.
   Prefer the closest catalog name over `other (<words>)` (only a catalog name is stated limb by limb):
   a lift is `carried kiss` / `bridal carry` / `piggyback` by how the legs are held. Never beside
   `Sex position:` (the explicit position already poses its people). A cuddle, a lying embrace or a massage
@@ -733,7 +734,7 @@ check); they go to the clip prompt verbatim.
   hidden. A shot with a `Sex act:` always has a `Contact:` line naming the contact points.
 - `Sex act:` / `Sex position:` only when `{workspace.contentPolicy.nudity}` is `allowed` and all
   depicted are adults: copy the beat's columns (names: skill `explicit-acts`, `load_skill` it first - it also says how `anatomy` and outfit `gear`, a strap-on included, decide who does what); both
-  `none` or both set (a massage is no act: its `Body pose:` is `prone massage`). ONE position per shot - with optional
+  `none` or both set (a massage is no act: its `Body pose:` is `prone massage`). ONE position per shot - or, for THREE bodies, one per pair (`Sex position: <keyA>-<keyB>: <position>; <keyA>-<keyC>: <position>`, with the `Sex act:` names and `Contact:` entries in the same order as the pairs) or a three-person name (`explicit-acts`, "three bodies"); never more than 3 bodies in contact in a shot (4+ is "simplify upstream": show at most 3 per shot and tell the user the scene needs simplifying) - with optional
   modifiers in parentheses from the entry's fixed list (`explicit-acts`, "Modifiers"), a solo act on a `solo ...` position; when the beat's position does not match the staging
   (a lift against the vanity coded `standing face to face`), use the position whose support matches
   (`standing carry`, `edge of surface`, ...) - the server states it limb by limb in every shot of the
