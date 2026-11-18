@@ -183,6 +183,16 @@ A coverage shot has a keyframe of its own, so it gets a `plan_shot` and states i
 - **Diegetic POV** (`POV: diegetic <device>`: a phone propped on a cushion, a webcam, a mirror, a live feed): the shot IS the device's picture, not a viewer's. No viewer posture (do not write one), no viewer-hands / `limbs` rules; the camera is locked off with the device's own lens look (the server states this fixed look); the people in it are normal figures. A live feed or recording shown on a screen is its own shot of the device's picture.
 - **Off-screen sources:** an `Off-screen` sound whose source is in ANOTHER place gets the LISTENER's reaction (the look) only; show the source's place only in a `parallel` beat (advisory note otherwise).
 
+### Signals acted (a beat's `Signal`) and `Insert:` (under `Grammar: takes`)
+
+A scene-list beat's `Signal` cell (`<character>: <signal> [@timing] [-> acted | push-in | detail | sound]`) is a sensation made visible or audible. It is PERFORMED inside a shot of that beat, never shot as an insert of its own. Every signal of a beat is stated by at least one shot that carries the beat (the hand-over lists the ones nobody acts).
+
+- **`Signal: <character>: <signal> [-> <carrier>]; ...`** (one line, `;`-separated, the scene list's own words) states which of the beat's signals THIS shot acts. Copy the character and the signal words exactly as the scene list has them; a signal the beat does not carry is refused. A signal that the shot does not state is not acted in it.
+- **The carrier** is the scene list's by default (breath / voice signals `sound`, eyes / lips / shiver `acted`, hands / swallow / bitten lip `detail`, flush `push-in`). Write `-> <carrier>` on the shot ONLY to change it for this shot, because of how the shot is framed: a face signal in a wide or full frame is `-> sound` or `-> push-in`; a `detail` the take cannot hold is `-> acted` in a tighter frame.
+- **What the shot must then contain.** Every carrier: the signal's words (as in the scene list, e.g. `bitten lip`, or the words of `other (<words>)`) in `Audio:` after the scene's atmosphere, with its time ("<atmosphere>; breath catches @2 s"). `acted` / `push-in` / `detail`: the person is in `Visible:` (never the viewer - the POV owner's own signals are `sound`) and one of THEIR `Motion:` beats names the signal's words at its time ("2-3 s character_x: her lips part, a breath in"). `push-in`: a `push in` in `Movement:` timed to the reaction. `detail`: one `Insert:` of that person.
+- **Readable size (acted / detail on a face or a hand).** The part must fill at least a sixth (face) / an eighth (hand) of the frame: open `Camera:` with `medium` or tighter for a whole-body person; a wider size is refused. `push-in`, `sound` and `other (<words>)` signals are not measured. The frame judge then asks one question per such signal (is the face / hand readable).
+- **`Insert: <key> (<part>) @<t0>-<t1> s: <micro-action>`** (one entry per line, at most TWO per shot): a 2-3 s detail that is later CUT OUT of this shot's own clip (a hand closing on a glass, a swallow). The person is in `Visible:`, the part is in the body-part list AND shown by their extent, the seconds lie inside `Duration:` and do not overlap another insert. Use it for a micro-action too small for the shot's size; a detail the shot cannot contain (an object out of frame, a hand under a table) is a shot of its own, never an `Insert:`. An `Insert:` is no keyframe and gets no `plan_shot` of its own.
+
 ### Cinematography (the shot rules below, R1-R20 and the POV / act rules R4 / R20 / R24 take precedence)
 
 - Scene 1 opens on its hook (the scene list's first beat); an establishing wide may follow it. Any other scene at a NEW place opens with an establishing wide (`Format: portrait`: one vertical establishing frame instead, see below).
@@ -195,7 +205,7 @@ A coverage shot has a keyframe of its own, so it gets a `plan_shot` and states i
 - `Format: portrait` (a vertical frame shows little side to side; these override the size and establishing-wide rules of this skill):
   - Prefer close framings (`close-up`, `medium close-up`) with ONE establishing frame; "shot size follows intensity" runs medium -> medium close-up -> close-up -> extreme close-up.
   - A two-shot is stacked in depth (one person behind the other, eye line about 28 % from the top, the lower third clear for captions). ONE ensemble frame per new configuration (a group of people) is allowed, framed the same way.
-  - A beat's optional `Signal` (the detail that carries a sensation) stays inside the beat's shots; it may be carried by a post-production cut-in / punch-in note instead of a still of its own.
+  - A beat's optional `Signal` (the detail that carries a sensation) is ACTED inside the beat's shots (see "Signals acted"), never a still or shot of its own; a face that the portrait frame holds too small carries the signal as a sound or a push-in there.
   - Two people side by side or one behind the other, close (within arm's reach), never at opposite edges of the frame.
   - A new place's establishing image is one vertical frame (a doorway, a corridor, a window), not a `wide` of the room.
 
@@ -394,7 +404,7 @@ check); they go to the clip prompt verbatim.
   line at about 2.5 words per second (plus 0.3 s of slack); lines never overlap and stay inside the shot
   (rule R23).
 - `Audio:` = the scene's atmosphere (room tone, space, distance, mood), copied VERBATIM from the scene
-  list's `Audio` for this scene onto EVERY shot of the scene (the write is refused when it differs). The ambient bed is ALWAYS audible at a natural level: 'quiet', 'distant', 'faint' or 'hushed' may describe the PLACE (its size, its sources), never the loudness of the sound; every clip carries an audible ambient bed. A scene `Audio` that names only a level ("quiet", "silence") is a scene-list defect: say so in the task result, do not copy it into a clip.
+  list's `Audio` for this scene at the START of the `Audio:` line of EVERY shot of the scene (the write is refused when the line does not start with it); the signals the shot acts follow it (see "Signals acted"). The ambient bed is ALWAYS audible at a natural level: 'quiet', 'distant', 'faint' or 'hushed' may describe the PLACE (its size, its sources), never the loudness of the sound; every clip carries an audible ambient bed. A scene `Audio` that names only a level ("quiet", "silence") is a scene-list defect: say so in the task result, do not copy it into a clip.
 - `Beat:` may list several beats (`Beat: 1.2, 1.3`) when one continuous action spans them.
 - The moment rules above (R9) apply to `Action:` and `Camera:` only: the sequence lives in `Motion:`.
 
@@ -938,11 +948,12 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] a continuous moment is `continue` shots (same place, people, moment) that state only their motion and what changes, at most 2 in a row (any position) before a cut that re-anchors, never another place or view; a jump to another side or place is a `cut`; a size change inside a shot is a performer-travel `Motion:` beat
 - [ ] a dialogue / reaction sequence is one long take of the two-person frame plus `Transition: coverage <shot id>` shots (each with its own `Camera:` + `Angle:`, a shared `Beat:`, `from <t> s` inside the covered take) rather than many restating cuts; `Angle:` words and keys follow `Visible:` / `Characters:`
 - [ ] each configuration states a `Line: <keyA> - <keyB>, camera <left|right>` (a new one when people move; a new place resets it) and no cut crosses it except by an `arc` or a neutral on-axis shot; consecutive cuts at one place with the same people differ by an angle or a size step; `Cut on:` names a Motion beat of the previous shot; a configuration of 3+ shots has an establishing frame; a look that leaves frame is answered by the matching cut; a device's picture is `POV: diegetic <device>` with no posture
+- [ ] every `Signal` of every beat is stated in the `Signal:` line of a shot of that beat (carrier overridden only to fit the framing), performed as a `Motion:` beat of the person (not `sound`) and named in that shot's `Audio:` after the scene's atmosphere; an acted face / hand signal is framed `medium` or tighter; at most 2 `Insert:` lines per shot, each inside the shot's `Duration:`
 - [ ] a marking (tattoo, scar) appears in `State:` only where its body area is bare in frame - never "under sleeve" / "covered"
 - [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
 - [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at
       least 1 s, every figure and the camera covered, ending at `Duration:`), each `Dialogue:` line has a
-      speaker key and a delivery and fits its time, and `Audio:` is the scene's, verbatim, on every shot
+      speaker key and a delivery and fits its time, and `Audio:` starts with the scene's atmosphere, verbatim, on every shot (the signals the shot acts follow it)
 - [ ] with `Timing: beats`: every beat names its mechanics and end state; every `Wardrobe:` / `State:`
       difference to the next shot is performed by a beat of THIS shot naming the garment and where it
       ends up (R26), this shot's own picture lines show each person at the instant before their
