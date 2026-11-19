@@ -50,12 +50,12 @@ you render nothing. Prompt and reference conventions for the entity lines: `work
   with NO arguments.
   `write_shot` checks only that shot (unlinked keys, R1–R20, with `Timing: beats` also R21–R23, unreadable lines; a `continue` shot is checked on its lines AFTER inheriting the running take's). A refused shot is
   not saved and the refusal lists only its problems: fix THAT shot and send it again with
-  `write_shot` — never touch other shots, never rewrite the file, never declare the task failed
+  `write_shot`, CHANGED as the refusal names (a refused call is never resent unchanged) — never touch other shots, never rewrite the file, never declare the task failed
   over a refusal. Sending a shot id again replaces its section; the file always keeps the shots in
   shot-number order, whatever order they are accepted in, so never reorder it yourself. Let
   `write_shot` do the validating: it checks the shot and refuses with the exact fix, so fix a
   refusal from its message instead of pre-checking every rule in your reasoning (long replies
-  time out). Send at most 3 shots per message. There is NO next turn: a message without tool
+  time out). Send at most 3 shots per message; write a `continue` only in a message AFTER its previous shot was accepted (never in the same message as a parent that may be refused: it would be judged without it). There is NO next turn: a message without tool
   calls ends the run and the draft fails, so never announce "I will continue with the remaining
   shots" — keep sending `write_shot` / `plan_shot` messages until `draft_storyboard()` is accepted.
   Beat coverage and the other
@@ -153,7 +153,7 @@ The header is the title line, `Format: portrait|landscape`, `Grammar: takes` (wr
   1. **Take.** A `new moment` / `parallel` beat (and the first shot of the scene) opens with ONE keyframed shot whose `Motion:` beats carry the beat's action (up to the clip maximum); never one shot per verb. A `continuous` beat at the same place, people and viewpoint continues the running take (step 2) instead, unless the chain cap is reached or step 4 forces a cut.
   2. **Continue** while the beat goes on at the same place, people and viewpoint but runs past the opener's duration, or its framing changes in a way the take can perform (a `Camera:` line on the continue states the new framing). A size change a performer can perform stays inside the shot as a `Motion:` beat; use a continue when the beat outlasts the opener or the change cannot be performed inside one shot. Up to 2 in a row; each states only what it adds. In first person the camera is the viewer's eyes: only a size change the viewer can perform (lean, step, walk) is a continue; a height or direction change or a change of the viewer's posture is a `cut`.
   3. **Coverage** when the beat needs ANOTHER camera position on the same moment: a reaction, a single of one person, an over-the-shoulder, a two-shot or reverse of what an earlier shot shows. Write `Transition: coverage <shot id> [from <t> s] — <reason>` with its own `Camera:` and `Angle:` and the same `Beat:`, never a plain `cut` (conditions in "Coverage"; not for a first-person shot, which has one camera: its viewpoint changes are cuts to a third-person angle, an insert or a watcher's angle). A change of framing inside a beat is coverage (or a continue), not a cut.
-  4. **Cut** for a new beat whose Continuity is `new moment` / `parallel`, a new place or view, a support change, a position or camera move the take cannot hold, the chain cap reached with no new camera position, or when the cutting rules demand it. A `cut` that repeats the previous shot's beat at the same place for none of these reasons is a missed continue or coverage: turn it into one. A cut or coverage shot right after a shot at the same place with the same people that differs by no angle family and no size step is refused (30-degree rule): continue or vary the camera.
+  4. **Cut** for a new beat whose Continuity is `new moment` / `parallel`, a new place or view, a support change, a position or camera move the take cannot hold, the chain cap reached with no new camera position, or when the cutting rules demand it. A `cut` that repeats the previous shot's beat at the same place for none of these reasons is a missed continue or coverage: turn it into one. A beat that is `continuous` with the previous beat never opens with a `cut` (new people or a new camera position are no reason): continue the running take, or cover it with `coverage` citing a non-coverage shot whose `Beat:` lists that beat - so the opener lists every continuous beat its take reaches (`Beat: 1.1, 1.2`), because a coverage shot cannot itself be covered. A cut or coverage shot right after a shot at the same place with the same people that differs by no angle family and no size step is refused (30-degree rule): continue or vary the camera.
   At the chain cap, re-anchor with a coverage shot when the camera position changes (a continue after it extends its own take), else with a cut.
 - **Performer travel:** a size change inside a shot is performed by the performer relative to the lens, as `Motion:` beats with an end size (`approach`, `lean in`, `back away`) - the way a first-person shot changes size. In third person the camera travels WITH a walker (`follow`; do not rely on `lead`, it is untested). Do not use `truck`: in a narrow space plan a cut or an `arc` instead.
 - **Heat is acting:** a beat's `Heat` level (`none | teasing | aroused | intense | climax`) becomes performer actions in `Motion:` that escalate and relax with the level; the viewer's hands / forearms are actors too (`limbs`). `Expression:` stays the face at t=0. Default vocabulary (every workspace): `teasing` - a held look, eye contact with the lens, a hand to the mouth; `aroused` - turning away then back, a breath drawn in, a smile that fades; `intense` - the breath quickening, a hand gripping the nearest edge, closing the eyes; `climax` - the body tightening, then slackening, a last held look. Where the workspace's nudity policy is `allowed`, `load_skill explicit-acts` for the explicit per-level actions.
@@ -191,7 +191,7 @@ Motion:
 
 ### Coverage (another camera position on the same moment)
 
-`Transition: coverage <shot id> [from <t> s] — <reason>` is a short keyframed shot of the SAME beat(s) as an EARLIER shot, seen from a new camera position. Use it whenever a beat is re-framed from another camera position - a dialogue exchange, a reaction, a single or over-the-shoulder of an action, any camera mode: shoot the beat as ONE take of the wider frame (the opener, e.g. `Angle: two-shot in depth`, `Motion:` beats carrying the whole beat), then add coverage shots - clean singles, over-the-shoulders, reaction cut-ins - instead of cuts that restate the action. Several coverage shots may cover the same shot; a coverage shot is never a shortcut to leave a beat uncovered by its own opener. Refused at the write unless:
+`Transition: coverage <shot id> [from <t> s] — <reason>` is a short keyframed shot of the SAME beat(s) as an EARLIER shot, seen from a new camera position. Use it whenever a beat is re-framed from another camera position - a dialogue exchange, a reaction, a single or over-the-shoulder of an action, any camera mode: shoot the beat as ONE take of the wider frame (the opener, e.g. `Angle: two-shot in depth`, `Motion:` beats carrying the whole beat), then add coverage shots - clean singles, over-the-shoulders, reaction cut-ins - instead of cuts that restate the action. A third-person scene in which two people talk has at least one `over the shoulder of <key>` or `two-shot in depth` shot (opener or coverage), besides singles and reaction cut-ins. A coverage shot's `Camera:` changes the camera HEIGHT (`low angle` / `high angle`) or DIRECTION (a side, `three-quarter angle`, `from behind`, a reverse) relative to the shot it covers wherever the blocking and sightlines allow it - `eye level` only where the scene calls for it, and always inside the `Line:` side and the 30-degree rule. Several coverage shots may cover the same shot; a coverage shot is never a shortcut to leave a beat uncovered by its own opener. Refused at the write unless:
 
 - the covered shot exists and is earlier, is not itself a coverage shot (cover the shot it covers), is at the same place and view, and shares at least one `Beat:` id with the coverage shot;
 - `from <t> s` (optional) = seconds into the covered shot's RUNNING TAKE (its opener plus its continues, through the covered shot) and does not exceed that take's length.
@@ -390,7 +390,7 @@ check); they go to the clip prompt verbatim.
   <A> stands IN the water at the ladder, hands on the rail, and the beat "0-2 s pulls up the ladder
   and steps out onto the deck" performs it; the next shot's lines show <A> on the deck, `State: wet hair`.
   Same for "<B> stands up from the chair": the picture lines show <B> seated, not already standing.
-  A person without a first beat is not asked. Write the opening state in words of a still, never as the
+  A first beat that merely continues what the picture lines already show (an ongoing action, a held pose, "chewing", "mid-step") is partway too: start the lines from the state before it, or make the first beat the next change. A person without a first beat is not asked. Write the opening state in words of a still, never as the
   motion. This covers the viewer (`viewer:` beats) and anyone seen only by `limbs` too, and `Contact:` /
   `Sex act:` count as picture lines: a beat that ENDS a join or touch starts from it (state the `Contact:`
   and act at the opening frame); a beat that BEGINS one starts without it.
@@ -428,7 +428,7 @@ check); they go to the clip prompt verbatim.
   is the character's design KEY. The delivery names emotion, volume, pace, breath and pitch ("soft, tired,
   slow, a small sigh first") — what the voice does is audible, so emotion words belong here. Size each
   line at about 2.5 words per second (plus 0.3 s of slack); lines never overlap and stay inside the shot
-  (rule R23).
+  (rule R23): count the words first - the line's span is at least words / 2.5 s + 0.3 s, so widen the span or shorten the words.
 - `Audio:` = the scene's atmosphere (room tone, space, distance, mood), copied VERBATIM from the scene
   list's `Audio` for this scene onto EVERY shot of the scene (the write is refused when it differs; under `Grammar: takes` the line must START with it and the signals the shot acts follow it, see "Signals acted"). The ambient bed is ALWAYS audible at a natural level: 'quiet', 'distant', 'faint' or 'hushed' may describe the PLACE (its size, its sources), never the loudness of the sound; every clip carries an audible ambient bed. A scene `Audio` that names only a level ("quiet", "silence") is a scene-list defect: say so in the task result, do not copy it into a clip.
 - `Beat:` may list several beats (`Beat: 1.2, 1.3`) when one continuous action spans them.
@@ -639,8 +639,8 @@ check); they go to the clip prompt verbatim.
     the lines teleports in the render. A change of the viewer's posture is stated in `Action:` too ("the viewer
     now lies back on the bench") with the new `POV:` posture: the renderer then drops the previous
     frame (its viewpoint is the old eyes) and carries the state in words.
-  - `Visible:` extents must fit `Camera:`'s framing size: `full figure` needs `full` / `wide`,
-    `upper body` needs `medium close-up` or wider; a `close-up` is `face` (or hands / feet as `limbs`).
+  - `Visible:` extents must fit `Camera:`'s framing size: `full figure` needs `full` / `wide` (`medium full` is not enough),
+    `upper body` needs `medium close-up` or wider and never shows the hips down (a `Contact:` part below the waist needs `full figure` or `lower body`); a `close-up` is `face` (or hands / feet as `limbs`).
     Writing "medium, head to waist" with `full figure` draws full figures (rule R12 refuses it). Pick
     the extent the size really shows, or the size the extent needs — never both wide and tight.
     The extent is also what the framing actually shows, not only the minimum size: `lower body` on a
@@ -825,7 +825,8 @@ send that shot again:
 One `plan_shot` call per KEYFRAMED shot (every shot except a `Transition: continue` shot, which has no keyframe: planning it is refused), right after that shot's `write_shot` was accepted (the plan is built
 from the shot's lines): `plan_shot` takes ONE plan - the fields below at the top level - checks it
 alone and stores it; a repeat for the same shot id replaces the stored plan. A refusal lists only that
-shot's problems (an enum field names its allowed values): fix THAT plan and send it again, never
+shot's problems (an enum field names its allowed values): fix THAT plan and send it again CHANGED as the refusal names, never
+resend it unchanged (e.g. an entity `contact_with` the shot's `Contact:` line does not state: drop it, or state the contact), never
 touch other shots. Never put all shots into one call - a plan for every shot in one reply is too
 long and one mistake forces a rewrite of all of them. A plan is tied to the shot's lines it was made
 from: when you change a shot with `write_shot` after planning it, plan it again with a CHANGED plan
