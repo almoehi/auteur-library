@@ -231,6 +231,7 @@ A scene-list beat's `Signal` cell (`<character>: <signal> [@timing] [-> acted | 
 - `Format: portrait` (a vertical frame shows little side to side; these override the size and establishing-wide rules of this skill):
   - Prefer close framings (`close-up`, `medium close-up`) with ONE establishing frame; "shot size follows intensity" runs medium -> medium close-up -> close-up -> extreme close-up.
   - A two-shot is stacked in depth (one person behind the other, eye line about 28 % from the top, the lower third clear for captions). ONE ensemble frame per new configuration (a group of people) is allowed, framed the same way.
+  - The `Camera:` size is the size of the person the shot is ON (the far person of an over-the-shoulder, the rear person of a two-shot in depth), and the keyframe is measured on them. `Blocking:` / `Frame:` must agree with it: a subject placed "at the far end", "small", "in the background" or behind a long stretch of furniture IS a `full` / `wide` shot - either state that size, or bring the subject close enough to the lens for the stated size.
   - A beat's optional `Signal` (the detail that carries a sensation) is ACTED inside the beat's shots (see "Signals acted"), never a still or shot of its own; a face that the portrait frame holds too small carries the signal as a sound or a push-in there.
   - Two people side by side or one behind the other, close (within arm's reach), never at opposite edges of the frame.
   - A new place's establishing image is one vertical frame (a doorway, a corridor, a window), not a `wide` of the room.
