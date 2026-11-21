@@ -124,6 +124,8 @@ drama -> `drama_1.md`; several -> ask which one, never pick yourself:
 update_story({ plot_from_artifact: { artifact: "story_adaptation", file: "drama_<k>.md" } })
 ```
 
+When the person narrows the production to PART of the drama (some scenes, places, characters or episodes), pass their own words, one short paragraph, as `scope` in the SAME call, BEFORE any pre-production task exists: `update_story({ plot_from_artifact: { artifact: "story_adaptation", file: "drama_<k>.md" }, scope: "<their words>" })`. The server writes it as a fixed "Production scope" header at the top of the plot, so every task and check reads it. Without narrowing, pass no `scope`: adopting without it drops a scope set earlier.
+
 Never call it on your own. Report the result in one line (the original is kept; "restore the
 original story" undoes it) and list `staleTasks`: they keep the old story until `reset_task`.
 Then: "Run pre-production to produce drama <k>." This workspace produces ONE drama; for another

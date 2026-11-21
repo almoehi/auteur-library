@@ -14,7 +14,7 @@ agentType: worker
 
 Plain LLM planning worker: read text, write `design_plan.json` one entry per `write_design` call, then ONE `create_designs_from_plan` call creates every design of the plan.
 
-- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `create_designs_from_plan`, `task_complete`, `task_failed`; where the workspace exposes a catalog also `catalog_index`, `search_catalog`, `use_reference` ("Garment references").
+- Tools: `artifact_index`, `task_index`, `read_artifact`, `write_design`, `run_checks`, `create_designs_from_plan`, `task_complete`, `task_failed`; where the workspace exposes a catalog also `catalog_index`, `search_catalog`, `use_reference` ("Garment references").
 - `create_designs_from_plan` takes no input: it reads your own `design_plan.json` and creates every entry that has no design yet, in the file's order. It needs `can_create_tasks: true` on your task. Never create designs one by one, and never pass `policies`.
 - Output file: `design_plan.json` only, written with `write_design` (the checks read the scene list from your `scene_list` input; never copy it).
 - Never render, draft or write any design file (`design.json` included); design workers (`design-asset`, `storyboard-scene`) continue each design.
@@ -49,7 +49,7 @@ Setting = `{workspace.story.setting}` (a given fact, never inferred from the plo
 A SET = the locations of ONE property (a house with its terrace, garden and driveway). Sets keep the spaces looking like the same place: members are drafted from the set's anchor (`design-asset`).
 
 - Group locations by the scene list's `## Places` table: same `set` value = one set. A standalone place is a set of one: no `set_anchor` link, no `connections` needed.
-- Anchor (one per set, STAR topology: members link the anchor, the anchor links nothing, never a chain): the exterior space showing the facade; else the space with the most connections; else the one used in the most scenes.
+- Anchor (one per set, STAR topology: members link the anchor, the anchor links nothing, never a chain): the member used in the most scenes (ties: the most connections); a set of one place has no anchor. The anchor is a dependency root every member waits for, so it is chosen by how much of the production depends on it, never by what the space looks like.
 - A location is a SPACE a camera stands in, never a surface or feature ("Grey House Wall", "Front Door"): fold such an entry into the space it belongs to (its `connections` and shot framing) and note it under `flagged:`.
 - Per set write ONCE `set_style` (set bible: architecture, materials, palette, era, signature elements; from the screenplay and the anchor's `place`) on the anchor; `write_design` copies it (and `set`) verbatim onto every member that omits them, and refuses a member whose text differs. `set` = the property's display name, identical on every member.
 - Per location `connections`: the Places row's facts with design KEYS ("glass doors in the back wall open onto location_backyard_pool_terrace; pool beyond them"). Both sides state the link.
@@ -179,9 +179,11 @@ The pick is recorded on the plan entry: the person sees it in the studio, and a 
   "links": [ { "role": "character", "key": "character_mira" } ], "scenes": [2] }
 ```
 
-## Phase 2 — Create the designs with `create_designs_from_plan`
+## Phase 2 — Check the plan, then create the designs with `create_designs_from_plan`
 
-Once every entry is written, call `create_designs_from_plan` ONCE (no input). It creates every entry without a design in the file's order and returns a count line, then one row per key (`- <key>: created|existing - task id <id>` or `- <key>: REFUSED|BLOCKED - <reason>`):
+Order of work: the links of a design are fixed when it is created (they become dependencies), so the plan must be right BEFORE anything is created. Once every entry is written, call `run_checks` and fix every rejected finding with `write_design` (same `kind` + `key_slug` replaces the entry). At most 3 fix rounds (`run_checks` is capped at 6 calls per attempt): call `create_designs_from_plan` when the checks pass, when the rounds are used up, or when a remaining finding concerns a rule `write_design` already accepted (the anchor star, `set`, `set_style`, creation order - the server enforces those, so such a finding is a judge error). A created design never changes its kind, links, `set` or `set_style`; a plan changed after creation is refused for those fields.
+
+Then call `create_designs_from_plan` ONCE (no input). It creates every entry without a design in the file's order and returns a count line, then one row per key (`- <key>: created|existing - task id <id>` or `- <key>: REFUSED|BLOCKED - <reason>`):
 
 - `created`: the design now exists (key, `@name`, task id).
 - `existing`: a design with that key already exists (a failed one counts); nothing was created.
