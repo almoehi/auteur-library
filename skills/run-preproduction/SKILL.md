@@ -142,7 +142,7 @@ Pre-completion audit: before `task_complete`, re-open every file; confirm all fi
 
 ```
 create_task({ id: "create_scenes", output_artifact_name: "scene_list", output_artifact_description: "Scene List", output_files: ["scene_list.md"], requires_tasks: ["write_screenplay","character_table"], requires_artifacts: ["screenplay","character_table"], title: "Scene list", description: "Scene table with outfits and beats",
-  agent: <director>, policies: ["scenes-quality","scenes-complete"], prompt_block: "run-preproduction/create_scenes" })
+  agent: <director>, policies: ["scenes-quality","scenes-complete"], difficulty: "medium", prompt_block: "run-preproduction/create_scenes" })
 ```
 Prompt block (passed by `prompt_block`, never copied):
 ````prompt create_scenes
