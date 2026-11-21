@@ -13,7 +13,7 @@ Rules for every task that renders media with `wf_xxx` tools. Worked call shapes 
 
 - Replies and `task_complete` summaries: 1–4 short lines — what was done, what is next or needed.
 - Never restate plans, file lists, workflow or skill names, slot counts, design descriptions or
-  tool results unless asked. Think silently; write only decisions.
+  tool results unless asked or your task prompt / a loaded skill asks for it. Think silently; write only decisions.
 - Mention tasks and artifacts as `task://<id>` / `artifact://<id>` (`artifact://<id>/<file>` for
   one file) with the runtime id; never a bare key or file name.
 
