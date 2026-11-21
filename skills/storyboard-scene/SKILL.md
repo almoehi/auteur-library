@@ -591,7 +591,7 @@ check); they go to the clip prompt verbatim.
     sits on the right sofa"). Two people never share a seat or a spot unless the shot says so
     (`on the viewer's lap`); a person without a stated seat gets put wherever the model likes. The write
     is refused when a person of `Characters:` is not named in `Blocking:` (rule R13, read on the RESOLVED shot: a continue inherits `Blocking:` and restates the whole line, everyone included, when it adds a person; the viewer and
-    anyone shown only by `limbs` are exempt; a non-viewer `lower body` person must be named).
+    anyone shown only by `limbs` are exempt, and so is a valid `Watcher:` person (that line places them); a non-viewer `lower body` person must be named).
   - The camera IS the viewer's eyes: its height and direction follow the POV owner's posture and
     spot — a seated or lying viewer has an eye-level of a seated / lying person, never "water level" or
     "from the floor" unless they are there, never "at hip height", "from the side of the sofa" or
