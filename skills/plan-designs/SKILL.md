@@ -181,7 +181,7 @@ The pick is recorded on the plan entry: the person sees it in the studio, and a 
 
 ## Phase 2 — Check the plan, then create the designs with `create_designs_from_plan`
 
-Order of work: the links of a design are fixed when it is created (they become dependencies), so the plan must be right BEFORE anything is created. Once every entry is written, call `run_checks`, fix every rejected finding with `write_design` (same `kind` + `key_slug` replaces the entry) and repeat until the checks pass. Only then call `create_designs_from_plan`. A created design never changes its kind, links or `set`; a plan changed after creation is refused for those fields.
+Order of work: the links of a design are fixed when it is created (they become dependencies), so the plan must be right BEFORE anything is created. Once every entry is written, call `run_checks` and fix every rejected finding with `write_design` (same `kind` + `key_slug` replaces the entry). At most 3 fix rounds (`run_checks` is capped at 6 calls per attempt): call `create_designs_from_plan` when the checks pass, when the rounds are used up, or when a remaining finding concerns a rule `write_design` already accepted (the anchor star, `set`, `set_style`, creation order - the server enforces those, so such a finding is a judge error). A created design never changes its kind, links, `set` or `set_style`; a plan changed after creation is refused for those fields.
 
 Then call `create_designs_from_plan` ONCE (no input). It creates every entry without a design in the file's order and returns a count line, then one row per key (`- <key>: created|existing - task id <id>` or `- <key>: REFUSED|BLOCKED - <reason>`):
 
