@@ -59,7 +59,7 @@ You choose NO reference pictures and pass none (`create_clip_tasks` has no `refe
 
 ## Step 2 — Read the plan
 
-- `clip_plan(storyboard)` once per scene. It is the authority for modes (`cut` / `continue`), reasons, bundles, start frames and framing; its text shows the clips and the bundles it will make. A `PROBLEMS` line = stop and tell the user. Never decide, change or "improve" a mode, a bundle or a clip number yourself.
+- `clip_plan(storyboard)` once per scene. It is the authority for modes (`cut` / `continue` / `coverage`), reasons, takes (a take within the generation length is ONE clip: its continues are `take-member`s of the opener's clip, they get no clip task of their own), bundles and start frames (a continue may have none: it has no keyframe); its text shows the clips and the bundles it will make. A `PROBLEMS` line = stop and tell the user. Never decide, change or "improve" a mode, a bundle or a clip number yourself.
 - `style` defaults to the workspace style (`{workspace.story.style}`, one line, "Medium / style is kept" in `workflow-calling-conventions`; NEVER the plot): pass `style` only to override, or when the workspace has none (the call is refused without one). The server adds the workspace setting (`{workspace.story.setting}`) to every clip brief as its own `setting:` line. `negative_prompt`: the preferred video workflow's recommended negative (`get_workflow_instructions`); omit when the workflow has no negative port.
 - The server reads the shotlist, scene list beats, frame edits and the shots' LoRAs itself: you read none of it.
 
