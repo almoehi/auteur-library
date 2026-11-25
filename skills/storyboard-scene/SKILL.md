@@ -287,7 +287,7 @@ A scene-list beat's `Signal` cell (`<character>: <signal> [@timing] [-> acted | 
   - Scenes at one place: the task prompt ends with a **Previous scene** block naming the previous scene's last shot and its exact `Location:` line (view included). A scene that CONTINUES at that place reuses that line for its first shot (same location key, same `(view <id>)`) and changes the view only when the shot's `Frame:` looks another way (binding the main picture after the previous scene ended at `(view 3)` jumps the layout). A scene at another place ignores the block.
   - A person's STANDARD views `(view back)` / `(view profile)` / `(view front)` suit shots from behind / in profile / facing the camera (`face` a head-and-shoulders close-up); an older design may list numbered views (`view_1`..) and a `portrait` instead, matched by their description.
   - Never invent a view id: only listed ones are valid (the write is refused for another). A `continue` shot keeps the running take's location AND view (inherited): another view is a `cut` (the write refuses a `continue` that names another view).
-- `Movement:` = the beat's `Camera move` intent when the scene list gives one, otherwise the move the storyboard chooses, in the canonical grammar of "Camera moves" below; the `from` / `to` frames follow the `Transition:` rule there.
+- `Movement:` = the beat's `Camera move` intent when the scene list gives one, otherwise a move ONLY when the shot needs one - a reveal of set the opening frame does not show, following a person who walks, a framing change the take must perform - and no `Movement:` line otherwise: a shot without a move is rendered with a locked-off static camera (the default). Prefer NO move for explicit-act shots and first-person (POV) shots: the act, the bodies and the viewer's frame stay steady. When you do write one, in the canonical grammar of "Camera moves" below; the `from` / `to` frames follow the `Transition:` rule there.
 - `Lens:` (optional, keyframe-relevant): `Lens: <wide|normal|long> [<N>mm][, <deep|shallow> focus][, focus on <thing>]`. Classes: wide <= 28 mm (default 24), normal 35-50 mm (default 35), long >= 85 mm (default 85); an explicit N must fit the class. It sets perspective and depth of field of the keyframe, never movement; leave it out when the scene's look needs nothing special.
 - `Lighting:` (optional, keyframe- and clip-relevant): this shot's light and set state in one short phrase: visible light sources and their state (on / off / dimmed, direction, colour), daylight or weather, screens or fire, and the state of openings and coverings (doors, windows, curtains) where it changes the look. It REPLACES the scene's `Lighting` phrase for this shot and wins over the light shown in the location picture. The scene list's `Lighting` is how the scene ends lit (its main state): write `Lighting:` on every shot before or after a change of that state, and omit it on shots that keep the scene's. Never contradict it in `Action:` / `Frame:`.
 - One moment, several framings: a framing size or angle that changes by travel inside the running take is a `continue` (at most 2 in a row, its `Camera:` line states the new framing; front <-> behind, 180°, is no travel the take can hold: a `cut`); a reaction, single, over-the-shoulder or two-shot of the same moment from another camera position is a `coverage` shot with an `Angle:` (see "Coverage"); a plain `cut` is neither. Beats that would look the same as a still are ONE shot - its clip carries them in `Motion:`, never two identical keyframes.
@@ -444,6 +444,7 @@ A clip performs an action starting from its keyframe: whatever a person picks up
 `Motion:` beat must already be IN THAT KEYFRAME, or the video model makes it appear from nowhere (or half in a
 hand). Stage every used thing in the opening frame, one of three ways:
 
+- **Name every prop DESCRIPTIVELY inside the thing phrase itself**: `<colour> <material> <thing>`, plus size when it matters. Props, holders and used-later things are matched by EXACT identity of that phrase - the same phrase everywhere it recurs (`Props:`, `Contact: ... holding <thing>`, `Wardrobe: aside:`) - and the keyframe states the look only from this phrase, so a bare noun gives the image model nothing to draw.
 - **Placed**: `Props: <thing> (<place in the frame>); ...` (at most 6, each with where it lies: `iron pan (on the stove)`,
   `toolbox (on the floor, left of the bike)`) - for things nobody holds yet. A used GARMENT that is off the body lies in
   `Wardrobe: <key> (...; aside: <garment> (<place>))`, never under `removed:` (a removed garment is NOT in the frame).
@@ -538,7 +539,7 @@ keyframe, so state only what the frame can show at its framing.
   seen only by `limbs` (hands / feet at the edge) is likewise named by role in words ("a man's hands"),
   never as a figure. Another person shown by `lower body` IS a figure: they are counted, pictured
   (design picture and outfit) and placed in `Blocking:`.
-- `Pose:` per person in frame (body position); for a `:none` look also its garments. For an extreme
+- `Pose:` per person in frame (body position); for a `:none` look also its garments. **Write it LIMB BY LIMB with support and weight:** what rests on what (back on <surface>, forearms on <surface>, feet flat, weight on the left leg), which way the torso faces, where hips and legs point, left / right as seen on screen, and who is nearer the camera (depth). The keyframe prompt can only carry what the shot gives; a one-word posture ("standing") is not enough when the body does something. For an extreme
   close-up, close-up or medium close-up, `Blocking:` / `Pose:` (and the plan entities' `posture` /
   `support`) describe only what the frame HOLDS: an eyes or face shot names the head, gaze and
   expression - no seat, knees, hands or support below the frame (the server crops the place to the
@@ -725,9 +726,7 @@ keyframe, so state only what the frame can show at its framing.
   at most 4 short phrases per person, each at most 40 characters — shocked, blushing, nervous,
   smug, tearful, determined, amused (under nudity `allowed` also seductive, aroused, ecstatic). Every shot with a visible face has one entry per person whose face shows (extent
   `full figure` / `upper body` / `face`); never for the POV owner or a `back` / `limbs` / `lower body` person. It is the face,
-  `State:` is the body (wet hair, mud); where the head or eyes point belongs in `Pose:` with a TARGET
-  ("eyes level on <Other>", "head turned toward <thing>"), never a bare direction ("chin lifted",
-  "face raised") — a head direction without a target is rendered toward the nearest default (the ceiling); keep it consistent with the beat's emotion. An expression that CHANGES during
+  `State:` is the body (wet hair, mud). **Gaze:** every shot states each shown person's gaze TARGET and its screen side - who or what they look at: another person, the camera, an object, off-frame left / right - in `Expression:` (`<key> (calm, looks at <key>'s face)`) or, for a non-actor, in `Watcher:` `gaze at <x>`; head direction in `Pose:` also carries a TARGET ("head turned toward <thing>"), never a bare direction ("chin lifted", "face raised") — a head direction without a target is rendered toward the nearest default (the ceiling). A person with no stated target looks at the camera by default of the model: never leave it open. Keep it consistent with the beat's emotion. An expression that CHANGES during
   the clip is a `Motion:` beat, not a second `Expression:`. Crying is an expression (`teary eyes`,
   `glistening eyes`), never fluid on the skin: "tear tracks" / "tear-streaked" render as thick streaks;
   name no body fluid a shot does not explicitly need.
@@ -1039,6 +1038,7 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] (a pose catalog exposed) every `Pose reference:` came from `use_reference` with the shot's CURRENT `Camera:` line, is
       eligible (solo: one person, no contact incl. the viewer; duo: third person, position matches, medium full or
       wider), its hands in `Pose:` follow the pick, and the import was checked with `describe_image`; otherwise no line
+- [ ] every prop phrase is descriptive (`<colour> <material> <thing>`) and identical wherever it recurs; every shown person has a gaze target + screen side (`Expression:` / `Watcher:`); every `Pose:` is limb by limb with support, weight, facing, left / right and depth
 - [ ] `draft_storyboard` was accepted; `design.json` untouched
 - `task_complete(summary="Storyboard scene <n>: <N> shots handed to the server; open: …")` (1–3
   lines). The takes land afterwards; this hands the design to the person, it does not finish it.

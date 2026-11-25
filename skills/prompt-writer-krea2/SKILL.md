@@ -215,6 +215,8 @@ At 0.90+: shorten and simplify the text prompt — over-specified prompts at hig
 
 ## Step 5 — Prompt Length Check
 
+**A storyboard keyframe brief that is a FACT SHEET** (blocks `CAMERA`, `CAST`, `PEOPLE`, `POSE, CONTACTS AND PROPS`, `ACT`, `GAZE AND EXPRESSION`, `PLACE`, `LIGHT`, `PICTURES`, `STYLE`) states its own length and paragraph rules in the request (a detailed prompt, usually 250-450 words, in the sheet's fixed paragraph order): they override the table below. A long medium / style description is the LAST paragraph, never mixed into the scene paragraphs.
+
 | Goal | Target |
 |---|---|
 | Exploration / thumbnail | 5–20 words |
