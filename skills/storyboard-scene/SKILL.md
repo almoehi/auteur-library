@@ -684,9 +684,10 @@ keyframe, so state only what the frame can show at its framing.
   - `aside:` — OFF the body but lying IN THE FRAME, with where: `aside: <garment> (<place in the frame>)`, e.g.
     `aside: coat (over the chair back)`. The frame shows it there, not worn. Use it for a garment a later
     beat puts on, hands over or reaches for (below, "Objects and garments a clip uses"); a garment off the
-    body and out of the frame for good stays `removed:`. An entry may hold only `aside:` items (a person fully
-    undressed, clothes lying in the frame): under their outfit look, or under `:nude`. A person who is `:nude` in
-    one shot and dressed in the next needs their garments lying aside in the first (or held, or out of frame by intent).
+    body and out of the frame for good stays `removed:`. An entry may hold only `aside:` items (clothes lying in the frame): under `:nude`, or under the outfit look - which
+    takes off ONLY the garments it lists (the rest of the outfit stays worn) unless it lists every garment of the outfit. A person who is `:nude` in
+    one shot and dressed in the next needs each garment the next shot's `Wardrobe:` names lying aside in the first
+    (or held, or out of frame by intent, under the same exact phrase).
   - `partly:` — still ON the body but displaced or open: lowered, pulled up, pushed up, unbuttoned,
     unzipped, a strap off one shoulder. Write the plain garment noun, then its END state in parentheses:
     `partly: <garment> (<end state>)`, e.g. `partly: scarf (loosened, hanging low)`. The state is where the garment is NOW (a still), never
