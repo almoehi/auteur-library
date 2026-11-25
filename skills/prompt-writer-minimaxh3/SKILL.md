@@ -136,6 +136,8 @@ non_diegetic_music:
 [1–3 sentences: instrumentation, tempo, rhythm, dynamics]
 ```
 
+**`place:` / `light:`** — the brief's `place:` line (the place, its fixed items and surfaces) and `light:` line (colour temperature, direction, hardness, time of day) are stated in the opening-state paragraph of `detailed_description` and kept steady through the clip; add no set or light of your own.
+
 **`subject_definitions:`** — copy each line of the brief's `subject_definitions:` block VERBATIM (one line per person, then the `Objects:` line): never shorten hair, build, garments or objects, never reword, never drop one. Then add the media labels of the `picture_map:` (`<Picture N> shows <Name>'s face`, `<Subject n>` labels, `<Audio n>`) - one short line per picture, no description of what the picture already shows. **Display names only**: every person, outfit and place is written by the name the brief gives; never a design key (`character_...`), a picture-reference id (`(ref2)`), a file name, a kind tag after a name (`(location)`), nor the brief's own labels (`camera attached to`, `defines`). The brief's `cast:` line is the count: exactly that many people in the clip, nobody else.
 
 **`summary:`** — the task-type prefix, then ONE sentence of who does what to whom, where, and the medium / shot type.
