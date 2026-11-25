@@ -68,7 +68,7 @@ A `coverage` clip is a cut render of its OWN `start_frame`: the same people doin
 
 ## 4. LoRAs
 
-The server chooses the clip's LoRAs from the clip workflow's OWN model family catalog by what the clip shows (the act and position shown, the intimate body parts in frame, the motion); the shot's `LoRAs:` line (in `shot_block`) names the keyframe family and is not what loads; you pass none. The loaded LoRAs' trigger words are added by the server: write no LoRA trigger word and no LoRA name into the prompt, and name the LoRAs the result reports (`clip_loras`) in the summary.
+The server chooses the clip's LoRAs from the clip workflow's OWN model family catalog by what the clip shows (the act and position shown, the intimate body parts in frame, the motion); the clip's `shot_block` carries no `LoRAs:` line; you pass none. The loaded LoRAs' trigger words are added by the server: write no LoRA trigger word and no LoRA name into the prompt, and name the LoRAs the result reports (`clip_loras`) in the summary.
 
 ## 5. Prepare the prompt
 
