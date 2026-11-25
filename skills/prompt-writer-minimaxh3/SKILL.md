@@ -144,7 +144,7 @@ non_diegetic_music:
 
 **`retention_analysis:`** — what must persist for the whole clip: every attached / held object and where it is attached, every garment as worn, the cast count, plus the retention level of each referenced asset.
 
-**Detailed description by phase** (the `detailed_description:` body, plain physical prose, one short paragraph per phase; target **600–900 words** for a clip with several beats, hard limit 7,000 characters):
+**Detailed description by phase** (the `detailed_description:` body, plain physical prose, one short paragraph per phase; target **600–900 words** for a clip with several beats (guidance); hard limit 7,000 characters, enforced by the server after the write):
 1. **Opening state** - the place; each person's posture, which way they face relative to the other, and what supports them (what rests on what); the camera.
 2. **Mechanics as concrete physical steps** - who grips which part, who moves where, limb placement ("her hand on his shoulder", "his knee on the bench"), what enters or leaves the frame; one step per sentence, in the order the beats give.
 3. **Repeated motion as an explicit mechanical cycle** - name the stages of one repetition in order ("pulling back, moving down, pushing forward, pulling up") and say what STAYS STEADY meanwhile ("the upper body stays steady while the hips do the work"); never "moves rhythmically".
@@ -411,7 +411,7 @@ Position: `centered` | `lower third` | `upper center` | `overlaid full-frame`
 | Keyframe completion / any clip brief with `subject_definitions:` | 600–900 words (hard limit 7,000 characters) |
 | ref2va | 400–800 words |
 
-Hard upper limit: 7,000 characters and a budget of about 2,500 tokens: cut restated stills (appearance, blocking, framing the pictures already show) first, then beat descriptions - never audio or camera fields. One generation of a complicated shot stays within 15 seconds (only held conversations go longer); a longer brief is the caller's to split.
+Hard upper limit: 7,000 characters (the server checks it after the write and sends a longer prompt back once): cut the descriptive prose of the place, restated stills (appearance, blocking, framing the pictures already show) and the repeated statement of one motion first - never a `subject_definitions` line, a beat (each keeps its time and window), audio or camera fields. One generation of a complicated shot stays within 15 seconds (only held conversations go longer); a longer brief is the caller's to split.
 
 ---
 
