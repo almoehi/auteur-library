@@ -438,6 +438,27 @@ check); they go to the clip prompt verbatim.
 - `Beat:` may list several beats (`Beat: 1.2, 1.3`) when one continuous action spans them.
 - The moment rules above (R9) apply to `Action:` and `Camera:` only: the sequence lives in `Motion:`.
 
+### Objects and garments a clip uses (in the frame before they are used)
+
+A clip performs an action starting from its keyframe: whatever a person picks up, puts on or hands over in a
+`Motion:` beat must already be IN THAT KEYFRAME, or the video model makes it appear from nowhere (or half in a
+hand). Stage every used thing in the opening frame, one of three ways:
+
+- **Placed**: `Props: <thing> (<place in the frame>); ...` (at most 6, each with where it lies: `iron pan (on the stove)`,
+  `toolbox (on the floor, left of the bike)`) - for things nobody holds yet. A used GARMENT that is off the body lies in
+  `Wardrobe: <key> (...; aside: <garment> (<place>))`, never under `removed:` (a removed garment is NOT in the frame).
+- **Held**: a thing a person already holds has its holder in `Contact:` - `<key> (hands) holding <thing>` (`hands`,
+  `fingers`, `forearms` or `arms` hold; the thing is a thing, never a person; a hand merely resting on something is `on`).
+- **Out of frame by intent**: a thing that enters from outside the frame is listed in `Out of frame:` of the shot that
+  starts the clip, and the beat says where it comes from.
+
+Rules the write checks (clip rules): a garment that goes back on between shot k and k+1 (`removed` / `aside` in k, `wearing`
+in k+1) must be `aside:` (or held, or out of frame) in shot k - not `removed:`; a thing held in shot k+1 (`holding`) must
+have been in shot k's frame (`Props:`, a `Contact:` thing, a worn or `aside:` garment) or out of frame by intent. The
+beat that uses the thing then names it as already there ("lifts the pan from the stove", "pulls the coat off the chair
+and puts it on"); the keyframe never shows the thing mid-action. Each placed thing and each aside garment is judged in the
+keyframe, so state only what the frame can show at its framing.
+
 ### Who is in frame
 
 - Keys only, copied from `design.json.links` (never names or slugs) in `Location:`,
@@ -660,6 +681,10 @@ check); they go to the clip prompt verbatim.
   `:nude` look is refused; on a `:none` look it is allowed — the garments in words only). Every garment of the look that changed goes in exactly ONE list:
   - `removed:` — fully OFF the body. Leave it unmentioned everywhere else in the shot and the prompt —
     never "held", never "in her hands", never "lying beside her": a named garment is painted back on.
+  - `aside:` — OFF the body but lying IN THE FRAME, with where: `aside: <garment> (<place in the frame>)`, e.g.
+    `aside: coat (over the chair back)`. The frame shows it there, not worn. Use it for a garment a later
+    beat puts on, hands over or reaches for (below, "Objects and garments a clip uses"); a garment off the
+    body and out of the frame for good stays `removed:`.
   - `partly:` — still ON the body but displaced or open: lowered, pulled up, pushed up, unbuttoned,
     unzipped, a strap off one shoulder. Write the plain garment noun, then its END state in parentheses:
     `partly: <garment> (<end state>)`, e.g. `partly: scarf (loosened, hanging low)`. The state is where the garment is NOW (a still), never
