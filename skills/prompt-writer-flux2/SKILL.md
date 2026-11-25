@@ -140,6 +140,8 @@ precedence over any formatting here). Negative terms go in the answer's separate
 
 ## Keyframe compose prompts (ref2i storyboard keyframes, FLUX.2 Klein)
 
+**A brief that is a FACT SHEET** (blocks `CAMERA`, `CAST`, `PEOPLE`, `POSE, CONTACTS AND PROPS`, `ACT`, `GAZE AND EXPRESSION`, `PLACE`, `LIGHT`, `PICTURES`, `STYLE`) carries its own writing rules in the request: they decide the paragraph order, the length (a detailed prompt of usually 250-450 words, not 60-120) and the placeholders, and they override the "Length", "Order" and placeholder bullets below. The server then appends nothing after your text, so every fact of the sheet must be in it, once. Only the family vocabulary of this section still applies (hands once, reflective surfaces, crying, removed garments, wardrobe terms). The rest of this section describes the older brief with a "Frame requirements" block.
+
 FLUX.2 Klein is step-distilled and runs at cfg 1: there is NO negative prompt, and every word you write is drawn. Earlier words weigh most. The server puts each person's picture label (with an identity note) where you write their placeholder, adds LoRA trigger words in front and appends the shot's frame requirements after your text - so your prose only has to set up the picture, briefly and in the right order.
 
 - **Length:** 60-120 words of your own, not counting the placeholders. Never restate the brief's requirement lines one by one.
