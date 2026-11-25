@@ -448,13 +448,13 @@ hand). Stage every used thing in the opening frame, one of three ways:
   `toolbox (on the floor, left of the bike)`) - for things nobody holds yet. A used GARMENT that is off the body lies in
   `Wardrobe: <key> (...; aside: <garment> (<place>))`, never under `removed:` (a removed garment is NOT in the frame).
 - **Held**: a thing a person already holds has its holder in `Contact:` - `<key> (hands) holding <thing>` (`hands`,
-  `fingers`, `forearms` or `arms` hold; the thing is a thing, never a person; a hand merely resting on something is `on`).
+  `fingers`, `forearms` or `arms` hold; the thing is a thing, never a person; a hand merely resting on something is `on`). A held garment is NOT also under `removed:` (removed means not in the frame).
 - **Out of frame by intent**: a thing that enters from outside the frame is listed in `Out of frame:` of the shot that
   starts the clip, and the beat says where it comes from.
 
 Rules the write checks (clip rules): a garment that goes back on between shot k and k+1 (`removed` / `aside` in k, `wearing`
 in k+1) must be `aside:` (or held, or out of frame) in shot k - not `removed:`; a thing held in shot k+1 (`holding`) must
-have been in shot k's frame (`Props:`, a `Contact:` thing, a worn or `aside:` garment) or out of frame by intent. The
+have been in shot k's frame (`Props:`, a `Contact:` thing, a worn or `aside:` garment) under the same exact phrase, or out of frame by intent (a face close-up before it is not forced to show a prop). `Props:` belongs to the shot that opens the take: a `continue` does not inherit it. The
 beat that uses the thing then names it as already there ("lifts the pan from the stove", "pulls the coat off the chair
 and puts it on"); the keyframe never shows the thing mid-action. Each placed thing and each aside garment is judged in the
 keyframe, so state only what the frame can show at its framing.
@@ -684,7 +684,9 @@ keyframe, so state only what the frame can show at its framing.
   - `aside:` — OFF the body but lying IN THE FRAME, with where: `aside: <garment> (<place in the frame>)`, e.g.
     `aside: coat (over the chair back)`. The frame shows it there, not worn. Use it for a garment a later
     beat puts on, hands over or reaches for (below, "Objects and garments a clip uses"); a garment off the
-    body and out of the frame for good stays `removed:`.
+    body and out of the frame for good stays `removed:`. An entry may hold only `aside:` items (a person fully
+    undressed, clothes lying in the frame): under their outfit look, or under `:nude`. A person who is `:nude` in
+    one shot and dressed in the next needs their garments lying aside in the first (or held, or out of frame by intent).
   - `partly:` — still ON the body but displaced or open: lowered, pulled up, pushed up, unbuttoned,
     unzipped, a strap off one shoulder. Write the plain garment noun, then its END state in parentheses:
     `partly: <garment> (<end state>)`, e.g. `partly: scarf (loosened, hanging low)`. The state is where the garment is NOW (a still), never
