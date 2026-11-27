@@ -119,7 +119,7 @@ Motion:
 0-6 s camera: slow lean in
 Dialogue: 3.5-5 s character_wife (soft, tired, slow, a small sigh first): "It's late"
 Audio: small dry kitchen at night, fridge hum, rain on the window
-Stage: character_wife (frame centre background, toward camera)
+Stage: character_wife (frame centre, background, toward camera)
 Blocking: the camera is the viewer's eyes (seated); the viewer's forearms and hands enter the lower frame; wife across the table, facing the viewer, her hands on the laptop
 Pose: wife: hands on the keyboard, head down; the viewer's hands flat on the table
 Frame: wife centre background; the viewer's hands bottom foreground
@@ -468,16 +468,16 @@ surface people lean on or lie on is oriented relative to the camera (`across the
 `along the right side` / `toward the camera`). Write `Stage:` FIRST, then derive `Blocking:`, `Frame:`, `Camera:` and
 `Expression:` from it, so every line describes the same plan.
 
-- `Stage: <key> (<position>, <facing>[, faces <key>][, <nest> <key>'s <part>]); ...` - one entry per person with a figure extent
-  (`full figure` / `upper body` / `face` / `back`); never the POV owner or a `limbs` / `lower body` person.
-  - `<position>`: `frame left` | `frame centre` | `frame right`, optionally + `foreground` | `midground` | `background`.
+- `Stage: <key> (<position>[, <depth>], <facing>[, faces <key>][, <nest> <key>'s <part>]); ...` - one entry per person with a figure extent
+  (`full figure` / `upper body` / `face` / `back`); a `lower body` person's entry is optional; a `limbs` person and the POV owner get none.
+  - `<position>`: `frame left` | `frame centre` | `frame right`; `<depth>` (optional, its own comma part): `foreground` | `midground` | `background`.
   - `<facing>` (where the nose points on screen): `toward camera` | `away` | `profile left` | `profile right` |
     `three-quarter left` | `three-quarter right` (front toward the camera, turned to that frame side).
   - `faces <key>`: whom they face. `<nest>` = `between` | `astride`, `<part>` = `knees` | `thighs` | `legs` | `hips` | `lap`:
     `between <B>'s knees` = B's legs are outside; `astride <B>'s hips` = this person's legs are outside B.
-  - Third person: `Stage: <A's key> (frame left midground, profile right, faces <B's key>); <B's key> (frame right midground, profile left, faces <A's key>)`
-  - Kneel / straddle: `Stage: <A's key> (frame centre foreground, toward camera, between <B's key>'s knees); <B's key> (frame centre midground, toward camera)`
-  - POV (the viewer gets no entry): `Stage: <A's key> (frame centre midground, toward camera)`
+  - Third person: `Stage: <A's key> (frame left, midground, profile right, faces <B's key>); <B's key> (frame right, midground, profile left, faces <A's key>)`
+  - Kneel / straddle: `Stage: <A's key> (frame centre, foreground, toward camera, between <B's key>'s knees); <B's key> (frame centre, midground, toward camera)` - with `Contact: <A's key> (hands) on <B's key> (knees)` on the same shot
+  - POV (the viewer gets no entry): `Stage: <A's key> (frame centre, midground, toward camera)`
 - Facing consequences:
 
 | If the plan says | Then |
@@ -485,9 +485,9 @@ surface people lean on or lie on is oriented relative to the camera (`across the
 | `away` | extent `back`; the back of the head and the spine show; no `Expression:` for them |
 | back against a surface that runs across the background | they face the camera; nobody stands "in front of" them without hiding them - put a side-by-side pair's surface on a side wall or on a diagonal |
 | the camera at a person's left side | it sees them in profile facing frame left (right side: frame right) |
-| two people face each other | the one at frame left is `profile right` / `three-quarter right`, the one at frame right the mirror; both `toward camera` is not facing each other |
+| two people face each other | at different frame positions and the same depth each one's facing points to the other's side (the one at frame left `profile right` / `three-quarter right`, the one at frame right the mirror); at the same frame position one `toward camera` and one `away` (over the shoulder) is fine, never both `toward camera` or both `away`; at different depths facing along the camera axis is fine |
 
-- One nesting relation per pair (`between` or `astride`), worded the same in `Action:`, `Pose:` and `Stage:`: never
+- A `between` / `astride` nest needs a `Contact:` entry between the two people (any part) or the write is refused; the nest may name the POV owner (`between the viewer's knees`). One nesting relation per pair (`between` or `astride`), worded the same in `Action:`, `Pose:` and `Stage:`: never
   "kneels between her knees" beside "her knees round his legs".
 - One head direction per person (up / level / down / turned toward <name>), in agreement with the `Expression:` gaze:
   "eyes on the lens" needs the head up or level, never bowed or turned away.
