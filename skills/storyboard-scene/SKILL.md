@@ -119,6 +119,7 @@ Motion:
 0-6 s camera: slow lean in
 Dialogue: 3.5-5 s character_wife (soft, tired, slow, a small sigh first): "It's late"
 Audio: small dry kitchen at night, fridge hum, rain on the window
+Stage: character_wife (frame centre background, toward camera)
 Blocking: the camera is the viewer's eyes (seated); the viewer's forearms and hands enter the lower frame; wife across the table, facing the viewer, her hands on the laptop
 Pose: wife: hands on the keyboard, head down; the viewer's hands flat on the table
 Frame: wife centre background; the viewer's hands bottom foreground
@@ -460,6 +461,37 @@ beat that uses the thing then names it as already there ("lifts the pan from the
 and puts it on"); the keyframe never shows the thing mid-action. Each placed thing and each aside garment is judged in the
 keyframe, so state only what the frame can show at its framing.
 
+### Stage the shot (floor plan first; the `Stage:` line)
+
+Before writing a shot's lines, fix its floor plan: where the camera stands, each person's spot and facing, and how the
+surface people lean on or lie on is oriented relative to the camera (`across the background` / `along the left side` /
+`along the right side` / `toward the camera`). Write `Stage:` FIRST, then derive `Blocking:`, `Frame:`, `Camera:` and
+`Expression:` from it, so every line describes the same plan.
+
+- `Stage: <key> (<position>, <facing>[, faces <key>][, <nest> <key>'s <part>]); ...` - one entry per person with a figure extent
+  (`full figure` / `upper body` / `face` / `back`); never the POV owner or a `limbs` / `lower body` person.
+  - `<position>`: `frame left` | `frame centre` | `frame right`, optionally + `foreground` | `midground` | `background`.
+  - `<facing>` (where the nose points on screen): `toward camera` | `away` | `profile left` | `profile right` |
+    `three-quarter left` | `three-quarter right` (front toward the camera, turned to that frame side).
+  - `faces <key>`: whom they face. `<nest>` = `between` | `astride`, `<part>` = `knees` | `thighs` | `legs` | `hips` | `lap`:
+    `between <B>'s knees` = B's legs are outside; `astride <B>'s hips` = this person's legs are outside B.
+  - Third person: `Stage: <A's key> (frame left midground, profile right, faces <B's key>); <B's key> (frame right midground, profile left, faces <A's key>)`
+  - Kneel / straddle: `Stage: <A's key> (frame centre foreground, toward camera, between <B's key>'s knees); <B's key> (frame centre midground, toward camera)`
+  - POV (the viewer gets no entry): `Stage: <A's key> (frame centre midground, toward camera)`
+- Facing consequences:
+
+| If the plan says | Then |
+| --- | --- |
+| `away` | extent `back`; the back of the head and the spine show; no `Expression:` for them |
+| back against a surface that runs across the background | they face the camera; nobody stands "in front of" them without hiding them - put a side-by-side pair's surface on a side wall or on a diagonal |
+| the camera at a person's left side | it sees them in profile facing frame left (right side: frame right) |
+| two people face each other | the one at frame left is `profile right` / `three-quarter right`, the one at frame right the mirror; both `toward camera` is not facing each other |
+
+- One nesting relation per pair (`between` or `astride`), worded the same in `Action:`, `Pose:` and `Stage:`: never
+  "kneels between her knees" beside "her knees round his legs".
+- One head direction per person (up / level / down / turned toward <name>), in agreement with the `Expression:` gaze:
+  "eyes on the lens" needs the head up or level, never bowed or turned away.
+
 ### Who is in frame
 
 - Keys only, copied from `design.json.links` (never names or slugs) in `Location:`,
@@ -737,11 +769,11 @@ keyframe, so state only what the frame can show at its framing.
   onlooker of a pair (a person who sees, directs, reacts, waits) instead of dressing them as an actor; where they look goes after `gaze at`
   (a person's key, or a thing: `the window`), not in `Pose:`. The keyframe brief states it and a judge item checks posture, gaze and that they only watch.
 - `State:` = transient, VISIBLE appearance of a person shown as a figure, `<characterKey> (<state>, <state>, …)`,
-  `;` between characters: short phrases of what the camera sees — `wet hair`, `wet skin`, `sweaty`,
+  `;` between characters: short phrases of what the camera sees — `wet hair`, `a few droplets on the shoulders`, `sweaty`,
   `messy hair`, `make-up smudged`, `flushed` (at most 6 per person, each at most 40 characters; never for
   the POV owner or a `limbs` person — they are words only). Write it in the first shot AFTER the action
   that changes such a state (<A>'s beat "climbs out of the water" is in shot k → shot k+1 has `State:
-  <A's key> (wet hair, wet skin)`; shot k itself, which starts before <A> climbs out, does not) and
+  <A's key> (wet hair, a few droplets on the shoulders)`; shot k itself, which starts before <A> climbs out, does not) and
   in EVERY later keyframed shot of the scene that shows the person while it lasts — a `continue` shot inherits it
   (state only what changes); a `cut` shot later in the same moment should repeat it (not checked — your job).
   A distinctive marking in the character's digest (tattoo, scar, birthmark) is permanent, but it is written
@@ -755,7 +787,7 @@ keyframe, so state only what the frame can show at its framing.
   covered. Under nudity `allowed` the same holds for explicit fluids (`semen on <her/his> face`,
   `saliva on lips and chin`); a `cumshot` shot's `Contact:` then names where it lands
   (`<A's key> (groin) on <B's key> (face)`).
-  When it ends, say so, preferably as the explicit new state (`dry hair`, `dry skin`): the judge checks
+  When it ends, say so, preferably as the explicit new state (`dry hair`, `dry shoulders`): the judge checks
   a named state best. `(none)` means back to the design's own look (the server then states "no longer:
   <the previous shot's states>"); write it alone, never mixed with states. The server states each state
   as "must show" and the judge checks it; nothing carries over unless the line says it. A beat's outfit look with a partial state in its Action → every shot of that beat keeps the outfit key and states the state in `Wardrobe:` (e.g. `Wardrobe: character_x (wearing: pale trousers; removed: yellow jacket)`); a `continue` shot inherits it (a `cut` restates it itself - not checked).
@@ -1010,6 +1042,8 @@ the stored plans of the other shots stay). Keep fixing and calling until it is a
 - [ ] a dialogue / reaction sequence, or any re-framing of a beat from another camera position, is one take of the establishing frame plus `Transition: coverage <shot id>` shots (each with its own `Camera:` + `Angle:`, a shared `Beat:`, `from <t> s` inside the covered take) rather than restating cuts; `Angle:` words and keys follow `Visible:` / `Characters:`
 - [ ] each configuration states a `Line: <keyA> - <keyB>, camera <left|right>` (a new one when people move; a new place resets it) and no cut crosses it except by an `arc` or a neutral on-axis shot; consecutive cuts at one place with the same people differ by an angle or a size step; `Cut on:` names a Motion beat of the previous shot; a configuration of 3+ shots has an establishing frame; a look that leaves frame is answered by the matching cut; a device's picture is `POV: diegetic <device>` with no posture
 - [ ] every `Signal` of every beat is stated in the `Signal:` line of a shot of that beat (carrier overridden only to fit the framing), performed as a `Motion:` beat of the person (not `sound`; the signal's words written literally) and named in that shot's `Audio:` after the scene's atmosphere; a `detail` has an `Insert:` of its part; an acted face / hand signal is framed `medium` or tighter (a detail has no size floor); at most 2 `Insert:` lines per shot, each inside the shot's `Duration:`
+- [ ] every keyframed shot has a `Stage:` line written FIRST from a floor plan (camera spot, each person's spot and facing, surface orientation); `Blocking:` / `Frame:` / `Camera:` / `Expression:` agree with it: a person facing `away` is `back` with no expression, nobody stands in front of a person whose back is against a surface across the background, the camera side matches each profile, people who face each other are turned toward each other's frame side
+- [ ] one nesting relation per pair, the same in `Action:`, `Pose:` and `Stage:`; one head direction per person that agrees with the `Expression:` gaze ("eyes on the lens" needs the head up or level); a `State:` names a body part (`wet hair`, droplets on the shoulders), never "wet skin"
 - [ ] a marking (tattoo, scar) appears in `State:` only where its body area is bare in frame - never "under sleeve" / "covered"
 - [ ] every shot names its `Beat:`; every beat has a shot; every beat's `Contact` is on a shot
 - [ ] with `Timing: beats`: `Action:` is the 0 s state; every shot has `Motion:` beats (no gaps, each at
